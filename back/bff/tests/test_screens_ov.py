@@ -133,6 +133,22 @@ class Queries(unittest.TestCase):
         asyncio.run(run())
 
 
+class NoDataSide(unittest.TestCase):
+    """Global score sheet (2026-11-02): "선택한 기간에 데이터가 없습니다" was said for every no_data, also on 2026-07 with
+    46,857 citations and on a card showing 75.2%: the empty side was the period before, and no caller said which."""
+
+    def test_the_caption_names_the_empty_side(self):
+        no_data = {"reason": "no_data"}
+        self.assertEqual(_period.period_caption({**no_data, "dataCyclesCur": 3}, {"days": 31, "kind": "calendarMonth"})["key"], "reason.noDataPrev")
+        self.assertEqual(_period.period_caption({**no_data, "dataCyclesCur": 0}, {"days": 31, "kind": "calendarMonth"})["key"], "reason.noDataCur")
+
+    def test_the_compare_result_carries_the_rounds_with_data(self):
+        from bff.screens._compare import to_compare_result
+        item = {"metric": "citations_per_answer", "unit": "pct", "prev": {"num": 0, "den": 0}, "cur": {"num": 5, "den": 2}, "delta": None,
+                "suppressed": True, "reason": "no_data", "cycles_prev": 1, "cycles_cur": 2, "data_cycles_cur": 2}
+        self.assertEqual(to_compare_result(item)["dataCyclesCur"], 2)
+
+
 class Values(unittest.TestCase):
     def test_no_nan_or_infinity_on_empty_denominators(self):
         data = {"visibility": {"num": 0, "den": 0}, "share_of_voice": {"num": 0, "den": 0}, "sentiment": {"num": 0, "den": 0},

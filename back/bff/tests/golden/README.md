@@ -26,6 +26,7 @@ Changes since recording (additive, each derived only from functions pinned by ot
   bodies are the recorded answers, which hold no pinned rival, so no output changes.
 
 Deliberate changes (what the screen shows changed by decision):
+- 2026-11-02 Overview brand table with a closed period (score sheet defect: 2026-09 인용 점유율 +2.6 on the chip, −2.7 in the table). 당사's Δ is the period compare the card chip shows and the rivals' last-round Δ is left out. 10 cases (`fix-rn-matrix-02 · 03 · 04 · 05 · 06 · 10 · 11`, `live-rn-matrix-closed · month · week`): the own `trend` tape entry is replaced by the same query's recorded `kpi/compare` answer from another case, and the outputs follow.
 - 2026-10-28 citation URL country (the user's decision: Gold, not the legacy hard-coded catalog). The domain
   detail URL country is Gold's — the reader sends `urls[].country` = dim_url.owner_key → dim_owned_base.geo_code
   (contract DetailUrl.country) and the screen passes it on; the front web-geo catalog port

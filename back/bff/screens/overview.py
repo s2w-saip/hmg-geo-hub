@@ -52,7 +52,7 @@ from fastapi import HTTPException
 from bff import api
 from bff.access import reader_scope
 from bff.screens import screen, split_context
-from bff.screens._compare import fetch_period_compare_api
+from bff.screens._compare import fetch_period_compare_api, has_closed_period
 from bff.screens._competitors import (
     brand_key, candidate_brand_keys, competitor_row, to_competitor_brand_values, to_competitor_citation_domains,
 )
@@ -342,6 +342,12 @@ def select_period_result(compare: list[dict] | None, metric: str | None) -> dict
     return next((r for r in compare if r.get("metric") == metric), None)
 
 
+def period_delta(compare: list[dict] | None, kpi_key: str) -> float | None:
+    """The card chip's Δ of one KPI: none when the compare is suppressed or missing."""
+    r = select_period_result(compare, KPI_KEY_TO_COMPARE_METRIC.get(kpi_key))
+    return js_round(r["delta"] * 10) / 10 if r and not r.get("suppressed") and is_num(r.get("delta")) else None
+
+
 def caption_ctx(days: int | None, label_ctx: dict) -> dict:
     """`{ days: days ?? 0, ...labelCtx }`."""
     return {"days": days if days is not None else 0, **label_ctx}
@@ -473,13 +479,15 @@ def _mirror_pct(r: Any) -> float | None:
 def geo_metrics(own: dict, rival: dict | None) -> dict:
     def r(pick):
         return {"name": rival["brand"], "value": pick(rival["metrics"])} if rival else None
+    rival_citation = _mirror_pct(rival["metrics"].get("citation_share")) if rival else None
     return {
         "visibility": {"ours": _mirror_pct(own.get("visibility")), "rival": r(lambda m: _mirror_pct(m.get("visibility")))},
         "shareOfVoice": {"ours": _mirror_pct(own.get("share_of_voice")),
                          "rival": r(lambda m: _mirror_pct(m.get("share_of_voice")))},
         "sentiment": {"ours": _mirror_pct(own.get("sentiment")), "rival": r(lambda m: _mirror_pct(m.get("sentiment")))},
         "position": {"ours": rank_avg(own.get("position")), "rival": r(lambda m: rank_avg(m.get("position")))},
-        "citationShare": {"ours": _mirror_pct(own.get("citation_share")), "rival": None},
+        "citationShare": {"ours": _mirror_pct(own.get("citation_share")),
+                          "rival": {"name": rival["brand"], "value": rival_citation} if rival_citation is not None else None},
     }
 
 
@@ -928,7 +936,8 @@ TREND_DEGRADE_LABEL = "standardTrend:day"  # the old degrade label of the round 
 
 @screen("overview/brand-matrix")
 async def brand_matrix_screen(q) -> dict | None:
-    """Renewal brand x KPI table: 당사 (card values, trend Δ) and every card's compared competitors.
+    """Renewal brand x KPI table: 당사 (card values, trend Δ) and every card's compared competitors. With a closed
+    period 당사's Δ is the card chip's (the period before); the rivals have no such Δ, so their last-round Δ is left out.
     None when the summary is empty (the card shows the empty state); a failed summary is raised (the page
     shows the table's failure). `degraded` = the old labels of the parts that failed transiently — the
     competitor reads (COMPETITOR_LABELS order), then the trend — present only when one did (2026-10-29 metric
@@ -937,10 +946,15 @@ async def brand_matrix_screen(q) -> dict | None:
     filters = global_filters(sp)
     common = common_params(filters, "global")
     trend_failed = False
+    period = has_closed_period(filters)
 
     async def trend_or_none():
         nonlocal trend_failed
         try:
+            if period:
+                shape, _, _ = period_context(filters, today_of(_ctx))
+                return await fetch_period_compare_api(filters, common, {"surface": "global", "kind": shape["kind"],
+                                                                        "metrics": OVERVIEW_COMPARE_METRICS})
             return await load_live_trend(common, "global", OVERVIEW_TREND_METRICS, "day")
         except Exception as exc:  # noqa: BLE001
             if not is_transient(exc):
@@ -954,11 +968,17 @@ async def brand_matrix_screen(q) -> dict | None:
         return None
     kpis = to_mirror_kpis(summary["data"], summary["meta"])
     by_key = {k["key"]: k for k in kpis}
-    applied = {k["key"]: k for k in apply_trend_deltas(kpis, trend)}
+    if period:
+        deltas = {k: period_delta(trend, k) for k in OVERVIEW_KPI_KEYS}
+    else:
+        applied = {k["key"]: k for k in apply_trend_deltas(kpis, trend)}
+        deltas = {k: overview_card_state(applied.get(k))["delta"] for k in OVERVIEW_KPI_KEYS}
     own = {"label": own_label_of(filters),
-           "values": {k: overview_card_state(by_key.get(k))["value"] for k in OVERVIEW_KPI_KEYS},
-           "deltas": {k: overview_card_state(applied.get(k))["delta"] for k in OVERVIEW_KPI_KEYS}}
-    out = brand_matrix(own, {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS})
+           "values": {k: overview_card_state(by_key.get(k))["value"] for k in OVERVIEW_KPI_KEYS}, "deltas": deltas}
+    rivals = {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS}
+    if period:
+        rivals = {k: [{**m, "delta": None} for m in row] for k, row in rivals.items()}
+    out = brand_matrix(own, rivals)
     failed = [*degraded, *([TREND_DEGRADE_LABEL] if trend_failed else [])]
     if failed:
         out["degraded"] = failed

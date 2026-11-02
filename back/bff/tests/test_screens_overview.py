@@ -426,6 +426,37 @@ def compare_body(cycles: dict) -> dict:
     return {"data": [compare_item(m, u, cycles.get(m, (3, 3))) for m, u in units.items()], "meta": META}
 
 
+class BrandMatrixPeriodDelta(unittest.TestCase):
+    """Global score sheet (2026-11-02): with 2026-09 picked, 인용 점유율 read +2.6 on the card chip (the month before) and
+    −2.7 in the brand table (the last two rounds). A Δ next to a period total compares it with the period before."""
+
+    def test_the_own_row_takes_the_compare_the_chip_shows(self):
+        bodies = {**BrandMatrixFailures.BODIES, "kpi/compare": compare_body({})}
+        out = screen("overview/brand-matrix", "time=2026-09-01..2026-09-30", Router(bodies))
+        own = out["rows"][0]["cells"]
+        self.assertEqual(own["citationShare"]["delta"], 10.0)
+        self.assertEqual(own["visibility"]["delta"], 10.0)
+
+    def test_a_suppressed_compare_leaves_no_delta(self):
+        body = compare_body({})
+        body = {**body, "data": [{**i, "suppressed": True, "reason": "no_prev"} for i in body["data"]]}
+        out = screen("overview/brand-matrix", "time=2026-09-01..2026-09-30", Router({**BrandMatrixFailures.BODIES, "kpi/compare": body}))
+        self.assertIsNone(out["rows"][0]["cells"]["citationShare"]["delta"])
+
+
+class GeoRivalCitation(unittest.TestCase):
+    """Global score sheet (2026-11-02): the market table's 인용 점유율 tab showed '—' for the rival on all 58 rows."""
+
+    def test_the_rival_carries_its_citation_share(self):
+        rival = {"brand": "Toyota", "metrics": {"citation_share": {"num": 2, "den": 100}}}
+        self.assertEqual(ov.geo_metrics({"citation_share": {"num": 10, "den": 100}}, rival)["citationShare"]["rival"],
+                         {"name": "Toyota", "value": 2.0})
+
+    def test_no_value_is_no_rival_cell(self):
+        rival = {"brand": "Toyota", "metrics": {"citation_share": None}}
+        self.assertIsNone(ov.geo_metrics({}, rival)["citationShare"]["rival"])
+
+
 class CompareLabels(unittest.TestCase):
     """Renewal audit 3-4 · 3-5 (2026-10-31). The renewal Overview header named compare[0]'s label for every card, though
     a window compare counts its rounds per metric (현재 3회차 / 직전 0회차 on one card, 2 / 1 on the next); the website

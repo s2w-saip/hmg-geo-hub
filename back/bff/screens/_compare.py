@@ -52,7 +52,7 @@ def legacy_compare_delta(unit: str | None, prev: float | None, cur: float | None
     return ((cur - prev) / prev) * 100
 
 
-_ITEM_FIELDS = (("cyclesPrev", "cycles_prev"), ("cyclesCur", "cycles_cur"), ("plannedPrev", "planned_prev"),
+_ITEM_FIELDS = (("cyclesPrev", "cycles_prev"), ("cyclesCur", "cycles_cur"), ("dataCyclesCur", "data_cycles_cur"), ("plannedPrev", "planned_prev"),
                 ("plannedCur", "planned_cur"), ("missingSharePrev", "missing_share_prev"),
                 ("missingShareCur", "missing_share_cur"))
 

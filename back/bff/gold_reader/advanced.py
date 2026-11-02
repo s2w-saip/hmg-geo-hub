@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from bff.gold_reader.citations import predicate as citation_predicate
 from bff.gold_reader.context import BRAND_NAMES, Context, SQL, envelope, flag, rank_avg, ratio
 from bff.gold_reader.metrics import COUNTS, TYPES, brand_rows, counts, metric_values
 
@@ -18,13 +19,23 @@ async def geo(ctx: Context) -> dict:
     bs = await brand_rows(ctx, by_country=True, extras=frozenset())
     dimensions = {r["geo_key"]: dict(r) for r in await ctx.conn.fetch("""SELECT c.*,r.code AS area
         FROM gold.dim_country c LEFT JOIN gold.dim_region r USING(region_key)""")}
+    # Each competitor's official sources per country, the sources the card's competitor citation share counts.
+    b = SQL()
+    where = citation_predicate(ctx, b)
+    rival_cited = defaultdict(int)
+    for r in await ctx.conn.fetch(f"""WITH a AS (SELECT f.geo_key,f.source_key,count(*)::int AS citations
+        FROM gold.citation_fact f WHERE {where} GROUP BY f.geo_key,f.source_key)
+        SELECT a.geo_key,br.name,sum(a.citations)::int AS citations FROM a JOIN gold.dim_source s USING(source_key)
+        JOIN gold.dim_category c ON c.category_key=s.category_key JOIN gold.dim_brand br ON br.brand_key=s.competitor_brand_key
+        WHERE c.slug='officialCompetitor' GROUP BY a.geo_key,br.name""", *b.args):
+        rival_cited[(r["geo_key"], r["name"])] = r["citations"]
     def row_metrics(c):
         return {k: v for k, v in metric_values(c).items() if k in {"visibility", "share_of_voice", "sentiment", "position", "citation_share"}}
-    def rival_view(r, total):
+    def rival_view(r, total, cited):
         return {"brand": r["name"], "metrics": {"visibility": ratio(r["answers"], total["answers"]),
                 "share_of_voice": ratio(r["mentions"], total["total_mentions"]),
                 "sentiment": ratio(r["positive"], sum(r[k] for k in ("positive", "negative", "neutral", "mixed"))),
-                "position": rank_avg(r["rank_sum"], r["ranked"]), "citation_share": None}}
+                "position": rank_avg(r["rank_sum"], r["ranked"]), "citation_share": ratio(cited, total["cit_total"])}}
     regions = defaultdict(list)
     for c in cs:
         dim = dimensions[c["geo_key"]]
@@ -35,7 +46,7 @@ async def geo(ctx: Context) -> dict:
         row = {"code": dim["code"], "answers": c["answers"], "own": row_metrics(c),
                "rank": {"our": 1 + sum(r["mentions"] > c["own_mentions"] for r in rivals), "field_size": len(rivals) + 1},
                "top_own_brand": {"brand": ours[0]["name"], "share_of_voice": ratio(ours[0]["mentions"], c["total_mentions"])} if ours else None,
-               "top_rival": rival_view(rivals[0], c) if rivals else None}
+               "top_rival": rival_view(rivals[0], c, rival_cited[(c["geo_key"], rivals[0]["name"])]) if rivals else None}
         regions[dim["area"] or ""].append((row, c))
     markets = []
     region_totals = {}
@@ -68,7 +79,8 @@ async def geo(ctx: Context) -> dict:
             market["top_own_brand"] = {"brand": name, "share_of_voice": ratio(own[name], mention_total)}
         if rivals:
             rival = max(rivals.values(), key=lambda r: r["mentions"])
-            market["top_rival"] = rival_view(rival, region_totals[market["region_id"]])
+            market["top_rival"] = rival_view(rival, region_totals[market["region_id"]],
+                                             sum(rival_cited[(k, rival["name"])] for k in country_keys))
     return envelope(ctx, {"active_brand": ctx.label, "own_label": ctx.label, "markets": markets, "pending": []})
 
 

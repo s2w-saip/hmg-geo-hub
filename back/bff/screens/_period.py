@@ -383,7 +383,9 @@ def period_caption(r: dict, ctx: dict) -> dict:
         params = {"days": ctx["days"]} if "days" in ctx else {}
         return {"key": "reason.noPrevWindow", "params": params}
     if reason == "no_data":
-        cur_data = ctx.get("curDataCycles")
+        cur_data = r.get("dataCyclesCur")
+        if cur_data is None:
+            cur_data = ctx.get("curDataCycles")
         if cur_data is None:
             cur_data = (ctx.get("curLedger") or {}).get("dataCycles")
         if cur_data is None:
