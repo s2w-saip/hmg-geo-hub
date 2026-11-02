@@ -2,7 +2,71 @@
 
 이 파일은 할 일과 기록이다. 규칙의 정본은 `CLAUDE.md`(마스터 룰)다. 순서는 사용자가 2026-10-29에 정했고, 2026-10-30에 Website 화면을 앞에 두었다. 바꾸려면 먼저 사용자에게 묻는다.
 
-**지금 할 일:** Admin 5단계 '키워드 도구'(`/admin/keyword-tools`)는 계정 인계를 기다린다(⛔D, 2026-11-02 사용자: 키는 추후 받고, 호출 범위 · 비용 상한은 그 계정에 정해져 있다). 그동안 이 화면과 Global · Website AI Conversion은 메뉴에 열쇠 표시, 화면은 샘플 + 계정 안내 막이다(결정 기록 '계정 대기 화면', `3043512`). 6단계는 ⛔C(명세)를 기다린다. Admin 3 · 4단계(`/renewal/admin/standards/customer-interest` · `entities`)는 구현 · 시험 · e2e · 커밋을 마쳤고 사용자 확인을 기다린다('3.' · '4.' 절). 리뉴얼 점검 후속(1~16단계)과 Website 화면(W0~W6), Admin 2단계 남은 일도 사용자 확인을 기다린다(`f28395f` · `a36b835`). 그 뒤 남은 일은 '점검 후속 뒤 남은 일' 절에 모았다. 그 절의 2026-11-02 대전제 검수 첫 두 항목(Website Overview 모수 · ⑥ 정의)은 운영 웹(`hmg-geo.vercel.app`, 로그인 필요)과 대조한 뒤 고칠 방법을 사용자가 정한다. 같은 절의 '2026-11-02 인사이트 · 정확도 마지막 검수'(정의 2건 · 라벨 · 키 · 정렬 18건)는 고칠지를 사용자가 정한다.
+**지금 할 일:** 사용자 지시를 기다린다. 남은 일은 바로 아래 '할 일' 절에 모았다. 바로 할 수 있는 것은 1절 결함(F1~F4는 2026-11-02 마지막 검수의 18건)과 2절 인사이트 개선 후보다. 3절은 사용자 결정, 4절은 업스트림 · 계정, 5절은 사용자 확인을 기다린다. Admin은 5단계(⛔D) · 6단계(⛔C)에서 멈춰 있다.
+
+## 할 일
+
+2026-11-02 정리. 남은 일은 이 절이 전부다. 끝나면 줄을 지우고 진행 기록에 해시와 함께 적는다. 근거는 '근거 — 점검 · 검수 기록' 절의 같은 이름 묶음에 있다. Admin 단계(0 → 6)의 체크는 '단계' 절에서 한다.
+
+**1. 결함 — 사용자가 '고쳐' 하면 바로 한다** (데이터 · 화면 원칙 안이고 Gold 값은 그대로다. 버그 수정 규칙을 따른다.)
+
+| ID | 화면 | 할 일 | 근거 |
+|---|---|---|---|
+| F1 | Website Overview | 기간 증감 문구 '직전 n회차'가 조건의 측정 회차가 아니다 · ④ 분자 이름 · ⑤ 정의 문구 · 추이 머리 '최근 N회차'(기간 모드) · 엔진 선택지 고정(DeepSeek 없음) | 마지막 검수 |
+| F2 | Website Citation | 공식(당사) ⓘ와 프롬프트 하위 화면 제목을 Gold website 자사 정의(사이트 등록 URL · 하위 페이지 ∨ 타겟)로 | 마지막 검수 |
+| F3 | Website Mention | 시장 표 '선두 경쟁사'(실제는 언급 1위) 이름 · 점유율 히어로 2위 동률 정렬 · Top 3 ⓘ · 엔진 표 셋째 열 머리 · 주별 표 문구와 ⓘ · '답변 없는 시장' 수의 브랜드 필터 | 마지막 검수 |
+| F4 | Global | Overview 기간 모드 브랜드 비교 안내 · 툴팁 · 시장 표 인용 탭 '최대 경쟁사' 이름 · Prompts 상세 변경 이력 키 · 변경 이력 탭 500건 자르기 · ACR '가장 낮은' 문구 · ACR 선택지 회차 고정 · Mention 요약 '변화' 발견의 상위 10 추이 | 마지막 검수 |
+| F5 | 공통 문구 | 한국어 조사 '와' 고정(8곳) · Gold 권역 이름이 영어(`rhqLabel`) | 화면 · 코드 |
+| F6 | 공통 | en 회차 달력 key 중복 · 리뉴얼 사이드바와 원본 DashLayout의 hydration 불일치 | 화면 · 코드 |
+| F7 | Admin | 저장한 필터가 없는 화면 3개(인용 출처 분류 · 고객 관심 · 엔티티) · Global prompts 편집이 측정 종류 빈칸을 'single'로 채움(없는 값, 지금 0건) | Admin 화면 점검 · 화면 · 코드 |
+| F8 | 분석 화면 | 출처 카테고리 이름 · 순서를 HUB 코드표(`catalog.source_code`)에서 읽는다(지금은 코드 상수, 13개 같음) | 화면 · 코드 |
+| F9 | 작은 것 | 답변 원문 창 스탠스 '당사'의 이름 비교 · Overview 기간 모드 인용 순위의 card · live 섞임 · `published.ga4_*` 뷰의 `hmg_data_external` 권한 잔재 · `rn-sidebar.tsx`의 `max-lg` 모바일 잔재 | 대전제 검수 |
+| F10 | 정리 | `front/lib/kpi/period-compare*`와 그 시험 · 문구 키 3개 · 명세 사본의 억제 규칙 · `global-renewal-catalog.html` ACR 설명 · 점검 전부터 실패하는 원본 시험 3건 · 원본 Prompts 열람 범위 pill | 화면 · 코드 |
+| F11 | 확인 | 레거시 정보 의심 4건을 원본과 대조한다(Global 추이 수집 공백 음영 · 서랍 프롬프트 표 정렬 · 경쟁사 표 전체 · 미측정 회차 수 · Website 유형 구성 경쟁사 건수) | 대전제 검수 |
+
+**2. 인사이트 개선 후보 — 원칙 안, 사용자가 고르면 한다**
+
+| ID | 할 일 | 근거 |
+|---|---|---|
+| I1 | Website ⑥ · 자사 · 타겟 URL의 '증감 미제공'을 Gold `url_prompt_cell`의 회차 · 기간 값으로 채운다 | 마지막 검수 |
+| I2 | Citation 엔진 발견 · 매트릭스 엔진 열에 측정 프롬프트 수 · 국가를 붙인다(DeepSeek은 CN 284개뿐) | 마지막 검수 |
+| I3 | Website Overview 출처 구성비 도메인 행에 Gold 자사 인용 수를 나란히 둔다(kia.com 83,061 중 37,559) | 마지막 검수 |
+| I4 | 리뉴얼이 더한 반복을 뺀다: Website Overview 요약 '인용 출처' 카드, 시장 표 경쟁사 인용 점유율 칸(39개국 중 37곳 0.0%) | 마지막 검수 |
+| I5 | 4칸 고정 발견: 값이 있는 발견을 순서 그대로 더 보인다(Website Citation '가장 크게 움직인 출처', Global Mention '순위 변화') | 마지막 검수 |
+| I6 | 레거시 통합(없애지 않음): Website Mention 언급 브랜드 수 · 키워드 수, Prompts 12,729 세 곳, Citation 8,815의 두 분모, Website Overview 엔진 일관성 배지 → 엔진 표 | 마지막 검수 |
+
+**3. 사용자 결정 — 값이 바뀌거나 새 원칙이 필요하다**
+
+| ID | 정할 것 | 근거 |
+|---|---|---|
+| D-1 | Website URL 인용률 · 모수 묶음. (a) Overview 모수 게이트(`web_report_prompt`) (b) ⑥ 정의(발행 시점 유닛 판정) (c) 자사 · 타겟 URL 인용률(Gold '율은 답변 수 합' 74.1 대 화면 88.0) (d) 발행값(`report_value`)을 읽지 않는데 늘 '범위 밖' 각주. (a) · (b)는 사용자가 운영 웹과 대조한 뒤 정하기로 했다(운영 계정 없음). | 대전제 검수 · 마지막 검수 |
+| D-2 | URL 수: 지금 `url_norm` 대 Gold 설명 `url_key`(Global 긍정 130,284 대 226,805). 업스트림 B6 | 마지막 검수 |
+| D-3 | 판단 필요 5건: Citation 매트릭스 '전체' 열 · ACR 기간 모드 Δ 없음 · Mention 요약 '{rank}위'(12개로 자른 표 안) · Website Overview 첫 요약의 '나빠진 것만' · AI Conversion 'coverage' 발견 늘 warn | 대전제 검수 |
+| D-4 | Global 점수표 판단 7건(머리 KPI 유형 섞임 · 우호도 5위 구성 효과 · 순위 변별 없음 · Overview · Mention 겹침 · 딜러 타일 · ACR 단절 · Prompts 미측정 503). Overview 첫 · 둘째 안은 하지 않기로 했다. | Global 점수표 · Overview 검증 |
+| D-5 | Mention 서랍: BFF 2,000행 요청 대 Gold 리더 상한 1,000 | 화면 · 코드 |
+| D-6 | Admin 고객 관심 › 소셜 결과 지도(Gold `ctx_*`)를 옮길지 | Admin 화면 점검 |
+| D-7 | ⛔I Project 화면을 어디에 둘지 | 결정 대기 |
+
+**4. 업스트림 · 외부 — 사용자가 보내거나 받는다**
+
+| ID | 기다리는 것 | 풀리면 할 일 |
+|---|---|---|
+| U1 | 업스트림 질문 초안 미발송(A1~A5 · B1~B8 · C1~C3 · D1~D8, `upstream-questions-2026-10-30.md`). 초안에 아직 없는 것: D6에 덧붙일 '율은 답변 수 합' 대 발행값 정의, Overview 라벨 정의(`brandPresence` · 리스트 유형) | 질문마다 '답에 따라 HUB가 할 일' |
+| U2 | ⛔H Gold `acr_cell_fact`의 website 행 | Website ACR(W5) |
+| U3 | ⛔D DataForSEO · OpenRouter 계정 | Admin 5 키워드 도구 |
+| U4 | GA4 계정 인계 | VM 수집 시작, AI Conversion 실제 숫자 대조, 직전 기간 빠진 날 '−'의 이유 안내 |
+| U5 | ⛔C 명세(운영 웹 화면 캡처 · 설명), 운영 웹 계정 | Admin 6, D-1 (a) · (b) 대조 |
+| U6 | 원본 운영 DB의 `standard_keywords` · `standard_sources` 행 | Admin 3 이관, 수집 소스 채널 값 |
+| U7 | ACR 후속 P2 질문 발송, cell · fact family의 metric_version 혼재 | `acr-next-session.html` 2절 |
+
+**5. 사용자 확인 대기 — 끝난 작업**
+
+- Admin 2(`a36b835`) · 3(`53126de`) · 4(`bb34ac4`), 계정 대기 화면(`3043512`)
+- Website W0~W6(`f28395f`)과 그 뒤 개편: Website Prompts(`86884ed`), Website Mention(`3127b6b`)
+- 리뉴얼 점검 후속 1~16단계, Global Overview 0번(`77f0ec6`)
+- VM 반영(Admin 0 계정 관리 등)은 사용자가 정한다.
+
+**보류:** AI 가시성(메뉴 숨김, HUB 기준선 · 문턱이 많다). 메뉴를 다시 열 때 다룬다.
 
 ## 규칙 번호
 
@@ -179,74 +243,74 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 - 이 파일에서는 다음만 고친다: 결정 대기 J · K · L, 결정 기록, 진행 기록, '지금 할 일' 줄(16단계에서).
 - **2026-10-31 1~16단계를 모두 마쳤다.** 사용자 확인을 기다린다. 16단계에서 리뉴얼 · 원본을 같은 조건으로 대조했고(값 모두 같음), 전체 시험을 통과했다. 결과는 `renewal-audit.md` 단계 메모 '16단계'에 있다.
 
-## 점검 후속 뒤 남은 일
+## 근거 — 점검 · 검수 기록
 
-2026-10-31 점검 후속 16단계에서 모았다. 괄호 안은 근거가 있는 `renewal-audit.md` 단계 메모다. 순서는 정하지 않았다. 코드를 고치는 일은 버그 수정 규칙(재현 시험 → 수정 → 전후 비교)을 따른다.
+열린 일과 체크는 맨 위 '할 일' 절에만 둔다. 이 절은 그 근거이고, 끝난 줄은 '(끝)'으로 남긴다. 2026-10-31 점검 후속 16단계에서 모으기 시작했다. 괄호 안은 근거가 있는 `renewal-audit.md` 단계 메모다. 순서는 정하지 않았다. 코드를 고치는 일은 버그 수정 규칙(재현 시험 → 수정 → 전후 비교)을 따른다.
 
 **보류 (다시 열 때 다룬다)**
 
-- [ ] AI 가시성(`/renewal/standard/ai-funnel/visibility`): 메뉴에서 숨겼다. HUB가 만든 기준선 · 문턱이 많고 `rule_ver` · 원자료가 빠져 있다. 메뉴를 다시 열 때 다룬다(계획 16단계).
-- [ ] Website ACR: ⛔H. Gold `acr_cell_fact`에 website 행이 없다. 답이 오면 W5의 ACR을 만든다.
+- AI 가시성(`/renewal/standard/ai-funnel/visibility`): 메뉴에서 숨겼다. HUB가 만든 기준선 · 문턱이 많고 `rule_ver` · 원자료가 빠져 있다. 메뉴를 다시 열 때 다룬다(계획 16단계).
+- Website ACR: ⛔H. Gold `acr_cell_fact`에 website 행이 없다. 답이 오면 W5의 ACR을 만든다.
 
 **화면 · 코드**
 
-- [ ] 한국어 화면에서 Gold 대륙 권역 이름(Asia · Europe · Latin America · Middle East · North America · Oceania 등)이 영어로 보인다. `rhqLabel`이 HUB RHQ id만 번역해서다. 원본 · 리뉴얼이 같다(4단계).
-- [ ] 리뉴얼 사이드바 NavGroup `id`의 hydration 불일치(`_shell/rn-sidebar.tsx`, 5단계)와 원본 DashLayout의 hydration 불일치(6 · 7단계). Next 개발 오버레이에 가끔 뜬다. 16단계에 연 화면에서는 나지 않았다.
-- [ ] en 회차 달력(`components/renewal-ui/round-calendar.tsx`)이 요일 첫 글자('T' · 'S')를 key로 써서 key 중복 경고를 낸다(10단계). 16단계에도 `/en/renewal/dashboard`에서 났다.
-- [ ] AI Conversion: 직전 기간에만 빠진 날이 있으면 증감 칩이 이유 안내 없이 '−'다(12단계).
-- [ ] AI Conversion 실제 숫자 대조: 12 · 15단계는 로컬 DB에 GA4 속성이 없어 fixture로만 봤다. GA4 수집을 시작하면 리뉴얼 · 원본을 같은 조건으로 한 번 대조한다.
-- [ ] 원본 Prompts의 열람 범위 pill은 범위 계정에게 국가 목록 · '내 시장 기준' 안내를 보이지 않는다(원본 페이지 prop, 13단계). 리뉴얼은 보인다.
-- [ ] 한국어 조사: 비교 브랜드 이름 뒤 조사가 받침과 관계없이 '와'로 고정이다. 예: Website Mention 미국 '2위 Audio System와 +51.6pp', '비교에서 Audio System와 차이가 가장 작음'. 문구는 `renewal.acr` · `renewal.mention`의 8곳이다(16단계).
-- [ ] 레거시 정리: 페이지에서 닿지 않는 `front/lib/kpi/period-compare*`(기간 비교 억제 규칙)와 그 시험, 문구 키 3개(`periodCompare.reason.missingShare` · `startWindow` · `startMonth`). 명세 사본 `docs/spec/api/m-kpi.html` · `docs/spec/functional-spec.html` · `docs/design/api/전체-통합.md`의 억제 규칙도 남아 있다(`모듈-KPI.md` K-2는 고침, 14단계).
-- [ ] 문서: `docs/catalog/global-renewal-catalog.html`의 ACR 지도 설명('평균선 아래 = …')은 15단계 전 화면 기준이다.
-- [ ] 점검 전(`1a7dd8b`)부터 실패하는 원본 시험 3건: `(dash)/dashboard/_components/period-delta-off-parity.render.test.tsx` 2건(3단계), `(dash)/projects/[id]/project-gate.test.ts` 1건(demo project, gap G16, 16단계).
-- [x] Global Citation 자사 판정이 국가 · 언어 필터에서 Gold 정의와 다르다. 리더 `gold_reader/citations.py` `own_citation`은 Gold `dim_owned_base`의 관점 브랜드 베이스를 모두 자사로 보고, Gold 표 설명의 규칙은 요청 국가 → 언어로 더 좁힌다. 국가 미국(2026-10-05)에서 자사 인용 3,288건(화면 9.5%) 대 2,224건(약 6.4%)이고, 필터 없음에서는 같다. 버그 수정 규칙을 따른다(`kpi-data-lineage.html` 2절). 2026-10-31 고쳤다(`9dbd27d`). 리더 `owned_bases`가 Gold 규칙대로 허용 배열을 만든다. 관점 베이스에서 요청 국가 geo_code로, 다시 요청 언어로 좁히고, 좁힌 결과가 비면 그 단계는 건너뛴다. 도메인 표 · 프롬프트 분할 · 도메인 상세가 모두 이 배열을 쓴다. 미국은 2,226건(6.4%)으로 Gold `kpi_cell.cit_owned_c`와 같다. 미국+독일 · en · 미국+es도 `citation_cell` 허용 배열 합과 같다. 필터 없음은 그대로다.
-- [ ] 분석 화면의 출처 카테고리 이름 · 순서는 코드 상수(`_query.py` `CITATION_CATEGORY_SLUGS` · `taxonomy.ts` · 문구 `citationCategories`)다. HUB 정본 코드표(`catalog.source_code`)를 고쳐도 분석 화면 이름은 바뀌지 않는다. 지금 13개는 같다(`kpi-data-lineage.html` 2절).
-- [ ] Admin › Global prompts 편집은 Gold 측정 종류가 비면 'single'로 채운다(`catalog_editor.py`). Global Prompts는 13단계에서 이 규칙을 뺐다. 지금 빈 값은 0건이다.
-- [ ] Mention 서랍 목록은 BFF가 2,000행을 청해도 Gold 리더 `limit` 상한 1,000에서 끊긴다(화면은 '1,000 / 전체' 안내). 상한을 맞출지 정한다.
+- 한국어 화면에서 Gold 대륙 권역 이름(Asia · Europe · Latin America · Middle East · North America · Oceania 등)이 영어로 보인다. `rhqLabel`이 HUB RHQ id만 번역해서다. 원본 · 리뉴얼이 같다(4단계).
+- 리뉴얼 사이드바 NavGroup `id`의 hydration 불일치(`_shell/rn-sidebar.tsx`, 5단계)와 원본 DashLayout의 hydration 불일치(6 · 7단계). Next 개발 오버레이에 가끔 뜬다. 16단계에 연 화면에서는 나지 않았다.
+- en 회차 달력(`components/renewal-ui/round-calendar.tsx`)이 요일 첫 글자('T' · 'S')를 key로 써서 key 중복 경고를 낸다(10단계). 16단계에도 `/en/renewal/dashboard`에서 났다.
+- AI Conversion: 직전 기간에만 빠진 날이 있으면 증감 칩이 이유 안내 없이 '−'다(12단계).
+- AI Conversion 실제 숫자 대조: 12 · 15단계는 로컬 DB에 GA4 속성이 없어 fixture로만 봤다. GA4 수집을 시작하면 리뉴얼 · 원본을 같은 조건으로 한 번 대조한다.
+- 원본 Prompts의 열람 범위 pill은 범위 계정에게 국가 목록 · '내 시장 기준' 안내를 보이지 않는다(원본 페이지 prop, 13단계). 리뉴얼은 보인다.
+- 한국어 조사: 비교 브랜드 이름 뒤 조사가 받침과 관계없이 '와'로 고정이다. 예: Website Mention 미국 '2위 Audio System와 +51.6pp', '비교에서 Audio System와 차이가 가장 작음'. 문구는 `renewal.acr` · `renewal.mention`의 8곳이다(16단계).
+- 레거시 정리: 페이지에서 닿지 않는 `front/lib/kpi/period-compare*`(기간 비교 억제 규칙)와 그 시험, 문구 키 3개(`periodCompare.reason.missingShare` · `startWindow` · `startMonth`). 명세 사본 `docs/spec/api/m-kpi.html` · `docs/spec/functional-spec.html` · `docs/design/api/전체-통합.md`의 억제 규칙도 남아 있다(`모듈-KPI.md` K-2는 고침, 14단계).
+- 문서: `docs/catalog/global-renewal-catalog.html`의 ACR 지도 설명('평균선 아래 = …')은 15단계 전 화면 기준이다.
+- 점검 전(`1a7dd8b`)부터 실패하는 원본 시험 3건: `(dash)/dashboard/_components/period-delta-off-parity.render.test.tsx` 2건(3단계), `(dash)/projects/[id]/project-gate.test.ts` 1건(demo project, gap G16, 16단계).
+- (끝) Global Citation 자사 판정이 국가 · 언어 필터에서 Gold 정의와 다르다. 리더 `gold_reader/citations.py` `own_citation`은 Gold `dim_owned_base`의 관점 브랜드 베이스를 모두 자사로 보고, Gold 표 설명의 규칙은 요청 국가 → 언어로 더 좁힌다. 국가 미국(2026-10-05)에서 자사 인용 3,288건(화면 9.5%) 대 2,224건(약 6.4%)이고, 필터 없음에서는 같다. 버그 수정 규칙을 따른다(`kpi-data-lineage.html` 2절). 2026-10-31 고쳤다(`9dbd27d`). 리더 `owned_bases`가 Gold 규칙대로 허용 배열을 만든다. 관점 베이스에서 요청 국가 geo_code로, 다시 요청 언어로 좁히고, 좁힌 결과가 비면 그 단계는 건너뛴다. 도메인 표 · 프롬프트 분할 · 도메인 상세가 모두 이 배열을 쓴다. 미국은 2,226건(6.4%)으로 Gold `kpi_cell.cit_owned_c`와 같다. 미국+독일 · en · 미국+es도 `citation_cell` 허용 배열 합과 같다. 필터 없음은 그대로다.
+- 분석 화면의 출처 카테고리 이름 · 순서는 코드 상수(`_query.py` `CITATION_CATEGORY_SLUGS` · `taxonomy.ts` · 문구 `citationCategories`)다. HUB 정본 코드표(`catalog.source_code`)를 고쳐도 분석 화면 이름은 바뀌지 않는다. 지금 13개는 같다(`kpi-data-lineage.html` 2절).
+- Admin › Global prompts 편집은 Gold 측정 종류가 비면 'single'로 채운다(`catalog_editor.py`). Global Prompts는 13단계에서 이 규칙을 뺐다. 지금 빈 값은 0건이다.
+- Mention 서랍 목록은 BFF가 2,000행을 청해도 Gold 리더 `limit` 상한 1,000에서 끊긴다(화면은 '1,000 / 전체' 안내). 상한을 맞출지 정한다.
 
 **`CLAUDE.md`에서 옮긴 일** (2026-11-02, 마스터 룰 적용 때 문구 그대로)
 
-- [x] **P4 ACR 차종 전환율 분모 중복 확인** — 2026-10-28 완료. Gold 기준 영향 없음, 수정 없음. 결과는 `docs/handoff/p4-acr-model-denominator.html` 머리 배너.
-- [ ] **ACR 후속** — `docs/handoff/acr-next-session.html` 2절. 2026-10-29 두 번째 세션에서 P1(회차 간 비교 막기)·P3(후보→선택 전환, 결선 맞대결)·P5(리더 SQL 집계)를 끝내 푸시했다(첫 세션 `341a09e`, 두 번째 세션 `2dfb8ef`). 같은 날 사용자 최종 결정으로 회차 간 비교를 다시 열고 숨김 코드도 지웠다. 추이·Δ·기간 합산을 리뉴얼·기존 화면 모두 보인다. 측정 방식·범위가 매주 달라질 수 있어도 그건 화면 사용자가 감수할 일이다. 숨기거나 경고하지 않는다. P2 업스트림 질문은 사용자가 보낸다. 미결: cell·fact family의 metric_version 혼재(Mention·Citation 추이).
-- [ ] **GA4 수집 시작** — 2026-10-29 리뉴얼 AI Conversion 화면과 GA4 수집기(`back/analytics/ga4_collect.py`)를 만들었다. 수집기는 GA4 Data API를 직접 읽어 HUB 데이터 DB `analytics.ga4_*`에 쌓고, 화면은 그 DB만 읽는다. 수집할 속성은 리뉴얼 Admin › GA4 연동(`/renewal/admin/ga4`, 데이터 DB `analytics.ga4_registry`)에서 등록한다(2026-10-29, 파일 등록부는 없앰). GA4 계정 인계 뒤 VM에서 돌린다(사용자 결정: production·dev build가 HUB DB 하나를 같이 씀, production은 cron `vm.sh ga4-cron`, dev는 수동 `vm.sh ga4 …`). 순서와 남은 일은 `docs/handoff/p4-acr-model-denominator.html` 7-3절 13~18번.
+- (끝) **P4 ACR 차종 전환율 분모 중복 확인** — 2026-10-28 완료. Gold 기준 영향 없음, 수정 없음. 결과는 `docs/handoff/p4-acr-model-denominator.html` 머리 배너.
+- **ACR 후속** — `docs/handoff/acr-next-session.html` 2절. 2026-10-29 두 번째 세션에서 P1(회차 간 비교 막기)·P3(후보→선택 전환, 결선 맞대결)·P5(리더 SQL 집계)를 끝내 푸시했다(첫 세션 `341a09e`, 두 번째 세션 `2dfb8ef`). 같은 날 사용자 최종 결정으로 회차 간 비교를 다시 열고 숨김 코드도 지웠다. 추이·Δ·기간 합산을 리뉴얼·기존 화면 모두 보인다. 측정 방식·범위가 매주 달라질 수 있어도 그건 화면 사용자가 감수할 일이다. 숨기거나 경고하지 않는다. P2 업스트림 질문은 사용자가 보낸다. 미결: cell·fact family의 metric_version 혼재(Mention·Citation 추이).
+- **GA4 수집 시작** — 2026-10-29 리뉴얼 AI Conversion 화면과 GA4 수집기(`back/analytics/ga4_collect.py`)를 만들었다. 수집기는 GA4 Data API를 직접 읽어 HUB 데이터 DB `analytics.ga4_*`에 쌓고, 화면은 그 DB만 읽는다. 수집할 속성은 리뉴얼 Admin › GA4 연동(`/renewal/admin/ga4`, 데이터 DB `analytics.ga4_registry`)에서 등록한다(2026-10-29, 파일 등록부는 없앰). GA4 계정 인계 뒤 VM에서 돌린다(사용자 결정: production·dev build가 HUB DB 하나를 같이 씀, production은 cron `vm.sh ga4-cron`, dev는 수동 `vm.sh ga4 …`). 순서와 남은 일은 `docs/handoff/p4-acr-model-denominator.html` 7-3절 13~18번.
 
 **2026-11-02 대전제 검수에서 나온 일**
 
 사용자 요청으로 Global · Website를 규칙 5 · 7에 대조했다. 값이 바뀌는 첫 두 항목은 고칠 방법을 사용자가 정한다. 사용자가 먼저 운영 웹과 대조하자고 했다. 운영 웹은 이메일 · 비밀번호 로그인이 필요하고 이 저장소에 운영 계정이 없어 아직 보지 못했다(2026-11-02).
 
-- [ ] Website Overview 모수가 Gold 정의와 다르다. `web_report_prompt` 설명은 카드 ①~⑤ · 증감 · 기간 칩 · 엔진 배지 · 추이 · 시장 GEO · 출처 구성비(기간 없음)의 모수를 '보고 유닛 소속 ∧ 제외 유닛(`web_unit.excluded`, file_seq 71 · 94 · 97) 아님'으로 정한다. 리더는 `kpi_cell` population 8 · 9만 읽고 이 게이트가 없다(`gold_reader/context.py` `population`, BFF에 이 표를 읽는 코드 0건). 옛 구현 `back/app/core/measure.py` `web_unit_pred`에는 있다. 10-09 필터 없음 답변 20,216 → 19,400, 노출률 88.0 → 88.9, 미국 704 → 602 · 57.2 → 50.0(따로 다시 세어 같음). 원본 `/website`도 같은 BFF라 원본 대조로는 잡히지 않았다. `kpi_cell`에 이 모수가 없어, 사실 표를 읽거나 Gold에 population을 요청해야 한다.
-- [ ] Website Overview ⑥ AI 타겟 출처 인용률의 정의가 Gold와 다르다. Gold는 기간 없는 카드 · 추이를 발행 시점 유닛 판정(`pub_cell_web.unit_owned` · `unit_target`)으로 센다고 적고, `url_prompt_cell` 설명은 이 정의를 셀로 내지 않는다고 적는다. 화면은 `url_prompt_cell` population 4다. 10-09 65.3%(Δ +1.4) 대 유닛 판정 89.6%(13,041 / 14,561, Δ −0.5). W1의 '카드와 Δ를 같게' 결정은 이 Gold 정의와 대조하지 않았다. 기간을 고른 ⑥(`web_target_url`)은 확인하지 못했다.
-- [x] Mention 트리맵 묶음 타일의 Δ · 색이 일부 브랜드 Δ의 합이다(`mention_renewal.py` `_group_of`, 안내는 hover뿐). 기본 조건 Global 12타일 중 6개(VW 8개 중 2개 등), Website 2타일 모두. '부분합 금지'(W6 · 12단계)와 어긋난다. 2026-11-02 고쳤다(`b013b8b`). 원인은 Δ를 상위 경쟁사 10개까지만 읽는 KPI 브랜드 추이에서 가져온 것이다. 회차 모드의 `mention/rn-ranking`이 모든 브랜드의 점유율 추이(`load_brand_share_lines`)를 읽고, 그래도 Δ가 빠진 구성원이 있는 묶음은 Δ를 내지 않는다(회색 + 이유). 기본 조건 부분합 타일 Global 6 → 0, Website 2 → 0이고, 순위표 Δ도 752 / 752행 · 436 / 436행으로 찼다. 기간 모드 '그 외'만 직전 기간에 없던 브랜드 때문에 Δ가 없다.
-- [x] Website Prompts 국가 축이 다른 화면과 다르다. 리더는 `dim_project.site_geo_key`, 다른 화면은 답변 국가다. SA-Jeddah 0 · SA-Riyadh 0 · SA-Dammam 246개 대 Mention 측정 프롬프트 93 · 84 · 69개. 2026-11-02 고쳤다(`0e69ace`). 다른 화면과 같아야 맞았다. Genesis 사우디 프로젝트(`project_key` 129)는 `site_geo_key`가 SA-Dammam 하나지만 프롬프트는 도시별 사이트(`genesis.com/sa-jeddah/…` · `sa-riyadh` · `sa-dammam`)를 겨누고, Gold 셀과 필터 선택지에는 세 도시가 있다. 리더가 `job_index`에서 사이트 국가와 다르게 측정된 프롬프트를 먼저 읽어 그 국가를 쓴다. 목록 12,729개 모두 측정 국가가 하나이고 달라진 것은 177개뿐이다. SA-Dammam 246 → 69, Jeddah 0 → 93, Riyadh 0 → 84개로 Mention과 같다. 원본 `/website/prompts`도 같은 리더라 같이 바뀌었다. 쿼리 안 CTE로 읽으면 job 스캔이 병렬로 돌지 못해(0.2 → 0.9초) 먼저 읽어 값으로 넘긴다(국가 필터 약 0.4초). 명세 `m-prompts.html` · `P-1-프롬프트-카탈로그.json`도 고쳤다.
-- [x] HUB가 정한 좋음 · 나쁨: Citation 발견 typeGap(추천 · 단순 언급 짝을 고정하고 warn/good, `citation_model.py`), 경쟁사 Δ 색(ACR 브랜드 표 · Overview 브랜드 표 · Citation 도메인 범프, Mention 순위표도 빠져 있었다), 프롬프트 하위 화면 머리 문구 '강점과 기회 영역'. 2026-11-02 고쳤다(`0e69ace`). typeGap은 값을 두고 `info`만 쓴다. 경쟁사 Δ는 화살표만 두고 회색이다. 리뉴얼 문구는 `renewal.citation.sub.promptsDescription`이고 원본 화면 문구는 그대로다. Mention 트리맵의 경쟁사 타일 초록 · 빨강은 범례가 있는 증감 인코딩이라 그대로 뒀다.
-- [ ] 판단이 필요한 것: Citation 출처 선호 매트릭스의 '전체' 열(⛔L 목록 밖 HUB 기준선, 유형 축은 중복 계상), ACR 기간 모드에 Δ 없음(`acr.py` `show_delta`), Mention 요약 '{rank}위'(경쟁사 12개로 자른 표 안 순위, 최대 13위), Website Overview 첫 요약 카드의 '나빠진 것만 목록'(`website-findings.ts`), ACR 차종 발견의 '가장 낮은'(상위 12행 안 최저), AI Conversion 'coverage' 발견의 늘 warn.
-- [x] 레거시 정보: 우선 노출도 회차별 순위 답변 수(툴팁 · 표 · CSV), Mention '당사 = …' 칩 · 우호도 감정 신호 칩, 우선 노출도 '상위 N%'. 2026-11-02 되살렸다(`b013b8b`). '당사 = …' 칩은 숨김 클래스 말고도 조건이 문제였다. 당사가 한 행(R1)이라 표시 조건 '브랜드 2개 이상'을 못 채웠고, 이제 리더 `own.brands`로 센다.
-- [ ] 레거시 정보 의심(아직 확인 안 함): Global 추이의 수집 공백 음영, 서랍 프롬프트 표 정렬, 경쟁사 표 전체 · 미측정 회차 수, Website 유형 구성의 경쟁사 건수.
-- [ ] 작은 것: 답변 원문 창 스탠스의 '당사'가 이름 비교다(`answers.py`, 2% 표본 1만6천여 행 중 6행 'Hyundai N'만 다름). Overview 기간 모드의 인용 순위는 당사 card · 경쟁사 live를 견준다(2026-09 당사 23.3% 대 23.1%, 경쟁사 최고 2.2%, 순위 영향 없음). `published.ga4_*` 뷰가 미개방 역할 `hmg_data_external`에 남아 있다(규칙 5 '외부로 안 나감'과 어긋나는 잔재, 127.0.0.1 · 프로젝트별 승인 전이라 지금 나가지 않음). 셸 `rn-sidebar.tsx`의 `max-lg` 서랍은 모바일 잔재다.
+- Website Overview 모수가 Gold 정의와 다르다. `web_report_prompt` 설명은 카드 ①~⑤ · 증감 · 기간 칩 · 엔진 배지 · 추이 · 시장 GEO · 출처 구성비(기간 없음)의 모수를 '보고 유닛 소속 ∧ 제외 유닛(`web_unit.excluded`, file_seq 71 · 94 · 97) 아님'으로 정한다. 리더는 `kpi_cell` population 8 · 9만 읽고 이 게이트가 없다(`gold_reader/context.py` `population`, BFF에 이 표를 읽는 코드 0건). 옛 구현 `back/app/core/measure.py` `web_unit_pred`에는 있다. 10-09 필터 없음 답변 20,216 → 19,400, 노출률 88.0 → 88.9, 미국 704 → 602 · 57.2 → 50.0(따로 다시 세어 같음). 원본 `/website`도 같은 BFF라 원본 대조로는 잡히지 않았다. `kpi_cell`에 이 모수가 없어, 사실 표를 읽거나 Gold에 population을 요청해야 한다.
+- Website Overview ⑥ AI 타겟 출처 인용률의 정의가 Gold와 다르다. Gold는 기간 없는 카드 · 추이를 발행 시점 유닛 판정(`pub_cell_web.unit_owned` · `unit_target`)으로 센다고 적고, `url_prompt_cell` 설명은 이 정의를 셀로 내지 않는다고 적는다. 화면은 `url_prompt_cell` population 4다. 10-09 65.3%(Δ +1.4) 대 유닛 판정 89.6%(13,041 / 14,561, Δ −0.5). W1의 '카드와 Δ를 같게' 결정은 이 Gold 정의와 대조하지 않았다. 기간을 고른 ⑥(`web_target_url`)은 확인하지 못했다.
+- (끝) Mention 트리맵 묶음 타일의 Δ · 색이 일부 브랜드 Δ의 합이다(`mention_renewal.py` `_group_of`, 안내는 hover뿐). 기본 조건 Global 12타일 중 6개(VW 8개 중 2개 등), Website 2타일 모두. '부분합 금지'(W6 · 12단계)와 어긋난다. 2026-11-02 고쳤다(`b013b8b`). 원인은 Δ를 상위 경쟁사 10개까지만 읽는 KPI 브랜드 추이에서 가져온 것이다. 회차 모드의 `mention/rn-ranking`이 모든 브랜드의 점유율 추이(`load_brand_share_lines`)를 읽고, 그래도 Δ가 빠진 구성원이 있는 묶음은 Δ를 내지 않는다(회색 + 이유). 기본 조건 부분합 타일 Global 6 → 0, Website 2 → 0이고, 순위표 Δ도 752 / 752행 · 436 / 436행으로 찼다. 기간 모드 '그 외'만 직전 기간에 없던 브랜드 때문에 Δ가 없다.
+- (끝) Website Prompts 국가 축이 다른 화면과 다르다. 리더는 `dim_project.site_geo_key`, 다른 화면은 답변 국가다. SA-Jeddah 0 · SA-Riyadh 0 · SA-Dammam 246개 대 Mention 측정 프롬프트 93 · 84 · 69개. 2026-11-02 고쳤다(`0e69ace`). 다른 화면과 같아야 맞았다. Genesis 사우디 프로젝트(`project_key` 129)는 `site_geo_key`가 SA-Dammam 하나지만 프롬프트는 도시별 사이트(`genesis.com/sa-jeddah/…` · `sa-riyadh` · `sa-dammam`)를 겨누고, Gold 셀과 필터 선택지에는 세 도시가 있다. 리더가 `job_index`에서 사이트 국가와 다르게 측정된 프롬프트를 먼저 읽어 그 국가를 쓴다. 목록 12,729개 모두 측정 국가가 하나이고 달라진 것은 177개뿐이다. SA-Dammam 246 → 69, Jeddah 0 → 93, Riyadh 0 → 84개로 Mention과 같다. 원본 `/website/prompts`도 같은 리더라 같이 바뀌었다. 쿼리 안 CTE로 읽으면 job 스캔이 병렬로 돌지 못해(0.2 → 0.9초) 먼저 읽어 값으로 넘긴다(국가 필터 약 0.4초). 명세 `m-prompts.html` · `P-1-프롬프트-카탈로그.json`도 고쳤다.
+- (끝) HUB가 정한 좋음 · 나쁨: Citation 발견 typeGap(추천 · 단순 언급 짝을 고정하고 warn/good, `citation_model.py`), 경쟁사 Δ 색(ACR 브랜드 표 · Overview 브랜드 표 · Citation 도메인 범프, Mention 순위표도 빠져 있었다), 프롬프트 하위 화면 머리 문구 '강점과 기회 영역'. 2026-11-02 고쳤다(`0e69ace`). typeGap은 값을 두고 `info`만 쓴다. 경쟁사 Δ는 화살표만 두고 회색이다. 리뉴얼 문구는 `renewal.citation.sub.promptsDescription`이고 원본 화면 문구는 그대로다. Mention 트리맵의 경쟁사 타일 초록 · 빨강은 범례가 있는 증감 인코딩이라 그대로 뒀다.
+- 판단이 필요한 것: Citation 출처 선호 매트릭스의 '전체' 열(⛔L 목록 밖 HUB 기준선, 유형 축은 중복 계상), ACR 기간 모드에 Δ 없음(`acr.py` `show_delta`), Mention 요약 '{rank}위'(경쟁사 12개로 자른 표 안 순위, 최대 13위), Website Overview 첫 요약 카드의 '나빠진 것만 목록'(`website-findings.ts`), ACR 차종 발견의 '가장 낮은'(상위 12행 안 최저), AI Conversion 'coverage' 발견의 늘 warn.
+- (끝) 레거시 정보: 우선 노출도 회차별 순위 답변 수(툴팁 · 표 · CSV), Mention '당사 = …' 칩 · 우호도 감정 신호 칩, 우선 노출도 '상위 N%'. 2026-11-02 되살렸다(`b013b8b`). '당사 = …' 칩은 숨김 클래스 말고도 조건이 문제였다. 당사가 한 행(R1)이라 표시 조건 '브랜드 2개 이상'을 못 채웠고, 이제 리더 `own.brands`로 센다.
+- 레거시 정보 의심(아직 확인 안 함): Global 추이의 수집 공백 음영, 서랍 프롬프트 표 정렬, 경쟁사 표 전체 · 미측정 회차 수, Website 유형 구성의 경쟁사 건수.
+- 작은 것: 답변 원문 창 스탠스의 '당사'가 이름 비교다(`answers.py`, 2% 표본 1만6천여 행 중 6행 'Hyundai N'만 다름). Overview 기간 모드의 인용 순위는 당사 card · 경쟁사 live를 견준다(2026-09 당사 23.3% 대 23.1%, 경쟁사 최고 2.2%, 순위 영향 없음). `published.ga4_*` 뷰가 미개방 역할 `hmg_data_external`에 남아 있다(규칙 5 '외부로 안 나감'과 어긋나는 잔재, 127.0.0.1 · 프로젝트별 승인 전이라 지금 나가지 않음). 셸 `rn-sidebar.tsx`의 `max-lg` 서랍은 모바일 잔재다.
 
 **2026-11-02 Admin 화면 점검에서 나온 일**
 
 사용자 요청으로 Admin 화면 10개를 1920×915에서 보고 폼 · 서랍 · 필터를 눌러 봤다. 바로 고친 것은 진행 기록(`f41a002`)에 있다. 아래는 남은 것이다.
 
-- [ ] 고객 관심 › 소셜 결과 지도. Gold `ctx_entity`(4,136) · `ctx_combination`(5,739) · `ctx_domain` · `ctx_evidence`에 2026-07-07 스냅샷 결과가 있고, 표 설명의 쓰임에 Admin Customer interest config의 표 · 상세 · 조합 표 · 소스 도메인이 있다. 원본 페이지는 `SocialScrapingFlow`에 데이터를 넘기지 않아 늘 빈 카드였고, 3단계 범위에서 뺐다('3 범위'). 리더는 `gold_reader/insights.py` `social`에 있다. 옮길지는 사용자가 정한다.
-- [ ] 저장한 필터가 없는 화면: 인용 출처 분류(교정 · 시드) · 고객 관심(키워드 · 소스) · 엔티티 카탈로그(`saved={null}`). 사용자 관리 · GA4 · 글로벌 프롬프트에는 있다. 화면 키를 `saved_filters.py` `PAGES` · `SavedFilterPage`에 더해야 한다.
-- [ ] 수집 소스의 실제 채널 값은 원본 운영 DB `standard_sources` 행에 있다(3단계 남은 일과 같음, 사용자 보유).
+- 고객 관심 › 소셜 결과 지도. Gold `ctx_entity`(4,136) · `ctx_combination`(5,739) · `ctx_domain` · `ctx_evidence`에 2026-07-07 스냅샷 결과가 있고, 표 설명의 쓰임에 Admin Customer interest config의 표 · 상세 · 조합 표 · 소스 도메인이 있다. 원본 페이지는 `SocialScrapingFlow`에 데이터를 넘기지 않아 늘 빈 카드였고, 3단계 범위에서 뺐다('3 범위'). 리더는 `gold_reader/insights.py` `social`에 있다. 옮길지는 사용자가 정한다.
+- 저장한 필터가 없는 화면: 인용 출처 분류(교정 · 시드) · 고객 관심(키워드 · 소스) · 엔티티 카탈로그(`saved={null}`). 사용자 관리 · GA4 · 글로벌 프롬프트에는 있다. 화면 키를 `saved_filters.py` `PAGES` · `SavedFilterPage`에 더해야 한다.
+- 수집 소스의 실제 채널 값은 원본 운영 DB `standard_sources` 행에 있다(3단계 남은 일과 같음, 사용자 보유).
 
 **2026-11-02 Global 데이터 점수표에서 나온 일**
 
 결과는 `docs/handoff/global-data-score.html`(205행)에 있다. 결함 15건은 2026-11-02 사용자 요청으로 모두 고쳤다(`97da2a0` · `38234bf` · `b805c7b` · `7a3875a` · `1d0a041`). 판단이 필요한 7건은 그 문서에 있고, 페이지별 인사이트 개선에서 사용자와 함께 다룬다. Overview부터 한 페이지씩 한다.
 
-- [x] Admin › 글로벌 프롬프트 '분류' 열이 비어 있었다. 2026-11-02 Admin 점검 때 '결함이 아니다'라고 한 답은 틀렸다. 2026-11-02 고쳤다(`1d0a041`). 목록 · 정렬 · 필터가 첫 번째 카탈로그 행의 값을 쓴다. 브랜드 행마다 값이 다른 프롬프트 115개는 첫 행 값으로 보인다.
+- (끝) Admin › 글로벌 프롬프트 '분류' 열이 비어 있었다. 2026-11-02 Admin 점검 때 '결함이 아니다'라고 한 답은 틀렸다. 2026-11-02 고쳤다(`1d0a041`). 목록 · 정렬 · 필터가 첫 번째 카탈로그 행의 값을 쓴다. 브랜드 행마다 값이 다른 프롬프트 115개는 첫 행 값으로 보인다.
 
 **2026-11-02 Overview 개선안 적대적 검증**
 
 첫 안(KPI 카드에 브랜드 포함 · 미포함 값, 뒤처진 시장 수, 격차 열)은 하지 않는다. 코드는 고치지 않았다. 고칠 안은 사용자가 정한다.
 
-- [x] 국가와 카탈로그 축을 함께 고르면 느리다. 2026-11-02 고쳤다(`77f0ec6`, 아래 진행 기록). `overview/cards` 독일 0.39초가 미포함을 더하면 13.8초(재측정), `overview/geo`는 독일에서 20초 제한에 걸려 `geo: null`이다. 범위 계정은 늘 국가가 붙어 이 경로다. 원인 후보는 `context.predicate`의 catalog_entry EXISTS다. 버그 수정 규칙을 따른다.
+- (끝) 국가와 카탈로그 축을 함께 고르면 느리다. 2026-11-02 고쳤다(`77f0ec6`, 아래 진행 기록). `overview/cards` 독일 0.39초가 미포함을 더하면 13.8초(재측정), `overview/geo`는 독일에서 20초 제한에 걸려 `geo: null`이다. 범위 계정은 늘 국가가 붙어 이 경로다. 원인 후보는 `context.predicate`의 catalog_entry EXISTS다. 버그 수정 규칙을 따른다.
   - 2026-11-02 두 번째 검증: 원인은 card 모드 셀 읽기의 Nested Loop Semi Join이다(catalog_entry에 prompt_key 인덱스가 없고 추정 1,451행 대 실제 133k). 리더만으로 고칠 수 있다. `Context.create`에서 맞는 prompt_key를 한 번 읽어 `prompt_key=ANY(int[])`로 묶으면 DE+유형 cards 13.0→0.7초, 미포함+유형 15.3초(빈 화면)→0.5초, geo 20.0→1.0초이고, 끝까지 돈 12쌍은 화면 JSON이 같았다. 축마다 따로 고른 뒤 교집합을 내면 틀린다(카탈로그 행이 여럿인 프롬프트 231개).
-- [x] `overview/geo`는 요약이 시간 초과되면 `{"geo": null, "degraded": false}`로 아무 표시 없이 빈다. 위 수정과 같이 버그 수정 규칙대로 고친다. 2026-11-02 고쳤다(`77f0ec6`). 이제 `degraded: true`이고, 두 화면 모두 지연 안내를 보인다.
-- [ ] 라벨 정의는 업스트림에 묻는다. `brandPresence`는 브랜드 행 값이라 78개 프롬프트가 브랜드마다 다르고, HMG 전체 보기에서는 76개 프롬프트 579답변이 양쪽에 잡힌다. branded 6,356개 중 1,159개(18.2%)는 본문에 브랜드 · 차종이 없다. unbranded는 5,546개 중 1개만 브랜드를 쓴다. 08-24 전 7회차는 Genesis 행 삭제로 라벨 없는 답변이 27~53%다.
+- (끝) `overview/geo`는 요약이 시간 초과되면 `{"geo": null, "degraded": false}`로 아무 표시 없이 빈다. 위 수정과 같이 버그 수정 규칙대로 고친다. 2026-11-02 고쳤다(`77f0ec6`). 이제 `degraded: true`이고, 두 화면 모두 지연 안내를 보인다.
+- 라벨 정의는 업스트림에 묻는다. `brandPresence`는 브랜드 행 값이라 78개 프롬프트가 브랜드마다 다르고, HMG 전체 보기에서는 76개 프롬프트 579답변이 양쪽에 잡힌다. branded 6,356개 중 1,159개(18.2%)는 본문에 브랜드 · 차종이 없다. unbranded는 5,546개 중 1개만 브랜드를 쓴다. 08-24 전 7회차는 Genesis 행 삭제로 라벨 없는 답변이 27~53%다.
 - 믿을 수 있는 시장 사실: 미포함에서 JP · TH 열세(노출 · 점유율 · 언급 순위, 두 엔진, 6회 전부). AT는 노출로만 열세, DE는 ChatGPT · 독일어 프롬프트 한정. BH · DK · PR · SK는 오차 안이다. 시장 수는 지표마다 4~24개, 합집합 34개라 쓰지 않는다.
 - 값이 가장 크게 갈리는 축은 포함 여부가 아니라 depth1이다(점유 폭 84.2 대 50.1). '1. Brand Image/key value'에서 당사 노출 2위, 우호 5위다.
 - 두 번째 안(범위 칩 '전체 · 브랜드 미포함', 리스트 유형 카드)도 하지 않는다. 칩은 디자인 규칙 1 · 3(필터는 왼쪽 패널, 같은 정보를 두 번 쓰지 않음)에 어긋나고, 지금은 다른 축과 겹치면 본문이 사라진다. 유형 카드의 '위'는 카드가 고른 경쟁사 4곳 안의 순위다(`standing`, 전체 브랜드 기준 우호도 BM 16/80). 경쟁사 13곳 우호도 분산의 69%는 유형(문항) 효과이고, 같은 프롬프트 · 엔진끼리 비교하면 CBR '2위' · SM '4위'가 사라진다. Strategic Model은 Hyundai 카탈로그 1,595개뿐이고 71%가 IONIQ 5를 직접 쓴다. '유형'은 Mention의 멘션 유형과 이름이 겹친다.
@@ -268,7 +332,7 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 
 값이 바뀌어 사용자 결정 · 업스트림이 필요한 것
 
-- [ ] Website 자사 · 타겟 URL 인용률이 Gold 규칙과 다르다. 해당 위치는 Overview 카드, Citation 깔때기, 요약 첫 문장, 엔진 '전체' 행이다.
+- Website 자사 · 타겟 URL 인용률이 Gold 규칙과 다르다. 해당 위치는 Overview 카드, Citation 깔때기, 요약 첫 문장, 엔진 '전체' 행이다.
   - **Gold 규칙:** `url_prompt_cell` 설명은 '율 · ⑥ 은 답변 수 합'이다.
   - **화면 계산:** 화면은 프롬프트 OR ÷ 측정 프롬프트다(`screens/_summary.py:130-149`).
   - **차이(화면 대 Gold):**
@@ -280,7 +344,7 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
     | 2026-09 | 92.5 · 75.3 | 61.9 · 40.0 |
   - **발행값:** 발행값(`report_value`, 유닛 프롬프트 수 합)은 리더가 읽지 않는다. 그런데 각주는 모든 조건에서 '이 필터 조합은 발행 리포트가 답할 수 없어…'라고 쓴다(`gold_reader/context.py:145`).
   - **할 일:** 업스트림 D6에 두 정의가 갈린다는 점을 덧붙인다. 라이브 '율은 답변 수 합'과 발행값 '프롬프트 수 합'이다.
-- [ ] URL 수는 `b805c7b`부터 `url_norm`으로 센다. 대상은 Citation 톤 타일, 톤 하위 화면, 도메인 서랍이고 Global · Website 모두다.
+- URL 수는 `b805c7b`부터 `url_norm`으로 센다. 대상은 Citation 톤 타일, 톤 하위 화면, 도메인 서랍이고 Global · Website 모두다.
   - **Gold 규칙:** `citation_fact` 설명은 '고유 URL 수는 count(DISTINCT url_key)'다.
   - **차이(화면 대 Gold):**
     - Global 긍정: 130,284 대 226,805
@@ -290,23 +354,23 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 
 값은 그대로이고 라벨 · 키 · 정렬만 틀린 것
 
-- [ ] Website Overview
+- Website Overview
   - 기간 증감 문구 '현재 n회차 / 직전 n회차'의 n은 표면 전체의 발행 회차 수다(`compare.py:108`). 2026-09 + US에서는 '직전 4회차'로 나오지만, US의 8월 측정 회차는 2개다.
   - ④ 분자 이름 '최초 등장 순위의 합'이 값과 맞지 않는다. 값은 경쟁 순위 합(`rank_sum`) 19,042이고, 첫 등장 순서의 합은 17,941이다.
   - ⑤ 정의는 'HMG 사이트 base URL'이지만 분자는 자사 ∨ 타겟이다(103,528. 자사만 세면 103,260).
   - 추이 머리 '최근 N회차'가 기간 모드에서도 그대로 나온다(`website-trend.tsx:54`).
   - 엔진 선택지가 front에 고정된 값(ChatGPT · Gemini)이라 Gold에 있는 DeepSeek(CN 284답변)을 거를 수 없다(`dimension-filter-panel.tsx:166`).
-- [ ] Website Citation: 공식(당사) 타일 ⓘ('공식(HMG)은 3사 전체라서')와 프롬프트 하위 화면 제목 '공식 도메인'이 Gold의 website 자사 정의와 다르다. Gold 정의는 사이트에 등록한 URL · 하위 페이지 ∨ 타겟이다.
+- Website Citation: 공식(당사) 타일 ⓘ('공식(HMG)은 3사 전체라서')와 프롬프트 하위 화면 제목 '공식 도메인'이 Gold의 website 자사 정의와 다르다. Gold 정의는 사이트에 등록한 URL · 하위 페이지 ∨ 타겟이다.
   - 필터가 없어도 61.7% 대 24.9%로 차이가 난다.
   - '미인용' 1,131개 중 968개가 공식(HMG) 출처를 인용한다.
-- [ ] Website Mention
+- Website Mention
   - 시장 표 '선두 경쟁사(노출률)'는 언급 수 1위를 고른다(`gold_reader/advanced.py:44`). 59개 시장 중 24곳에서 노출률 1위와 다르다(CA: Tesla 2.4 대 Audio System 3.5). Global Overview 시장 표 인용 탭의 '최대 경쟁사'도 같아서 51개국 중 43곳이 다르다.
   - 점유율 히어로의 '2위'는 반올림한 값이 같으면 이름순으로 정한다(`mention_renewal.py:345` `_board_cmp`, `mention_view.py:275`). 화면은 BMW인데 Gold로는 Tata다(0.235 > Toyota 0.222 > BMW 0.217).
   - 'Top 3 노출 비율' ⓘ는 '평균 순위 3 이하'라고 적었다. 실제 값은 Gold `kpi_cell.top3`, 곧 가장 앞선 당사 순위가 3 이하인 답변이다.
   - 엔진 표 셋째 열은 머리가 비어 있다. aria-label은 '당사 − 경쟁사 평균'인데 값은 회차 Δ다(`site-engines.tsx:42`).
   - 주별 언급 표에 차트 시절 문구('선은 자기 눈금…', '선이 끊긴 곳')가 남아 있다. ⓘ는 '최신 답변 1개 기준'인데 값은 모든 답변이다.
   - 각주 '답변이 없는 시장 n개'는 브랜드를 고르면 그 브랜드 사이트가 없는 시장까지 센다(Kia 34 = 미측정 15 + 사이트 없음 19).
-- [ ] Global
+- Global
   - Overview 기간 모드 브랜드 비교: 증감 안내 · 툴팁은 '마지막 두 회차 차'라고 하지만 값은 기간 비교다. `97da2a0`이 BFF만 바꿨다(`overview-body.tsx:378-395`).
   - Prompts 상세 '변경 이력'이 늘 비어 있다. `prompt-detail.tsx:67`은 Gold `catalog_row_id`(`row.id`)를 넘기는데, 이력 화면은 HUB UUID(`scopePromptId`)만 받는다.
   - Prompts 변경 이력 탭은 최신 500건을 먼저 읽고 그 뒤에 기간 · 종류를 거른다(`standard_prompts.py:349-357`). 그래서 90일 24,460건 중 '일괄 교체 500건' 한 줄만 보이고, 사용자 수정 2건은 보이지 않는다.
@@ -337,11 +401,11 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 
 - 9단계에서 본 로컬 front의 옛 ko 문구(`/ko/renewal/website/answer-analysis/citation`)는 16단계에 다시 열었을 때 새 문구('당사 도메인')로 보였다. 풀렸다. front 재시작은 사용자가 정한다.
 - 첫 방문 때 페이지 요청이 아닌 404가 1건 난다(5 · 6 · 7 · 16단계). 화면에는 영향이 없다.
-- 2026-11-02: 로컬 front(3333, 10-29부터 실행)가 `messages/*.json` 변경을 다시 읽지 않는다. 컴파일된 묶음에는 새 문구가 있지만 서버가 옛 값을 쓴다. 그래서 Website Mention 현황 카드 제목이 키 이름(`renewal.website.mention.ownTrend.exposure`)으로 보이고 요약 문장이 옛 문구다. front를 다시 띄우면 풀린다(재시작은 사용자가 정한다). 새 문구는 별도 포트의 임시 복사본에서 확인했다. 2026-11-02 17:23 사용자 지시로 front(와 API)를 다시 띄웠다. Overview · GA4 연동 · AI Conversion · 키워드 도구가 새 코드 · 문구로 그려진다(하이드레이션 실패 · MISSING_MESSAGE 없음).
+- 2026-11-02: 로컬 front(3333)가 `messages/*.json` 변경을 다시 읽지 않던 것은 17:23 사용자 지시로 front · API를 다시 띄워 풀렸다.
 
 **업스트림 답 대기**
 
-- [ ] D1 ~ D7(`upstream-questions-2026-10-30.md` 'D. 2026-10-31 점검'). 사용자가 보낸다. 16단계에서 D1 · D3 · D7을 2 ~ 15단계 결과와 맞췄다. 답이 오면 각 질문의 '답에 따라 HUB가 할 일'을 한다. 같은 파일의 A ~ C절도 아직 보내지 않은 초안이다.
+- D1 ~ D8(`upstream-questions-2026-10-30.md` 'D. 2026-10-31 점검'). 사용자가 보낸다. 16단계에서 D1 · D3 · D7을 2 ~ 15단계 결과와 맞췄다. 답이 오면 각 질문의 '답에 따라 HUB가 할 일'을 한다. 같은 파일의 A ~ C절도 아직 보내지 않은 초안이다.
 
 ## 결정 대기 (⛔)
 
@@ -581,3 +645,4 @@ W1 · W2 · W3은 W0 필터가 끝나기 전에도 범위 확인, BFF 점검, �
 - 2026-11-02 — 계정 대기 화면(`3043512`, 사용자 요청). 메뉴 열쇠 표시(`ACCOUNT_PAGES`), 공용 막 `account-gate.tsx`, AI Conversion 샘플(`conv-sample.tsx`), 리뉴얼 키워드 도구 샘플 화면, BFF `_state` 수정(재현 시험은 고치기 전 실패 확인). 시험: BFF `test_screens_conversion` 30건 통과(전체 BFF는 돌리지 않음, ruff 2건은 기존 시험 코드), 프런트 관련 7개 파일 306건 · typecheck · eslint 통과. e2e 14단계 통과(1920×915: 열쇠 3 · 공사 4, inert · 초점 없음, 스크롤해도 안내 제자리, `?geography=US`도 막, 사이드바로 Website 전환 · 키워드 도구). 공유 개발 서버 3333은 Overview · GA4 연동을 바뀌기 전 사이드바로 SSR해 하이드레이션 오류가 나서, 작업 트리 사본을 새로 띄운 3334에서 다시 확인했다(오류 없음, 남은 속성 불일치 경고는 첫 방문 안내 모달의 aria-hidden). 뒤에 사용자 지시로 3333을 다시 띄우고 같은 확인을 3333에서 했다.
 - 2026-11-02 — Overview 0번(`77f0ec6`, 사용자 '시작'). 카탈로그 축 지연과 시장 구역 빈 화면을 고쳤다. 리더 `Context.create`가 모든 카탈로그 선택에 맞는 프롬프트를 한 번 읽고, 술어는 `prompt_key=ANY`로 묶는다. `create` 없이 만든 Context는 선택을 버리지 않고 오류를 낸다. 재현 시험(단위 2건 · `overview/geo` 화면 1건 · 실제 API 2건)은 고치기 전 실패를 확인했다. 리더 19개 조건 전후: 12.6 → 1.6초, 13.4 → 1.5초, geo 24.4 → 1.0초, website branded 10.5 → 3.3초이고, 503이던 2개(미포함 + 리스트 유형, branded + 퍼널)는 약 1초다. 값은 19개 모두 같다(503 2개는 옛 코드를 제한 없이 돌려 48 · 79초에 같은 답). 화면 `overview/cards` · `geo`: 독일 + 미포함 0.58 · 1.13초. golden `overview/fix-g-geo-11`을 다시 고정했다(README). BFF 727건 통과(건너뜀 2, 실제 API 시험 9건 포함), 바뀐 파일에 새 ruff 지적 없음. 화면 코드는 바꾸지 않아 e2e는 돌리지 않았다.
 - 2026-11-02 — 인사이트 · 정확도 마지막 검수(사용자 요청). 하위 에이전트 넷이 Website Overview(45항목) · Citation(50) · Mention(61) · Prompts(21)를 점수표 기준으로 매기고 Gold에서 따로 다시 셌다. Global은 점수표의 낮은 행 47개와 고친 구역(약 5,000칸)을 다시 봤다. 진행 세션이 Gold 설명(`url_prompt_cell` · `report_value` · `web_report_prompt` · `citation_fact`)을 직접 읽었고, 큰 주장 셋(Prompts 상세 이력 키 · 이력 500건 자르기 · Website Mention 엔진 표 머리)을 코드로 확인했다. 값 불일치는 이미 알려진 ⑥ 2건과 Mention 2건뿐이다. 정의 2건과 라벨 · 키 · 정렬 18건, 인사이트 낮음 52항목과 Global 47행이 나왔다('점검 후속 뒤 남은 일'). 코드는 고치지 않았다. 브라우저 화면과 범위 계정 화면은 보지 못했다.
+- 2026-11-02 — 할 일 정리(사용자 'todo를 검수하고 다듬자'). 열린 항목을 코드로 다시 확인했고(모두 그대로), 맨 위 '할 일' 절 하나로 모았다: 결함 F1~F11 · 인사이트 개선 I1~I6 · 사용자 결정 D-1~D-7 · 업스트림 · 외부 U1~U7 · 확인 대기. 점검 · 검수 절은 근거로 두고 체크 상자를 뺐다. '지금 할 일' 줄을 고쳤다. 업스트림 초안에 없는 질문 둘(D6 덧붙임 · Overview 라벨 정의)을 U1에 적었다.
