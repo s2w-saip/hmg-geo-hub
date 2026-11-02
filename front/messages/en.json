@@ -7277,5 +7277,17 @@
   "unimplemented": {
     "label": "Not implemented",
     "body": "This screen is not implemented yet."
+  },
+  "accountGate": {
+    "sample": "Sample screen",
+    "note": "Every value below is sample data, not a measurement.",
+    "ga4": {
+      "label": "GA4 account needed",
+      "body": "AI traffic and conversions come from the brand sites' GA4 reports. Once an account that can read the GA4 properties is connected, the measured values show here."
+    },
+    "dataforseo": {
+      "label": "DataForSEO · OpenRouter account needed",
+      "body": "Search volume runs on a DataForSEO account and prompt generation on an OpenRouter account. Once they are connected, you can run both here."
+    }
   }
 }

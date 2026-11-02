@@ -18,14 +18,18 @@ import {
   RnOverviewFilterRail,
   RnOverviewFilters,
 } from "../../../_components/overview-filters";
+import { ACCOUNT_PAGES } from "@/app/[locale]/(renewal)/_shell/renewal-pages";
+import { RnSampleVeil } from "../../../_components/account-gate";
 import { RnConvBody } from "./_components/conv-body";
+import { RnConvSample } from "./_components/conv-sample";
 import type { RnConvScreen } from "./_data/screen-types";
 
 // Renewal AI Conversion (2026-10-29) — the redesigned /standard/ai-funnel/conversion. Data: screen
 // conversion/renewal (back/bff/screens/conversion.py) = the original's read (analytics/conversion, the HUB
 // analytics store's GA4 rows) for the period and the previous period of the same length, and every derived
-// number; the header's period pill comes from conversion/renewal-header (URL only, no reads). No sample data:
-// until the GA4 collector fills the store the page shows which state it is in (no property, waiting, empty).
+// number; the header's period pill comes from conversion/renewal-header (URL only, no reads). Until the GA4
+// collector fills the store the page shows which state it is in (waiting, empty); with no property at all it shows
+// the page on sample data under the "GA4 account needed" veil (2026-11-02, user) — never sample next to measured values.
 
 type Sp = Record<string, string | string[] | undefined>;
 
@@ -91,23 +95,28 @@ async function RenewalConversion({ sp, scope, userId, locale, header }: { sp: Sp
     throwForPage(e, locale);
   }
   const { body } = read;
+  // no GA4 property connected yet: the page on sample data under the veil, filters included (2026-11-02, user)
+  const sample = ACCOUNT_PAGES["/standard/ai-funnel/conversion"] != null && body.state === "noprop";
+  const panel = (
+    <RnOverviewFilterPanel
+      basis={<RnDaysPeriod choice={body.choice} period={body.period} />}
+      axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp"), visitorType: t("filters.visitorTypeHelp") }}
+      hint={t("filters.hint")}
+    />
+  );
   return (
     <RnOverviewFilters props={{ ...read.props, scope }} savedFilters={{ page: "conversion", userId, initial: await saved }}>
-      <RnFilterSplit
-        header={header}
-        panel={
-          <RnOverviewFilterPanel
-            basis={<RnDaysPeriod choice={body.choice} period={body.period} />}
-            axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp"), visitorType: t("filters.visitorTypeHelp") }}
-            hint={t("filters.hint")}
-          />
-        }
-        rail={<RnOverviewFilterRail />}
-      >
-        <RnOverviewApplied />
-        <RnBusyScope className="flex flex-col gap-4">
-          <RnConvBody input={body} />
-        </RnBusyScope>
+      <RnFilterSplit header={header} panel={sample ? <RnSampleVeil className="h-full">{panel}</RnSampleVeil> : panel} rail={<RnOverviewFilterRail />}>
+        {sample ? (
+          <RnConvSample />
+        ) : (
+          <>
+            <RnOverviewApplied />
+            <RnBusyScope className="flex flex-col gap-4">
+              <RnConvBody input={body} />
+            </RnBusyScope>
+          </>
+        )}
       </RnFilterSplit>
     </RnOverviewFilters>
   );

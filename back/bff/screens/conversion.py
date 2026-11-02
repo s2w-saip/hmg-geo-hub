@@ -310,14 +310,15 @@ def findings(v: dict) -> list[dict]:
 
 # ── screens ──────────────────────────────────────────────────────────────────
 
-def _state(meta: dict, data: dict, narrowed: bool, filtered: bool) -> str:
+def _state(meta: dict, data: dict, narrowed: bool, filtered: bool, listed: bool) -> str:
     """The body state. The reader answers without a reason when only period-user windows are there, so a period
-    without a single GA4 row is not measured either: no match under a filter, else nothing measured yet."""
+    without a single GA4 row is not measured either: no match under a filter, else nothing measured yet. Without one
+    readable property (`listed`) a filter carried in from another page is not what left it empty: no property."""
     reason = (meta or {}).get("reason")
     if reason == "source_unavailable":
         return "down"
     if reason == "no_properties":
-        return "nomatch" if narrowed else "noprop"
+        return "nomatch" if narrowed and listed else "noprop"
     if reason == "no_measurements":
         return "empty" if any(p.get("status") == "active" for p in data.get("properties") or []) else "pending"
     if not data.get("trend"):
@@ -356,7 +357,7 @@ async def renewal(q) -> dict:
     filtered = any(split_filter_values(sp.get(k)) for k in USER_AXES)
     period = data.get("period") or {}
     body: dict[str, Any] = {
-        "state": _state(meta, data, narrowed, filtered), "choice": period_choice(sp),
+        "state": _state(meta, data, narrowed, filtered, bool(listed["data"].get("properties"))), "choice": period_choice(sp),
         "period": {"from": period.get("from"), "to": period.get("to"), "days": period.get("days")},
         "properties": [{"id": p.get("property_id"), "country": p.get("country"), "brand": BRAND_NAMES.get(p.get("brand_bit")), "status": p.get("status")}
                        for p in properties],

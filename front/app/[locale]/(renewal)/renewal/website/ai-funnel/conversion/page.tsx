@@ -18,14 +18,18 @@ import {
   RnOverviewFilterRail,
   RnOverviewFilters,
 } from "../../../_components/overview-filters";
+import { ACCOUNT_PAGES } from "@/app/[locale]/(renewal)/_shell/renewal-pages";
+import { RnSampleVeil } from "../../../_components/account-gate";
 import { RnConvBody } from "../../../standard/ai-funnel/conversion/_components/conv-body";
+import { RnConvSample } from "../../../standard/ai-funnel/conversion/_components/conv-sample";
 import type { RnConvScreen } from "../../../standard/ai-funnel/conversion/_data/screen-types";
 
 // Renewal Website AI Conversion (2026-10-30, W5) — the redesigned /website/ai-funnel/conversion. The original is
 // the Global screen itself (SourceAnalytics kind=conversion): GA4 rows carry no surface, so this page is the
 // renewal Global AI Conversion with the same screens (conversion/renewal-header, conversion/renewal), body and
 // filters (period + GA4 axes: the property country, not the website's site countries). Only its saved filters are
-// its own list (website-conversion).
+// its own list (website-conversion). With no GA4 property at all it shows the Global page's sample under the
+// "GA4 account needed" veil (2026-11-02, user).
 
 type Sp = Record<string, string | string[] | undefined>;
 
@@ -92,23 +96,28 @@ async function RenewalWebsiteConversion({ sp, scope, userId, locale, header }: {
     throwForPage(e, locale);
   }
   const { body } = read;
+  // no GA4 property connected yet: the page on sample data under the veil, filters included (2026-11-02, user)
+  const sample = ACCOUNT_PAGES["/website/ai-funnel/conversion"] != null && body.state === "noprop";
+  const panel = (
+    <RnOverviewFilterPanel
+      basis={<RnDaysPeriod choice={body.choice} period={body.period} />}
+      axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp"), visitorType: t("filters.visitorTypeHelp") }}
+      hint={t("filters.hint")}
+    />
+  );
   return (
     <RnOverviewFilters props={{ ...read.props, scope }} savedFilters={{ page: "website-conversion", userId, initial: await saved }}>
-      <RnFilterSplit
-        header={header}
-        panel={
-          <RnOverviewFilterPanel
-            basis={<RnDaysPeriod choice={body.choice} period={body.period} />}
-            axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp"), visitorType: t("filters.visitorTypeHelp") }}
-            hint={t("filters.hint")}
-          />
-        }
-        rail={<RnOverviewFilterRail />}
-      >
-        <RnOverviewApplied />
-        <RnBusyScope className="flex flex-col gap-4">
-          <RnConvBody input={body} />
-        </RnBusyScope>
+      <RnFilterSplit header={header} panel={sample ? <RnSampleVeil className="h-full">{panel}</RnSampleVeil> : panel} rail={<RnOverviewFilterRail />}>
+        {sample ? (
+          <RnConvSample />
+        ) : (
+          <>
+            <RnOverviewApplied />
+            <RnBusyScope className="flex flex-col gap-4">
+              <RnConvBody input={body} />
+            </RnBusyScope>
+          </>
+        )}
       </RnFilterSplit>
     </RnOverviewFilters>
   );

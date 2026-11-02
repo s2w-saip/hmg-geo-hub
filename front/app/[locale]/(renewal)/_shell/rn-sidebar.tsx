@@ -15,7 +15,7 @@ import type { RouteDef } from "@/lib/auth/route-policy";
 import type { Role } from "@/lib/auth/types";
 import { cx } from "@/components/renewal-ui";
 import { useRnNavPending } from "./nav-pending";
-import { RENEWAL_PAGES } from "./renewal-pages";
+import { ACCOUNT_PAGES, RENEWAL_PAGES, type RnAccount } from "./renewal-pages";
 
 // Sidebar of the renewal shell (S급 테마, 2026-10-23; rules: docs/design/ui/design-rules.html '틀'):
 // brand · Global | Website sections (each folds) · Project · Admin · account. One sidebar, no
@@ -30,6 +30,7 @@ import { RENEWAL_PAGES } from "./renewal-pages";
 // over its sub-items, not a link, and the sub-items sit inside a tree line whose stretch lights up beside
 // the current one.
 // 2026-10-29 (user): an item without a renewal page carries a "not implemented" icon; the β badge is gone.
+// 2026-11-02 (user): an item waiting on an outside account (GA4, DataForSEO) carries a key instead, named for the account.
 // Every link keeps prefetch={false} (the original sidebar's 2026-08-27 production rule).
 
 const RENEWAL = "/renewal";
@@ -42,6 +43,8 @@ interface NavLeaf {
   label: string;
   /** no renewal page yet: the item opens the "not implemented" page */
   unimplemented: boolean;
+  /** its data waits on this outside account (the page shows sample data under a veil) */
+  account?: RnAccount;
 }
 interface NavItem extends NavLeaf {
   /** first level only (the original menu's icon); sub-items have none */
@@ -171,6 +174,7 @@ function menuItems(tree: StandardSubItem[], allowed: Set<string>, label: (key: s
     path: RENEWAL + x.path,
     label: label(x.i18nKey),
     unimplemented: !RENEWAL_PAGES.has(x.path),
+    account: ACCOUNT_PAGES[x.path],
   });
   const out: NavItem[] = [];
   for (const item of tree) {
@@ -239,6 +243,7 @@ function NavGroup({ item, current }: { item: NavItem; current: string | null }) 
 
 function NavLink({ leaf, active, icon: Icon, kid = false }: { leaf: NavLeaf; active: boolean; icon?: NavIcon; kid?: boolean }) {
   const tUnimplemented = useTranslations("unimplemented");
+  const tAccount = useTranslations("accountGate");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { target, start } = useRnNavPending();
@@ -271,6 +276,12 @@ function NavLink({ leaf, active, icon: Icon, kid = false }: { leaf: NavLeaf; act
         <span data-rn-nav-unimplemented="" title={tUnimplemented("label")} className={cx("flex shrink-0", !pending && "ml-auto")}>
           <Construction aria-hidden className="size-3.5 text-rn-faint" />
           <span className="sr-only">{tUnimplemented("label")}</span>
+        </span>
+      ) : null}
+      {leaf.account ? (
+        <span data-rn-nav-account={leaf.account} title={tAccount(`${leaf.account}.label`)} className={cx("flex shrink-0", !pending && "ml-auto")}>
+          <KeyRound aria-hidden className="size-3.5 text-rn-faint" />
+          <span className="sr-only">{tAccount(`${leaf.account}.label`)}</span>
         </span>
       ) : null}
     </Link>

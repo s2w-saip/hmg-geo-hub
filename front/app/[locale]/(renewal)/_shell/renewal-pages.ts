@@ -23,5 +23,17 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
   "/admin/standards/customer-interest",
   "/admin/standards/entities",
   "/admin/standards/citation-sources",
+  "/admin/keyword-tools",
   "/admin/ga4",
 ]);
+
+export type RnAccount = "ga4" | "dataforseo";
+
+// The pages whose data needs an outside account the HUB does not hold yet (2026-11-02, user): the sidebar marks them
+// with a key instead of the "not implemented" mark, and the page shows its screen on sample data under a veil naming
+// the account (renewal/_components/account-gate.tsx). Delete a row when its account is handed over.
+export const ACCOUNT_PAGES: Readonly<Record<string, RnAccount>> = {
+  "/standard/ai-funnel/conversion": "ga4",
+  "/website/ai-funnel/conversion": "ga4",
+  "/admin/keyword-tools": "dataforseo",
+};

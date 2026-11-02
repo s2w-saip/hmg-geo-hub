@@ -499,6 +499,14 @@ class Screens(unittest.TestCase):
         self.assertEqual(out["body"]["properties"], [{"id": "469542848", "country": "IT", "brand": "Kia", "status": "active"},
                                                      {"id": "310000002", "country": "FR", "brand": "Hyundai", "status": "pending_grant"}])
 
+    def test_no_readable_property_is_noprop_under_a_carried_filter(self):
+        """2026-11-02: the sidebar carries the country between pages. Without one readable property the filter is not
+        what left the page empty, so the page says what is missing, not that the filter matched nothing."""
+        reader = {"data": {"kind": "conversion", "metrics": {}, "period": {"from": None, "to": None, "days": None}, "properties": []},
+                  "meta": {"reason": "no_properties"}}
+        out, _ = self.call("geography=JP", reader, props=[])
+        self.assertEqual(out["body"]["state"], "noprop")
+
     def test_windows_without_rows_are_not_measured(self):
         """The reader answers without a reason when only period-user windows match (a visitor type without rows)."""
         def windows_only():

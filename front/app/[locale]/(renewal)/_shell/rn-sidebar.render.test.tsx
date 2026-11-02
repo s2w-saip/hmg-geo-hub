@@ -28,10 +28,10 @@ vi.mock("@/lib/auth/actions", () => ({ logout: async () => {} }));
 
 const { RnSidebar } = await import("./rn-sidebar");
 const { ADMIN_SUB_ITEMS, STANDARD_SUB_ITEMS, WEBSITE_SUB_ITEMS } = await import("@/components/dash/sidebar");
-const { RENEWAL_PAGES } = await import("./renewal-pages");
+const { ACCOUNT_PAGES, RENEWAL_PAGES } = await import("./renewal-pages");
 
 /** Section → its open state and its items in order: links as "label → href" ("· 미구현" marks an item without a
- * renewal page, 2026-10-29), a menu
+ * renewal page, 2026-10-29; "· 계정 <account>" one waiting on an outside account, 2026-11-02), a menu
  * parent (a label over its sub-items, not a link) as "label (group)". */
 function html(role: Role): string {
   return renderToStaticMarkup(
@@ -45,7 +45,11 @@ function menu(role: Role): Record<string, { open: boolean; links: string[] }> {
   const out: Record<string, { open: boolean; links: string[] }> = {};
   for (const [, open, id, body] of html(role).matchAll(/<details( open="")?[^>]*data-rn-sec="(\w+)"[^>]*>(.*?)<\/details>/g)) {
     const links = [...body.matchAll(/<a href="([^"]+)"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?<span[^>]*>([^<]*)<\/span>(.*?)<\/a>|<div[^>]*data-rn-nav-group=""[^>]*>(?:<svg[^>]*>.*?<\/svg>)?<span[^>]*>([^<]*)<\/span><\/div>/g)].map(
-      ([, href, label, rest, group]) => (group != null ? `${group} (group)` : `${label}${rest.includes("data-rn-nav-unimplemented") ? " · 미구현" : ""} → ${href}`),
+      ([, href, label, rest, group]) => {
+        if (group != null) return `${group} (group)`;
+        const account = /data-rn-nav-account="(\w+)"/.exec(rest)?.[1];
+        return `${label}${rest.includes("data-rn-nav-unimplemented") ? " · 미구현" : ""}${account ? ` · 계정 ${account}` : ""} → ${href}`;
+      },
     );
     out[id] = { open: open != null, links };
   }
@@ -60,7 +64,7 @@ const GLOBAL = [
   "Citation → /renewal/standard/answer-analysis/citation",
   "AI Agent Funnel (group)",
   "ACR → /renewal/standard/ai-funnel/acr",
-  "AI Conversion → /renewal/standard/ai-funnel/conversion",
+  "AI Conversion · 계정 ga4 → /renewal/standard/ai-funnel/conversion",
 ];
 const WEBSITE = [
   "Overview → /renewal/website",
@@ -69,7 +73,7 @@ const WEBSITE = [
   "Mention → /renewal/website/answer-analysis/mention",
   "Citation → /renewal/website/answer-analysis/citation",
   "AI Agent Funnel (group)",
-  "AI Conversion → /renewal/website/ai-funnel/conversion",
+  "AI Conversion · 계정 ga4 → /renewal/website/ai-funnel/conversion",
 ];
 
 describe("renewal sidebar", () => {
@@ -87,7 +91,7 @@ describe("renewal sidebar", () => {
           "Customer interest config → /renewal/admin/standards/customer-interest",
           "Entity catalog → /renewal/admin/standards/entities",
           "인용 출처 분류 → /renewal/admin/standards/citation-sources",
-          "Keyword tools · 미구현 → /renewal/admin/keyword-tools",
+          "Keyword tools · 계정 dataforseo → /renewal/admin/keyword-tools",
           "GA4 연동 → /renewal/admin/ga4",
           "분석 엔진 · 미구현 → /renewal/admin/analysis",
           "리포트 관리 · 미구현 → /renewal/admin/reports",
@@ -103,9 +107,23 @@ describe("renewal sidebar", () => {
   it("marks the items without a renewal page and shows no beta badge", () => {
     const out = html("admin");
     const marks = [...out.matchAll(/<span data-rn-nav-unimplemented="" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span>/g)];
-    expect(marks.length).toBe(5); // Project 1 · Admin 4
+    expect(marks.length).toBe(4); // Project 1 · Admin 3
     for (const [, title, sr] of marks) expect([title, sr]).toEqual([ko.unimplemented.label, ko.unimplemented.label]);
     expect(out).not.toContain("β");
+  });
+
+  // 2026-11-02 (user): an item waiting on an outside account carries a key, not the "not implemented" mark — named for
+  // the account on hover and for assistive tech
+  it("marks the items waiting on an outside account with the account they need", () => {
+    const out = html("admin");
+    const marks = [...out.matchAll(/<a href="([^"]+)"[^>]*>(?:(?!<\/a>).)*<span data-rn-nav-account="(\w+)" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span><\/a>/g)];
+    expect(marks.map(([, href, account, title, sr]) => [href, account, title, sr])).toEqual([
+      ["/renewal/standard/ai-funnel/conversion", "ga4", ko.accountGate.ga4.label, ko.accountGate.ga4.label],
+      ["/renewal/website/ai-funnel/conversion", "ga4", ko.accountGate.ga4.label, ko.accountGate.ga4.label],
+      ["/renewal/admin/keyword-tools", "dataforseo", ko.accountGate.dataforseo.label, ko.accountGate.dataforseo.label],
+    ]);
+    // a page waiting on an account has its renewal page, so it never carries the "not implemented" mark as well
+    for (const path of Object.keys(ACCOUNT_PAGES)) expect(RENEWAL_PAGES.has(path), path).toBe(true);
   });
 
   it("knows exactly the renewal pages there are", () => {
@@ -143,8 +161,8 @@ describe("renewal sidebar", () => {
       expect(icon, label).toBeTruthy();
       expect(cls, label).not.toMatch(/cursor-pointer|hover:/);
       expect(tree, label).toMatch(/^<a href="\/renewal\//);
-      // no menu icon on a sub-item (the "not implemented" mark is a status, not the menu's icon)
-      expect(tree.replace(/<span data-rn-nav-unimplemented="".*?<\/span><\/span>/g, ""), label).not.toContain("<svg");
+      // no menu icon on a sub-item (the "not implemented" and account marks are a status, not the menu's icon)
+      expect(tree.replace(/<span data-rn-nav-(?:unimplemented|account)="\w*".*?<\/span><\/span>/g, ""), label).not.toContain("<svg");
     }
     expect(out).not.toMatch(/<a [^>]*>(<svg[^>]*>(?:(?!<\/svg>).)*<\/svg>)?(<span[^>]*>)?(Answer analysis|AI Agent Funnel|Global config|측정 크레딧)</);
   });

@@ -7277,5 +7277,17 @@
   "unimplemented": {
     "label": "미구현",
     "body": "아직 구현되지 않은 화면입니다."
+  },
+  "accountGate": {
+    "sample": "샘플 화면",
+    "note": "아래 값은 모두 샘플이며 실제 측정값이 아닙니다.",
+    "ga4": {
+      "label": "GA4 계정 필요",
+      "body": "AI 유입 · 전환은 브랜드 사이트의 GA4 보고서로 만듭니다. GA4 속성을 읽을 수 있는 계정이 연결되면 실제 측정값이 보입니다."
+    },
+    "dataforseo": {
+      "label": "DataForSEO · OpenRouter 계정 필요",
+      "body": "검색량 조회는 DataForSEO, 프롬프트 생성은 OpenRouter 계정으로 동작합니다. 계정이 연결되면 여기서 직접 조회 · 생성할 수 있습니다."
+    }
   }
 }

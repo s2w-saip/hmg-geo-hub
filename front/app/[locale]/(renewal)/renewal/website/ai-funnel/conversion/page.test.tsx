@@ -9,6 +9,7 @@ import { isValidElement, type ReactElement } from "react";
 const st = vi.hoisted(() => ({
   calls: [] as { name: string; query: Record<string, unknown> }[],
   savedPages: [] as string[],
+  state: "empty",
 }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, usePathname: () => "/", useRouter: () => ({}) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({}), useSearchParams: () => new URLSearchParams(), notFound: () => { throw new Error("nf"); }, redirect: () => { throw new Error("rd"); } }));
@@ -27,7 +28,7 @@ vi.mock("../../../_components/saved-filters-server", () => ({
     return [{ id: "a", name: "미국 7일", query: "geography=US&days=7", isDefault: false }];
   },
 }));
-const BODY = { state: "noprop", choice: { preset: 28, days: 28, from: null, to: null }, period: { from: null, to: null, days: null }, properties: [], view: null };
+const BODY = { state: "empty", choice: { preset: 28, days: 28, from: null, to: null }, period: { from: null, to: null, days: null }, properties: [], view: null };
 vi.mock("@/lib/screen", () => ({
   screenGet: (name: string, query: Record<string, unknown>) => {
     st.calls.push({ name, query });
@@ -35,7 +36,7 @@ vi.mock("@/lib/screen", () => ({
       case "conversion/renewal-header":
         return Promise.resolve({ preset: 7, days: 7, from: null, to: null });
       case "conversion/renewal":
-        return Promise.resolve({ props: { stage: "conversion", geographyOptions: ["US"] }, body: BODY });
+        return Promise.resolve({ props: { stage: "conversion", geographyOptions: ["US"] }, body: { ...BODY, state: st.state } });
       default:
         return Promise.reject(new Error(`unexpected screen ${name}`));
     }
@@ -73,6 +74,7 @@ const render = (sp: Record<string, string>) => Page({ params: Promise.resolve({ 
 beforeEach(() => {
   st.calls = [];
   st.savedPages = [];
+  st.state = "empty";
 });
 
 describe("renewal website AI Conversion page", () => {
@@ -95,5 +97,19 @@ describe("renewal website AI Conversion page", () => {
     expect(panel.hint).toBe("filters.hint");
     expect(panel.axisHelp).toEqual({ engine: "filters.engineHelp", device: "filters.deviceHelp", visitorType: "filters.visitorTypeHelp" });
     expect(got.get("RnDaysPeriod")).toEqual({ choice: BODY.choice, period: BODY.period });
+    expect(got.has("RnConvSample")).toBe(false);
+    expect(got.has("RnSampleVeil")).toBe(false);
+  });
+
+  // 2026-11-02 (user): with no GA4 property at all the page shows the sample under the "GA4 account needed" veil — the
+  // filter panel veiled too — instead of the empty state card; any other state keeps its card
+  it("shows the sample under the account veil while no GA4 property is connected", async () => {
+    st.state = "noprop";
+    const got = await collect(await render({ geography: "US" }));
+    expect(got.has("RnConvSample")).toBe(true);
+    expect(got.has("RnConvBody")).toBe(false);
+    expect(got.has("RnOverviewApplied")).toBe(false);
+    expect(got.get("RnSampleVeil")!.className).toBe("h-full");
+    expect(got.get("RnOverviewFilterPanel")!.hint).toBe("filters.hint");
   });
 });
