@@ -660,7 +660,7 @@ def _group_of(key: str, members: list[dict], total: float) -> dict:
         "value": value,
         "share": round1((100 * value) / total),
         # a sum of some members is not the group's change (2026-11-02 premise review)
-        "delta": round1(_js_sum(m["delta"] for m in with_d)) if with_d and not partial else None,
+        "delta": round1(_js_sum(exact(m["delta"]) for m in with_d)) if with_d and not partial else None,
         "partial": partial,
         "own": any(m["own"] for m in sorted_m),
     }
@@ -1075,10 +1075,11 @@ def _max_from_one(values) -> float:
 
 
 def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any, brands: list[dict], trend: Any,
-                      prev_brands: list[dict] | None = None) -> dict:
-    """HeroDelta · HeroStanding · HeroTrend · Board of one rate metric."""
+                      prev_brands: list[dict] | None = None, lines: Any = None) -> dict:
+    """HeroDelta · HeroStanding · HeroTrend · Board of one rate metric. The board reads every brand's line (`lines`, the
+    ranking's read), the hero chart the KPI brand trend; `lines` is None in period mode."""
     hero = rate_hero(metric, sub, prev, engine, period)
-    b = board({"metric": metric, "brands": brands, "trend": trend, "values": None, "hero": hero, "prevBrands": prev_brands})
+    b = board({"metric": metric, "brands": brands, "trend": lines or trend, "values": None, "hero": hero, "prevBrands": prev_brands})
     rows = b["rows"]
     own_i = next((i for i, r in enumerate(rows) if r["own"]), None)
     standing = None
@@ -1419,11 +1420,11 @@ async def rn_rate_value(q) -> dict:
 async def rn_rate_hero(q) -> dict:
     _, filters, ctx = _begin(q)
     md = _md()
-    period, subs, prevs, engine, trend, brands, prev_brands = await asyncio.gather(
+    period, subs, prevs, engine, trend, brands, prev_brands, lines = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx, RATE_METRICS), _prevs(md, filters, ctx, RATE_METRICS),
         md.load_engine_kpi_trend(filters, ctx), md.load_brand_trend(filters, ctx, pin_top=True), _body_brands(md, filters, ctx),
-        md.load_prev_period_brands(filters, ctx))
-    return {m: rate_hero_payload(m, subs[m], prevs[m], engine, period, brands, trend, prev_brands) for m in RATE_METRICS}
+        md.load_prev_period_brands(filters, ctx), md.load_brand_share_lines(filters, ctx))
+    return {m: rate_hero_payload(m, subs[m], prevs[m], engine, period, brands, trend, prev_brands, lines) for m in RATE_METRICS}
 
 
 @screen("mention/rn-rate-engines")

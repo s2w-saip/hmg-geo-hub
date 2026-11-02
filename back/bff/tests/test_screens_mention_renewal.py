@@ -21,6 +21,7 @@ try:
 
     from bff import screens
     from bff.screens import mention_renewal as rn
+    from bff.screens._convert import Exact
 except ModuleNotFoundError as exc:  # pragma: no cover - outside the API image
     raise unittest.SkipTest("Run inside the BFF image") from exc
 
@@ -791,6 +792,25 @@ class TreemapNonAuto(unittest.TestCase):
         self.assertEqual([g["key"] for g in rn.treemap_groups(rows, 1000)], ["HMG", "Toyota", rn.TREEMAP_FOLD])
 
 
+class BoardReadsEveryBrandsLine(unittest.TestCase):
+    """Global score sheet (2026-11-02): the ranking gives Audi and Mazda a Δ, while the 경쟁 구도 table beside it said
+    '추이 미산출': it took the KPI brand trend, which stops at the top rivals."""
+
+    def test_the_board_uses_the_all_brand_lines_and_the_hero_keeps_its_trend(self):
+        seen = {}
+        def board(inp):
+            seen["board"] = inp["trend"]
+            return {"rows": [], "ownRank": None}
+        with mock.patch.object(rn, "rate_hero", return_value={"pct": 1, "points": [], "delta": {"value": None}}), \
+                mock.patch.object(rn, "board", board), mock.patch.object(rn, "hero_trend_series", return_value={"brands": []}) as hero:
+            try:
+                rn.rate_hero_payload("exposure", None, None, None, None, [], {"brands": [], "top": 10}, None, {"brands": [], "all": True})
+            except (KeyError, TypeError):
+                pass
+        self.assertTrue(seen["board"].get("all"))
+        self.assertEqual(hero.call_args.args[1].get("top"), 10)
+
+
 class TreemapGroupDelta(unittest.IsolatedAsyncioTestCase):
     """2026-11-02 premise review: a group tile's Δ and colour were the sum of the members that had a Δ, and the round Δ
     came from the KPI brand trend, which stops at the top rivals: VW was the sum of 2 of its 8 brands (the Global default
@@ -809,6 +829,11 @@ class TreemapGroupDelta(unittest.IsolatedAsyncioTestCase):
     def test_a_group_with_every_members_delta_sums_them(self):
         group = rn._group_of("VW", [self.member("VW", 0.4), self.member("Audi", -0.1)], 1000)
         self.assertEqual((group["delta"], group["partial"]), (0.3, False))
+
+    def test_a_groups_delta_is_summed_before_rounding(self):
+        # Global score sheet (2026-11-02): BMW group read +0.4 where Gold's change is +0.34, the sum of rounded Δ
+        members = [self.member("BMW", Exact(0.2, 0.154)), self.member("MINI", Exact(0.2, 0.19))]
+        self.assertEqual(rn._group_of("BMW", members, 1000)["delta"], 0.3)
 
     def test_every_brand_gets_a_round_delta_from_its_share_line(self):
         names = [f"Brand {i}" for i in range(1500)]
