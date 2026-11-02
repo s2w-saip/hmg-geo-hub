@@ -912,8 +912,9 @@ async def card_competitors(q) -> dict:
 
 @screen("overview/geo")
 async def geo(q) -> dict:
-    """GEO section of the global dashboard and the renewal market card: nothing when the summary is empty
-    (or failed transiently); a transient /v1/geo failure -> degraded (old label standardGeoCompetition)."""
+    """GEO section of the global dashboard and the renewal market card: nothing when the summary is empty; a
+    transient failure of the summary or /v1/geo -> degraded (old label standardGeoCompetition). A failed summary
+    is not an empty one: it went blank with no note when Gold's 15 s limit cut it (2026-11-02)."""
     ctx, sp = split_context(q)
     common = common_params(global_filters(sp), "global")
     # The markets read leaves with the summary instead of after it (1.9 s later); its outcome counts only
@@ -922,7 +923,9 @@ async def geo(q) -> dict:
                                             fetch_geo(common), return_exceptions=True)
     if isinstance(summary, BaseException):
         raise summary
-    if not summary or summary_is_empty(summary["data"], summary["meta"]):
+    if summary is None:
+        return {"geo": None, "degraded": True}
+    if summary_is_empty(summary["data"], summary["meta"]):
         return {"geo": None, "degraded": False}
     if isinstance(markets, BaseException):
         if not is_transient(markets):

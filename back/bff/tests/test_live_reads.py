@@ -83,6 +83,14 @@ class GoldLiveReads(unittest.TestCase):
         self.assertTrue(codes)
         self.assertTrue(all(len(c) == 2 and c.isupper() for c in codes), sorted(codes))
 
+    def test_catalog_picks_answer_within_the_statement_limit(self):
+        # Overview check (2026-11-02): these ran past Gold's 15 s statement limit (catalog_entry EXISTS per cell row)
+        for query in ("surface=global&card=true&brand_presence=unbranded&list_type=Consumer%20base%20Response",
+                      "surface=global&brand_presence=branded&funnel=%EC%9D%B8%EC%A7%80%2F%ED%83%90%EC%83%89"):
+            with self.subTest(query=query):
+                visibility = self.read(f"/v1/kpi/summary?{query}")["data"]["visibility"]
+                self.assertGreater(visibility["den"], 0)
+
     def validate(self, path, payload):
         route = next(r for r in CONTRACT["routes"] if r["path"] == "/v1/" + path)
         schema = {"components": {"schemas": CONTRACT["schemas"]}, **route["response"]}

@@ -186,8 +186,9 @@ class Calls(unittest.TestCase):
                 self.assertEqual(out, {"geo": None, "degraded": False})
         out = screen("overview/geo", "", Router({"kpi/summary": summary(), "geo": GEO}, {"geo": 503}))
         self.assertEqual(out, {"geo": None, "degraded": True})
+        # a summary that failed (Gold's 15 s limit) is not an empty one: the section says it, not vanish (2026-11-02)
         out = screen("overview/geo", "", Router({"kpi/summary": summary(), "geo": GEO}, {"kpi/summary": 503}))
-        self.assertEqual(out, {"geo": None, "degraded": False})
+        self.assertEqual(out, {"geo": None, "degraded": True})
 
     def test_unknown_surface_is_refused(self):
         with self.assertRaises(HTTPException) as cm:

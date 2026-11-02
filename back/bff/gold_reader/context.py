@@ -77,6 +77,8 @@ class Context:
         self.mention: tuple[str, int | None] | None = None
         # the global 자사 judgment's 허용 배열 of this request (citations.owned_bases), read once
         self.owned_bases: list[int] | None = None
+        # the prompts whose catalog row matches every taxonomy pick (global · website), read once; None = no pick
+        self.catalog_prompts: list[int] | None = None
 
     @classmethod
     async def create(cls, conn: Any, q: Any) -> Context:
@@ -127,6 +129,13 @@ class Context:
         else:
             offset = max(0, int(q.get("cycle_offset", "0")))
             self.selected_dates = self.dates[offset:offset + 1]
+        # Overview check (2026-11-02): an EXISTS on catalog_entry per cell row (no prompt_key index) planned a nested
+        # loop on card reads, 13 s and past the 15 s limit; the keys read once and bound take 0.5-1 s, same rows.
+        b = SQL()
+        if self.sf != 3 and (tax := self.taxon_where(b, "ce")):
+            self.catalog_prompts = [r["prompt_key"] for r in await conn.fetch(f"""SELECT DISTINCT ce.prompt_key
+                FROM gold.catalog_entry ce WHERE ce.build_id=ANY({b.bind(self.builds.get('fact', []), 'bigint[]')})
+                AND (ce.brand_bit & {b.bind(self.bits | 8)})<>0 AND {' AND '.join(tax)}""", *b.args)]
         return self
 
     @property
@@ -159,6 +168,11 @@ class Context:
         selected = set(self.selected_dates)
         return [x for x in builds if x not in self.build_dates or self.build_dates[x] in selected]
 
+    def taxon_where(self, b: SQL, alias: str) -> list[str]:
+        """One condition per picked taxonomy axis on the catalog row `alias` (all on the same row)."""
+        return [f"{alias}.{column} IN (SELECT taxon_key FROM gold.dim_taxon WHERE lower(code)=ANY({b.bind([v.lower() for v in selected], 'text[]')}))"
+                for axis, column in AXES.items() if (selected := values(self.q, axis))]
+
     def population(self, family: str) -> int:
         return (9 if self.card else 2) if family == "citations" else (8 if self.card else 1)
 
@@ -189,19 +203,12 @@ class Context:
                 if selected:
                     parts.append(f"{alias}.{key} IN (SELECT {key} FROM gold.{table} WHERE lower(code)=ANY({b.bind([v.lower() for v in selected], 'text[]')}))")
         if taxonomy:
-            tax = []
-            tax_alias = "p" if self.sf == 3 else "ce"
-            for axis, column in AXES.items():
-                selected = values(self.q, axis)
-                if selected:
-                    tax.append(f"{tax_alias}.{column} IN (SELECT taxon_key FROM gold.dim_taxon WHERE lower(code)=ANY({b.bind([v.lower() for v in selected], 'text[]')}))")
-            if tax:
-                if self.sf == 3:
-                    parts.append(f"EXISTS(SELECT 1 FROM gold.dim_prompt p WHERE p.prompt_key={alias}.prompt_key AND {' AND '.join(tax)})")
-                else:
-                    parts.append(f"EXISTS(SELECT 1 FROM gold.catalog_entry ce WHERE ce.prompt_key={alias}.prompt_key "
-                                 f"AND ce.build_id=ANY({b.bind(self.builds.get('fact', []), 'bigint[]')}) "
-                                 f"AND (ce.brand_bit & {b.bind(self.bits | 8)})<>0 AND {' AND '.join(tax)})")
+            if self.catalog_prompts is not None:
+                parts.append(f"{alias}.prompt_key=ANY({b.bind(self.catalog_prompts, 'int[]')})")
+            elif self.sf != 3 and any(values(self.q, axis) for axis in AXES):
+                raise RuntimeError("Catalog picks are read in Context.create")  # never drop a pick
+            elif self.sf == 3 and (tax := self.taxon_where(b, "p")):
+                parts.append(f"EXISTS(SELECT 1 FROM gold.dim_prompt p WHERE p.prompt_key={alias}.prompt_key AND {' AND '.join(tax)})")
             custom = [(k[3:], values(self.q, k)) for k in self.q if k.startswith("cf.")]
             for field, selected in custom:
                 parts.append(f"EXISTS(SELECT 1 FROM gold.prompt_custom_value cv JOIN gold.dim_custom_field cf USING(field_id) "

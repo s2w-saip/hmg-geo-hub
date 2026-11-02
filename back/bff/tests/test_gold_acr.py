@@ -10,7 +10,7 @@ try:
     from starlette.datastructures import QueryParams
 
     from bff.gold_reader import acr
-    from bff.gold_reader.context import Context
+    from bff.gold_reader.context import SQL, Context
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_gold_acr)") from exc
 
@@ -316,11 +316,14 @@ class EveryFilterApplies(unittest.TestCase):
         ctx.builds = {"acr": [0, 1], "fact": [9]}
         ctx.build_dates = {0: D2, 1: D1}
         ctx.dates = ctx.selected_dates = [D2, D1]
+        ctx.catalog_prompts = [1]  # Context.create reads the prompts of every catalog pick (test_gold_filters.CatalogAxes)
         meta = asyncio.run(acr.read(ctx))["meta"]
         cells = next(q for q in statements if "FROM gold.acr_cell_fact f JOIN gold.dim_prompt" in q)
-        for column in ("geo_key IN", "lang_key IN", "engine_key IN", "presence_key IN", "list_type_key IN", "depth1_key IN",
-                       "depth2_key IN", "depth3_key IN", "f.bgrp &", "f.round_date=ANY"):
+        for column in ("geo_key IN", "lang_key IN", "engine_key IN", "f.prompt_key=ANY", "f.bgrp &", "f.round_date=ANY"):
             self.assertIn(column, cells)
+        catalog = " ".join(ctx.taxon_where(SQL(), "ce"))
+        for column in ("presence_key IN", "list_type_key IN", "depth1_key IN", "depth2_key IN", "depth3_key IN"):
+            self.assertIn(column, catalog)
         self.assertEqual((meta["ignored_filters"], meta["dropped_filters"]), ([], {}))
 
 

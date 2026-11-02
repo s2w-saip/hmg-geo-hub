@@ -245,5 +245,67 @@ class TaxonomyCase(unittest.TestCase):
         self.assertNotIn("gold.dim_taxon WHERE code=ANY(", src)
 
 
+class CreateConn:
+    """Context.create's reads: the release, its builds, the round dates and the catalog read under test."""
+
+    def __init__(self, prompts=(11, 12)):
+        self.prompts, self.catalog = prompts, []
+
+    async def fetch(self, sql, *args):
+        if "FROM gold.active_release" in sql:
+            return [{"release_id": 1, "version": 1, "rule_signature": "test"}]
+        if "FROM gold.release_item i" in sql:
+            return [{"family": "cell", "build_id": 1, "round_date": D}, {"family": "fact", "build_id": 2, "round_date": D}]
+        if "SELECT DISTINCT c.round_date" in sql:
+            return [{"round_date": D}]
+        if "FROM gold.catalog_entry" in sql:
+            self.catalog.append((sql, args))
+            return [{"prompt_key": k} for k in self.prompts]
+        raise AssertionError(sql)
+
+
+class CatalogAxes(unittest.TestCase):
+    """Overview check (2026-11-02): a catalog pick tested each cell row with EXISTS on catalog_entry, which has no
+    prompt_key index; card reads planned a nested loop over it (1,451 rows estimated, 133k read). Country + 미포함 took
+    13 s, 미포함 + a list type ran past Gold's 15 s and the page went empty. The matching prompts are read once per
+    request instead, every axis on the same catalog row (231 prompts have several rows that differ)."""
+
+    def create(self, qs, conn):
+        return asyncio.run(Context.create(conn, QueryParams(qs)))
+
+    def test_the_matching_prompts_are_read_once_and_bound(self):
+        conn = CreateConn()
+        ctx = self.create("surface=global&card=true&brand=kia&brand_presence=unbranded&list_type=Brand%20Message", conn)
+        self.assertEqual(len(conn.catalog), 1)
+        sql, args = conn.catalog[0]
+        self.assertIn("presence_key IN", sql)
+        self.assertIn("list_type_key IN", sql)
+        self.assertIn([2], args)  # the fact builds
+        self.assertIn(2 | 8, args)  # the brand bits with the shared bit
+        b = context_module.SQL()
+        where = ctx.predicate(b, "f", population="mentions")
+        self.assertNotIn("catalog_entry", where)
+        self.assertIn("f.prompt_key=ANY(", where)
+        self.assertIn([11, 12], b.args)
+
+    def test_no_pick_reads_no_catalog(self):
+        conn = CreateConn()
+        ctx = self.create("surface=global&card=true&country=DE", conn)
+        self.assertEqual(conn.catalog, [])
+        b = context_module.SQL()
+        self.assertNotIn("prompt_key", ctx.predicate(b, "f"))
+
+    def test_no_matching_prompt_matches_no_row(self):
+        ctx = self.create("surface=global&list_type=none", CreateConn(prompts=()))
+        b = context_module.SQL()
+        self.assertIn("f.prompt_key=ANY(", ctx.predicate(b, "f"))
+        self.assertIn([], b.args)
+
+    def test_a_read_without_taxonomy_ignores_the_pick(self):
+        ctx = self.create("surface=global&brand_presence=unbranded", CreateConn())
+        b = context_module.SQL()
+        self.assertNotIn("prompt_key", ctx.predicate(b, "f", taxonomy=False))
+
+
 if __name__ == "__main__":
     unittest.main()
