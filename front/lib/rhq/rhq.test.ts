@@ -54,6 +54,13 @@ describe("RHQ 정본 — brand × country → 권역", () => {
     expect(countriesForRhq("hyundai-north-america").sort()).toEqual(["CA", "MX", "US"]);
     expect(rhqLabel("kia-western-europe", "ko")).toBe("Europe(W)");
     expect(rhqLabel("kia-eastern-europe", "en")).toBe("Europe(E)");
+    // Gold's continent areas (dim_region.code) are a display name too: a Korean screen showed 'Asia' · 'Latin America'
+    // (renewal audit step 4, last review 2026-11-02 F5)
+    expect(["Asia", "Europe", "Latin America", "Middle East", "North America", "Oceania", "Africa"].map((a) => rhqLabel(a, "ko"))).toEqual(
+      ["아시아", "유럽", "중남미", "중동", "북미", "오세아니아", "아프리카"],
+    );
+    expect(rhqLabel("Latin America", "en")).toBe("Latin America");
+    expect(rhqLabel("Atlantis", "ko")).toBeNull();
     expect(rhqLabel("genesis-europe", "ko")).toBe("유럽");
   });
 

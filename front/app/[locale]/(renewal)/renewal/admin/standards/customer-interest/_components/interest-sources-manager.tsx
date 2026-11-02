@@ -9,6 +9,8 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Pause, Pencil, Play, Plus } from "lucide-react";
 import {
   RnButton,
@@ -65,15 +67,15 @@ function useGoldCategory() {
   return (slug: string | null | undefined) => (!slug ? null : tc.has(slug as "other") ? tc(slug as "other") : slug);
 }
 
-export function InterestSourcesManager({ initial, tabs }: { initial: InterestSourceListing; tabs?: ReactNode }) {
+export function InterestSourcesManager({ initial, tabs, savedFilters }: { initial: InterestSourceListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   return (
     <RnToastProvider>
-      <Manager initial={initial} tabs={tabs} />
+      <Manager initial={initial} tabs={tabs} savedFilters={savedFilters} />
     </RnToastProvider>
   );
 }
 
-function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: ReactNode }) {
+function Manager({ initial, tabs, savedFilters }: { initial: InterestSourceListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   const t = useTranslations("hubInterest");
   const ts = useTranslations("hubInterest.sources");
   const tv = useTranslations("standardPromptsView");
@@ -113,6 +115,20 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
     return t(`status.${v as "active"}`);
   };
   const picked = pickedSourceAxes(filters);
+  const savedList = useAdminSavedFilters({
+    source: savedFilters,
+    query: sourceFilterToQuery(filters, search),
+    filtered: picked.length > 0 || Boolean(search),
+    apply: (q) => {
+      const next = queryToSourceFilter(q);
+      setFilters(next.filters);
+      setSearch(next.search);
+    },
+    summarize: (q) => {
+      const next = queryToSourceFilter(q);
+      return [...pickedSourceAxes(next.filters).map((a) => valueLabel(a, next.filters[a])), ...(next.search ? [`“${next.search}”`] : [])].join(" · ");
+    },
+  });
   const shown = useMemo(() => sortSources(listing.items.filter((r) => sourceMatches(r, filters, search)), sort.key, sort.asc), [listing.items, filters, search, sort]);
   const total = sourceCounts(listing.items);
   const head = (key: SourceSort, className?: string) => (
@@ -146,7 +162,7 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
         setFilters(DEFAULT_SOURCE_FILTER);
         toast(tr("resetDone"), { undoLabel: tr("undo"), undo: () => setFilters(before) });
       }}
-      saved={null}
+      saved={savedList.section}
     >
       {SOURCE_AXES.map((a) => (
         <RnRadioAxis
@@ -191,6 +207,7 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
           <b className="text-rn-ink">{t("flowNoteTitle")}</b>
           <span>{ts("flowNote")}</span>
         </RnNote>
+        {savedList.note}
         {picked.length || search ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
             {picked.map((a) => (

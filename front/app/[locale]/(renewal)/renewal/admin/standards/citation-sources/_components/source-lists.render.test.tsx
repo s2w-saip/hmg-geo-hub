@@ -90,7 +90,7 @@ describe("tab bar", () => {
 
 describe("seeds tab", () => {
   it("renders the HUB's seeds next to Gold's values with their states, the add form and the published list", () => {
-    const out = html(<SourceSeedsManager initial={SEEDS} tabs={<SourceTabs value="seeds" />} />);
+    const out = html(<SourceSeedsManager initial={SEEDS} tabs={<SourceTabs value="seeds" />} savedFilters={{ page: "source-seeds", userId: "u", initial: [] }} />);
     expect(out).toContain(">인용 출처 분류<");
     expect(out).toContain(ko.hubSourceLists.seeds.flowNote.replaceAll("'", "&#x27;"));
     expect(out).not.toContain("즉시 반영");

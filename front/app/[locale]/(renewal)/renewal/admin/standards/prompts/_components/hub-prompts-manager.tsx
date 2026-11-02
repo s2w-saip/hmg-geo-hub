@@ -502,7 +502,7 @@ function Manager({ initial, initialSearch, options, loginHref, savedFilters }: H
                           <RnMarkets markets={splitMarkets(p.regions)} labelOf={marketLabel} allLabel={tv("marketAll")} allHint={tv("marketAllHint")} />
                         </td>
                         <td className={cx(TD, "text-rn-12 whitespace-nowrap")}>
-                          <RnKindMark acr={p.kind === "acr"} />
+                          {p.kind ? <RnKindMark acr={p.kind === "acr"} /> : null}
                         </td>
                         <td className={TD}>
                           <StatusMark status={p.status} />
@@ -721,7 +721,7 @@ function Detail({ id, options, loginHref, onChanged }: { id: string; options: Hu
               <RnDetailField label={fieldLabel("regions")}>
                 <RnMarketList codes={[...markets.real, ...markets.pseudo]} labelOf={marketLabel} allLabel={tv("marketAll")} allHint={tv("marketAllHint")} />
               </RnDetailField>
-              <RnDetailField label={fieldLabel("kind")}>{item.kind === "acr" ? tv("kindAcr") : tv("kindSingle")}</RnDetailField>
+              <RnDetailField label={fieldLabel("kind")}>{item.kind === "acr" ? tv("kindAcr") : item.kind === "single" ? tv("kindSingle") : null}</RnDetailField>
               <RnDetailField label={t("statusLabel")}>
                 <StatusMark status={item.status} />
               </RnDetailField>

@@ -76,7 +76,7 @@ HISTORY_ROWS_SQL = """SELECT v.prompt_id,v.version,v.text,v.definition,v.recorde
 SCALARS = {"language": "language", **LABELS}
 # sort= of a list page -> its column (the management list's sortable columns)
 SORTS = {"changed": "p.recorded_at", "text": "p.text", "origin": "p.origin",
-         "status": "coalesce(p.definition->>'status','active')", "kind": "coalesce(p.definition->>'kind','single')",
+         "status": "coalesce(p.definition->>'status','active')", "kind": "p.definition->>'kind'",
          "language": "p.definition->>'language'", "region": "p.definition->'regions'->>0",
          **{api: label_sql(key) for api, key in LABELS.items()}}
 VOCABULARY_SQL = f"""SELECT k.key,k.value,count(*)::int AS n FROM catalog.current_prompt p
@@ -227,7 +227,7 @@ def snapshot(text: str, definition: dict) -> dict:
     regions = definition.get("regions")
     catalogs = definition.get("catalogs")
     first_row = catalogs[0] if isinstance(catalogs, list) and catalogs else {}
-    return {"text": text, "kind": definition.get("kind") or "single", "language": definition.get("language") or None,
+    return {"text": text, "kind": definition.get("kind") or None, "language": definition.get("language") or None,
             "regions": sorted({r for r in (normalize_region(str(x)) for x in regions) if r}) if isinstance(regions, list) else [],
             **{api: definition.get(key) or first_row.get(key) or None for api, key in LABELS.items()}, "status": status_of(definition)}
 
@@ -372,7 +372,7 @@ def list_filters(q: dict, project: UUID) -> tuple[str, list]:
     if q.get("kind"):
         if q["kind"] not in ("single", "acr"):
             raise refused(422, "invalid_value", "kind must be single or acr")
-        bind("coalesce(p.definition->>'kind','single')=$?", q["kind"])
+        bind("p.definition->>'kind'=$?", q["kind"])
     if q.get("language"):
         bind("lower(p.definition->>'language')=$?", q["language"].strip().lower())
     # the label codes and one market, as the options list them (the list's filter panel)

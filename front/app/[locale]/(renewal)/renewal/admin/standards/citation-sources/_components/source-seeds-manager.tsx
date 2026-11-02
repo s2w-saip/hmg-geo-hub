@@ -9,6 +9,8 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Loader2, Plus, RotateCcw, Undo2 } from "lucide-react";
 import {
   RnButton,
@@ -52,15 +54,15 @@ import {
   type SeedSort,
 } from "./source-lists-model";
 
-export function SourceSeedsManager({ initial, tabs }: { initial: SeedListing; tabs?: ReactNode }) {
+export function SourceSeedsManager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   return (
     <RnToastProvider>
-      <Manager initial={initial} tabs={tabs} />
+      <Manager initial={initial} tabs={tabs} savedFilters={savedFilters} />
     </RnToastProvider>
   );
 }
 
-function Manager({ initial, tabs }: { initial: SeedListing; tabs?: ReactNode }) {
+function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   const t = useTranslations("hubSourceLists");
   const ts = useTranslations("hubSourceLists.seeds");
   const to = useTranslations("hubSourceOverrides");
@@ -97,6 +99,20 @@ function Manager({ initial, tabs }: { initial: SeedListing; tabs?: ReactNode }) 
   const valueLabel = (a: SeedAxis, v: string) =>
     v === ALL ? tv("filterAll") : a === "category" ? label(v) : a === "state" ? ts(`state.${v as "applied"}`) : ts(`status.${v as "active"}`);
   const picked = pickedSeedAxes(filters);
+  const savedList = useAdminSavedFilters({
+    source: savedFilters,
+    query: seedFilterToQuery(filters, search),
+    filtered: picked.length > 0 || Boolean(search),
+    apply: (q) => {
+      const next = queryToSeedFilter(q);
+      setFilters(next.filters);
+      setSearch(next.search);
+    },
+    summarize: (q) => {
+      const next = queryToSeedFilter(q);
+      return [...pickedSeedAxes(next.filters).map((a) => valueLabel(a, next.filters[a])), ...(next.search ? [`“${next.search}”`] : [])].join(" · ");
+    },
+  });
   const shown = useMemo(
     () => sortSeeds(listing.items.filter((r) => seedMatches(r, filters, search)), sort.key, sort.asc, categoryOrder),
     [listing.items, filters, search, sort, categoryOrder],
@@ -132,7 +148,7 @@ function Manager({ initial, tabs }: { initial: SeedListing; tabs?: ReactNode }) 
         setFilters(DEFAULT_SEED_FILTER);
         toast(tr("resetDone"), { undoLabel: tr("undo"), undo: () => setFilters(before) });
       }}
-      saved={null}
+      saved={savedList.section}
     >
       {SEED_AXES.map((a) => (
         <RnRadioAxis
@@ -181,6 +197,7 @@ function Manager({ initial, tabs }: { initial: SeedListing; tabs?: ReactNode }) 
           onAdd={(skey, category) => write(skey, () => seedApi.set(skey, category), ts("toast.saved", { domain: skey }))}
           busy={saving != null}
         />
+        {savedList.note}
         {picked.length || search ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
             {picked.map((a) => (

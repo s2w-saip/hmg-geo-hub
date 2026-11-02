@@ -74,13 +74,17 @@ const LISTING: EntityListing = {
 };
 
 describe("EntityRolesManager", () => {
-  const out = html(<EntityRolesManager initial={LISTING} />);
+  const out = html(<EntityRolesManager initial={LISTING} savedFilters={{ page: "entity-roles", userId: "u", initial: [] }} />);
 
   it("lists Gold's entities by answers with the HUB's role", () => {
     expect(keysOf(out)).toEqual(["hyundai", "bmw", "apple", "alias"]);
     expect(out).toContain("업스트림 목록 v1 · 19건");
     expect(out).toContain("entity_role");
     expect(out).toContain("4 / 4개 · 자사 2 · 제외 1 · 반영 대기 1 · 업스트림 1");
+  });
+
+  it("keeps saved filters in the filter panel, as the other admin lists (last review 2026-11-02, F7)", () => {
+    expect(out).toContain(ko.renewal.saved.empty);
   });
 
   it("shows each kind of row", () => {
@@ -102,7 +106,7 @@ describe("EntityRolesManager", () => {
   });
 
   it("renders in English too", () => {
-    expect(html(<EntityRolesManager initial={LISTING} />, "en")).toContain("Own · Hyundai");
+    expect(html(<EntityRolesManager initial={LISTING} savedFilters={{ page: "entity-roles", userId: "u", initial: [] }} />, "en")).toContain("Own · Hyundai");
   });
 
   it("has every message in both languages", () => {

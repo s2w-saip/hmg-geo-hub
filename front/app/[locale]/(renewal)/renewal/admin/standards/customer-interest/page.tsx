@@ -6,6 +6,7 @@ import { canAccessRoute } from "@/lib/auth/route-policy";
 import { isHghApiError } from "@/lib/hgh/errors";
 import { hubFetch } from "@/lib/hub/client";
 import { hubToken } from "@/lib/hub/session";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import { RnPageFrame } from "../../../_components/filter-split";
 import type { InterestSourceListing, KeywordListing } from "./_components/interest-api";
 import { tabOf } from "./_components/interest-model";
@@ -55,11 +56,11 @@ export default async function RenewalCustomerInterestPage({
   if (!token) return notice(t("loginRequired"));
   try {
     if (tab === "sources") {
-      const list = await hubFetch<{ data: InterestSourceListing }>("GET", "/v1/hub/interest-sources", { token });
-      return <InterestSourcesManager initial={list.data} tabs={tabs} />;
+      const [list, saved] = await Promise.all([hubFetch<{ data: InterestSourceListing }>("GET", "/v1/hub/interest-sources", { token }), loadSavedFilters("interest-sources")]);
+      return <InterestSourcesManager initial={list.data} tabs={tabs} savedFilters={{ page: "interest-sources", userId: session.user.id, initial: saved }} />;
     }
-    const list = await hubFetch<{ data: KeywordListing }>("GET", "/v1/hub/interest-keywords", { token });
-    return <InterestKeywordsManager initial={list.data} tabs={tabs} />;
+    const [list, saved] = await Promise.all([hubFetch<{ data: KeywordListing }>("GET", "/v1/hub/interest-keywords", { token }), loadSavedFilters("interest-keywords")]);
+    return <InterestKeywordsManager initial={list.data} tabs={tabs} savedFilters={{ page: "interest-keywords", userId: session.user.id, initial: saved }} />;
   } catch (e) {
     if (!isHghApiError(e)) throw e;
     // a failed read is told apart from an empty list (the original screen's error boundary)

@@ -9,6 +9,8 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Pause, Pencil, Play, Plus } from "lucide-react";
 import {
   RnButton,
@@ -64,15 +66,15 @@ import {
 
 type Sheet = { mode: "add"; term: string; conditions: KeywordCondition[] } | { mode: "edit"; key: string } | { mode: "detail"; key: string };
 
-export function InterestKeywordsManager({ initial, tabs }: { initial: KeywordListing; tabs?: ReactNode }) {
+export function InterestKeywordsManager({ initial, tabs, savedFilters }: { initial: KeywordListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   return (
     <RnToastProvider>
-      <Manager initial={initial} tabs={tabs} />
+      <Manager initial={initial} tabs={tabs} savedFilters={savedFilters} />
     </RnToastProvider>
   );
 }
 
-function Manager({ initial, tabs }: { initial: KeywordListing; tabs?: ReactNode }) {
+function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   const t = useTranslations("hubInterest");
   const tk = useTranslations("hubInterest.keywords");
   const tv = useTranslations("standardPromptsView");
@@ -114,6 +116,20 @@ function Manager({ initial, tabs }: { initial: KeywordListing; tabs?: ReactNode 
     return t(`status.${v as "active"}`);
   };
   const picked = pickedKeywordAxes(filters);
+  const savedList = useAdminSavedFilters({
+    source: savedFilters,
+    query: keywordFilterToQuery(filters, search),
+    filtered: picked.length > 0 || Boolean(search),
+    apply: (q) => {
+      const next = queryToKeywordFilter(q);
+      setFilters(next.filters);
+      setSearch(next.search);
+    },
+    summarize: (q) => {
+      const next = queryToKeywordFilter(q);
+      return [...pickedKeywordAxes(next.filters).map((a) => valueLabel(a, next.filters[a])), ...(next.search ? [`“${next.search}”`] : [])].join(" · ");
+    },
+  });
   const shown = useMemo(() => sortKeywords(listing.items.filter((r) => keywordMatches(r, filters, search)), sort.key, sort.asc, locale), [listing.items, filters, search, sort, locale]);
   const total = keywordCounts(listing.items);
   const head = (key: KeywordSort, className?: string) => (
@@ -147,7 +163,7 @@ function Manager({ initial, tabs }: { initial: KeywordListing; tabs?: ReactNode 
         setFilters(DEFAULT_KEYWORD_FILTER);
         toast(tr("resetDone"), { undoLabel: tr("undo"), undo: () => setFilters(before) });
       }}
-      saved={null}
+      saved={savedList.section}
     >
       {KEYWORD_AXES.map((a) => (
         <RnRadioAxis
@@ -191,6 +207,7 @@ function Manager({ initial, tabs }: { initial: KeywordListing; tabs?: ReactNode 
           <b className="text-rn-ink">{t("flowNoteTitle")}</b>
           <span>{tk("flowNote")}</span>
         </RnNote>
+        {savedList.note}
         {picked.length || search ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
             {picked.map((a) => (

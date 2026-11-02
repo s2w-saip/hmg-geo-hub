@@ -111,6 +111,15 @@ describe("Global prompt management", () => {
     expect(out).toContain("링크 복사");
   });
 
+  it("shows no kind for a prompt Gold gives none, not 'single' (last review 2026-11-02, F7)", () => {
+    const page = { ...PAGE, items: [prompt({ kind: null })] };
+    const out = html(<HubPromptsManager initial={page} initialSearch="" options={OPTIONS} loginHref="/ko/login" savedFilters={SAVED} />);
+    const row = out.slice(out.indexOf("data-hub-prompt-row="), out.indexOf("</tr>", out.indexOf("data-hub-prompt-row=")));
+    const single = html(<HubPromptsManager initial={{ ...PAGE, items: [prompt({})] }} initialSearch="" options={OPTIONS} loginHref="/ko/login" savedFilters={SAVED} />);
+    const singleRow = single.slice(single.indexOf("data-hub-prompt-row="), single.indexOf("</tr>", single.indexOf("data-hub-prompt-row=")));
+    expect(row.length).toBeLessThan(singleRow.length);
+  });
+
   it("filter model: 사용 중 by default, picks in the URL, a parent resets its children, the BFF query", () => {
     expect(pickedAxes(DEFAULT_FILTER)).toEqual([]);
     expect(filterToQuery(DEFAULT_FILTER, "")).toBe("");

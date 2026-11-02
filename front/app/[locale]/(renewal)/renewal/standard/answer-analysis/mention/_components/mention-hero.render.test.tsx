@@ -280,7 +280,7 @@ describe("renewal Mention heroes", () => {
     const html = render(<Summary />, { input: { summary: settled(s) } });
     expect(html).toContain("직전 회차 대비 격차 변화 없음");
     expect(html).not.toContain("좁혀졌습니다");
-    expect(html).toContain("최종 선택에서 BMW와 같음 — 뒤지는 유형 없음");
+    expect(html).toContain("같은 값: 최종 선택 · BMW — 뒤지는 유형 없음");
     expect(html).not.toContain("모든 유형에서");
   });
 

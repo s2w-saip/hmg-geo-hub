@@ -6,6 +6,7 @@ import { canAccessRoute } from "@/lib/auth/route-policy";
 import { isHghApiError } from "@/lib/hgh/errors";
 import { hubFetch } from "@/lib/hub/client";
 import { hubToken } from "@/lib/hub/session";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import { RnPageFrame } from "../../../_components/filter-split";
 import type { CodeListing, SeedListing, SocialListing } from "./_components/source-lists-api";
 import { tabOf } from "./_components/source-lists-model";
@@ -58,8 +59,8 @@ export default async function RenewalCitationSourcesPage({
   if (!token) return notice(t("loginRequired"));
   try {
     if (tab === "seeds") {
-      const list = await hubFetch<{ data: SeedListing }>("GET", "/v1/hub/source-seeds", { token });
-      return <SourceSeedsManager initial={list.data} tabs={tabs} />;
+      const [list, saved] = await Promise.all([hubFetch<{ data: SeedListing }>("GET", "/v1/hub/source-seeds", { token }), loadSavedFilters("source-seeds")]);
+      return <SourceSeedsManager initial={list.data} tabs={tabs} savedFilters={{ page: "source-seeds", userId: session.user.id, initial: saved }} />;
     }
     if (tab === "social") {
       const list = await hubFetch<{ data: SocialListing }>("GET", "/v1/hub/source-socials", { token });
@@ -69,8 +70,8 @@ export default async function RenewalCitationSourcesPage({
       const list = await hubFetch<{ data: CodeListing }>("GET", "/v1/hub/source-codes", { token });
       return <SourceCodesManager initial={list.data} tabs={tabs} />;
     }
-    const list = await hubFetch<{ data: SourceListing }>("GET", "/v1/hub/source-overrides", { token });
-    return <SourceOverridesManager initial={list.data} tabs={tabs} />;
+    const [list, saved] = await Promise.all([hubFetch<{ data: SourceListing }>("GET", "/v1/hub/source-overrides", { token }), loadSavedFilters("source-overrides")]);
+    return <SourceOverridesManager initial={list.data} tabs={tabs} savedFilters={{ page: "source-overrides", userId: session.user.id, initial: saved }} />;
   } catch (e) {
     if (!isHghApiError(e)) throw e;
     // a failed read is told apart from an empty list (the original screen's error boundary)

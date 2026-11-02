@@ -136,8 +136,24 @@ export function isRhqRegionId(id: string): boolean {
   return REGION_BY_ID.has(id);
 }
 
-/** 권역 id의 표시 라벨(locale), 없으면 null. */
+/**
+ * Gold 대륙 권역(dim_region.code)의 표시 이름. 이름표일 뿐이고 묶음 · 값은 Gold 그대로다(시장 표 · 지도의 권역 행이 이
+ * 코드를 id로 쓴다). HUB 권역 id(브랜드-권역)와 겹치지 않는다.
+ */
+const GOLD_AREA_LABELS: Record<string, Record<RhqLocale, string>> = {
+  Africa: { ko: "아프리카", en: "Africa" },
+  Asia: { ko: "아시아", en: "Asia" },
+  Europe: { ko: "유럽", en: "Europe" },
+  "Latin America": { ko: "중남미", en: "Latin America" },
+  "Middle East": { ko: "중동", en: "Middle East" },
+  "North America": { ko: "북미", en: "North America" },
+  Oceania: { ko: "오세아니아", en: "Oceania" },
+};
+
+/** 권역 id(HUB 권역 또는 Gold 대륙 권역)의 표시 라벨(locale), 없으면 null. */
 export function rhqLabel(regionId: string, locale: RhqLocale = "ko"): string | null {
   const r = REGION_BY_ID.get(regionId);
-  return r ? (r.labels[locale] ?? r.labels.ko) : null;
+  if (r) return r.labels[locale] ?? r.labels.ko;
+  const area = GOLD_AREA_LABELS[regionId];
+  return area ? area[locale] : null;
 }

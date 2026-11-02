@@ -206,6 +206,18 @@ GOLD_DEF = {"surface": 1, "kind": "single", "language": "ko", "regions": ["KR", 
 
 # ═══ passwords and tokens ════════════════════════════════════════════════════════════════════════════════
 
+class EmptyKind(unittest.TestCase):
+    """Last review (2026-11-02, F7): Admin › Global prompts showed a prompt with no Gold kind as 'single' and found it under
+    the 'single' pick, a value Gold does not have (Global Prompts dropped the same fill in renewal audit step 13)."""
+
+    def test_an_empty_kind_stays_empty(self):
+        self.assertIsNone(ce.snapshot("q", {})["kind"])
+        self.assertEqual(ce.snapshot("q", {"kind": "acr"})["kind"], "acr")
+
+    def test_the_kind_pick_and_sort_read_gold_s_value(self):
+        self.assertNotIn("coalesce(p.definition->>'kind','single')", ce.SORTS["kind"])
+
+
 class Passwords(unittest.TestCase):
     def test_round_trip_and_wrong_password(self):
         encoded = passwords.hash_password("s3cret-pass")
@@ -324,7 +336,7 @@ class Rules(unittest.TestCase):
     def test_list_filters_bind_every_value(self):
         project = uuid4()
         where, args = ce.list_filters({"status": "all", "origin": "hub", "kind": "acr", "language": " KO ", "q": "50%_off"}, project)
-        self.assertEqual(where, "p.project_id=$1 AND p.origin=$2 AND coalesce(p.definition->>'kind','single')=$3 AND "
+        self.assertEqual(where, "p.project_id=$1 AND p.origin=$2 AND p.definition->>'kind'=$3 AND "
                                 "lower(p.definition->>'language')=$4 AND strpos(lower(p.text),lower($5))>0")
         self.assertEqual(args, [project, "hub", "acr", "ko", "50%_off"])
         self.assertEqual(ce.list_filters({}, project)[1], [project, "active"])

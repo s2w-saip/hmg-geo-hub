@@ -6,6 +6,7 @@ import { canAccessRoute } from "@/lib/auth/route-policy";
 import { isHghApiError } from "@/lib/hgh/errors";
 import { hubFetch } from "@/lib/hub/client";
 import { hubToken } from "@/lib/hub/session";
+import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import { RnPageFrame } from "../../../_components/filter-split";
 import type { EntityListing } from "./_components/entity-roles-api";
 import { EntityRolesManager } from "./_components/entity-roles-manager";
@@ -41,8 +42,8 @@ export default async function RenewalEntitiesPage({ params }: { params: Promise<
   const token = await hubToken();
   if (!token) return notice(t("loginRequired"));
   try {
-    const list = await hubFetch<{ data: EntityListing }>("GET", "/v1/hub/entity-roles", { token });
-    return <EntityRolesManager initial={list.data} />;
+    const [list, saved] = await Promise.all([hubFetch<{ data: EntityListing }>("GET", "/v1/hub/entity-roles", { token }), loadSavedFilters("entity-roles")]);
+    return <EntityRolesManager initial={list.data} savedFilters={{ page: "entity-roles", userId: session.user.id, initial: saved }} />;
   } catch (e) {
     if (!isHghApiError(e)) throw e;
     // a failed read is told apart from an empty list (the original screen's error boundary)

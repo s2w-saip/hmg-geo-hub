@@ -51,7 +51,7 @@ describe("renewal ACR body: 후보 → 선택 전환 and 결선 맞대결", () =
     expect(html).toContain(T.duel.title);
     expect(html).toContain(T.duel.chip);
     expect(html).toContain("셀당 반복 1개를 표본으로 계산합니다(반복 20회 중 8회, 셀 8개)");
-    expect(html).toMatch(/data-rn-b="Toyota"[^>]*title="Toyota와 함께 후보에 오른 반복 8회 — 당사 승 2 \(25\.0%\) · Toyota 승 3 \(37\.5%\) · 그 외 3 \(37\.5%\)"/);
+    expect(html).toMatch(/data-rn-b="Toyota"[^>]*title="함께 후보에 오른 반복 8회\(상대 Toyota\) — 당사 승 2 \(25\.0%\) · Toyota 승 3 \(37\.5%\) · 그 외 3 \(37\.5%\)"/);
   });
 });
 
@@ -106,14 +106,14 @@ describe("renewal ACR body: the summary restates the page's numbers (renewal aud
     const less = render(withFindings([{ ...leak, tone: "warn", params: { ...leak.params, gap: 2, dir: "less" } }]));
     expect(less).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota보다 Top1 ACR 2.0pp 낮음");
     const same = render(withFindings([{ ...leak, tone: "info", params: { ...leak.params, gap: 0, dir: "same" } }]));
-    expect(same).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota와 Top1 ACR 같음");
+    expect(same).toContain("Hyundai · 후보군 포함율이 가장 가까운 Toyota — Top1 ACR 같음");
     expect(same).not.toContain("비슷하지만");
   });
   it("an engine gap of none says so, and a sweep names no content to add", () => {
     const engine = bodies.snapshot.view!.findings[2];
     expect(render(withFindings([{ ...engine, params: { ...engine.params, wins: 1, diff: 0 } }]))).toContain("엔진마다 당사 1위 프롬프트 1/1로 같음");
     const sweep = render(withFindings([{ kind: "sweep", tone: "info", pri: 4, target: "sec-prompt", brand: "Toyota", params: { rival: "Toyota", count: 1 } }]));
-    expect(sweep).toContain("Toyota가 모든 엔진에서 1위인 프롬프트 1개");
+    expect(sweep).toContain("모든 엔진에서 Toyota 1위인 프롬프트 1개");
     expect(sweep).not.toContain("보강");
   });
   // renewal audit 15 (W6): a gap change shown as 0.0 is no change, not 'widened' or 'narrowed'

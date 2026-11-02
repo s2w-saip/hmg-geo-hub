@@ -10,6 +10,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { AlertTriangle, ArrowDownWideNarrow, ArrowUpNarrowWide, Database, History, Loader2, RotateCcw } from "lucide-react";
 import {
   RnButton,
@@ -51,10 +53,10 @@ import {
   type SourceSort,
 } from "./source-overrides-model";
 
-export function SourceOverridesManager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }) {
+export function SourceOverridesManager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   return (
     <RnToastProvider>
-      <Manager initial={initial} tabs={tabs} />
+      <Manager initial={initial} tabs={tabs} savedFilters={savedFilters} />
     </RnToastProvider>
   );
 }
@@ -72,7 +74,7 @@ function useCategoryLabel(listing: SourceListing) {
   );
 }
 
-function Manager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }) {
+function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs?: ReactNode; savedFilters: SavedFiltersSource }) {
   const t = useTranslations("hubSourceOverrides");
   const tv = useTranslations("standardPromptsView");
   const tp = useTranslations("renewal.prompts");
@@ -110,6 +112,21 @@ function Manager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }
     v === ALL ? tv("filterAll") : a === "category" ? label(v) : a === "source" ? t(`source.${v as "override"}`) : t(`state.${v as "applied"}`);
 
   const picked = pickedAxes(filters);
+  const savedList = useAdminSavedFilters({
+    source: savedFilters,
+    query: filterToQuery(filters, search, otherOnly),
+    filtered: picked.length > 0 || Boolean(search) || otherOnly,
+    apply: (q) => {
+      const next = queryToFilter(q);
+      setFilters(next.filters);
+      setSearch(next.search);
+      setOtherOnly(next.otherOnly);
+    },
+    summarize: (q) => {
+      const next = queryToFilter(q);
+      return [...pickedAxes(next.filters).map((a) => valueLabel(a, next.filters[a])), ...(next.otherOnly ? [t("otherOnly")] : []), ...(next.search ? [`“${next.search}”`] : [])].join(" · ");
+    },
+  });
   const shown = useMemo(
     () => sortRows(listing.items.filter((r) => matches(r, filters, search, otherOnly)), sort.key, sort.asc, categoryOrder),
     [listing.items, filters, search, otherOnly, sort, categoryOrder],
@@ -158,7 +175,7 @@ function Manager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }
         setFilters(DEFAULT_FILTER);
         toast(tr("resetDone"), { undoLabel: tr("undo"), undo: () => setFilters(before) });
       }}
-      saved={null}
+      saved={savedList.section}
     >
       {SOURCE_AXES.map((a) => (
         <RnRadioAxis
@@ -208,6 +225,7 @@ function Manager({ initial, tabs }: { initial: SourceListing; tabs?: ReactNode }
           <b className="text-rn-ink">{t("flowNoteTitle")}</b>
           <span>{t("flowNote")}</span>
         </RnNote>
+        {savedList.note}
         {picked.length || search || otherOnly ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
             {picked.map((a) => (

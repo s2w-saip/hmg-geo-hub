@@ -63,8 +63,9 @@ export function RnRoundCalendar({
         </RnIconButton>
       </div>
       <div className="mt-1 grid grid-cols-7 gap-0.5 text-center">
-        {labels.weekdays.map((w) => (
-          <span key={w} className="py-0.5 text-rn-11 text-rn-muted">
+        {/* keyed by position: the en heads repeat letters (T · S) */}
+        {labels.weekdays.map((w, i) => (
+          <span key={i} className="py-0.5 text-rn-11 text-rn-muted">
             {w}
           </span>
         ))}

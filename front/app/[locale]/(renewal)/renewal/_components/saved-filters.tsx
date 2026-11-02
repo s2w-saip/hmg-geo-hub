@@ -14,7 +14,9 @@ import { RnButton, RnMenu, RnMenuItem, RnSkeleton, RnTextButton, cx, useRnToast 
 export type SavedFilterPage =
   | "overview" | "mention" | "citation" | "acr" | "visibility" | "conversion" | "prompts" | "hub-prompts" | "accounts" | "ga4"
   // Website pages keep their own lists (2026-10-30): their filters are the site axes, not the Global ones.
-  | "website-overview" | "website-mention" | "website-citation" | "website-prompts" | "website-conversion" | "website-acr";
+  | "website-overview" | "website-mention" | "website-citation" | "website-prompts" | "website-conversion" | "website-acr"
+  // Admin list screens (2026-11-02): each list keeps its own.
+  | "source-overrides" | "source-seeds" | "interest-keywords" | "interest-sources" | "entity-roles";
 
 export interface SavedFilter {
   id: string;

@@ -15,7 +15,8 @@ export type HubPrompt = {
   editable: boolean;
   version: number;
   text: string;
-  kind: HubKind;
+  /** null = Gold has no kind (not shown as 'single', last review 2026-11-02). */
+  kind: HubKind | null;
   language: string | null;
   regions: string[];
   status: HubStatus;

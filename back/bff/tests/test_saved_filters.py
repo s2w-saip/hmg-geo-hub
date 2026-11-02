@@ -187,6 +187,13 @@ class Routes(unittest.TestCase):
         self.assertEqual(self.listed("overview"), [])
         self.assertEqual(self.listed("mention"), [])
 
+    def test_admin_list_screens_keep_their_own_lists(self):
+        """Last review (2026-11-02, F7): 인용 출처 분류(교정 · 시드) · 고객 관심(키워드 · 소스) · 엔티티 카탈로그 had no saved filters."""
+        for page in ("source-overrides", "source-seeds", "interest-keywords", "interest-sources", "entity-roles"):
+            self.save("A", page=page, isDefault=True)
+            self.assertEqual(self.names(page), [("A", True)], page)
+        self.assertEqual(self.listed("ga4"), [])
+
     def test_a_new_default_takes_over(self):
         self.save("A", isDefault=True)
         self.save("B", isDefault=True)

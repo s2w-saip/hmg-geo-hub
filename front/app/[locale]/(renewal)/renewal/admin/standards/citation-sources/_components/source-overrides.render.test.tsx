@@ -59,7 +59,7 @@ const LISTING: SourceListing = {
 
 describe("citation source list", () => {
   it("renders the URL's picks: corrections with Gold's state, the owned warning and the published list", () => {
-    const out = html(<SourceOverridesManager initial={LISTING} />);
+    const out = html(<SourceOverridesManager initial={LISTING} savedFilters={{ page: "source-overrides", userId: "u", initial: [] }} />);
     expect(out).toContain(">인용 출처 분류<");
     expect(out).toContain(ko.hubSourceOverrides.flowNote.replaceAll("'", "&#x27;"));
     expect(out).not.toContain("즉시 반영");
@@ -81,7 +81,7 @@ describe("citation source list", () => {
   it("labels a revert Gold still applies as 원복 대기 (state stays pending)", () => {
     const REVERTED = row({ skey: "rev.example", key: "rev.example", source: "override", gold: { category: "newsMedia", source: "override" },
       override: { ...OVERRIDE, category: "newsMedia", status: "cleared" }, state: "pending" });
-    const out = html(<SourceOverridesManager initial={{ ...LISTING, items: [REVERTED] }} />);
+    const out = html(<SourceOverridesManager initial={{ ...LISTING, items: [REVERTED] }} savedFilters={{ page: "source-overrides", userId: "u", initial: [] }} />);
     const tr = out.slice(out.indexOf('data-hub-source-row="rev.example"'), out.indexOf("</tr>", out.indexOf('data-hub-source-row="rev.example"')));
     expect(tr).toContain('data-hub-source-state="pending"');
     expect(tr).toContain(`>${ko.hubSourceOverrides.state.pendingClear}<`);
@@ -90,7 +90,7 @@ describe("citation source list", () => {
 
   it("gives each filter axis one 전체 radio, checked only when nothing is picked", () => {
     // 2026-10-30: axisOptions also listed ALL, so the panel showed 전체 twice (both checked while nothing was picked).
-    const out = html(<SourceOverridesManager initial={LISTING} />);
+    const out = html(<SourceOverridesManager initial={LISTING} savedFilters={{ page: "source-overrides", userId: "u", initial: [] }} />);
     const radios = (axis: string) => [...out.matchAll(new RegExp(`role="radio" aria-checked="(true|false)"[^>]*data-fk="v:${axis}:([^"]+)"`, "g"))].map(([, c, v]) => [v, c === "true"] as const);
     // source=override is picked in the URL; the state axis is not
     expect(radios("source").filter(([v]) => v === "all")).toHaveLength(1);

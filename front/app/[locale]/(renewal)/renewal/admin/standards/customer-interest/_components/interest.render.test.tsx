@@ -106,7 +106,7 @@ const SOURCES: InterestSourceListing = {
 };
 
 describe("InterestKeywordsManager", () => {
-  const out = html(<InterestKeywordsManager initial={KEYWORDS} />);
+  const out = html(<InterestKeywordsManager initial={KEYWORDS} savedFilters={{ page: "interest-keywords", userId: "u", initial: [] }} />);
 
   it("lists the HUB's keywords next to Gold's collection, with no 'saved = applied' wording", () => {
     expect(keysOf(out, "data-hub-keyword-row")).toEqual(["중고차", "패밀리 suv", "ev9", "suv"]); // the Korean collation
@@ -137,12 +137,12 @@ describe("InterestKeywordsManager", () => {
   });
 
   it("renders in English too", () => {
-    expect(html(<InterestKeywordsManager initial={KEYWORDS} />, "en")).toContain("South Korea · ko and 1 more");
+    expect(html(<InterestKeywordsManager initial={KEYWORDS} savedFilters={{ page: "interest-keywords", userId: "u", initial: [] }} />, "en")).toContain("South Korea · ko and 1 more");
   });
 });
 
 describe("InterestSourcesManager", () => {
-  const out = html(<InterestSourcesManager initial={SOURCES} />);
+  const out = html(<InterestSourcesManager initial={SOURCES} savedFilters={{ page: "interest-sources", userId: "u", initial: [] }} />);
 
   it("orders by the corpus and never says a source was applied", () => {
     expect(keysOf(out, "data-hub-source-row")).toEqual(["gall.dcinside.com", "reddit.com/r/cars", "newsite.example"]);
@@ -166,7 +166,7 @@ describe("InterestSourcesManager", () => {
   it("shows Gold's source category, and a channel only as a suggestion until the row is registered", () => {
     const corpus = (key: string, category: string | null) => source({ key, url: key, host: key, channel: null, brands: [], status: null, updatedAt: null, gold: { entities: 9, mentions: 3729, category }, state: "upstream" });
     const listing = { ...SOURCES, items: [source({}), corpus("thetruthaboutcars.com", "automotiveMedia"), corpus("arca.live", "other"), corpus("gall.dcinside.com", null)] };
-    const page = html(<InterestSourcesManager initial={listing} />);
+    const page = html(<InterestSourcesManager initial={listing} savedFilters={{ page: "interest-sources", userId: "u", initial: [] }} />);
     const media = rowOf(page, "data-hub-source-row", "thetruthaboutcars.com");
     expect(media).toContain("자동차 미디어");
     expect(media).toContain('data-hub-source-suggested="news"');

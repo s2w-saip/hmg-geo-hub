@@ -9,6 +9,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History } from "lucide-react";
 import {
   RnButton,
@@ -55,15 +57,15 @@ import {
 
 type Sheet = { mode: "entity"; key: string } | { mode: "recent" };
 
-export function EntityRolesManager({ initial }: { initial: EntityListing }) {
+export function EntityRolesManager({ initial, savedFilters }: { initial: EntityListing; savedFilters: SavedFiltersSource }) {
   return (
     <RnToastProvider>
-      <Manager initial={initial} />
+      <Manager initial={initial} savedFilters={savedFilters} />
     </RnToastProvider>
   );
 }
 
-function Manager({ initial }: { initial: EntityListing }) {
+function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilters: SavedFiltersSource }) {
   const t = useTranslations("hubEntities");
   const tv = useTranslations("standardPromptsView");
   const tp = useTranslations("renewal.prompts");
@@ -104,6 +106,20 @@ function Manager({ initial }: { initial: EntityListing }) {
     return v;
   };
   const picked = pickedEntityAxes(filters);
+  const savedList = useAdminSavedFilters({
+    source: savedFilters,
+    query: entityFilterToQuery(filters, search),
+    filtered: picked.length > 0 || Boolean(search),
+    apply: (q) => {
+      const next = queryToEntityFilter(q);
+      setFilters(next.filters);
+      setSearch(next.search);
+    },
+    summarize: (q) => {
+      const next = queryToEntityFilter(q);
+      return [...pickedEntityAxes(next.filters).map((a) => valueLabel(a, next.filters[a])), ...(next.search ? [`“${next.search}”`] : [])].join(" · ");
+    },
+  });
   const matched = useMemo(() => sortEntities(listing.items.filter((r) => entityMatches(r, filters, search)), sort.key, sort.asc, locale), [listing.items, filters, search, sort, locale]);
   const pages = Math.max(1, Math.ceil(matched.length / size));
   const current = Math.min(page, pages);
@@ -122,7 +138,7 @@ function Manager({ initial }: { initial: EntityListing }) {
         setFilters(DEFAULT_ENTITY_FILTER);
         toast(tr("resetDone"), { undoLabel: tr("undo"), undo: () => setFilters(before) });
       }}
-      saved={null}
+      saved={savedList.section}
     >
       {ENTITY_AXES.map((a) => (
         <RnRadioAxis
@@ -170,6 +186,7 @@ function Manager({ initial }: { initial: EntityListing }) {
           <b className="text-rn-ink">{t("flowNoteTitle")}</b>
           <span>{t("flowNote")}</span>
         </RnNote>
+        {savedList.note}
         {picked.length || search ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
             {picked.map((a) => (
