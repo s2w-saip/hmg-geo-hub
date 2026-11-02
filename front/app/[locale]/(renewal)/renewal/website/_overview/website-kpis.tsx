@@ -90,6 +90,8 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
   const hasRatio = tile.ratio?.numerator != null && tile.ratio.denominator != null;
   // the original's copy variant: an "api" tile reads its label and tip from dashboard.kpi.api.* when it has them
   const copyKey = (k: string) => (tile.copyVariant === "api" && tKpi.has(`api.${k}`) ? `api.${k}` : k);
+  // a website meaning that differs from Global's (⑤ counts the site's own URLs, Gold cit_m05 = cit_owned): its own copy
+  const copy = (k: string) => (t.has(`copy.${k}`) ? t(`copy.${k}` as "title") : tKpi(copyKey(k) as "definition.visibility"));
   return (
     <div data-rn-kpi={tile.key} className="group/kpi relative flex min-w-0 flex-col gap-1 border-l border-white/14 px-4 py-0.5 first:border-l-0 @max-[760px]/rnwkpi:nth-[2n+1]:border-l-0">
       <span className="flex items-center gap-1 text-rn-13 font-bold text-white/86">
@@ -97,8 +99,8 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
         {/* above the tile's link, so ⓘ shows its tip instead of opening the page */}
         <span className="relative z-[1] inline-flex">
           <RnInfoTip label={tR("infoLabel", { name })} align={end ? "end" : "start"}>
-            <RnInfoTipItem label={tR("definition")}>{tKpi(copyKey(`definition.${tile.key}`) as "definition.visibility")}</RnInfoTipItem>
-            <RnInfoTipItem label={tR("formula")}>{tKpi(copyKey(`formula.${tile.key}`) as "formula.visibility")}</RnInfoTipItem>
+            <RnInfoTipItem label={tR("definition")}>{copy(`definition.${tile.key}`)}</RnInfoTipItem>
+            <RnInfoTipItem label={tR("formula")}>{copy(`formula.${tile.key}`)}</RnInfoTipItem>
           </RnInfoTip>
         </span>
       </span>
@@ -132,7 +134,7 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
           {hasRatio ? (
             <>
               <div data-rn-ratio={`${tile.key}.num`} className={ROW}>
-                <dt className="truncate text-white/72">{tKpi(copyKey(`ratio.${tile.key}.num`) as "ratio.visibility.num")}</dt>
+                <dt className="truncate text-white/72">{copy(`ratio.${tile.key}.num`)}</dt>
                 <dd className="m-0 font-semibold text-white tabular-nums">{f.count(tile.ratio!.numerator!)}</dd>
               </div>
               <div data-rn-ratio={`${tile.key}.den`} className={ROW}>

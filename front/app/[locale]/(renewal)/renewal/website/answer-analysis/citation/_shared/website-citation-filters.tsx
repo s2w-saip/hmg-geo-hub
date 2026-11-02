@@ -17,6 +17,7 @@ export async function websiteCitationFilterProps(query: ScreenQuery, scope: Allo
     catalogRows: bar.options.catalogRows,
     geographyOptions: bar.options.geographyOptions,
     languageOptions: bar.options.languageOptions,
+    engineOptions: bar.options.engineOptions,
     optionMatrix: bar.options.optionMatrix,
     collectionStartDay: bar.dates.collectionStartDay,
     latestAnchorDay: bar.dates.latestAnchorDay,

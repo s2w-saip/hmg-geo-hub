@@ -273,7 +273,7 @@ def competitor_kpi_rows(inp: dict) -> list[dict]:
                      "gapPp": None if b["isTracked"] else delta_pp(pct, own_pct), "inTrendSeries": in_series})
     tracked = [r for r in rows if r["isTracked"]]
     others = sort_by([r for r in rows if not r["isTracked"]],
-                     lambda a, b: _sign(_nn(b["pct"], -1) - _nn(a["pct"], -1)) or locale_compare(a["brand"], b["brand"]))
+                     lambda a, b: _sign(exact(_nn(b["pct"], -1)) - exact(_nn(a["pct"], -1))) or locale_compare(a["brand"], b["brand"]))
     return (tracked + others)[:limit]
 
 

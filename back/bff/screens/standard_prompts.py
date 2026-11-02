@@ -43,7 +43,7 @@ PRESENCES = ("branded", "unbranded")
 KINDS = ("acr", "single")
 NONE = "none"                   # the filter pick of the rows Gold left without a presence / kind
 GEO_PSEUDO = ("x:WW", "x:EU", "x:ME")
-HISTORY_LIMIT = 500
+GROUP_ROWS = 100
 TIMELINE_LIMIT = 100
 COLLATORS = {"ko": icu.Collator.createInstance(icu.Locale("ko")), "en": icu.Collator.createInstance(icu.Locale("en"))}
 
@@ -86,6 +86,7 @@ def catalog_row(item: dict) -> dict:
             "depth4": item.get("depth4"), "funnelStage": item.get("funnel_stage"), "kind": kind if kind in KINDS else None,
             "lang": item.get("lang"), "regions": item.get("regions"),
             "scopePromptId": item.get("scope_prompt_id") if measured else None,
+            "hubPromptId": str(item["scope_prompt_id"]) if item.get("scope_prompt_id") else None,
             "presence": presence if presence in PRESENCES else None,
             "common": brand is None or brand == UMBRELLA_BRAND,
             "markets": split_markets(item.get("regions"))}
@@ -337,21 +338,23 @@ async def prompts_timeline(q) -> dict:
 
 @screen("catalog/prompts-history")
 async def prompts_history(q) -> dict:
-    """The 변경 이력 tab: the latest changes in the last 30 or 90 days, one event type or all, in bulk
-    groups, from the HUB catalog's revisions. available = false when the store is not connected, and for an account
-    with a scope: the feed names prompts of every market."""
+    """The 변경 이력 tab: the changes in the last 30 or 90 days, one event type or all, in bulk groups, from the HUB
+    catalog's revisions. The store reads the whole window and the event pick runs over all of it; a group keeps its
+    full count and lists its first GROUP_ROWS rows (a Gold import writes ~12k revisions at once). available = false
+    when the store is not connected, and for an account with a scope: the feed names prompts of every market."""
     _, sp = split_context(q)
     days = 30 if one(sp, "days") == "30" else 90
     event = one(sp, "event") or "all"
     if not reader_scope().get("all"):
         return {"available": False, "shown": 0, "groups": []}
+    since = datetime.now(timezone.utc) - timedelta(days=days)
     try:
-        items = await catalog_editor.history_rows(None, HISTORY_LIMIT)
+        items = await catalog_editor.history_rows(None, None, since=since)
     except HTTPException as exc:
         if exc.status_code == 503:
             return {"available": False, "shown": 0, "groups": []}
         raise
-    since = datetime.now(timezone.utc) - timedelta(days=days)
     rows = [v for v in (audit_view(r) for r in items)
             if v["createdAt"] and instant(v["createdAt"]) >= since and (event == "all" or v["eventType"] == event)]
-    return {"available": True, "shown": len(rows), "groups": batch_groups(rows)}
+    groups = [{**g, "count": len(g["rows"]), "rows": g["rows"][:GROUP_ROWS]} for g in batch_groups(rows)]
+    return {"available": True, "shown": len(rows), "groups": groups}

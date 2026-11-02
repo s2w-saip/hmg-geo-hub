@@ -194,6 +194,7 @@ async function filterProps(sp: Sp, admin: boolean, scope: AllowedScope, locale: 
       scope,
       geographyOptions: options.geographyOptions,
       languageOptions: options.languageOptions,
+      engineOptions: options.engineOptions,
       optionMatrix: options.optionMatrix,
       collectionStartDay: dates.collectionStartDay,
       latestAnchorDay: dates.latestAnchorDay,

@@ -64,6 +64,8 @@ export interface OverviewPanelInput {
    * brands of website/prompts-options, renewal audit 13-4). Absent = the static DIMENSIONS.brand, as in the app.
    */
   brandOptions?: string[];
+  /** AI 엔진 axis options from Gold (website panel options: DeepSeek on the CN site too). Absent = the static DIMENSIONS.engine. */
+  engineOptions?: string[];
   optionMatrix?: MeasuredScopeCombo[];
 }
 
@@ -208,6 +210,7 @@ export function axisOptions(
   }
   if (group === "language") return model.languageOptions;
   if (group === "brand" && input.brandOptions) return input.brandOptions;
+  if (group === "engine" && input.engineOptions) return input.engineOptions;
   return DIMENSIONS[group];
 }
 

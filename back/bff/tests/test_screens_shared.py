@@ -106,6 +106,16 @@ class Readers(unittest.TestCase):
                                {"surface": "global", "scope": READER_SCOPE, "filters": {}})
         self.assertEqual(out, {"geographyOptions": [], "languageOptions": [], "optionMatrix": []})  # no catalogRows key
 
+    def test_website_offers_gold_s_engines(self):
+        """Last review (2026-11-02): the website panel offered the static ChatGPT · Gemini; Gold measures DeepSeek on the CN
+        site too (284 answers on 10-09), which no pick could narrow to."""
+        data = {"geo_matrix": [], "catalog": None, "custom_fields": None,
+                "engines": [{"code": "chatgpt", "is_default": True}, {"code": "gemini"}, {"code": "deepseek"}]}
+        out = to_panel_options({"data": data}, {"surface": "website", "scope": READER_SCOPE, "filters": {}})
+        self.assertEqual(out["engineOptions"], ["chatgpt", "gemini", "deepseek"])
+        from bff.screens._filters import website_prompt_options_of
+        self.assertEqual(website_prompt_options_of({**data, "regions": [], "languages": []})["engineOptions"], ["chatgpt", "gemini", "deepseek"])
+
 
 class Gate(unittest.IsolatedAsyncioTestCase):
     async def test_other_errors_are_raised(self):

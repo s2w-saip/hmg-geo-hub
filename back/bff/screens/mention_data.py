@@ -33,7 +33,7 @@ from bff.access import reader_scope
 from bff.screens._competitors import rank_first_position_rows
 from bff.screens._compare import fetch_period_compare_api, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
-from bff.screens._filters import load_website_prompt_options, read_standard_filters
+from bff.screens._filters import fetch_filter_options, read_standard_filters, website_prompt_options_of
 from bff.screens._period import resolve_request_compare_period_shape
 from bff.screens._query import analysis_query, to_api_params
 from bff.screens._sort import code_unit_key
@@ -537,9 +537,20 @@ async def load_market_reads(filters: dict, ctx: dict, brands: list[str]) -> dict
     n = len(brands)
     gaps, options = await asyncio.gather(
         degrade_on_api_failure("websiteMarkets", lambda: api.get("mentions/market-gaps", query_params(filters, _qctx(ctx)))),
-        degrade_on_api_failure("websiteMarkets", load_website_prompt_options))
+        degrade_on_api_failure("websiteMarkets", lambda: fetch_filter_options({"surface": "website"})))
     return {"cur": cur, "prev": before, "brands": {b: {"cur": by_brand[i], "prev": by_brand[n + i]} for i, b in enumerate(brands)},
-            "gaps": {g["country"]: g for g in gaps["data"]["items"]} if gaps else {}, "countries": (options or {}).get("geographyOptions") or []}
+            "gaps": {g["country"]: g for g in gaps["data"]["items"]} if gaps else {},
+            "countries": site_markets(options["data"], filters.get("brand")) if options else []}
+
+
+def site_markets(options: dict, brands: list[str] | None) -> list[str]:
+    """The site markets the market table counts: every one, or with a brand picked (or locked by the scope) those where
+    Gold has that brand's site (geo_matrix), not a market the brand has no site in (last review, 2026-11-02)."""
+    markets = website_prompt_options_of(options)["geographyOptions"]
+    if not brands:
+        return markets
+    sites = {r.get("region") for r in options.get("geo_matrix") or [] if r.get("brand") in brands}
+    return [c for c in markets if c in sites]
 
 
 async def load_own_sum(filters: dict, ctx: dict) -> list[str]:

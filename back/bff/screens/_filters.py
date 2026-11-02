@@ -368,6 +368,8 @@ def to_panel_options(res: dict, ctx: dict) -> dict:
     out["languageOptions"] = language_options_of(matrix, brands)
     if ctx["surface"] == "website":
         out["optionMatrix"] = narrow_geo_matrix(matrix, brands)
+        # Gold's engines (DeepSeek on the CN site too), not the panel's static ChatGPT · Gemini (last review, 2026-11-02)
+        out["engineOptions"] = engine_options_of(data.get("engines") or [])
         return out
     _put(out, "catalogRows", to_catalog_rows(data.get("catalog")))
     out["optionMatrix"] = narrow_geo_matrix(matrix, None)
@@ -385,7 +387,9 @@ def website_prompt_options_of(data: dict) -> dict:
     """/website/prompts option lists (lib/hgh/adapters/catalog.ts loadWebsitePromptOptions)."""
     return {"geographyOptions": js_sorted(uniq(r["code"] for r in data["regions"] if r.get("kind") != "virtual_brand")),
             "languageOptions": js_sorted(uniq(data["languages"])),
-            "brandOptions": js_sorted(uniq(r.get("brand") for r in data["geo_matrix"] if r.get("brand")))}
+            "brandOptions": js_sorted(uniq(r.get("brand") for r in data["geo_matrix"] if r.get("brand"))),
+            # Gold's engines, as the other website panels (last review, 2026-11-02)
+            "engineOptions": engine_options_of(data.get("engines") or [])}
 
 
 async def load_website_prompt_options() -> dict:

@@ -31,6 +31,8 @@ export interface FilterBarView {
   selectableDates?: string[];
   /** Global only: the panel's axes (no measured language = no language axis). */
   onlyGroups?: DimensionGroup[];
+  /** Website only: Gold's engines. */
+  engineOptions?: string[];
 }
 
 /** The period-compare block of a card: chip, what it compares against, the reason caption. */

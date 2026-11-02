@@ -95,6 +95,13 @@ describe("renewal Website Overview trend", () => {
     expect(orphanQueries(out)).toEqual([]);
   });
 
+  it("names the rounds the trend draws, not 'the latest' (last review 2026-11-02: a September pick said 최근 4회차)", () => {
+    const head = text(wrap(<RnWebsiteTrend trend={settled({ trend: view })} />));
+    const days = view.rows.map((r) => `${+r.day.slice(5, 7)}/${+r.day.slice(8, 10)}`);
+    expect(head).toContain(`${days[0]} ~ ${days[days.length - 1]} ${view.rows.length}회차`);
+    expect(head).not.toContain("최근");
+  });
+
   it("tells a failed read from a trend still accruing", () => {
     expect(text(wrap(<RnWebsiteTrend trend={settled("failed" as const)} />))).toContain("KPI 추이를 불러오지 못했습니다");
     expect(text(wrap(<RnWebsiteTrend trend={settled({ trend: null })} />))).toContain(ko.dashboard.trend.accruing);

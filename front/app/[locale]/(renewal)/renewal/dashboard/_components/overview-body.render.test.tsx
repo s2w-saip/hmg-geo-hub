@@ -176,11 +176,14 @@ describe("renewal Overview basis and failure wording", () => {
     }
   });
 
-  it("says in a period compare that the brand table's Δ is the period's last two rounds, not the cards' compare", () => {
+  it("says in a period compare that 당사's Δ is the cards' compare and the rivals have none", () => {
+    // last review (2026-11-02): 97da2a0 made 당사's Δ the cards' period compare, the hint and titles still said 'the
+    // period's last two rounds on every row'
     const out = render({ matrix: ownOnly(), compareTitle: { key: "label.weekly", params: {} } });
     const hint = text(brandCard(out).slice(0, brandCard(out).indexOf("<table")));
     expect(hint).toContain(fill(O.brandsHintPeriod, { compare: ko.periodCompare.label.weekly }));
-    expect(brandCard(out)).toContain(`title="${O.deltaUp} · ${O.deltaRounds}"`);
+    expect(hint).not.toContain("마지막 두 회차");
+    expect(brandCard(out)).toContain(`title="${O.deltaUp} · ${ko.periodCompare.label.weekly}"`);
     // without a period the table and the cards compare the same rounds
     const plain = brandCard(render({ matrix: ownOnly() }));
     expect(text(plain.slice(0, plain.indexOf("<table")))).toContain(fill(O.brandsHint, { compare: ko.dashboard.overview.compare }));

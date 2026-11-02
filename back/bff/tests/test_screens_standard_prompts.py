@@ -39,6 +39,13 @@ class Rows(unittest.TestCase):
         self.assertEqual(sp.catalog_row(item("a"))["scopePromptId"], "s-a")
         self.assertIsNone(sp.catalog_row(item("a", measured=False))["scopePromptId"])
 
+    def test_every_row_carries_the_hub_prompt_id(self):
+        """Last review (2026-11-02): the detail sheet asked the timeline for the Gold catalog row id, which the HUB
+        history does not know, so every prompt showed no change. The HUB id is Gold's dim_prompt.prompt_id, measured or not."""
+        self.assertEqual(sp.catalog_row(item("a"))["hubPromptId"], "s-a")
+        self.assertEqual(sp.catalog_row(item("a", measured=False))["hubPromptId"], "s-a")
+        self.assertIsNone(sp.catalog_row(item("a", scope_prompt_id=None))["hubPromptId"])
+
     def test_presence_is_gold_s_value_only(self):
         """Renewal audit 13-1: an empty Gold value stays empty (the brand no longer stands in for it: HMG ->
         미포함, another brand -> 포함 was the original API's presence_effective)."""
@@ -275,11 +282,29 @@ class History(unittest.TestCase):
 
     def test_window_event_filter_and_view_rows(self):
         vm, get = self.history("days=30&event=updated", [audit(1, 1), audit(2, 40), audit(3, 2, event="created")])
-        get.assert_awaited_once_with(None, 500)
+        self.assertEqual(get.await_args.args, (None, None))
         self.assertEqual(vm["shown"], 1)
         row = vm["groups"][0]["rows"][0]
         self.assertEqual((row["id"], row["changes"]["kind"]), ("1", {"old": "1", "new": "true"}))
         self.assertEqual(self.history("", [audit(1, 1), audit(2, 40)])[0]["shown"], 2)
+
+    def test_window_and_event_apply_before_any_cap(self):
+        """Last review (2026-11-02): the tab read the newest 500 revisions and filtered after, so a Gold import of 12,446
+        rows hid everything older (the users' own edits) and an event pick found only what sat in those 500. The store
+        reads the whole window; every batch keeps its full count and lists its first rows."""
+        rows = [audit(f"b{i}", 1, batch="b") for i in range(600)] + [audit("u1", 2, event="text_updated"), audit("u2", 3, event="text_updated"),
+                                                                     audit("old", 120, event="text_updated")]
+
+        async def store(pid, limit, since=None):
+            out = [r for r in rows if since is None or sp.instant(r["created_at"]) >= since]
+            return out[:limit] if limit else out
+
+        with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(side_effect=store)):
+            vm = run(sp.prompts_history(QueryParams("days=90")))
+            picked = run(sp.prompts_history(QueryParams("days=90&event=text_updated")))
+        self.assertEqual(vm["shown"], 602)
+        self.assertEqual([(g["key"], g["count"], len(g["rows"])) for g in vm["groups"]], [("b0", 600, sp.GROUP_ROWS), ("u1", 1, 1), ("u2", 1, 1)])
+        self.assertEqual((picked["shown"], [g["key"] for g in picked["groups"]]), (2, ["u1", "u2"]))
 
     def test_timeline_reads_one_prompt_without_a_window(self):
         with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(return_value=[audit(1, 400), audit(2, 1)])) as get:

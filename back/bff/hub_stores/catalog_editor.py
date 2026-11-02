@@ -19,6 +19,7 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -70,7 +71,8 @@ HISTORY_ROWS_SQL = """SELECT v.prompt_id,v.version,v.text,v.definition,v.recorde
         w.version AS prev_version,w.text AS prev_text,w.definition AS prev_definition
     FROM catalog.prompt_version v JOIN catalog.prompt p USING(prompt_id)
     LEFT JOIN catalog.prompt_version w ON w.prompt_id=v.prompt_id AND w.version=v.version-1
-    WHERE p.project_id=$1 AND ($2::uuid IS NULL OR v.prompt_id=$2) ORDER BY v.recorded_at DESC,v.prompt_id LIMIT $3"""
+    WHERE p.project_id=$1 AND ($2::uuid IS NULL OR v.prompt_id=$2) AND ($4::timestamptz IS NULL OR v.recorded_at>=$4)
+    ORDER BY v.recorded_at DESC,v.prompt_id LIMIT $3"""
 SCALARS = {"language": "language", **LABELS}
 # sort= of a list page -> its column (the management list's sortable columns)
 SORTS = {"changed": "p.recorded_at", "text": "p.text", "origin": "p.origin",
@@ -471,10 +473,10 @@ def audit_row(row, names: dict) -> dict:
             "actor_email": (names.get(actor) or {}).get("login") if actor else None, "prompt_text": row["text"], "prompt_brand": None}
 
 
-async def history_rows(prompt_id: UUID | None, limit: int) -> list[dict]:
-    """The Global catalog's latest revisions (one prompt's, or all), newest first."""
+async def history_rows(prompt_id: UUID | None, limit: int | None, since: datetime | None = None) -> list[dict]:
+    """The Global catalog's latest revisions (one prompt's, or all), newest first; limit None = every one since `since`."""
     async with reading() as conn:
-        rows = await conn.fetch(HISTORY_ROWS_SQL, await global_project(conn), prompt_id, limit)
+        rows = await conn.fetch(HISTORY_ROWS_SQL, await global_project(conn), prompt_id, limit, since)
     names = await actors({str(r["recorded_by"]) for r in rows if r["recorded_by"]})
     return [audit_row(r, names) for r in rows]
 

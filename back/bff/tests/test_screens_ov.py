@@ -149,6 +149,29 @@ class NoDataSide(unittest.TestCase):
         self.assertEqual(to_compare_result(item)["dataCyclesCur"], 2)
 
 
+class RoundsWithData(unittest.TestCase):
+    """Last review (2026-11-02): Website Overview 2026-09 + US said '직전 4회차 수집 기준'; US was measured on 2 rounds of
+    August. The caption counted the surface's published rounds whatever the filters; Gold's rounds with data under the
+    filters (the ledger's data_cycles) are what the compare stands on."""
+
+    R = {"reason": None, "cyclesPrev": 4, "cyclesCur": 4, "dataCyclesPrev": 2, "dataCyclesCur": 4}
+
+    def test_the_caption_counts_the_rounds_with_data(self):
+        self.assertEqual(_period.period_caption(self.R, {"days": 45})["params"], {"prevCycles": 2, "curCycles": 4})
+        from bff.screens import overview
+        self.assertEqual(overview.window_label(self.R)["params"], {"prevCycles": 2, "curCycles": 4})
+
+    def test_published_rounds_without_both_data_counts(self):
+        r = {k: v for k, v in self.R.items() if k != "dataCyclesPrev"}
+        self.assertEqual(_period.period_caption(r, {"days": 45})["params"], {"prevCycles": 4, "curCycles": 4})
+
+    def test_the_compare_result_carries_both_sides(self):
+        from bff.screens._compare import to_compare_result
+        item = {"metric": "visibility", "unit": "pp", "prev": {"num": 1, "den": 2}, "cur": {"num": 1, "den": 2}, "delta": 0, "suppressed": False,
+                "reason": None, "cycles_prev": 4, "cycles_cur": 4, "data_cycles_prev": 2, "data_cycles_cur": 4}
+        self.assertEqual((to_compare_result(item)["dataCyclesPrev"], to_compare_result(item)["dataCyclesCur"]), (2, 4))
+
+
 class Values(unittest.TestCase):
     def test_no_nan_or_infinity_on_empty_denominators(self):
         data = {"visibility": {"num": 0, "den": 0}, "share_of_voice": {"num": 0, "den": 0}, "sentiment": {"num": 0, "den": 0},

@@ -164,7 +164,7 @@ export function RnAuditHistory({ initial, load = fetchPromptsHistory }: { initia
             </thead>
             <tbody>
               {groups.map((g) =>
-                g.rows.length === 1 ? (
+                g.count === 1 ? (
                   eventRow(g.rows[0])
                 ) : (
                   <Fragment key={g.key}>
@@ -185,12 +185,19 @@ export function RnAuditHistory({ initial, load = fetchPromptsHistory }: { initia
                           className="inline-flex cursor-pointer items-center gap-1.5 text-rn-12 font-semibold text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy"
                         >
                           <ChevronRight aria-hidden className={cx("size-3.5 transition-transform", open.has(g.key) && "rotate-90")} />
-                          {th("bulkGroup", { count: g.rows.length })}
+                          {th("bulkGroup", { count: g.count })}
                           <span className="font-normal text-rn-muted">{g.rows[0].actorEmail ?? t("actorUnknown")}</span>
                         </button>
                       </td>
                     </tr>
                     {open.has(g.key) ? g.rows.map((r) => eventRow(r, true)) : null}
+                    {open.has(g.key) && g.count > g.rows.length ? (
+                      <tr className="bg-rn-page">
+                        <td colSpan={3} className="border-b border-rn-line px-3 py-2 text-rn-12 text-rn-muted tabular-nums">
+                          {th("groupMore", { shown: g.rows.length, count: g.count })}
+                        </td>
+                      </tr>
+                    ) : null}
                   </Fragment>
                 ),
               )}

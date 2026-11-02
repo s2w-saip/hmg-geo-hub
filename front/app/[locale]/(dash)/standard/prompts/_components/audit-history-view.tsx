@@ -212,7 +212,7 @@ export function AuditHistoryView({ initial, load = fetchPromptsHistory }: { init
                           ) : (
                             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
                           )}
-                          {th("bulkGroup", { count: g.rows.length })}
+                          {th("bulkGroup", { count: g.count })}
                           <span className="font-normal text-muted-foreground">
                             {g.rows[0].actorEmail ?? t("actorUnknown")}
                           </span>

@@ -343,7 +343,8 @@ def rank_hero(fp: Any, period: Any) -> dict:
 
 
 def _board_cmp(a: dict, b: dict) -> int:
-    d = (b["pct"] if b["pct"] is not None else -1) - (a["pct"] if a["pct"] is not None else -1)
+    # by the exact values: rivals shown alike (0.2) are told apart (last review, 2026-11-02)
+    d = (exact(b["pct"]) if b["pct"] is not None else -1) - (exact(a["pct"]) if a["pct"] is not None else -1)
     if d != 0:
         return _sign(d)
     return -1 if a["own"] else 1 if b["own"] else locale_compare(a["key"], b["key"])
@@ -984,16 +985,17 @@ def _type_finding_ref_free(tf: dict, rows: list[dict]) -> dict:
 
 def summary_payload(period: Any, subs: dict, prevs: dict, engine: Any, trend: Any, types_by_brand: Any, fp: Any,
                     brands: list[dict], prev_brands: list[dict] | None = None,
-                    prev_engines: dict | None = None) -> dict:
-    """이번 회차 요약: headline values + the findings for every compare pick.
+                    prev_engines: dict | None = None, lines: Any = None) -> dict:
+    """이번 회차 요약: headline values + the findings for every compare pick. The standing and mover findings read the
+    boards the way the 경쟁 구도 board does, over every brand's line (`lines`, None in period mode).
 
     `fixed` = the findings that do not depend on the pick (standing, mover, engine, climb,
     negative; insertion order). Per pick: `type` = index into `typeFindings` (or None) and
     `order` = the four shown, highest priority first (-1 = the type finding)."""
     hero_e = rate_hero("exposure", subs["exposure"], prevs["exposure"], engine, period)
     hero_s = rate_hero("sov", subs["sov"], prevs["sov"], engine, period)
-    ex = board({"metric": "exposure", "brands": brands, "trend": trend, "values": None, "hero": hero_e, "prevBrands": prev_brands})
-    sov = board({"metric": "sov", "brands": brands, "trend": trend, "values": None, "hero": hero_s, "prevBrands": prev_brands})
+    ex = board({"metric": "exposure", "brands": brands, "trend": lines or trend, "values": None, "hero": hero_e, "prevBrands": prev_brands})
+    sov = board({"metric": "sov", "brands": brands, "trend": lines or trend, "values": None, "hero": hero_s, "prevBrands": prev_brands})
     favor = favor_hero(subs["favorability"], prevs["favorability"], engine, period)
     rank = rank_hero(_mv().overlay_first_position_values(fp, None), period)
     standing = _standing_finding(ex)
@@ -1397,11 +1399,12 @@ async def rn_summary(q) -> dict:
     month label, tests)."""
     c, filters, ctx = _begin(q)
     md = _md()
-    period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines = await asyncio.gather(
+    period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines, lines = await asyncio.gather(
         md.load_period_compare(filters, ctx), _subs(md, filters, ctx), _prevs(md, filters, ctx), md.load_engine_kpi_trend(filters, ctx),
         md.load_brand_trend(filters, ctx, pin_top=True), md.load_types_by_brand(filters, ctx), md.load_first_position(filters, ctx, pin_top=True),
-        _body_brands(md, filters, ctx), md.load_prev_period_brands(filters, ctx), md.load_prev_period_engines(filters, ctx))
-    return {**summary_payload(period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines),
+        _body_brands(md, filters, ctx), md.load_prev_period_brands(filters, ctx), md.load_prev_period_engines(filters, ctx),
+        md.load_brand_share_lines(filters, ctx))
+    return {**summary_payload(period, subs, prevs, engine, trend, tb, fp, brands, prev_brands, prev_engines, lines),
             "monthLine": per_answer_line(period, filters, c.get("today"))}
 
 

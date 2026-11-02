@@ -369,7 +369,7 @@
           "den": "All sentiment signals"
         },
         "position": {
-          "num": "Sum of first-mention ranks",
+          "num": "Sum of competitive ranks",
           "den": "Ranked answers (unranked excluded)"
         },
         "ownedUrlRate": {
@@ -486,7 +486,7 @@
         "countrySearch": "Search countries",
         "all": "All",
         "colRegion": "Region / country",
-        "colRival": "Top competitor",
+        "colRival": "Most-mentioned rival",
         "noRival": "—",
         "selected": "{n} selected",
         "brandRequired": "Pick a single brand to see the regional breakdown.",
@@ -801,7 +801,7 @@
           "formula": "Answers with total brand mentions >= 2 (unit: answers)"
         },
         "top3Rate": {
-          "definition": "Share of answers mentioning our brand where the mean exposure rank of our brand is 3.0 or lower. Based on the mean exposure rank, not literal 'top 3'.",
+          "definition": "Share of answers mentioning our brand where our competitive rank (the rank behind Average Position) is 3 or better (Gold top3).",
           "formula": "Answers with mean exposure rank <= 3.0 / answers mentioning our brand x 100 (%)"
         },
         "total": {
@@ -2390,6 +2390,7 @@
       "days30": "Last 30 days",
       "days90": "Last 90 days",
       "bulkGroup": "Bulk replace {count}",
+      "groupMore": "First {shown} of {count} shown",
       "exportCsv": "Export CSV",
       "shownCount": "{count} shown",
       "colWhen": "When",
@@ -4089,12 +4090,25 @@
       },
       "overview": {
         "title": "Website AI answer performance",
+        "copy": {
+          "definition": {
+            "citationShare": "Share of all citation occurrences that point to the measured site's own URLs (its registered address and the pages under it, target URLs included; multiple citations within one answer counted)"
+          },
+          "formula": {
+            "citationShare": "citations to own URLs ÷ total source citations × 100 (unit: %)"
+          },
+          "ratio": {
+            "citationShare": {
+              "num": "Own-URL citations"
+            }
+          }
+        },
         "noDelta": "No change data",
         "noPeriodDelta": "No period change",
         "timesOf": "{n}×",
         "kpiTitle": "KPIs",
         "kpiHintDelta": "Change = {compare}",
-        "trendHint": "Last {count} rounds · each KPI on its own axis · a round without a measurement breaks the line · hover an answer count for the change from the round before",
+        "trendHint": "{from} ~ {to}, {count} rounds · each KPI on its own axis · a round without a measurement breaks the line · hover an answer count for the change from the round before",
         "trendFailed": "Could not load the KPI trend. Reopen the page in a moment.",
         "trendTooltip": "Round {x}",
         "trendAria": "KPI trend: {series}",
@@ -4178,13 +4192,17 @@
       },
       "citation": {
         "title": "Website citation",
+        "promptsPage": {
+          "title": "Prompts citing own URLs",
+          "description": "Prompts that cited the measured site's own URLs (its registered address and the pages under it, target URLs included) at least once, and those that did not."
+        },
         "lens": {
           "hmgDef": "The share of all citations classified as HMG group official sites. The same value as Official (HMG) in the source mix below; the change compares with the previous round as the source mix does, or with the period of the same length before when a period is picked. It is a different basis from the Official (ours) share.",
           "own": {
             "name": "Official (ours) citation share",
             "question": "How much AI rests on our brand's official sites",
-            "def": "The share of all citations judged as our brand's official sites. Our official sites follow the brand scope of the current access and filters, the same judgement as the dashboard's official site citation KPI. Official (HMG) counts the official sites of all three group brands, so the values can differ. The change uses the Overview card's basis (previous round), or the period of the same length before when a period is picked. With a source filter on, the round change and the line are not drawn.",
-            "formula": "Citations matched to our official sites ÷ all citations × 100 (citations, not domains)",
+            "def": "The share of all citations judged as the measured site's own URLs (its registered address and the pages under it, target URLs included; Gold's website ownership, the same judgement as the Overview's AI citation share). Official (HMG) follows the source category Official (HMG), so the values differ. The change uses the Overview card's basis (previous round), or the period of the same length before when a period is picked. With a source filter on, the round change and the line are not drawn.",
+            "formula": "Citations of own URLs ÷ all citations × 100 (citations, not domains)",
             "none": "No citations to count"
           },
           "categories": "{n} source classes"
@@ -4295,13 +4313,13 @@
         },
         "weekly": {
           "title": "Weekly brand mentions",
-          "desc": "Weekly mentions of our brand and the top 10 brands by share. A week starts on Monday (‘wk 6/29’) and holds the round measured in it. Each line has its own scale; compare sizes with the numbers on the right.",
+          "desc": "Weekly mentions of our brand and the top 10 brands by share. A week starts on Monday (‘wk 6/29’) and holds the round measured in it. The last column is the change from the week before.",
           "chip": "wk {from} – wk {to} · {n} weeks",
           "weekOf": "wk {d}",
           "brand": "Brand",
           "latest": "Latest week",
           "delta": "vs previous week",
-          "gapNote": "A break in a line is a week without collection."
+          "gapNote": "— marks a week with no round measured."
         },
         "summary": {
           "how": "Restates this page's values (no new data), in a fixed order: market, missing prompts, engine, favorability. The market line names where the answers naming us fell and rose most. No threshold filters or ranks them.",
@@ -4337,7 +4355,7 @@
           "withBrands": "Naming other brands",
           "noBrand": "Answers naming no brand",
           "answers": "Answers",
-          "rival": "Top rival (exposure)",
+          "rival": "Most-mentioned rival (exposure)",
           "countryTip": "{country} — add to or remove from the country filter",
           "openMissing": "See {country}'s {count} missing prompts",
           "noteBrand": "Brand columns read Hyundai, Kia and Genesis. Hyundai N sites count in the value column only, so the three may not match it.",
@@ -4348,6 +4366,7 @@
         "engines": {
           "title": "By AI engine",
           "colEngine": "AI engine",
+          "colDelta": "Δ",
           "colRounds": "Rounds measured",
           "rounds": "{n}",
           "colTrend": "Trend"
@@ -5211,7 +5230,7 @@
         "model": {
           "tag": "Models",
           "title": "{model} converts {rate}% — our best model in the table",
-          "detail": "Lowest in the table: {worst} at {worstRate}% · how often a shortlisted model is picked"
+          "detail": "Lowest of our models in the table: {worst} at {worstRate}% · how often a shortlisted model is picked"
         },
         "mover": {
           "tag": "Change",
@@ -5524,8 +5543,7 @@
       "rivalsFailed": "Competitor values could not be loaded",
       "standing": "<b>#{rank}</b> of {count} compared brands",
       "brandsHint": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · Δ = {compare} on every row",
-      "brandsHintPeriod": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · values = the selected period · Δ = the period's last two rounds on every row (the KPI Δ above: {compare})",
-      "deltaRounds": "the period's last two rounds",
+      "brandsHintPeriod": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · values = the selected period · our Δ = the KPI Δ above ({compare}) · no period Δ for the rivals",
       "brandsFailed": "The brand comparison could not be loaded. Please reopen the page in a moment.",
       "brandsPartial": "Some values could not be loaded and are left blank. Please reopen the page in a moment.",
       "colBrand": "Brand",

@@ -40,6 +40,8 @@ export interface PromptRow {
   lang: string | null;
   // null = 미측정
   scopePromptId: string | null;
+  /** The HUB catalog's prompt id (Gold dim_prompt.prompt_id), measured or not: the change timeline's key. */
+  hubPromptId: string | null;
   /** Gold's brand presence of the row (branded / unbranded), null = Gold has none (점검 13-1: not inferred from the brand). */
   presence: "branded" | "unbranded" | null;
   /** No brand or the umbrella brand: shown as "공통". */
@@ -101,7 +103,8 @@ export type AuditRow = Omit<PromptAuditLogView, "createdAt"> & { createdAt: stri
 export interface PromptsHistory {
   available: boolean;
   shown: number;
-  groups: { key: string; batchId: string | null; rows: AuditRow[] }[];
+  /** count = the group's rows in the window; rows = its first ones (a Gold import writes ~12k at once). */
+  groups: { key: string; batchId: string | null; count: number; rows: AuditRow[] }[];
 }
 
 /** One prompt's change timeline, newest first (screen catalog/prompts-timeline). */

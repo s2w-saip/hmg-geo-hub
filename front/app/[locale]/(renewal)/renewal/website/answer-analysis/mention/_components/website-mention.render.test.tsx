@@ -149,6 +149,30 @@ describe("website mention engine table", () => {
     expect(html).toContain(T.engines.rounds.replace("{n}", "2"));
     expect(html).toContain(T.engines.rounds.replace("{n}", "1"));
   });
+
+  it("heads the change column as a change (last review 2026-11-02: no head, its label said 당사 − 경쟁사 평균)", () => {
+    const html = render(<RnSiteEngines metric="exposure" />, { rateEngines: settled(ENGINES) });
+    const heads = [...html.slice(0, html.indexOf("</thead>")).matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map(([, h]) => h);
+    expect(heads[2]).toBe(T.engines.colDelta);
+    expect(html).not.toContain(`aria-label="${ko.renewal.mention.engine.gapTitle}"`);
+  });
+});
+
+describe("website mention wording says what the values are (last review 2026-11-02)", () => {
+  it("the rival column names how the rival is picked", () => {
+    expect(T.markets.rival).toContain("언급 1위");
+  });
+
+  it("the weekly table speaks of a table, not of the chart it was", () => {
+    for (const s of [T.weekly.desc, T.weekly.gapNote]) {
+      expect(s).not.toContain("선");
+      expect(s).not.toContain("눈금");
+    }
+  });
+
+  it("Top 3 is the answers whose 당사 competitive rank is 3 or better (Gold top3), not an average", () => {
+    expect(ko.answerAnalysis.mentions.def.top3Rate.definition).not.toContain("평균");
+  });
 });
 
 describe("website mention views", () => {

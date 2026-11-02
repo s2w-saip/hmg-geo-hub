@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Bookmark, CalendarDays, ChevronLeft, Link2, Loader2, PanelLeft } from "lucide-react";
 import {
+  DIMENSIONS,
   ENGINE_LABEL,
   LABELED_VALUES,
   buildCommitParams,
@@ -782,6 +783,11 @@ export function useRnFilterToggle(): (group: DimensionGroup, value: string) => v
     (group: DimensionGroup, value: string) => change((d) => ({ draft: normalizeDraft(toggleValue(d, group, value), group, props.catalogRows) })),
     [change, props.catalogRows],
   );
+}
+
+/** The engines the panel offers (Gold's on the website pages, else the static list): what a chart row may pick. */
+export function useRnEngineOptions(): readonly string[] {
+  return useFilterActions().props.engineOptions ?? DIMENSIONS.engine;
 }
 
 /** Copies the page URL (current conditions) to the clipboard. */

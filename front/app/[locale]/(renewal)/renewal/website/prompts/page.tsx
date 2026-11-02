@@ -36,6 +36,8 @@ interface PromptOptionsView {
   geographyOptions: string[];
   languageOptions: string[];
   brandOptions: string[];
+  /** Gold's engines (DeepSeek on the CN site too). */
+  engineOptions?: string[];
   selectableDates: string[] | null;
 }
 
@@ -136,6 +138,7 @@ async function filterOptions(scope: AllowedScope, sp: SP, ctx: ScreenQuery, loca
     languageOptions: v.languageOptions,
     // the brands of the options read, as the original's WebsitePromptFilters (renewal audit 13-4)
     brandOptions: v.brandOptions,
+    engineOptions: v.engineOptions,
     selectableDates: v.selectableDates ?? undefined,
   };
 }

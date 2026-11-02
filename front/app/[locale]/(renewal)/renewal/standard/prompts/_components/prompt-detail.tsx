@@ -64,7 +64,7 @@ export function RnPromptDetail({
         </section>
         <section>
           <h3 className="m-0 mb-3 text-rn-13 font-bold text-rn-ink">{tp("detail.history")}</h3>
-          <RnPromptTimeline id={row.id} />
+          {row.hubPromptId ? <RnPromptTimeline id={row.hubPromptId} /> : null}
         </section>
       </div>
     </RnDrawer>

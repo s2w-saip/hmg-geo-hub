@@ -51,7 +51,11 @@ export function RnWebsiteTrend({ trend }: { trend: Promise<WebsiteTrendView | Fa
   const v = use(trend);
   return (
     <RnCard aria-label={tD("title")} className="min-w-0">
-      <RnCardHeader title={tD("title")} hint={v !== "failed" && v.trend ? t("trendHint", { count: v.trend.rows.length }) : undefined} />
+      {/* the rounds drawn, first ~ last (a period pick is not "the latest", last review 2026-11-02) */}
+      <RnCardHeader
+        title={tD("title")}
+        hint={v !== "failed" && v.trend ? t("trendHint", { from: md(v.trend.rows[0].day), to: md(v.trend.rows[v.trend.rows.length - 1].day), count: v.trend.rows.length }) : undefined}
+      />
       {v === "failed" ? (
         <RnEmpty className="mx-6 mb-5">{t("trendFailed")}</RnEmpty>
       ) : v.trend ? (

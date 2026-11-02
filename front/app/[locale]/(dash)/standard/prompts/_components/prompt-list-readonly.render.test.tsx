@@ -28,6 +28,7 @@ function row(over: Partial<PromptRow>): PromptRow {
     regions: null,
     lang: null,
     scopePromptId: "scope-1",
+    hubPromptId: "h1",
     presence: "branded",
     common: false,
     markets: { real: [], pseudo: [] },

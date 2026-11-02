@@ -23,7 +23,8 @@ export default async function RenewalWebsiteCitationPromptsRoute({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("answerAnalysis.citations.v2.promptsPage");
+  // the website's own title: Gold's website 자사 is the site's own URLs, not "공식 도메인" (last review, 2026-11-02)
+  const t = await getTranslations("renewal.website.citation.promptsPage");
   const tR = await getTranslations("renewal.citation");
   const session = await getSession();
   if (!session) throw new UnauthorizedError();
@@ -36,7 +37,7 @@ export default async function RenewalWebsiteCitationPromptsRoute({
           <RnTag className="ml-2 align-middle text-rn-11">{tR("beta")}</RnTag>
         </>
       }
-      meta={<span className="text-rn-13 text-rn-muted">{tR("sub.promptsDescription")}</span>}
+      meta={<span className="text-rn-13 text-rn-muted">{t("description")}</span>}
     />
   );
   const query = { ...sp, "ctx.surface": "website", "ctx.role": session.user.role };

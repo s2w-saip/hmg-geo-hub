@@ -934,7 +934,7 @@ export function StandardPromptReadonlyList({
                       className="h-6 w-6 p-0 text-muted-foreground"
                       aria-label={t("historyColumn")}
                       title={t("historyColumn")}
-                      onClick={() => setTimelineRow({ id: r.id, text: r.text })}
+                      onClick={() => setTimelineRow({ id: r.hubPromptId ?? r.id, text: r.text })}
                     >
                       <History className="h-3.5 w-3.5" aria-hidden />
                     </Button>

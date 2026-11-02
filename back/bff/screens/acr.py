@@ -193,10 +193,12 @@ def _panel_props(options: dict, languages: list, dates: dict) -> dict:
     return out
 
 
-async def load_acr_coverage() -> dict | None:
-    """What the renewal panel can offer (funnel/acr/coverage); a transient failure leaves the panel as it is."""
+async def load_acr_coverage(filters: dict) -> dict | None:
+    """What the renewal panel can offer (funnel/acr/coverage): the rounds with cells, and the countries and catalog rows
+    with cells on the picked round (the latest without a pick); a transient failure leaves the panel as it is."""
+    picked = {k: filters[k] for k in ("dateFrom", "dateTo") if filters.get(k)}
     try:
-        return (await api.get("funnel/acr/coverage", to_api_params(analysis_query({}, {"surface": "global", "scope": reader_scope()}), {})))["data"]
+        return (await api.get("funnel/acr/coverage", to_api_params(analysis_query(picked, {"surface": "global", "scope": reader_scope()}), {})))["data"]
     except Exception as exc:  # noqa: BLE001
         if not is_transient(exc):
             raise
@@ -827,7 +829,7 @@ async def renewal(q) -> dict:
     _, sp = split_context(q)
     filters = read_standard_filters(sp, reader_scope())
     st = page_state(sp, filters)
-    (acr, options, dates), coverage = await asyncio.gather(_global_reads(filters, "first", duels=True), load_acr_coverage())
+    (acr, options, dates), coverage = await asyncio.gather(_global_reads(filters, "first", duels=True), load_acr_coverage(filters))
     options, dates = covered_options(options, dates, coverage)
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
     data = acr["data"]

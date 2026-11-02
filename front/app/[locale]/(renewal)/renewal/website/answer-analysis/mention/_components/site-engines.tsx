@@ -20,7 +20,7 @@ export function RnSiteEngines({ metric }: { metric: "exposure" | "sov" }) {
   const rounds = (s: Array<number | null>) => s.filter((v) => v != null).length;
   const csv = () => ({
     name: `mention-${metric}-engines`,
-    rows: [[t("colEngine"), tE("own"), tE("avgShort"), tE("gapTitle"), ...x], ...rows.map((r) => [engineLabel(r.engine), r.own, r.avg, r.gap, ...r.series])],
+    rows: [[t("colEngine"), tE("own"), t("colDelta"), tE("avgShort"), tE("gapTitle"), ...x], ...rows.map((r) => [engineLabel(r.engine), r.own, r.delta, r.avg, r.gap, ...r.series])],
   });
   return (
     <>
@@ -39,7 +39,7 @@ export function RnSiteEngines({ metric }: { metric: "exposure" | "sov" }) {
               <tr className="border-b border-rn-line text-rn-12 text-rn-muted">
                 <th scope="col" className="py-1.5 pr-2 text-left font-semibold">{t("colEngine")}</th>
                 <th scope="col" className="px-2 py-1.5 text-right font-semibold">{tE("own")}</th>
-                <th scope="col" className="px-2 py-1.5 text-right font-semibold" aria-label={tE("gapTitle")} />
+                <th scope="col" className="px-2 py-1.5 text-right font-semibold">{t("colDelta")}</th>
                 <th scope="col" className="px-2 py-1.5 text-right font-semibold">{tE("avgShort")}</th>
                 <th scope="col" className="px-2 py-1.5 text-right font-semibold whitespace-nowrap">{t("colRounds")}</th>
                 <th scope="col" className="w-[34%] py-1.5 pl-2 text-left font-semibold">{t("colTrend")}</th>

@@ -762,6 +762,20 @@ class Coverage(unittest.TestCase):
         kept_o, kept_d = acr.covered_options(options, dates, coverage)
         self.assertEqual((kept_o["geographyOptions"], kept_o["catalogRows"], kept_d["selectableDates"]), (["US"], [row], ["2026-10-05"]))
 
+    def test_the_panel_asks_for_the_picked_round(self):
+        """Last review (2026-11-02): the coverage read had no round, so the panel offered the latest round's countries
+        on every round: on 08-17 eight of its 51 countries had cells, and EG (cells 07-13 ~ 08-17) was never offered."""
+        seen = []
+
+        async def get(path, params=None):
+            seen.append(dict(params or {}))
+            return {"data": {"rounds": [], "countries": [], "catalog": {"rows": []}}}
+        with mock.patch("bff.api.get", get), mock.patch.object(acr, "reader_scope", return_value={"all": True}):
+            asyncio.run(acr.load_acr_coverage({"dateFrom": "2026-08-17", "dateTo": "2026-08-17"}))
+            asyncio.run(acr.load_acr_coverage({}))
+        self.assertEqual((seen[0].get("from"), seen[0].get("to")), ("2026-08-17", "2026-08-17"))
+        self.assertNotIn("from", seen[1])
+
     def test_no_coverage_leaves_the_panel_as_it_is(self):
         options, dates = {"geographyOptions": ["EG"]}, {"selectableDates": ["2026-10-05"]}
         self.assertEqual(acr.covered_options(options, dates, None), (options, dates))

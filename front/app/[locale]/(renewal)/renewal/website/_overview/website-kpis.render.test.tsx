@@ -118,6 +118,33 @@ describe("renewal Website Overview KPI", () => {
   });
 });
 
+describe("renewal Website Overview KPI wording (last review 2026-11-02)", () => {
+  const view: TilesView = {
+    groups: [
+      {
+        category: "source",
+        tiles: [
+          tile({ key: "position", unit: "rank", value: 1.1, ratio: { numerator: 19042, denominator: 17796 } }),
+          tile({ key: "citationShare", value: 24.9, ratio: { numerator: 103528, denominator: 415632 } }),
+        ],
+      },
+    ],
+    suppressionCaption: null,
+  };
+  const out = wrap(<KpiCard view={view} qs="" deltas={false} findings={null} />);
+
+  it("names 우선 노출도's numerator Gold's competitive rank sum, not the first-appearance order", () => {
+    expect(text(tileOf(out, "position"))).toContain("경쟁 순위의 합");
+    expect(text(tileOf(out, "position"))).not.toContain("최초 등장");
+  });
+
+  it("says the website citation share counts the site's own URLs (target included), not HMG's base URLs", () => {
+    const c = text(tileOf(out, "citationShare"));
+    expect(c).toContain("자사 URL");
+    expect(c).not.toContain("base URL");
+  });
+});
+
 describe("renewal Website Overview 핵심 요약 cards", () => {
   const out = wrap(
     <WebsiteFindingList

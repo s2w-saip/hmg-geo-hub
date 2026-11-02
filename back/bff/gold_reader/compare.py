@@ -106,7 +106,7 @@ async def read(ctx):
         items.append({"metric": metric, "family": family, "unit": unit, "prev": p, "cur": c,
             "delta": None if reason else logic.delta_of(unit, pair(p), pair(c)),
             "suppressed": bool(reason), "reason": reason, "cycles_prev": lp.published_cycles,
-            "cycles_cur": lc.published_cycles, "data_cycles_cur": lc.data_cycles, "planned_prev": lp.planned_units, "planned_cur": lc.planned_units,
+            "cycles_cur": lc.published_cycles, "data_cycles_prev": lp.data_cycles, "data_cycles_cur": lc.data_cycles, "planned_prev": lp.planned_units, "planned_cur": lc.planned_units,
             "missing_share_prev": lp.missing_share, "missing_share_cur": lc.missing_share})
         if reason:
             suppressed[metric] = reason

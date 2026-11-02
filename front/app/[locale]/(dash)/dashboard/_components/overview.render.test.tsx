@@ -125,6 +125,11 @@ describe("GeoOverview", () => {
     expect(html).toContain("BMW");
     expect(html).toContain("7.3%");
   });
+  it("names the rival column by how its rival is picked, the most mentions (last review 2026-11-02)", () => {
+    // on the citation tab 43 of 51 countries had a rival citing more than the most-mentioned one shown as '최대 경쟁사'
+    expect(render(<GeoOverview geo={geoViewOf(GEO)} initialMetric="citationShare" />)).toContain("언급 1위 경쟁사");
+  });
+
   it("formats the position KPI as a rank", () => {
     const html = render(<GeoOverview geo={geoViewOf(GEO)} initialMetric="position" />);
     // 국가별 GEO 현황도 카드·답변분석 탭과 같은 단위 키를 쓴다(2026-09-20 고객 요구 ⑥).

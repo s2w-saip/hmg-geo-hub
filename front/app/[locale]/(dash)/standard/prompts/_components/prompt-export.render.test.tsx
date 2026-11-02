@@ -25,6 +25,7 @@ function row(i: number): PromptRow {
     regions: ["KR"],
     lang: "KO",
     scopePromptId: `scope-${i}`,
+    hubPromptId: "h1",
     presence: "branded",
     common: false,
     markets: { real: ["KR"], pseudo: [] },

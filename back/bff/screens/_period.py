@@ -391,12 +391,20 @@ def period_caption(r: dict, ctx: dict) -> dict:
         if cur_data is None:
             cur_data = 0
         return {"key": "reason.noDataCur", "params": {}} if cur_data <= 0 else {"key": "reason.noDataPrev", "params": {}}
+    return {"key": "window", "params": window_cycles(r)}
+
+
+def window_cycles(r: dict) -> dict:
+    """The rounds each side of a compare stands on: Gold's rounds with data under the filters (data_cycles) when the
+    read carries both sides, else the surface's published rounds (last review, 2026-11-02: a US pick said '직전 4회차'
+    on the 2 rounds US was measured)."""
+    prev, cur = ("dataCyclesPrev", "dataCyclesCur") if "dataCyclesPrev" in r and "dataCyclesCur" in r else ("cyclesPrev", "cyclesCur")
     params = {}
-    if "cyclesPrev" in r:
-        params["prevCycles"] = r["cyclesPrev"]
-    if "cyclesCur" in r:
-        params["curCycles"] = r["cyclesCur"]
-    return {"key": "window", "params": params}
+    if prev in r:
+        params["prevCycles"] = r[prev]
+    if cur in r:
+        params["curCycles"] = r[cur]
+    return params
 
 
 def period_chip(m: dict) -> dict:

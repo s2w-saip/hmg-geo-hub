@@ -122,6 +122,7 @@ async function filterOptions(scope: AllowedScope, q: ScreenQuery, locale: string
     scope,
     geographyOptions: v.geographyOptions,
     languageOptions: v.languageOptions,
+    engineOptions: v.engineOptions,
     optionMatrix: v.optionMatrix,
     collectionStartDay: v.collectionStartDay,
     latestAnchorDay: v.latestAnchorDay,

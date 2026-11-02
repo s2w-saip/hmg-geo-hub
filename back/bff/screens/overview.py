@@ -61,7 +61,7 @@ from bff.screens._filters import (
     fetch_filter_dates, filter_dates_view, load_panel_options, load_website_prompt_options, read_standard_filters,
 )
 from bff.screens._js import is_num, js_round
-from bff.screens._period import kst_today, label_key_of, period_caption, period_chip, resolve_request_compare_period_shape
+from bff.screens._period import kst_today, label_key_of, period_caption, period_chip, resolve_request_compare_period_shape, window_cycles
 from bff.screens._query import RHQ_REGION_COUNTRIES, UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens._summary import (
     DASHBOARD_SUMMARY_PARTS, apply_competitor_sov_from_brands, apply_engine_consistency, consistency, fetch_kpi_summary,
@@ -354,12 +354,7 @@ def caption_ctx(days: int | None, label_ctx: dict) -> dict:
 
 
 def window_label(r: dict) -> dict:
-    params = {}
-    if "cyclesCur" in r:
-        params["curCycles"] = r["cyclesCur"]
-    if "cyclesPrev" in r:
-        params["prevCycles"] = r["cyclesPrev"]
-    return {"key": "window", "params": params}
+    return {"key": "window", "params": window_cycles(r)}
 
 
 def compare_label(r: dict, days: int | None, label_ctx: dict) -> dict:
@@ -837,6 +832,8 @@ async def filter_bar(q) -> dict:
     out["geographyOptions"] = options["geographyOptions"]
     out["languageOptions"] = options["languageOptions"]
     out["optionMatrix"] = options["optionMatrix"]
+    if "engineOptions" in options:
+        out["engineOptions"] = options["engineOptions"]
     out["collectionStartDay"] = view["collectionStartDay"] if view else None
     out["latestAnchorDay"] = view["latestAnchorDay"] if view else None
     if view and view["selectableDates"] is not None:

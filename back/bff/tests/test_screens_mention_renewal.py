@@ -848,7 +848,7 @@ class TreemapGroupDelta(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(out), 1500)
         self.assertEqual(out["Brand 1499"], 0.5)
 
-    async def share_lines(self, query: str) -> list[dict]:
+    async def share_lines(self, query: str, screen: str = "mention/rn-ranking") -> list[dict]:
         seen: list[dict] = []
 
         async def get(path, params=None):
@@ -857,7 +857,10 @@ class TreemapGroupDelta(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(0)
             raise HTTPException(503, "boom")
         with mock.patch("bff.api.get", get):
-            await screens.build("mention/rn-ranking", QueryParams(query))
+            try:
+                await screens.build(screen, QueryParams(query))
+            except HTTPException:
+                pass
             await asyncio.sleep(0)
         return seen
 
@@ -869,6 +872,49 @@ class TreemapGroupDelta(unittest.IsolatedAsyncioTestCase):
 
     async def test_a_period_compares_rows_and_reads_no_share_lines(self):
         self.assertEqual(await self.share_lines("time=2026-09-01..2026-09-30"), [])
+
+    async def test_the_summary_reads_every_brands_share_line_on_a_round(self):
+        """Last review (2026-11-02): the summary's 변화 finding read the KPI brand trend (top rivals only) while the board
+        under it reads every brand's line: US with no compare said 'Porsche ▲0.3pp 가장 큰 변화', the board had Mazda ▼0.4."""
+        for query in ("", "ctx.surface=website"):
+            lines = await self.share_lines(query, "mention/rn-summary")
+            self.assertIn(("brand", ["visibility", "share_of_voice"], rn._md().ALL_BRANDS_TOP_N),
+                          [(p["dimension"], p["metrics"], p["top_n"]) for p in lines], query)
+
+    def test_the_mover_is_the_largest_move_of_every_brand(self):
+        engine = {"unit": "week", "engines": ["chatgpt"], "buckets": [], "latest": [], "latestBrands": [], "typeTrend": [], "trendDegraded": False}
+        empty = {"rows": [], "promptsWithoutBrand": None, "measuredPrompts": None}
+        subs, prevs = {"exposure": empty, "sov": empty, "favorability": empty}, {"exposure": None, "sov": None, "favorability": None}
+        brands = [{"brand": b, "isTracked": b == "HMG", "mentions": 10, "share": 1.0, "prompts": 1, "mentionRate": 1.0, "avgPosition": None}
+                  for b in ("HMG", "Porsche", "Mazda")]
+        top = {"unit": "week", "brands": [{"brand": "HMG", "isTracked": True, "mentions": 1}, {"brand": "Porsche", "isTracked": False, "mentions": 1}], "buckets": []}
+        every = {**top, "brands": [*top["brands"], {"brand": "Mazda", "isTracked": False, "mentions": 1}]}
+        moves = {"Porsche": 0.3, "Mazda": -0.4}
+        real = rn._mv().competitor_kpi_rows
+        with mock.patch.object(rn._mv(), "competitor_kpi_rows",
+                               side_effect=lambda inp: [{**r, "wowPp": moves.get(r["brand"]) if any(b["brand"] == r["brand"] for b in inp["trend"]["brands"]) else None}
+                                                        for r in real(inp)]):
+            s = rn.summary_payload(None, subs, prevs, engine, top, None, None, brands, lines=every)
+        mover = next(f for f in s["fixed"] if f["kind"] == "mover")
+        self.assertEqual(mover["brand"], "Mazda")
+
+
+class BoardOrder(unittest.TestCase):
+    """Last review (2026-11-02): Website SOV hero said '2위 BMW' where Gold has Tata 0.235 > Toyota 0.222 > BMW 0.217; all
+    three show 0.2, and the board broke the rounded tie by name."""
+
+    def test_the_board_ranks_by_exact_values(self):
+        row = lambda key, shown, exact_v: {"key": key, "own": False, "pct": Exact(shown, exact_v)}
+        rows = rn._sort([row("BMW", 0.2, 0.217), row("Tata", 0.2, 0.235), row("Toyota", 0.2, 0.222)], rn._board_cmp)
+        self.assertEqual([r["key"] for r in rows], ["Tata", "Toyota", "BMW"])
+
+    def test_the_competitor_rows_rank_by_exact_values(self):
+        def brand(name, exact_v, mentions):
+            return {"brand": name, "isTracked": False, "mentions": mentions, "share": Exact(0.2, exact_v), "mentionRate": Exact(1.0, 1.0),
+                    "prompts": 1, "avgPosition": None}
+        brands = [brand("BMW", 0.217, 609), brand("Tata", 0.235, 658), brand("Toyota", 0.222, 620)]
+        rows = rn._mv().competitor_kpi_rows({"brands": brands, "trend": None, "metric": "sov", "ownPct": 50.0})
+        self.assertEqual([r["brand"] for r in rows], ["Tata", "Toyota", "BMW"])
 
 
 class RankRoundCounts(unittest.TestCase):
@@ -946,7 +992,9 @@ class Markets(unittest.IsolatedAsyncioTestCase):
             if path == "mentions/market-gaps":
                 return {"data": {"items": [{"country": "US", "missing": 8, "with_brands": 3, "answers_no_brand": 12}]}, "meta": {}}
             if path == "filters/options":
-                return {"data": {"regions": [{"code": "US"}, {"code": "CO"}], "languages": [], "geo_matrix": []}, "meta": {}}
+                return {"data": {"regions": [{"code": "US"}, {"code": "CO"}, {"code": "DE"}], "languages": [],
+                                 "geo_matrix": [{"brand": "Kia", "region": "US", "lang": "en"}, {"brand": "Kia", "region": "CO", "lang": "es"},
+                                                {"brand": "Hyundai", "region": "DE", "lang": "de"}]}, "meta": {}}
             raise HTTPException(503, "boom")
         return get
 
@@ -999,9 +1047,15 @@ class Markets(unittest.IsolatedAsyncioTestCase):
 
     async def test_markets_with_no_answers_this_round_are_counted(self):
         got, _ = await self.build()
-        self.assertEqual(got["unmeasured"], 1)
+        self.assertEqual(got["unmeasured"], 2)
         filtered, _ = await self.build("&geography=US")
         self.assertEqual(filtered["unmeasured"], 0)
+
+    async def test_a_brand_pick_counts_only_the_markets_with_its_site(self):
+        """Last review (2026-11-02): with Kia picked the note said 34 markets had no answer, 19 of them have no Kia site."""
+        for query, scope in (("&brand=Kia", None), ("", {"brands": ["Kia"]})):
+            got, _ = await self.build(query, scope)
+            self.assertEqual(got["unmeasured"], 1, query)
 
     async def test_a_failed_read_says_so(self):
         async def get(path, params=None):

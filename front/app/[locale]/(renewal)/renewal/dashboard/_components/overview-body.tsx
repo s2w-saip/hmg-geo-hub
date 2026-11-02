@@ -375,9 +375,9 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
     );
   if (!m) return null;
   const { rows, cols } = m;
-  // A period compare on the cards compares the period with the one before; the table's Δ stays the last two rounds
-  // of the period, so the hint and the Δ titles say which (review ⚠️ #28).
-  const compare = basis.period ? t("deltaRounds") : tO("compare");
+  // A period compare: 당사's Δ is the cards' compare of the period with the one before, the rivals have none (97da2a0);
+  // the hint and the Δ titles say so (review ⚠️ #28).
+  const compare = basis.period ? basis.text : tO("compare");
   const hint = basis.period ? t("brandsHintPeriod", { compare: basis.text }) : t("brandsHint", { compare });
   const deltaText = (k: OverviewKpiKey, mark: BrandCellView["deltaMark"]) => {
     // a compared value without Δ says so (renewal audit 3-6: the place was left empty) with the cards' no-Δ mark,

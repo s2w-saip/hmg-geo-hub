@@ -13,6 +13,11 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/ko/renewal/standard/prompts",
   useSearchParams: () => new URLSearchParams(),
 }));
+// the timeline reads on mount; here it only shows which id the detail sheet hands it
+vi.mock("./prompt-history", async (orig) => ({
+  ...(await orig<typeof import("./prompt-history")>()),
+  RnPromptTimeline: ({ id }: { id: string }) => <span data-rn-timeline={id} />,
+}));
 
 const { RnToastProvider } = await import("@/components/renewal-ui");
 const { RnPromptsView } = await import("./prompts-view");
@@ -34,6 +39,7 @@ const row = (id: string, over: Partial<PromptRow> = {}): PromptRow => ({
   regions: ["ES", "MX", "US"],
   lang: "ko",
   scopePromptId: "s1",
+  hubPromptId: "h1",
   presence: "branded",
   common: false,
   markets: { real: ["ES", "MX", "US"], pseudo: [] },
@@ -309,5 +315,21 @@ describe("renewal Global prompts wording", () => {
     const on = strip(wrap(<RnAuditHistory initial={HISTORY} load={async () => HISTORY} />));
     expect(on).toContain(H.history.shownCount.replace("{count}", "0"));
     expect(on).toContain(H.empty);
+  });
+});
+
+describe("renewal Global prompts: change history (last review 2026-11-02)", () => {
+  it("asks the timeline for the HUB prompt id, not the Gold catalog row id", () => {
+    const html = wrap(<RnPromptDetail row={ROWS[0]} taxonomy={() => []} marketLabel={(c) => c} onClose={() => {}} />);
+    expect(html).toContain('data-rn-timeline="h1"');
+    expect(html).not.toContain('data-rn-timeline="a"');
+  });
+
+  it("names a bulk group by its full count, not by the rows it lists", () => {
+    const at = "2026-10-28T00:00:00Z";
+    const ev = (id: string) => ({ id, promptId: "p", actorId: null, actorType: "system", eventType: "meta_updated", changes: {}, batchId: at, createdAt: at, actorEmail: null, promptText: "t", promptBrand: null });
+    const h: PromptsHistory = { available: true, shown: 12446, groups: [{ key: "1", batchId: at, count: 12446, rows: [ev("1"), ev("2")] }] };
+    const text = strip(wrap(<RnAuditHistory initial={h} load={async () => h} />));
+    expect(text).toContain(ko.promptAudit.history.bulkGroup.replace("{count}", "12446"));
   });
 });

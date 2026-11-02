@@ -59,6 +59,7 @@ const row = (id: string, over: Record<string, unknown> = {}) => ({
   regions: ["KR"],
   lang: "KO",
   scopePromptId: "s1",
+  hubPromptId: "h1",
   presence: "branded" as const,
   common: false,
   markets: { real: ["KR"], pseudo: [] as string[] },
