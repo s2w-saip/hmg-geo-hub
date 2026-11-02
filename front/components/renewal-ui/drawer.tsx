@@ -6,7 +6,8 @@ import { RnIconButton } from "./button";
 
 /**
  * Right-side sheet (modal dialog). Escape and the backdrop close it; focus moves into
- * it on open and back to the opener on close.
+ * it on open and back to the opener on close. Without `onClose` none of them does, nor
+ * is there a close button: the sheet leaves by its own buttons (a password shown once).
  */
 export function RnDrawer({
   open,
@@ -17,7 +18,7 @@ export function RnDrawer({
   children,
 }: {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   title: ReactNode;
   subtitle?: ReactNode;
   closeLabel: string;
@@ -36,7 +37,7 @@ export function RnDrawer({
     opener.current = document.activeElement;
     ref.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close.current();
+      if (e.key === "Escape") close.current?.();
     };
     document.addEventListener("keydown", onKey);
     return () => {
@@ -60,9 +61,11 @@ export function RnDrawer({
             <h2 className="m-0 text-rn-20 font-bold text-rn-ink">{title}</h2>
             {subtitle ? <p className="m-0 mt-1 text-rn-13 break-words text-rn-ink-2">{subtitle}</p> : null}
           </div>
-          <RnIconButton label={closeLabel} onClick={onClose}>
-            <X className="size-4" aria-hidden />
-          </RnIconButton>
+          {onClose ? (
+            <RnIconButton label={closeLabel} onClick={onClose}>
+              <X className="size-4" aria-hidden />
+            </RnIconButton>
+          ) : null}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
       </div>

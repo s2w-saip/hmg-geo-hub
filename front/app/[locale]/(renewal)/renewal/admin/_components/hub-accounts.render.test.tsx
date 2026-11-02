@@ -10,8 +10,9 @@ import { DEFAULT_FILTER, filterToQuery, matches, queryToFilter, sortAccounts, st
 
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams("role=country&q=kim") }));
 
-const { HubAccountsManager } = await import("./hub-accounts-manager");
+const { HubAccountsManager, closeOf } = await import("./hub-accounts-manager");
 const { HubAccountForm } = await import("./hub-account-form");
+const { RnDrawer } = await import("@/components/renewal-ui");
 
 const ROLES: HubRole[] = ["hq", "region", "country"]; // what an administrator hands out
 const html = (ui: ReactElement) =>
@@ -77,6 +78,23 @@ describe("account list", () => {
     expect(sortAccounts(all, "role", true).map((a) => a.login)).toEqual(["admin@hub", "lee.hq", "kim.us", "old"]);
     expect(sortAccounts(all, "lastSignIn", false).map((a) => a.login).at(-1)).toBe("kim.us");
     expect(sortAccounts(all, "created", false)[0].login).toBe("lee.hq");
+  });
+});
+
+describe("temporary password sheet", () => {
+  // Admin check (2026-11-02): Escape, a backdrop click or the X closed it, and the password, shown once, was gone
+  // with the account already made (a reset was the only way back). The original closed it by its button only.
+  it("leaves only by its done button while the password shows", () => {
+    const close = () => {};
+    expect(closeOf({ mode: "issued", item: COUNTRY, password: "Tmp-1234", kind: "create" }, close)).toBeUndefined();
+    expect(closeOf({ mode: "create" }, close)).toBe(close);
+    expect(closeOf({ mode: "open", id: COUNTRY.id }, close)).toBe(close);
+  });
+
+  it("a sheet without a close has no close button", () => {
+    const sheet = (onClose?: () => void) => html(<RnDrawer open onClose={onClose} title="새 계정" closeLabel="닫기">본문</RnDrawer>);
+    expect(sheet()).not.toContain('aria-label="닫기"');
+    expect(sheet(() => {})).toContain('aria-label="닫기"');
   });
 });
 

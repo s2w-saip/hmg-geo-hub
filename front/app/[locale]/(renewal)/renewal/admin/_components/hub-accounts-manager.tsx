@@ -60,6 +60,12 @@ import {
 
 type Sheet = { mode: "create" } | { mode: "open"; id: string } | { mode: "issued"; item: HubAccount; password: string; kind: "create" | "reset" };
 
+/** The sheet's close (X, Escape, backdrop): none while a temporary password shows. It is shown once and the account
+ *  is already made or reset, so only its done button leaves it, as in the original (Admin check, 2026-11-02). */
+export function closeOf(sheet: Sheet | null, close: () => void): (() => void) | undefined {
+  return sheet?.mode === "issued" ? undefined : close;
+}
+
 export interface HubAccountsManagerProps {
   initial: HubAccount[];
   /** the roles the signed-in account hands out: those below its own */
@@ -396,7 +402,7 @@ function Manager({ initial, roles, savedFilters }: HubAccountsManagerProps) {
       </RnFilterSplit>
       <RnDrawer
         open={sheet != null}
-        onClose={() => setSheet(null)}
+        onClose={closeOf(sheet, () => setSheet(null))}
         title={sheet?.mode === "create" ? t("createTitle") : sheet?.mode === "issued" ? t("issued.title") : t("detailTitle")}
         subtitle={sheet?.mode === "create" ? t("createHint") : undefined}
         closeLabel={tp("close")}
