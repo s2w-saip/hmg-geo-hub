@@ -49,6 +49,7 @@ describe("account list", () => {
   it("renders the URL's picks, one line per matching account, its scope and state", () => {
     const out = html(<HubAccountsManager initial={[account({}), COUNTRY, HQ, NOROLE]} roles={ROLES} savedFilters={{ page: "accounts", userId: "u", initial: [] }} />);
     expect(out).toContain(">사용자 관리<");
+    expect(out).toContain("Global · Website 화면 데이터만"); // website reads carry the same scope (⛔J)
     expect(out).toContain('data-hub-account-row="kim.us"');
     expect(out).not.toContain('data-hub-account-row="admin@hub"'); // role=country picked in the URL
     expect(out).toContain("Kia · 미국");

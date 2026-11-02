@@ -97,6 +97,8 @@ describe("seeds tab", () => {
     expect(out).toContain("Gold 2026-10-05 회차 · 글로벌");
     expect(out).toContain("업스트림 목록 v2 · 701건");
     expect(out).toContain("data-hub-seed-add=");
+    expect(out).toContain('data-hub-seed-domain=""'); // sized by its wrapper: the input's w-full would win over a width beside it
+    expect(out).not.toMatch(/w-full[^"]*w-\[260px\]/);
     // most cited first
     expect(keysOf(out, "data-hub-seed-row")).toEqual(["hyundai.news", "carandbike.com", "changed.example", "up.example", "old.example", "newsite.example"]);
     expect(rowOf(out, "data-hub-seed-row", "carandbike.com")).toContain('data-hub-seed-state="applied"');

@@ -51,12 +51,19 @@ import {
   sourceFirstAsc,
   sourceKeyOf,
   sourceMatches,
+  suggestedChannel,
   type SourceAxis,
   type SourceFilter,
   type SourceSort,
 } from "./interest-model";
 
-type Sheet = { mode: "add"; url: string } | { mode: "edit"; key: string } | { mode: "detail"; key: string };
+type Sheet = { mode: "add"; url: string; channel?: SourceChannel } | { mode: "edit"; key: string } | { mode: "detail"; key: string };
+
+/** Gold's source category by slug; a host dim_source does not have is empty. */
+function useGoldCategory() {
+  const tc = useTranslations("citationCategories");
+  return (slug: string | null | undefined) => (!slug ? null : tc.has(slug as "other") ? tc(slug as "other") : slug);
+}
 
 export function InterestSourcesManager({ initial, tabs }: { initial: InterestSourceListing; tabs?: ReactNode }) {
   return (
@@ -78,6 +85,7 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
   const tip = useRnTruncTip();
   const errorText = useInterestError();
   const brandsLabel = useBrandsLabel();
+  const goldCategory = useGoldCategory();
   const fromUrl = useMemo(() => queryToSourceFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [listing, setListing] = useState(initial);
@@ -221,10 +229,11 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
               <table className="w-full table-fixed border-separate border-spacing-0 text-rn-13" data-hub-source-table="">
                 <colgroup>
                   <col />
-                  <col className="w-[96px]" />
-                  <col className="w-[132px]" />
-                  <col className="w-[112px]" />
-                  <col className="w-[128px]" />
+                  <col className="w-[124px]" />
+                  <col className="w-[148px]" />
+                  <col className="w-[120px]" />
+                  <col className="w-[104px]" />
+                  <col className="w-[120px]" />
                   <col className="w-[72px]" />
                   <col className="w-[176px]" />
                 </colgroup>
@@ -232,6 +241,7 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
                   <tr className="text-left text-rn-12 text-rn-muted">
                     {head("url", "pl-5")}
                     {head("channel")}
+                    <th className={LIST_TH_PLAIN}>{ts("column.category")}</th>
                     <th className={LIST_TH_PLAIN}>{ts("column.brand")}</th>
                     {head("mentions", "text-right")}
                     {head("state")}
@@ -243,6 +253,8 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
                   {shown.map((row) => {
                     const busy = saving != null;
                     const hub = row.status != null;
+                    const suggested = suggestedChannel(row);
+                    const category = goldCategory(row.gold?.category);
                     return (
                       <tr key={row.key} data-hub-source-row={row.key} className="hover:bg-rn-navy-25/60">
                         <td className={cx(TD, "pl-5")}>
@@ -250,7 +262,20 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
                             {row.url}
                           </span>
                         </td>
-                        <td className={TD}>{row.channel ? <RnTag>{t(`channel.${row.channel}`)}</RnTag> : <span className="text-rn-12 text-rn-faint">—</span>}</td>
+                        <td className={TD}>
+                          {row.channel ? (
+                            <RnTag>{t(`channel.${row.channel}`)}</RnTag>
+                          ) : suggested ? (
+                            <span className="whitespace-nowrap text-rn-12 text-rn-muted" title={ts("suggestedTip")} data-hub-source-suggested={suggested}>
+                              {ts("suggested", { channel: t(`channel.${suggested}`) })}
+                            </span>
+                          ) : (
+                            <span className="text-rn-12 text-rn-faint">—</span>
+                          )}
+                        </td>
+                        <td className={cx(TD, "text-rn-12 text-rn-ink-2")} data-hub-source-category={row.gold?.category ?? ""}>
+                          {category ? <span data-rn-tip="" className="block truncate">{category}</span> : <span className="text-rn-faint">—</span>}
+                        </td>
                         <td className={cx(TD, "text-rn-12 text-rn-ink-2")}>{hub ? <span data-rn-tip="" className="block truncate">{brandsLabel(row.brands)}</span> : <span className="text-rn-faint">—</span>}</td>
                         <td className={cx(TD, "text-right text-rn-12 text-rn-ink-2 tabular-nums")} data-hub-source-mentions={row.gold?.mentions ?? 0}>
                           {row.gold ? nf.format(row.gold.mentions) : "—"}
@@ -275,7 +300,7 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
                                 </RnIconButton>
                               </>
                             ) : (
-                              <RnButton size="sm" disabled={busy} onClick={() => setSheet({ mode: "add", url: row.key })} data-hub-source-adopt={row.key}>
+                              <RnButton size="sm" disabled={busy} onClick={() => setSheet({ mode: "add", url: row.key, channel: suggested ?? undefined })} data-hub-source-adopt={row.key}>
                                 <Plus className="size-3.5" aria-hidden />
                                 {ts("addAsSource")}
                               </RnButton>
@@ -295,7 +320,7 @@ function Manager({ initial, tabs }: { initial: InterestSourceListing; tabs?: Rea
       </RnFilterSplit>
       <RnDrawer open={sheet != null} onClose={() => setSheet(null)} title={sheetTitle} closeLabel={tp("close")}>
         {sheet?.mode === "add" ? (
-          <SourceForm key={`add:${sheet.url}`} initial={{ url: sheet.url, channel: "community", brands: [], note: "" }} editing={false} exists={(k) => listing.items.some((r) => r.key === k && r.status != null)} onSaved={saved} onCancel={() => setSheet(null)} />
+          <SourceForm key={`add:${sheet.url}`} initial={{ url: sheet.url, channel: sheet.channel ?? "community", brands: [], note: "" }} editing={false} exists={(k) => listing.items.some((r) => r.key === k && r.status != null)} onSaved={saved} onCancel={() => setSheet(null)} />
         ) : sheet?.mode === "edit" && sheetRow ? (
           <SourceForm key={`edit:${sheetRow.key}:${sheetRow.updatedAt ?? ""}`} initial={{ url: sheetRow.url, channel: sheetRow.channel ?? "community", brands: sheetRow.brands, note: sheetRow.note ?? "" }} editing exists={() => false} onSaved={saved} onCancel={() => setSheet(null)} />
         ) : sheet?.mode === "detail" && sheetRow ? (
@@ -391,6 +416,7 @@ function SourceDetail({ row }: { row: InterestSourceRow }) {
   const locale = useLocale();
   const errorText = useInterestError();
   const brandsLabel = useBrandsLabel();
+  const goldCategory = useGoldCategory();
   const nf = new Intl.NumberFormat(locale);
   const value = (field: string, v: unknown): string | null => {
     if (v == null) return null;
@@ -413,6 +439,7 @@ function SourceDetail({ row }: { row: InterestSourceRow }) {
           <RnDetailField label={ts("field.host")}>
             <span className="font-mono text-rn-12">{row.host}</span>
           </RnDetailField>
+          <RnDetailField label={ts("column.category")}>{goldCategory(row.gold?.category)}</RnDetailField>
           <RnDetailField label={ts("field.corpus")}>{row.gold ? ts("corpusValue", { mentions: nf.format(row.gold.mentions), entities: nf.format(row.gold.entities) }) : ts("corpusNone")}</RnDetailField>
           <RnDetailField label={t("field.note")}>{row.note}</RnDetailField>
         </dl>

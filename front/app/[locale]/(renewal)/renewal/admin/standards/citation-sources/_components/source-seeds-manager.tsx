@@ -363,21 +363,24 @@ function AddSeed({
     <RnCard aria-label={ts("add.title")}>
       <form onSubmit={submit} className="flex flex-wrap items-center gap-2 px-5 py-3" data-hub-seed-add="" noValidate>
         <b className="mr-2 text-rn-13 text-rn-ink">{ts("add.title")}</b>
-        <input
-          className={cx(INPUT, "w-[260px] font-mono")}
-          value={domain}
-          onChange={(e) => {
-            setDomain(e.target.value);
-            setProblem(null);
-          }}
-          placeholder={ts("add.domainPlaceholder")}
-          aria-label={ts("add.domain")}
-          aria-invalid={problem != null || undefined}
-          autoComplete="off"
-          spellCheck={false}
-          maxLength={320}
-          data-hub-seed-add-domain=""
-        />
+        <span className="w-[260px] shrink-0">
+          <input
+            className={cx(INPUT, "font-mono")}
+            value={domain}
+            onChange={(e) => {
+              setDomain(e.target.value);
+              setProblem(null);
+            }}
+            placeholder={ts("add.domainPlaceholder")}
+            aria-label={ts("add.domain")}
+            aria-invalid={problem != null || undefined}
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={320}
+            data-hub-seed-domain=""
+            data-hub-seed-add-domain=""
+          />
+        </span>
         <RnSelect label={ts("add.category")} value={category} onChange={(e) => setCategory(e.target.value)} options={categories} data-hub-seed-add-category="" />
         <RnButton type="submit" size="sm" variant="primary" disabled={busy || !domain.trim()}>
           <Plus className="size-3.5" aria-hidden />

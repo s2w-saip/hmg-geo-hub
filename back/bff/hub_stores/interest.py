@@ -47,11 +47,14 @@ CHANNELS = ("news", "pr", "social", "community")
 GOLD_SEEDS_SQL = """SELECT k.term,k.term_norm,s.location_code,s.language_code,max(s.observed_at) AS observed_at
     FROM gold.kw_suggestion s JOIN gold.dim_keyword k ON k.kw_key=s.kw_key WHERE s.is_seed
     GROUP BY k.term,k.term_norm,s.location_code,s.language_code"""
-# Gold: the active social snapshot (gold_reader.insights.social picks it the same way) and its hosts, without www.
+# Gold: the active social snapshot (gold_reader.insights.social picks it the same way) and its hosts, without www., each
+# with Gold's source category when dim_source has exactly that host (a subdomain does not take its parent's: kin.naver.com
+# would read as naver.com's automotive media). Gold keeps no channel per host.
 GOLD_SNAPSHOT_SQL = """SELECT snapshot_id,taken_at,source_total FROM gold.ctx_snapshot ORDER BY is_active DESC,taken_at DESC,snapshot_id DESC LIMIT 1"""
-GOLD_HOSTS_SQL = """SELECT host,count(DISTINCT entity_id)::int AS entities,sum(n)::int AS mentions FROM (
+GOLD_HOSTS_SQL = """SELECT d.host,count(DISTINCT d.entity_id)::int AS entities,sum(d.n)::int AS mentions,max(c.slug) AS category FROM (
         SELECT regexp_replace(lower(host),'^www\\.','') AS host,entity_id,n FROM gold.ctx_domain WHERE snapshot_id=$1) d
-    GROUP BY host"""
+    LEFT JOIN gold.dim_source s ON s.skey=d.host LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
+    GROUP BY d.host"""
 
 KEYWORD_COLUMNS = "term_norm,term,conditions,source_types,brands,note,status,origin,created_at,updated_at,updated_by"
 SOURCE_COLUMNS = "source_key,url,channel,brands,note,status,created_at,updated_at,updated_by"
@@ -198,7 +201,8 @@ def source_view(key: str, hub, gold) -> dict:
     return {"key": key, "url": hub["url"] if hub else key, "host": host_of(key), "channel": hub["channel"] if hub else None,
             "brands": list(hub["brands"]) if hub else [], "note": hub["note"] if hub else None,
             "status": hub["status"] if hub else None, "updatedAt": hub["updated_at"] if hub else None,
-            "gold": {"entities": gold["entities"], "mentions": gold["mentions"]} if gold else None, "state": source_state(hub, gold)}
+            "gold": {"entities": gold["entities"], "mentions": gold["mentions"], "category": gold["category"]} if gold else None,
+            "state": source_state(hub, gold)}
 
 
 # ═══ connections ═════════════════════════════════════════════════════════════════════════════════════════

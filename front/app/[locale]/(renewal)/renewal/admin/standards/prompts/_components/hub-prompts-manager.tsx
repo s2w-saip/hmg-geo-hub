@@ -423,7 +423,7 @@ function Manager({ initial, initialSearch, options, loginHref, savedFilters }: H
             >
               {sort.asc ? <ArrowUpNarrowWide className="size-4" aria-hidden /> : <ArrowDownWideNarrow className="size-4" aria-hidden />}
             </RnIconButton>
-            <span className="ml-auto text-rn-12 text-rn-muted tabular-nums">{tv("filteredCount", { shown: total, total: data.counts.total })}</span>
+            <span className="ml-auto text-rn-12 text-rn-muted tabular-nums">{tv("filteredCount", { shown: new Intl.NumberFormat(locale).format(total), total: new Intl.NumberFormat(locale).format(data.counts.total) })}</span>
           </div>
           {listError ? (
             <ErrorNote code={listError} loginHref={loginHref} className="m-5" />

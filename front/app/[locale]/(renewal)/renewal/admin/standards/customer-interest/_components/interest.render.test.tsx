@@ -26,6 +26,7 @@ import {
   sourceFilterToQuery,
   sourceKeyOf,
   sourceMatches,
+  suggestedChannel,
   tabOf,
 } from "./interest-model";
 
@@ -90,7 +91,7 @@ const source = (over: Partial<InterestSourceRow>): InterestSourceRow => ({
   note: null,
   status: "active",
   updatedAt: "2026-11-02T05:00:00Z",
-  gold: { entities: 1161, mentions: 6796 },
+  gold: { entities: 1161, mentions: 6796, category: "communityForums" },
   state: "observed",
   ...over,
 });
@@ -100,7 +101,7 @@ const SOURCES: InterestSourceListing = {
   items: [
     source({}),
     source({ key: "newsite.example", url: "newsite.example", host: "newsite.example", channel: "news", brands: [], gold: null, state: "unseen" }),
-    source({ key: "gall.dcinside.com", url: "gall.dcinside.com", host: "gall.dcinside.com", channel: null, brands: [], status: null, updatedAt: null, gold: { entities: 995, mentions: 7128 }, state: "upstream" }),
+    source({ key: "gall.dcinside.com", url: "gall.dcinside.com", host: "gall.dcinside.com", channel: null, brands: [], status: null, updatedAt: null, gold: { entities: 995, mentions: 7128, category: null }, state: "upstream" }),
   ],
 };
 
@@ -160,6 +161,20 @@ describe("InterestSourcesManager", () => {
     expect(upstream).toContain('data-hub-source-state="upstream"');
     expect(upstream).toContain("data-hub-source-adopt");
     expect(upstream).not.toContain("data-hub-source-toggle");
+  });
+
+  it("shows Gold's source category, and a channel only as a suggestion until the row is registered", () => {
+    const corpus = (key: string, category: string | null) => source({ key, url: key, host: key, channel: null, brands: [], status: null, updatedAt: null, gold: { entities: 9, mentions: 3729, category }, state: "upstream" });
+    const listing = { ...SOURCES, items: [source({}), corpus("thetruthaboutcars.com", "automotiveMedia"), corpus("arca.live", "other"), corpus("gall.dcinside.com", null)] };
+    const page = html(<InterestSourcesManager initial={listing} />);
+    const media = rowOf(page, "data-hub-source-row", "thetruthaboutcars.com");
+    expect(media).toContain("자동차 미디어");
+    expect(media).toContain('data-hub-source-suggested="news"');
+    const other = rowOf(page, "data-hub-source-row", "arca.live");
+    expect(other).toContain("기타");
+    expect(other).not.toContain("data-hub-source-suggested");
+    expect(rowOf(page, "data-hub-source-row", "gall.dcinside.com")).not.toContain("data-hub-source-suggested");
+    expect(rowOf(page, "data-hub-source-row", "reddit.com/r/cars")).not.toContain("data-hub-source-suggested"); // the HUB's own value
   });
 });
 
@@ -250,6 +265,14 @@ describe("models", () => {
     expect(sortSources(SOURCES.items, "url", true).map((r) => r.key)).toEqual(["gall.dcinside.com", "newsite.example", "reddit.com/r/cars"]);
     expect(sortSources(SOURCES.items, "state", true).map((r) => r.state)).toEqual(["observed", "unseen", "upstream"]);
     expect(sourceCounts(SOURCES.items)).toEqual({ total: 3, active: 2, stopped: 0, upstream: 1 });
+    const media = source({ key: "m.example", channel: null, status: null, gold: { entities: 1, mentions: 1, category: "automotiveMedia" }, state: "upstream" });
+    expect(suggestedChannel(media)).toBe("news");
+    expect(suggestedChannel(source({ channel: "pr" }))).toBeNull(); // the HUB's own value wins
+    expect(suggestedChannel(source({ channel: null, gold: { entities: 1, mentions: 1, category: "dealerMarketplace" } }))).toBeNull();
+    expect(suggestedChannel(source({ channel: null, gold: null }))).toBeNull();
+    expect(sourceMatches(media, { ...f, channel: "news" }, "")).toBe(true); // the filter sees what the column shows
+    expect(sourceMatches(media, { ...f, channel: "community" }, "")).toBe(false);
+    expect(sortSources([source({ key: "c", channel: "pr" }), media, source({ key: "n", channel: null, gold: null })], "channel", true).map((r) => r.key)).toEqual(["m.example", "c", "n"]);
     expect(sourceFilterToQuery({ ...f, channel: "pr" }, "x")).toBe("tab=sources&channel=pr&q=x");
     expect(queryToSourceFilter("tab=sources&channel=pr&state=x").filters).toEqual({ ...f, channel: "pr", state: ALL });
   });

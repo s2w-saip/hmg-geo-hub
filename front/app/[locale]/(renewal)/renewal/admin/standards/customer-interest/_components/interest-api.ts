@@ -86,8 +86,8 @@ export interface InterestSourceRow {
   note: string | null;
   status: InterestStatus | null;
   updatedAt: string | null;
-  /** the host in Gold's active snapshot */
-  gold: { entities: number; mentions: number } | null;
+  /** the host in Gold's active snapshot; category: gold.dim_category.slug when dim_source has exactly this host */
+  gold: { entities: number; mentions: number; category: string | null } | null;
   state: InterestSourceState | null;
 }
 

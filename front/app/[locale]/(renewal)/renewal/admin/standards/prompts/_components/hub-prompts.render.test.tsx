@@ -98,7 +98,7 @@ describe("Global prompt management", () => {
     for (const axis of ["상태", "출처", "리스트 유형", "Depth1", "퍼널", "측정 종류", "대상 시장", "언어"]) expect(out).toContain(`<span>${axis}</span>`);
     expect(out).not.toContain("<span>Depth2</span>");
     expect(out).toContain("선택 없음");
-    expect(out).toContain("표시 120 / 전체 12014");
+    expect(out).toContain("표시 120 / 전체 12,014");
     expect(out.match(/data-hub-prompt-row=/g)).toHaveLength(3);
     // a Gold prompt that left Gold: its own status label, muted like an archived one
     expect(out).toMatch(/text-rn-muted"><i aria-hidden="true" class="[^"]*border-dashed[^"]*"><\/i><span class="truncate">Gold에서 빠짐<\/span>/);

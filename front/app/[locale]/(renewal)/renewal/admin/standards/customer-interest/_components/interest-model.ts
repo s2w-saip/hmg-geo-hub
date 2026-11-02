@@ -11,6 +11,7 @@ import {
   type InterestSourceRow,
   type KeywordCondition,
   type KeywordRow,
+  type SourceChannel,
 } from "./interest-api";
 
 export const ALL = "all";
@@ -171,6 +172,27 @@ export function sourceFirstAsc(key: SourceSort): boolean {
   return key !== "mentions";
 }
 
+// Gold keeps no channel per host, so a corpus host has none until an admin registers it. The categories that plainly are a
+// channel suggest one, for the column and the add form; nothing is stored or published until it is saved. The other
+// categories (dealers, blogs, wikis, other …) suggest nothing: the admin picks.
+const CHANNEL_OF_CATEGORY: Partial<Record<string, SourceChannel>> = {
+  communityForums: "community",
+  socialVideo: "social",
+  newsMedia: "news",
+  automotiveMedia: "news",
+  officialHmg: "pr",
+  officialCompetitor: "pr",
+};
+
+export function suggestedChannel(r: Pick<InterestSourceRow, "channel" | "gold">): SourceChannel | null {
+  return r.channel ? null : (CHANNEL_OF_CATEGORY[r.gold?.category ?? ""] ?? null);
+}
+
+/** What the channel column shows: the HUB's value, else the suggestion. */
+export function channelOf(r: Pick<InterestSourceRow, "channel" | "gold">): SourceChannel | null {
+  return r.channel ?? suggestedChannel(r);
+}
+
 export function sourceAxisOptions(axis: SourceAxis): string[] {
   if (axis === "channel") return [...SOURCE_CHANNELS];
   if (axis === "brand") return [COMMON, ...INTEREST_BRANDS];
@@ -179,7 +201,7 @@ export function sourceAxisOptions(axis: SourceAxis): string[] {
 }
 
 export function sourceMatches(r: InterestSourceRow, f: SourceFilter, search: string): boolean {
-  if (f.channel !== ALL && r.channel !== f.channel) return false;
+  if (f.channel !== ALL && channelOf(r) !== f.channel) return false;
   if (!brandMatches(r, f.brand)) return false;
   if (f.state !== ALL && r.state !== f.state) return false;
   if (f.status !== ALL && r.status !== f.status) return false;
@@ -193,11 +215,12 @@ export function sortSources(rows: readonly InterestSourceRow[], key: SourceSort,
   const dir = asc ? 1 : -1;
   const compare = (a: InterestSourceRow, b: InterestSourceRow): number => {
     if (key === "mentions") return (a.gold?.mentions ?? 0) - (b.gold?.mentions ?? 0);
-    if (key === "channel") return (a.channel ?? "~").localeCompare(b.channel ?? "~");
+    if (key === "channel") return (channelOf(a) ?? "").localeCompare(channelOf(b) ?? "");
     if (key === "state") return (a.state ? SOURCE_STATE_ORDER[a.state] : 9) - (b.state ? SOURCE_STATE_ORDER[b.state] : 9);
     return a.key.localeCompare(b.key);
   };
-  return [...rows].sort((a, b) => compare(a, b) * dir || (b.gold?.mentions ?? 0) - (a.gold?.mentions ?? 0) || a.key.localeCompare(b.key));
+  const blank = (r: InterestSourceRow) => (key === "channel" && !channelOf(r) ? 1 : 0); // either way, no channel goes last
+  return [...rows].sort((a, b) => blank(a) - blank(b) || compare(a, b) * dir || (b.gold?.mentions ?? 0) - (a.gold?.mentions ?? 0) || a.key.localeCompare(b.key));
 }
 
 export function sourceCounts(rows: readonly InterestSourceRow[]) {

@@ -89,7 +89,7 @@ class Rules(unittest.TestCase):
                          ("SUV", [KR, US], 2, None, "upstream"))
 
     def test_a_source_compares_with_the_corpus_without_saying_it_was_applied(self):
-        g = {"entities": 3, "mentions": 9}
+        g = {"entities": 3, "mentions": 9, "category": "communityForums"}
         self.assertEqual(it.source_state({"status": "active"}, g), "observed")
         self.assertEqual(it.source_state({"status": "stopped"}, g), "observed")
         self.assertEqual(it.source_state({"status": "active"}, None), "unseen")
@@ -98,6 +98,9 @@ class Rules(unittest.TestCase):
         row = it.source_view("reddit.com/r/cars", hub, g)
         self.assertEqual((row["host"], row["gold"], row["state"]), ("reddit.com", g, "observed"))
         self.assertEqual(it.source_view("arca.live", None, g)["url"], "arca.live")
+        self.assertIsNone(it.source_view("arca.live", None, {"entities": 3, "mentions": 9, "category": None})["gold"]["category"])
+        self.assertIn("gold.dim_source", it.GOLD_HOSTS_SQL)  # only the exact host: no subdomain takes a parent's category
+        self.assertIn("s.skey=d.host", it.GOLD_HOSTS_SQL)
 
 
 class Routes(unittest.TestCase):
@@ -196,7 +199,7 @@ class Store(unittest.TestCase):
             return {"zz-interest suv": [seed("ZZ-Interest SUV"), ], "zz-upstream": [seed("ZZ-Upstream", 2840, "en")]}
 
         async def gold_hosts():
-            return {"takenAt": datetime.date(2026, 7, 7), "sources": 606}, {"zz-interest.example": {"entities": 2, "mentions": 8}, "zz-corpus.example": {"entities": 1, "mentions": 3}}
+            return {"takenAt": datetime.date(2026, 7, 7), "sources": 606}, {"zz-interest.example": {"entities": 2, "mentions": 8, "category": None}, "zz-corpus.example": {"entities": 1, "mentions": 3, "category": None}}
 
         async def no_actors(ids):
             return {}
