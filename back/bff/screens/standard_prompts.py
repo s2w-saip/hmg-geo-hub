@@ -17,12 +17,14 @@ from __future__ import annotations
 import math
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from zoneinfo import ZoneInfo
+from uuid import UUID
 
 import icu
 from fastapi import HTTPException
 
 from bff import api
+from bff.access import reader_scope
+from bff.hub_stores import catalog_editor
 from bff.screens import screen, split_context
 from bff.screens._filters import load_filter_dates
 from bff.screens._js import js_str
@@ -43,7 +45,6 @@ NONE = "none"                   # the filter pick of the rows Gold left without 
 GEO_PSEUDO = ("x:WW", "x:EU", "x:ME")
 HISTORY_LIMIT = 500
 TIMELINE_LIMIT = 100
-TIMELINE_FROM = "2000-01-01"    # the legacy timeline had no window: from/to always sent
 COLLATORS = {"ko": icu.Collator.createInstance(icu.Locale("ko")), "en": icu.Collator.createInstance(icu.Locale("en"))}
 
 
@@ -145,9 +146,22 @@ def read_query(sp: dict, paged: bool = True) -> dict:
 
 # ═══ filters, options, order (catalog_screen) ═══════════════════════════════════════════════════════════
 
+def folded(value: Any) -> Any:
+    """Gold spells some taxon codes in two cases (Design · design, 47 depth3 values): one value to a filter."""
+    return value.lower() if isinstance(value, str) else value
+
+
+def one_spelling(values) -> list[str]:
+    """Sorted, one spelling per value: the capitalised one sorts first."""
+    first: dict[str, str] = {}
+    for v in sorted(set(values)):
+        first.setdefault(v.lower(), v)
+    return list(first.values())
+
+
 def matches(row: dict, f: dict[str, str], search: str) -> bool:
     for axis, field in FIELDS.items():
-        if f[axis] != "all" and row[field] != (None if axis == "kind" and f[axis] == NONE else f[axis]):
+        if f[axis] != "all" and folded(row[field]) != (None if axis == "kind" and f[axis] == NONE else folded(f[axis])):
             return False
     if f["presence"] != "all" and row["presence"] != (None if f["presence"] == NONE else f["presence"]):
         return False
@@ -172,8 +186,8 @@ def facets(rows: list[dict], draft: dict[str, str]) -> dict[str, list[str]]:
     parents: list[tuple[str, str]] = []
     for key in ("listType", "depth1", "depth2", "depth3", "depth4", "funnel", "lang"):
         field = FIELDS[key]
-        scoped = [r for r in rows if all(r[f] == v for f, v in parents)] if parents and key.startswith("depth") else rows
-        out[key] = sorted({r[field] for r in scoped if r[field]})
+        scoped = [r for r in rows if all(folded(r[f]) == folded(v) for f, v in parents)] if parents and key.startswith("depth") else rows
+        out[key] = one_spelling(r[field] for r in scoped if r[field])
         if key in ("listType", "depth1", "depth2", "depth3") and draft[key] != "all":
             parents.append((field, draft[key]))
     codes = {c for r in rows for c in r["markets"]["real"] + r["markets"]["pseudo"]}
@@ -308,31 +322,36 @@ async def prompts_timeline(q) -> dict:
     prompt_id = one(sp, "prompt_id")
     if not prompt_id or len(prompt_id) > 200:
         raise invalid("Invalid prompt id")
-    today = datetime.now(ZoneInfo("Asia/Seoul")).date().isoformat()
     try:
-        res = await api.get("prompts/history", {"surface": "global", "prompt_id": prompt_id, "from": TIMELINE_FROM,
-                                                "to": today, "limit": TIMELINE_LIMIT})
+        pid = UUID(prompt_id)
+    except ValueError:
+        return {"available": True, "rows": []}
+    try:
+        items = await catalog_editor.history_rows(pid, TIMELINE_LIMIT)
     except HTTPException as exc:
         if exc.status_code == 503:
             return {"available": False, "rows": []}
         raise
-    return {"available": True, "rows": [audit_view(r) for r in res["data"]["items"]]}
+    return {"available": True, "rows": [audit_view(r) for r in items]}
 
 
 @screen("catalog/prompts-history")
 async def prompts_history(q) -> dict:
     """The 변경 이력 tab: the latest changes in the last 30 or 90 days, one event type or all, in bulk
-    groups. available = false when the connected source does not supply the change history."""
+    groups, from the HUB catalog's revisions. available = false when the store is not connected, and for an account
+    with a scope: the feed names prompts of every market."""
     _, sp = split_context(q)
     days = 30 if one(sp, "days") == "30" else 90
     event = one(sp, "event") or "all"
+    if not reader_scope().get("all"):
+        return {"available": False, "shown": 0, "groups": []}
     try:
-        res = await api.get("prompts/history", {"surface": "global", "limit": HISTORY_LIMIT})
+        items = await catalog_editor.history_rows(None, HISTORY_LIMIT)
     except HTTPException as exc:
         if exc.status_code == 503:
             return {"available": False, "shown": 0, "groups": []}
         raise
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    rows = [v for v in (audit_view(r) for r in res["data"]["items"])
+    rows = [v for v in (audit_view(r) for r in items)
             if v["createdAt"] and instant(v["createdAt"]) >= since and (event == "all" or v["eventType"] == event)]
     return {"available": True, "shown": len(rows), "groups": batch_groups(rows)}

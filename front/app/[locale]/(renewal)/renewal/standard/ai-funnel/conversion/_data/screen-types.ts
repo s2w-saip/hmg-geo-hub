@@ -57,6 +57,8 @@ export interface ConvPage {
   id: number;
   url: string;
   path: string;
+  /** Brand · country, when the list holds pages of more than one GA4 property. */
+  market: string | null;
   sessions: number | null;
   share: number | null;
   /** running share down the table */

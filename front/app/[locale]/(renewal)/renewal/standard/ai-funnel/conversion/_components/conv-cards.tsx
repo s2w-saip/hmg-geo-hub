@@ -356,6 +356,7 @@ export function ConvPageCard({ view }: { view: ConvView }) {
                 ) : (
                   <span title={p.url} className="truncate">
                     {p.path}
+                    {p.market ? <span className="ml-1.5 text-rn-11 text-rn-muted" data-conv-page-market="">{p.market}</span> : null}
                   </span>
                 )}
                 <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">

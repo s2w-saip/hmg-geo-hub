@@ -534,6 +534,17 @@ class FrontFixture(unittest.TestCase):
         self.assertEqual(json.loads(FRONT_FIXTURE.read_text(encoding="utf-8")), front_body())
 
 
+
+class PagesByProperty(unittest.TestCase):
+    """Global score sheet (2026-11-02): pages were grouped by path, and the collector stores paths, so Hyundai DE's '/'
+    and Kia DE's '/' read as one row while the market card kept them apart."""
+
+    def test_the_same_path_of_two_properties_is_two_pages(self):
+        from bff.hub_stores import analytics_reader as ar
+        rows = [{"prop_key": 1, "url": None, "page": "/"}, {"prop_key": 2, "url": None, "page": "/"}, {"prop_key": 1, "url": None, "page": "/"}]
+        self.assertEqual(sorted({ar.page_of(r) for r in rows}), [(1, "/"), (2, "/")])
+
+
 if __name__ == "__main__":
     import sys
     if "--write-fixture" in sys.argv:

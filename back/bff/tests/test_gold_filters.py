@@ -8,7 +8,7 @@ from unittest import mock
 try:
     from starlette.datastructures import QueryParams
 
-    from bff.gold_reader import citations, drilldown, metrics
+    from bff.gold_reader import citations, context as context_module, drilldown, metrics
     from bff.gold_reader.context import Context
     from bff.screens import citation, citation_model
 except ModuleNotFoundError as exc:
@@ -232,6 +232,17 @@ class CitationSourceFilter(unittest.TestCase):
             "owned": None, "splitOff": True})
         self.assertNotIn("promptSplit", live)
         self.assertEqual(citation_model.lens(live, None, None, ["Official (HMG)"], {})["split"], {"kind": "notComputed"})
+
+
+
+class TaxonomyCase(unittest.TestCase):
+    """Global score sheet (2026-11-02): dim_taxon spells 47 depth3 values in two cases, so picking `Design` (587) left out
+    `design` (286). A taxonomy pick matches regardless of case, as the country, language and engine axes do."""
+
+    def test_a_pick_matches_both_spellings(self):
+        src = open(context_module.__file__, encoding="utf8").read()
+        self.assertIn("gold.dim_taxon WHERE lower(code)=ANY(", src)
+        self.assertNotIn("gold.dim_taxon WHERE code=ANY(", src)
 
 
 if __name__ == "__main__":

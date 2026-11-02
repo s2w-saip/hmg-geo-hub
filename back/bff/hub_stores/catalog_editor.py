@@ -34,6 +34,14 @@ log = logging.getLogger("hgh.hub")
 # API field -> definition key (the keys sync_catalog.py records for Gold prompts)
 LABELS = {"funnel": "funnel", "brandPresence": "brand_presence", "listType": "list_type",
           "depth1": "depth1", "depth2": "depth2", "depth3": "depth3", "depth4": "depth4"}
+
+
+def label_sql(key: str) -> str:
+    """A label as the list reads it: the prompt's own, else its first catalog row's. Gold keeps the classification per
+    brand row (catalog_entry); dim_prompt has none for Global prompts, so the definition's top level is empty."""
+    return f"coalesce(p.definition->>'{key}',p.definition->'catalogs'->0->>'{key}')"
+
+
 # gold.dim_taxon axis -> API field (Gold has no depth4 axis)
 TAXON_AXES = {"funnel": "funnel", "presence": "brandPresence", "list_type": "listType",
               "depth1": "depth1", "depth2": "depth2", "depth3": "depth3", "depth4": "depth4"}
@@ -57,14 +65,20 @@ CURRENT_SQL = """SELECT p.prompt_id,p.project_id,p.origin,p.registered_at,v.vers
     WHERE prompt_id=p.prompt_id ORDER BY version DESC LIMIT 1) v ON true WHERE p.prompt_id=$1"""
 VERSIONS_SQL = """SELECT version,text,definition,recorded_at,recorded_by FROM catalog.prompt_version
     WHERE prompt_id=$1 ORDER BY version DESC LIMIT $2"""
+# The Global catalog's revisions with the one before each, newest first: the change history the Global prompts screen shows.
+HISTORY_ROWS_SQL = """SELECT v.prompt_id,v.version,v.text,v.definition,v.recorded_at,v.recorded_by,
+        w.version AS prev_version,w.text AS prev_text,w.definition AS prev_definition
+    FROM catalog.prompt_version v JOIN catalog.prompt p USING(prompt_id)
+    LEFT JOIN catalog.prompt_version w ON w.prompt_id=v.prompt_id AND w.version=v.version-1
+    WHERE p.project_id=$1 AND ($2::uuid IS NULL OR v.prompt_id=$2) ORDER BY v.recorded_at DESC,v.prompt_id LIMIT $3"""
 SCALARS = {"language": "language", **LABELS}
 # sort= of a list page -> its column (the management list's sortable columns)
 SORTS = {"changed": "p.recorded_at", "text": "p.text", "origin": "p.origin",
          "status": "coalesce(p.definition->>'status','active')", "kind": "coalesce(p.definition->>'kind','single')",
          "language": "p.definition->>'language'", "region": "p.definition->'regions'->>0",
-         **{api: f"p.definition->>'{key}'" for api, key in LABELS.items()}}
+         **{api: label_sql(key) for api, key in LABELS.items()}}
 VOCABULARY_SQL = f"""SELECT k.key,k.value,count(*)::int AS n FROM catalog.current_prompt p
-    CROSS JOIN LATERAL (VALUES {",".join(f"('{api}',p.definition->>'{key}')" for api, key in SCALARS.items())}) k(key,value)
+    CROSS JOIN LATERAL (VALUES {",".join(f"('{api}',{label_sql(key)})" for api, key in SCALARS.items())}) k(key,value)
     WHERE p.project_id=$1 AND k.value<>'' GROUP BY 1,2
     UNION ALL
     SELECT 'regions',r.value,count(*)::int FROM catalog.current_prompt p CROSS JOIN LATERAL jsonb_array_elements_text(
@@ -209,9 +223,11 @@ def status_of(definition: dict) -> str:
 def snapshot(text: str, definition: dict) -> dict:
     """The fields the screen shows and edits, from a stored text + definition (Gold or HUB)."""
     regions = definition.get("regions")
+    catalogs = definition.get("catalogs")
+    first_row = catalogs[0] if isinstance(catalogs, list) and catalogs else {}
     return {"text": text, "kind": definition.get("kind") or "single", "language": definition.get("language") or None,
             "regions": sorted({r for r in (normalize_region(str(x)) for x in regions) if r}) if isinstance(regions, list) else [],
-            **{api: definition.get(key) or None for api, key in LABELS.items()}, "status": status_of(definition)}
+            **{api: definition.get(key) or first_row.get(key) or None for api, key in LABELS.items()}, "status": status_of(definition)}
 
 
 def item_view(row) -> dict:
@@ -360,7 +376,7 @@ def list_filters(q: dict, project: UUID) -> tuple[str, list]:
     # the label codes and one market, as the options list them (the list's filter panel)
     for api, key in LABELS.items():
         if q.get(api):
-            bind(f"p.definition->>'{key}'=$?", code_param(q[api], api))
+            bind(f"{label_sql(key)}=$?", code_param(q[api], api))
     if q.get("region"):
         bind("p.definition->'regions' @> jsonb_build_array($?::text)", normalize_region(code_param(q["region"], "region")))
     search = (q.get("q") or "").strip()
@@ -433,6 +449,34 @@ async def detail(prompt_id: UUID) -> dict:
     for e in events:
         e["actor"] = names.get(e["recordedBy"]) if e["recordedBy"] else None
     return {"item": item_view(row), "history": events}
+
+
+def audit_event(event: str, changes: dict) -> str:
+    """history()'s event -> the audit event the Global prompts history names."""
+    if event == "updated":
+        return "text_updated" if "text" in changes else "meta_updated"
+    return {"created": "created", "archived": "enabled_changed", "removed": "deleted", "restored": "restored"}[event]
+
+
+def audit_row(row, names: dict) -> dict:
+    """One revision as a history row. A Gold import writes a run's revisions in one transaction, one recorded_at: one batch."""
+    before = [{"text": row["prev_text"], "definition": row["prev_definition"], "version": row["prev_version"],
+               "recorded_at": None, "recorded_by": None}] if row["prev_version"] is not None else []
+    event = history([*before, row])[0]
+    changes = {field: {side: ", ".join(v) if isinstance(v, list) else v for side, v in pair.items()} for field, pair in event["changes"].items()}
+    actor = event["recordedBy"]
+    return {"audit_id": f"{row['prompt_id']}:{row['version']}", "prompt_id": str(row["prompt_id"]), "actor_id": actor,
+            "actor_type": "user" if actor else "system", "event_type": audit_event(event["event"], changes), "changes": changes,
+            "batch_id": None if actor else row["recorded_at"].isoformat(), "created_at": row["recorded_at"].isoformat(),
+            "actor_email": (names.get(actor) or {}).get("login") if actor else None, "prompt_text": row["text"], "prompt_brand": None}
+
+
+async def history_rows(prompt_id: UUID | None, limit: int) -> list[dict]:
+    """The Global catalog's latest revisions (one prompt's, or all), newest first."""
+    async with reading() as conn:
+        rows = await conn.fetch(HISTORY_ROWS_SQL, await global_project(conn), prompt_id, limit)
+    names = await actors({str(r["recorded_by"]) for r in rows if r["recorded_by"]})
+    return [audit_row(r, names) for r in rows]
 
 
 # ═══ writes ══════════════════════════════════════════════════════════════════════════════════════════════

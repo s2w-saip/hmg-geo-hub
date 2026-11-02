@@ -198,15 +198,17 @@ def conversion_view(cur: dict, prev: dict | None, filtered: bool) -> dict:
                      key=lambda r: (r["sessions"] is None, -(r["sessions"] or 0), str(r["engine"])))
     rest = totals["aiSessions"] - e_sessions if totals["aiSessions"] is not None and e_sessions is not None else None
     # landing pages
-    prev_pages = {p.get("url"): p.get("sessions") for p in prev.get("pages") or []}
+    prev_pages = {(p.get("prop_key"), p.get("url")): p.get("sessions") for p in prev.get("pages") or []}
+    many_markets = len({p.get("prop_key") for p in cur.get("pages") or []}) > 1
     raw = sorted(cur.get("pages") or [], key=lambda p: (p.get("sessions") is None, -(p.get("sessions") or 0), str(p.get("url"))))
     p_total = _sum(p.get("sessions") for p in raw)
     pages, acc = [], 0
     for i, p in enumerate(raw):
-        s, before = p.get("sessions"), prev_pages.get(p.get("url"))
+        s, before = p.get("sessions"), prev_pages.get((p.get("prop_key"), p.get("url")))
         acc += s or 0
         g = p.get("human_sessions")
-        pages.append({"id": i, "url": p.get("url"), "path": path_of(p.get("url")), "sessions": s, "share": share(s, p_total),
+        market = " · ".join(v for v in (p.get("brand"), p.get("country")) if v) if many_markets else None
+        pages.append({"id": i, "url": p.get("url"), "path": path_of(p.get("url")), "market": market or None, "sessions": s, "share": share(s, p_total),
                       "cum": share(acc, p_total) if s is not None else None, "views": p.get("page_views"),
                       "prev": before if prev_ok else None, "d": gap(s, before) if prev_ok else None,
                       "genSessions": g, "aiOfPage": share(s, s + g) if s is not None and g is not None else None,

@@ -194,7 +194,7 @@ class Context:
             for axis, column in AXES.items():
                 selected = values(self.q, axis)
                 if selected:
-                    tax.append(f"{tax_alias}.{column} IN (SELECT taxon_key FROM gold.dim_taxon WHERE code=ANY({b.bind(selected, 'text[]')}))")
+                    tax.append(f"{tax_alias}.{column} IN (SELECT taxon_key FROM gold.dim_taxon WHERE lower(code)=ANY({b.bind([v.lower() for v in selected], 'text[]')}))")
             if tax:
                 if self.sf == 3:
                     parts.append(f"EXISTS(SELECT 1 FROM gold.dim_prompt p WHERE p.prompt_key={alias}.prompt_key AND {' AND '.join(tax)})")

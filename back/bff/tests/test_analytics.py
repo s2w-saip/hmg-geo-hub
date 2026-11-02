@@ -138,7 +138,7 @@ class AnalyticsRules(unittest.IsolatedAsyncioTestCase):
                          {"AI Assistant": (None, None, None), "Organic Search": (None, None, None)})
         self.assertEqual({s["value"]: (s["ai_conversions"], s["human_conversions"]) for s in gap["segments"]["device"]},
                          {"mobile": (None, None), "desktop": (None, None)})
-        self.assertTrue(all(v is None for p in gap["pages"] for k, v in p.items() if k != "url"))
+        self.assertTrue(all(v is None for p in gap["pages"] for k, v in p.items() if k not in ("url", "prop_key", "brand", "country")))
         self.assertEqual([e["count"] for e in gap["events"]], [None])
         # the markets: Korea collected every day keeps its own values, DE is unknown
         market = {m["property_id"]: m for m in gap["countries"]}

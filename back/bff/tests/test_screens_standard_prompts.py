@@ -250,43 +250,63 @@ def audit(aid, days_ago, event="updated", batch=None, **over):
 
 
 class History(unittest.TestCase):
+    """Global score sheet (2026-11-02): the tab was always empty, it asked Gold, which keeps no history; the HUB catalog
+    keeps every revision (catalog.prompt_version)."""
+
+    PID = "00000000-0000-0000-0000-000000000001"
+
     def history(self, qs, items):
-        with mock.patch("bff.api.get", mock.AsyncMock(return_value={"data": {"items": items}})) as get:
+        with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(return_value=items)) as get:
             return run(sp.prompts_history(QueryParams(qs))), get
 
-    def test_source_without_history_is_unavailable(self):
-        err = HTTPException(503, "This capability is not supplied by the Gold source")
-        with mock.patch("bff.api.get", mock.AsyncMock(side_effect=err)):
+    def test_store_without_history_is_unavailable(self):
+        err = HTTPException(503, "HUB data store is not configured")
+        with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(side_effect=err)):
             self.assertEqual(run(sp.prompts_history(QueryParams(""))), {"available": False, "shown": 0, "groups": []})
 
     def test_other_errors_propagate(self):
-        with mock.patch("bff.api.get", mock.AsyncMock(side_effect=HTTPException(500, "x"))):
+        with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(side_effect=HTTPException(500, "x"))):
             with self.assertRaises(HTTPException):
                 run(sp.prompts_history(QueryParams("")))
 
+    def test_a_scoped_account_reads_no_feed_of_every_market(self):
+        with mock.patch.object(sp, "reader_scope", return_value={"all": False}):
+            self.assertEqual(self.history("", [audit(1, 1)])[0], {"available": False, "shown": 0, "groups": []})
+
     def test_window_event_filter_and_view_rows(self):
         vm, get = self.history("days=30&event=updated", [audit(1, 1), audit(2, 40), audit(3, 2, event="created")])
-        get.assert_awaited_once_with("prompts/history", {"surface": "global", "limit": 500})
+        get.assert_awaited_once_with(None, 500)
         self.assertEqual(vm["shown"], 1)
         row = vm["groups"][0]["rows"][0]
         self.assertEqual((row["id"], row["changes"]["kind"]), ("1", {"old": "1", "new": "true"}))
         self.assertEqual(self.history("", [audit(1, 1), audit(2, 40)])[0]["shown"], 2)
 
     def test_timeline_reads_one_prompt_without_a_window(self):
-        with mock.patch("bff.api.get", mock.AsyncMock(return_value={"data": {"items": [audit(1, 400), audit(2, 1)]}})) as get:
-            vm = run(sp.prompts_timeline(QueryParams("prompt_id=p-1")))
-        path, params = get.await_args.args
-        self.assertEqual((path, params["prompt_id"], params["from"], params["limit"], params["surface"]),
-                         ("prompts/history", "p-1", "2000-01-01", 100, "global"))
+        with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(return_value=[audit(1, 400), audit(2, 1)])) as get:
+            vm = run(sp.prompts_timeline(QueryParams(f"prompt_id={self.PID}")))
+        self.assertEqual((str(get.await_args.args[0]), get.await_args.args[1]), (self.PID, 100))
         self.assertEqual((vm["available"], [r["id"] for r in vm["rows"]]), (True, ["1", "2"]))
 
     def test_timeline_unavailable_and_bad_id(self):
-        with mock.patch("bff.api.get", mock.AsyncMock(side_effect=HTTPException(503, "x"))):
-            self.assertEqual(run(sp.prompts_timeline(QueryParams("prompt_id=p"))), {"available": False, "rows": []})
+        with mock.patch.object(sp.catalog_editor, "history_rows", mock.AsyncMock(side_effect=HTTPException(503, "x"))):
+            self.assertEqual(run(sp.prompts_timeline(QueryParams(f"prompt_id={self.PID}"))), {"available": False, "rows": []})
         for qs in ("", "prompt_id=", "prompt_id=" + "x" * 201):
             with self.assertRaises(HTTPException) as cm:
                 run(sp.prompts_timeline(QueryParams(qs)))
             self.assertEqual(cm.exception.status_code, 422)
+        self.assertEqual(run(sp.prompts_timeline(QueryParams("prompt_id=not-a-uuid"))), {"available": True, "rows": []})
+
+    def test_a_revision_becomes_a_history_row(self):
+        from datetime import datetime, timezone
+        from bff.hub_stores import catalog_editor as ed
+        at = datetime(2026, 10, 28, tzinfo=timezone.utc)
+        row = {"prompt_id": self.PID, "version": 2, "text": "new", "definition": {"kind": "single"}, "recorded_at": at, "recorded_by": None,
+               "prev_version": 1, "prev_text": "old", "prev_definition": {"kind": "single"}}
+        out = ed.audit_row(row, {})
+        self.assertEqual((out["event_type"], out["changes"]["text"], out["batch_id"], out["actor_type"]),
+                         ("text_updated", {"old": "old", "new": "new"}, at.isoformat(), "system"))
+        first = ed.audit_row({**row, "version": 1, "prev_version": None, "prev_text": None, "prev_definition": None}, {})
+        self.assertEqual((first["event_type"], first["changes"]), ("created", {}))
 
     def test_consecutive_rows_of_one_batch_fold(self):
         vm, _ = self.history("", [audit(1, 1, batch="b"), audit(2, 1, batch="b"), audit(3, 1), audit(4, 1, batch="b")])
@@ -336,6 +356,47 @@ class GoldGlobalList(unittest.TestCase):
         sql, args = global_list("brand=Kia&country=DE")
         self.assertIn("(ce.brand_bit & $2)<>0", sql)
         self.assertEqual(args[1], 2 | 8)
+
+
+
+class CatalogSpelling(unittest.TestCase):
+    """Global score sheet (2026-11-02): one catalog value in two cases is one filter option."""
+
+    def test_rows_differing_by_case_fold_into_one(self):
+        from bff.screens._filters import to_catalog_rows
+        base = {"brand": "Kia", "brand_presence": "branded", "list_type": "A", "depth1": "x", "depth2": "y", "depth4": None}
+        rows = to_catalog_rows({"rows": [{**base, "depth3": "design"}, {**base, "depth3": "Design"}]})
+        self.assertEqual([r["depth3"] for r in rows], ["Design"])
+
+
+
+class DepthCase(unittest.TestCase):
+    def test_a_pick_finds_both_spellings(self):
+        f = {k: "all" for k in (*sp.FIELDS, "presence", "status", "market")}
+        row = {**dict.fromkeys(sp.FIELDS.values()), "presence": None, "scopePromptId": None, "markets": [], "text": "", "depth3": "design"}
+        self.assertTrue(sp.matches(row, {**f, "depth3": "Design"}, ""))
+        self.assertFalse(sp.matches({**row, "depth3": "Other"}, {**f, "depth3": "Design"}, ""))
+
+    def test_the_options_list_one_spelling(self):
+        self.assertEqual(sp.one_spelling(["design", "Design", "Audio"]), ["Audio", "Design"])
+
+
+
+class AdminClassification(unittest.TestCase):
+    """Global score sheet (2026-11-02): Admin › Global prompts showed '—' for the classification of 12,446 Gold prompts:
+    it read the prompt level (dim_prompt), and Gold keeps these values per brand row (catalog_entry, definition.catalogs)."""
+
+    def test_a_label_falls_back_to_the_first_catalog_row(self):
+        from bff.hub_stores import catalog_editor as ed
+        row = {"list_type": "Consumer base Response", "depth1": "1. Car+Features", "brand_presence": "unbranded"}
+        snap = ed.snapshot("t", {"kind": "single", "depth1": None, "catalogs": [row, {"depth1": "other"}]})
+        self.assertEqual((snap["listType"], snap["depth1"], snap["brandPresence"]), ("Consumer base Response", "1. Car+Features", "unbranded"))
+        self.assertEqual(ed.snapshot("t", {"depth1": "own", "catalogs": [row]})["depth1"], "own")
+        self.assertIsNone(ed.snapshot("t", {})["depth1"])
+
+    def test_the_list_filters_and_sorts_on_the_same_value(self):
+        from bff.hub_stores import catalog_editor as ed
+        self.assertIn("catalogs'->0->>'list_type'", ed.SORTS["listType"])
 
 
 if __name__ == "__main__":

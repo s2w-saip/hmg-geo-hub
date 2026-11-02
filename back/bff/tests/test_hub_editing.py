@@ -329,8 +329,8 @@ class Rules(unittest.TestCase):
         self.assertEqual(args, [project, "hub", "acr", "ko", "50%_off"])
         self.assertEqual(ce.list_filters({}, project)[1], [project, "active"])
         where, args = ce.list_filters({"funnel": "인지/탐색", "brandPresence": "branded", "depth1": "1. Car+Features", "region": " x:ww "}, project)
-        self.assertEqual(where, "p.project_id=$1 AND coalesce(p.definition->>'status','active')=$2 AND p.definition->>'funnel'=$3 AND "
-                                "p.definition->>'brand_presence'=$4 AND p.definition->>'depth1'=$5 AND "
+        self.assertEqual(where, "p.project_id=$1 AND coalesce(p.definition->>'status','active')=$2 AND "
+                                f"{ce.label_sql('funnel')}=$3 AND {ce.label_sql('brand_presence')}=$4 AND {ce.label_sql('depth1')}=$5 AND "
                                 "p.definition->'regions' @> jsonb_build_array($6::text)")
         self.assertEqual(args, [project, "active", "인지/탐색", "branded", "1. Car+Features", "x:WW"])
         for bad in ({"status": "deleted"}, {"origin": "x"}, {"kind": "x"}, {"q": "a\nb"}, {"funnel": "a\tb"}, {"region": "K" * 201}):
@@ -340,7 +340,7 @@ class Rules(unittest.TestCase):
     def test_list_order_sorts_by_one_column_then_the_latest_change(self):
         self.assertEqual(ce.list_order({}), "p.recorded_at DESC NULLS LAST,p.recorded_at DESC,p.prompt_id")
         self.assertEqual(ce.list_order({"sort": "text"}), "p.text ASC NULLS LAST,p.recorded_at DESC,p.prompt_id")
-        self.assertEqual(ce.list_order({"sort": "depth1", "order": "desc"}), "p.definition->>'depth1' DESC NULLS LAST,p.recorded_at DESC,p.prompt_id")
+        self.assertEqual(ce.list_order({"sort": "depth1", "order": "desc"}), f"{ce.label_sql('depth1')} DESC NULLS LAST,p.recorded_at DESC,p.prompt_id")
         self.assertEqual(ce.list_order({"sort": "status"}), "coalesce(p.definition->>'status','active') ASC NULLS LAST,p.recorded_at DESC,p.prompt_id")
         for bad in ({"sort": "p.text; DROP"}, {"sort": "text", "order": "up"}):
             with self.assertRaises(ce.HTTPException):

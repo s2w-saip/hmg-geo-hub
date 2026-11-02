@@ -34,6 +34,11 @@ def grouped(rows, key):
     return out
 
 
+def page_of(row) -> tuple:
+    """A landing page belongs to its property: the collector stores paths, so '/' of two sites is two pages."""
+    return row["prop_key"], row["url"] or row["page"]
+
+
 def conversions(rows, properties, ai=True, complete=frozenset()):
     """Each property's declared basis chooses one report, never two overlapping reports. Basis 2: GA4 sends no row
     for a tracked event that did not happen, so a slice whose events were collected (report 3 rows of the cohort)
@@ -237,9 +242,11 @@ async def conversion(conn, q):
     data["segments"] = {"device": segments("device"), "visitor_type": segments("nvr")}
     landing = [r for r in rows if r["report"] == 4]
     data["pages"] = []
-    for url, mine in sorted(grouped([r for r in landing if r["url"] or r["page"]], lambda r: r["url"] or r["page"]).items()):
+    markets = {p["prop_key"]: p for p in properties}
+    for (prop, url), mine in sorted(grouped([r for r in landing if r["url"] or r["page"]], page_of).items()):
         ai, general = [r for r in mine if r["is_ai"] is True], [r for r in mine if r["is_ai"] is False]
-        data["pages"].append({"url": url, "sessions": whole_only(observed_sum(ai, "sessions")), "page_views": whole_only(observed_sum(mine, "page_views")),
+        data["pages"].append({"url": url, "prop_key": prop, "brand": BRAND_NAMES.get(markets.get(prop, {}).get("brand_bit")),
+            "country": markets.get(prop, {}).get("country"), "sessions": whole_only(observed_sum(ai, "sessions")), "page_views": whole_only(observed_sum(mine, "page_views")),
             "ai_page_views": whole_only(observed_sum(ai, "page_views")), "ai_key_events": whole_only(observed_sum(ai, "key_events")),
             "human_sessions": whole_only(observed_sum(general, "sessions")), "human_key_events": whole_only(observed_sum(general, "key_events"))})
     data["events"] = [{"event": event, "count": whole_only(observed_sum(mine, "event_count")), "tracked": any(r["is_conv"] for r in mine),

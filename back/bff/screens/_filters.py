@@ -275,9 +275,16 @@ def to_catalog_rows(catalog: dict | None) -> list[dict] | None:
     """data.catalog -> CatalogTaxonomyRow[] (funnel dropped, deduped, legacy order); no catalog -> None."""
     if not catalog:
         return None
+    # Gold spells some taxon codes in two cases (Design · design): one option, under its capitalised spelling
+    spelling: dict[str, str] = {}
+    for r in catalog["rows"]:
+        for _, snake in _CATALOG_KEYS:
+            v = r.get(snake)
+            if isinstance(v, str) and (v.lower() not in spelling or v < spelling[v.lower()]):
+                spelling[v.lower()] = v
     seen: dict[tuple, dict] = {}
     for r in catalog["rows"]:
-        row = {camel: r.get(snake) for camel, snake in _CATALOG_KEYS}
+        row = {camel: spelling.get(r[snake].lower()) if isinstance(r.get(snake), str) else r.get(snake) for camel, snake in _CATALOG_KEYS}
         seen.setdefault(tuple(row.values()), row)
     return sort_by(list(seen.values()), _catalog_cmp)
 
