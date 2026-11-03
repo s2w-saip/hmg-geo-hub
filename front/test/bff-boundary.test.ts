@@ -10,7 +10,7 @@ import { readSourceText } from "@/test/source-text";
 // pages, and fails when one of them reaches a module family that computes data.
 //
 // Allowed on purpose (not data computation): the filter panel's chrome and its master data
-// (lib/scope dimensions · brand-presence · website-virtual-geo, lib/rhq), display mappings
+// (lib/scope dimensions · brand-presence · website-virtual-geo · engines (the AI engine names), lib/rhq), display mappings
 // (lib/geo-catalog names, lib/citation-categorizer/taxonomy labels, lib/period-chip-text), chart
 // geometry (lib/viz), the project gate and session adapters, and the auth repositories the session
 // and the route gates use.
@@ -29,7 +29,7 @@ const FORBIDDEN: ReadonlyArray<[RegExp, string]> = [
   [/^lib\/hgh\/adapters\/(?!project-gate\.ts$|session\.ts$)/, "front adapters (the API builds the view model)"],
   [/^lib\/kpi\//, "KPI / period comparison computation"],
   [/^lib\/period\//, "period resolution"],
-  [/^lib\/scope\/(?!dimensions\.ts$|brand-presence\.ts$|website-virtual-geo\.ts$)/, "legacy aggregation / scope readers"],
+  [/^lib\/scope\/(?!dimensions\.ts$|brand-presence\.ts$|website-virtual-geo\.ts$|engines\.ts$)/, "legacy aggregation / scope readers"],
   [/^lib\/db\/repositories\/(?!profiles\.ts$|project-members\.ts$|projects\.ts$|request-cache\.ts$)/, "legacy repositories"],
   [/^lib\/(ga4|keyword|summary)\//, "direct GA4 / DataForSEO / summary computation"],
   [/^lib\/citation-categorizer\/(?!taxonomy\.ts$)/, "citation categorisation rules"],
