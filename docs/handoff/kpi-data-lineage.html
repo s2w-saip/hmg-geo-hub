@@ -100,7 +100,7 @@ table.metrics td { overflow-wrap: anywhere; }
 <main>
 <div class="prose">
 <h1>화면 지표 데이터 출처</h1>
-<p class="sub">2026-10-31 · 코드 기준 d2996f0(자사 판정 행은 9dbd27d) · Gold 발행 Global live 603 · card 604, Website live 3647 · card 3648 · 기준일 Global 2026-10-05 · Website 2026-10-09</p>
+<p class="sub">2026-10-31 · 코드 기준 d2996f0(자사 판정 행은 9dbd27d, 서비스 기준 주 줄은 a3b28e7) · Gold 발행 Global live 603 · card 604, Website live 3647 · card 3648 · 기준일 Global 2026-10-05 · Website 2026-10-09</p>
 <p>리뉴얼 화면에 보이는 숫자마다 <b>Gold의 어느 표 · 열 · 조건</b>에서 오는지, <b>HUB가 무엇을 계산했는지</b>, <b>HUB 데이터</b>(HUB DB 표, 코드 속 목록 · 이름표 · 묶음, 계정 범위)를 무엇을 썼는지 적었다. 화면 값이 Gold 값인지, HUB가 만든 값인지를 행마다 가릴 수 있게 하려는 표다.</p>
 <p>주요 숫자(KPI 값과 Δ, 요약 숫자, 주요 표의 첫 행, 탭 개수, 필터 선택지 수)는 기본 조건(필터 없음, 최신 회차, 관리자 계정)에서 화면이 받는 BFF 응답과, Gold 사실 표(answer_fact · answer_brand_fact · citation_fact · acr_* 등)로 리더 SQL 없이 따로 센 값을 견줬다. 대조한 275건이 모두 일치했다. 기본 조건에서 같아도 필터를 걸면 Gold 정의와 갈리던 곳이 하나 있었고, 2026-10-31에 고쳤다(2절 첫 줄).</p>
 <p>AI Conversion · AI 가시성은 Gold가 아니라 HUB DB(GA4 · SEO 수집 결과)를 읽는다. 로컬 DB에 GA4 속성이 없어 값 대조는 하지 못했고, 시험 fixture로 열 → 화면 값의 흐름만 확인했다.</p>
