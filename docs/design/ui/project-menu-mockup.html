@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project 메뉴 목업 — HMG GEO 리뉴얼</title>
+<style>
+  @font-face {
+    font-family: "Pretendard";
+    src: url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2-variations"),
+         url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2");
+    font-weight: 100 900; font-style: normal; font-display: swap;
+  }
+  /* Project 메뉴 구성 목업 (2026-11-03). 사이드바는 리뉴얼 구현(rn-sidebar.tsx)과 디자인 규칙 '틀 · 사이드바 메뉴'를 그대로 따릅니다.
+     목록의 값은 Gold surface 3(2026-11-03 조회)이고, 이름 · 브랜드 · 국가는 Gold에 없어 비워 둡니다.
+     설계하는 동안만 쓰고 구현하면 지웁니다(디자인 규칙 '구현이 기준'). */
+  :root {
+    --navy: #002c5f; --navy-500: #1a4d8e; --navy-300: #6b89b3; --navy-50: #e6eaf0; --navy-25: #f2f5fd; --navy-tint: rgba(0, 44, 95, .08);
+    --sky: #aacae6; --sand-inset: #eee9e2; --sand-light: #f6f3f2; --white: #ffffff;
+    --ink: #0a0908; --ink-2: #2b2825; --ink-muted: #6b6660; --ink-faint: #939393; --line: #ece8e3; --line-2: #e2ddd6;
+    --font: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", monospace;
+    --shadow-1: 0 1px 2px rgba(10,9,8,.05), 0 1px 3px rgba(10,9,8,.06);
+    --shadow-3: 0 24px 56px -16px rgba(10,9,8,.30), 0 6px 16px rgba(10,9,8,.08);
+    --shadow-card: 0 1px 2px rgba(10,9,8,.04), 0 0 0 1px var(--line);
+    --r-card: 16px; --side-w: 232px;
+    --ease: cubic-bezier(.2,.7,.2,1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--sand-light); color: var(--ink); font-family: var(--font); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; word-break: keep-all; }
+  button, input { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.s14 { width: 14px; height: 14px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--mono); letter-spacing: -.01em; }
+  .muted { color: var(--ink-muted); }
+
+  /* ── 목업 바 ── */
+  .mk { position: sticky; top: 0; z-index: 100; background: #1c1f24; color: #e6e8eb; font-size: 12px; }
+  .mk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 16px; }
+  .mk-tag { background: #f4c542; color: #1c1f24; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .mk-title { font-weight: 600; }
+  .mk-group { display: inline-flex; align-items: center; gap: 4px; }
+  .mk-group > span { color: #9aa3ad; margin-right: 2px; }
+  .mk-btn { border: 1px solid #3a414b; background: transparent; color: #cfd4da; font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
+  .mk-btn[aria-pressed="true"] { background: #e6e8eb; color: #1c1f24; border-color: #e6e8eb; font-weight: 600; }
+  .mk-note { color: #9aa3ad; margin-left: auto; }
+  .mk-cap { border-top: 1px solid #2c323a; padding: 8px 16px 10px; color: #cfd4da; line-height: 1.6; display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; }
+  .mk-cap b { color: #fff; }
+  .mk-cap ul { margin: 0; padding-left: 16px; }
+
+  /* ── 틀: 사이드바 232 + 본문 ── */
+  .sx { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: calc(100vh - var(--mk-h, 0px)); }
+  .main { min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px 32px 72px; }
+  .wrap { max-width: 1480px; margin: 0 auto; }
+
+  /* ── 사이드바 (rn-sidebar.tsx · 디자인 규칙 '사이드바 메뉴') ── */
+  .sx-side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 18px 12px 14px; background: var(--white); border-right: 1px solid var(--line); }
+  .sx-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 4px; }
+  .sx-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+  .sx-wm { display: flex; flex-direction: column; line-height: 1.15; }
+  .sx-wm b { font-size: 14px; font-weight: 800; color: var(--navy); letter-spacing: -.01em; }
+  .sx-wm small { font-size: 11px; color: var(--ink-muted); }
+  .snb { display: flex; flex-direction: column; gap: 1px; }
+  .snb-more { padding-top: 12px; border-top: 1px solid var(--line); }
+  .snb .sec { display: flex; flex-direction: column; gap: 1px; }
+  .snb .sec + .sec { margin-top: 14px; }
+  .snb .sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
+  .snb .sec > summary::-webkit-details-marker { display: none; }
+  .snb .sec > summary::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); opacity: .55; transition: transform .15s var(--ease); }
+  .snb .sec[open] > summary::after { transform: rotate(45deg); margin-top: -3px; }
+  .snb .sec > summary:hover { background: var(--sand-light); color: var(--ink-2); }
+  .snb .sec[data-here] > summary { color: var(--ink); }
+  .snb a { position: relative; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: none; cursor: pointer; }
+  .snb a:hover { background: rgba(0,44,95,.06); color: var(--navy); }
+  .snb a.on { background: var(--navy-tint); color: var(--navy); font-weight: 600; }
+  .snb a > span.l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .snb .ni { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; color: var(--ink-faint); }
+  .snb a:hover .ni, .snb a.on .ni { color: var(--navy); }
+  .snb .st { margin-left: auto; display: flex; color: var(--ink-faint); }
+  .snb .st .ni { width: 14px; height: 14px; }
+  .snb .ngrp { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+  .snb .par { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 10px; font-size: 12px; font-weight: 700; color: var(--ink-muted); cursor: default; }
+  .snb .tree { display: flex; flex-direction: column; gap: 1px; margin: 0 0 2px 17px; padding-left: 6px; border-left: 1px solid var(--line); }
+  .snb .tree a { min-height: 30px; }
+  .snb .tree a.on::before { content: ""; position: absolute; left: -7px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--navy); }
+  .snb .grp { padding: 10px 10px 2px; font-size: 11px; font-weight: 700; color: var(--ink-muted); }
+  .sx-out { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--navy-25); color: var(--ink-2); font-size: 11px; line-height: 1.5; }
+  .sx-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .sx-acct { display: flex; align-items: center; gap: 10px; padding: 8px 8px 2px; border-top: 1px solid var(--line); }
+  .sx-av { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-50); color: var(--navy); display: grid; place-items: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
+  .sx-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+  .sx-acct b { font-size: 12px; } .sx-acct small { font-size: 11px; color: var(--ink-muted); }
+  .sx-acct .lang { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-muted); }
+
+  /* 프로젝트 카드 (안 A · B): 지금 어느 프로젝트인지 + 바꾸기 */
+  .pj { display: grid; grid-template-columns: minmax(0, 1fr) 30px; align-items: center; gap: 0 6px; margin: 4px 0 4px; padding: 8px 6px 8px 12px; border-radius: 10px; background: var(--sand-light); box-shadow: inset 0 0 0 1px var(--line); }
+  .pj b { display: block; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .pj small { display: block; font-size: 11px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon { all: unset; cursor: pointer; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; color: var(--ink-muted); }
+  .icon:hover, .icon[aria-expanded="true"] { background: var(--sand-inset); color: var(--ink); }
+  .icon:focus-visible { outline: 2px solid var(--navy); }
+  /* 안 C: 메뉴 안의 프로젝트 줄 */
+  .snb a.prow .mono { font-size: 12.5px; }
+  .snb a.prow .chev { margin-left: auto; transition: transform .15s; color: var(--ink-faint); }
+  .snb a.prow.open .chev { transform: rotate(90deg); }
+  .snb .tree .tree { margin-left: 10px; }
+
+  /* 바꾸기 창 */
+  .pop { position: fixed; z-index: 90; width: 420px; max-height: min(560px, calc(100vh - 120px)); display: flex; flex-direction: column; background: var(--white); border-radius: 14px; box-shadow: var(--shadow-3), 0 0 0 1px var(--line); }
+  .pop[hidden] { display: none; }
+  .pop-h { display: flex; align-items: center; gap: 8px; padding: 12px 10px 8px 16px; }
+  .pop-h b { font-size: 14px; }
+  .pop-h .icon { margin-left: auto; }
+  .pop-s { padding: 0 12px 8px; }
+  .pop-l { overflow-y: auto; padding: 0 6px 6px; border-top: 1px solid var(--line); }
+  .pop-l button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; padding: 8px 10px; border-radius: 8px; }
+  .pop-l button:hover, .pop-l button:focus-visible { background: var(--navy-25); }
+  .pop-l button[aria-current] { background: var(--navy-tint); }
+  .pop-l .t { font-size: 13px; font-weight: 600; }
+  .pop-l .m { font-size: 12px; color: var(--ink-muted); text-align: right; white-space: nowrap; }
+  .pop-l .p { grid-column: 1 / -1; font-size: 12px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pop-f { padding: 8px 16px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-muted); display: flex; gap: 10px; align-items: center; }
+  .pop-f .lnk { margin-left: auto; }
+
+  /* ── 페이지 ── */
+  .pg { display: flex; flex-direction: column; gap: 16px; }
+  .ph { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+  .ph h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.25; }
+  .ph .sub { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; color: var(--ink-muted); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--line-2); background: var(--white); font-size: 12px; color: var(--ink-2); }
+  .pill b { font-weight: 700; }
+  .card { background: var(--white); border-radius: var(--r-card); box-shadow: var(--shadow-card); position: relative; }
+  .card-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 18px 22px 12px 24px; }
+  .card-h h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .card-h .hint { font-size: 12px; color: var(--ink-muted); }
+  .card.q { background: var(--sand-light); box-shadow: inset 0 0 0 1px var(--line); }
+  .card.q p { margin: 0; padding: 0 24px 18px; font-size: 12px; color: var(--ink-2); line-height: 1.7; }
+  .card.mko { background: #fffdf5; box-shadow: inset 0 0 0 1.5px #ecd98a; }
+  .card.mko .card-h h2::before { content: "목업 안내"; margin-right: 8px; padding: 1px 6px; border-radius: 4px; background: #f4c542; color: #1c1f24; font-size: 11px; font-weight: 700; vertical-align: 2px; }
+  .btn { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--line-2); background: var(--white); color: var(--ink-2); }
+  .btn:hover { border-color: var(--ink-faint); }
+  .lnk { all: unset; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--navy); }
+  .lnk:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .tb { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 16px 22px 12px 24px; }
+  .tb .r { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-muted); }
+  .finwrap { position: relative; width: 360px; }
+  .finwrap .i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); }
+  .finput { width: 100%; height: 34px; border: 1px solid var(--line-2); border-radius: 8px; padding: 0 10px 0 32px; font-size: 13px; color: var(--ink); background: var(--white); outline: none; }
+  .finput:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,44,95,.12); }
+  .seg { display: inline-flex; padding: 3px; background: var(--sand-inset); border-radius: 9px; }
+  .seg button { all: unset; cursor: pointer; height: 28px; line-height: 28px; padding: 0 12px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--ink-muted); }
+  .seg button.on { background: var(--white); color: var(--ink); font-weight: 700; box-shadow: var(--shadow-1); }
+  .seg button .c { margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .tblwrap { overflow-x: auto; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; }
+  th { height: 38px; text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-muted); padding: 0 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--white); }
+  th:first-child, td:first-child { padding-left: 24px; }
+  th:last-child, td:last-child { padding-right: 24px; }
+  th.r, td.r { text-align: right; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: middle; }
+  td.r { font-variant-numeric: tabular-nums; }
+  tr.go { cursor: pointer; }
+  tr.go:hover td, tr.go:focus-visible td { background: var(--navy-25); }
+  tr.go:focus-visible { outline: none; }
+  td .id { font-weight: 700; }
+  td .pt { display: block; margin-top: 1px; font-size: 12px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td.none { color: var(--ink-faint); }
+  .tmore { display: flex; align-items: center; gap: 12px; padding: 12px 24px 16px; font-size: 12px; color: var(--ink-muted); }
+  .empty { padding: 28px 24px; color: var(--ink-muted); font-size: 13px; }
+  /* 메뉴 → 화면 표 */
+  .map td { font-size: 12.5px; line-height: 1.5; }
+  .map tr.here td { background: var(--navy-25); box-shadow: inset 0 1px 0 var(--navy-300), inset 0 -1px 0 var(--navy-300); }
+  .map tr.here td:first-child { font-weight: 700; color: var(--navy); }
+  .map tr.off td { color: var(--ink-muted); }
+  .map code, .cmp code, .card.q code { font-family: var(--mono); font-size: 11.5px; background: var(--sand-light); padding: 0 4px; border-radius: 4px; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .tag.ok { background: var(--navy-tint); color: var(--navy); }
+  .tag.wip { background: var(--sand-inset); color: var(--ink-muted); }
+  .tag.key { background: #fbf3dc; color: #7a5d12; }
+  .tag .ni { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* 본문 자리 (프로젝트 안) */
+  .frame { display: grid; grid-template-columns: 296px minmax(0, 1fr); gap: 20px; }
+  .ph-box { border-radius: var(--r-card); border: 1.5px dashed var(--line-2); background: rgba(255,255,255,.55); padding: 16px 18px; color: var(--ink-muted); font-size: 12px; line-height: 1.7; min-height: 220px; }
+  .ph-box b { display: block; margin-bottom: 4px; color: var(--ink-2); font-size: 13px; }
+  .ph-box.veil { background: repeating-linear-gradient(135deg, rgba(246,243,242,.9) 0 10px, rgba(255,255,255,.9) 10px 20px); }
+  /* 안 비교 */
+  .cmp td { font-size: 12.5px; line-height: 1.55; vertical-align: top; }
+  .cmp tr.rec td { background: var(--navy-25); }
+  .cmp tr.rec td:first-child b { color: var(--navy); }
+  .cmp tr.out td { color: var(--ink-muted); }
+  .cmp-n { margin: 0; padding: 12px 24px 18px; font-size: 12px; color: var(--ink-muted); line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="mk" id="mk">
+  <div class="mk-row">
+    <span class="mk-tag">목업</span><span class="mk-title">Project 메뉴 구성 · 설계 중</span>
+    <span class="mk-group" role="group" aria-label="안"><span>안</span>
+      <button class="mk-btn" data-opt="A">A 프로젝트 문맥 구역 · 추천</button><button class="mk-btn" data-opt="B">B 프로젝트 전용 사이드바</button><button class="mk-btn" data-opt="C">C 메뉴에 프로젝트 나열</button></span>
+    <span class="mk-group" role="group" aria-label="화면"><span>화면</span>
+      <button class="mk-btn" data-view="list">목록</button><button class="mk-btn" data-view="project">프로젝트 안</button></span>
+    <span class="mk-group" role="group" aria-label="계정"><span>계정</span>
+      <button class="mk-btn" data-acct="admin">관리자</button><button class="mk-btn" data-acct="scoped">범위 계정</button></span>
+    <span class="mk-note">읽기 단계(P0~P5)를 마친 뒤 모습 · 공사 = 리뉴얼 화면 없음 · 열쇠 = GA4 계정 대기</span>
+  </div>
+  <div class="mk-cap" id="mk-cap"></div>
+</div>
+<div class="sx">
+  <aside class="sx-side" id="side" aria-label="사이드 메뉴"></aside>
+  <main class="main" id="main"><div class="wrap" id="page"></div></main>
+</div>
+<div class="pop" id="pop" role="dialog" aria-label="프로젝트 바꾸기" hidden>
+  <div class="pop-h"><b>프로젝트 바꾸기</b><span class="muted" id="pop-n"></span><button class="icon" id="pop-x" aria-label="닫기"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="pop-s"><label class="finwrap" style="width:100%"><svg class="i s14"><use href="#i-search"/></svg><input class="finput" id="pop-q" placeholder="ID · 프롬프트 원문 · 국가" aria-label="프로젝트 찾기"></label></div>
+  <div class="pop-l" id="pop-l"></div>
+  <div class="pop-f"><span id="pop-f"></span><button class="lnk" id="pop-all">전체 목록 →</button></div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="n-dashboard" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+  <symbol id="n-list-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <symbol id="n-message-square-text" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol>
+  <symbol id="n-flask-conical" viewBox="0 0 24 24"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></symbol>
+  <symbol id="n-briefcase" viewBox="0 0 24 24"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></symbol>
+  <symbol id="n-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="n-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="n-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
+  <symbol id="n-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+  <symbol id="n-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></symbol>
+  <symbol id="n-file-chart-column" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 18v-1"/><path d="M12 18v-6"/><path d="M16 18v-3"/></symbol>
+  <symbol id="n-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+  <!-- 레거시 프로젝트 하위 메뉴 아이콘 (components/dash/sidebar.tsx PROJECT_SUB_ITEMS) -->
+  <symbol id="p-layout" viewBox="0 0 24 24"><rect width="7" height="18" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></symbol>
+  <symbol id="p-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="p-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+  <symbol id="p-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-wip" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/></symbol>
+  <symbol id="i-updown" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+</defs></svg>
+
+<script>
+// Gold surface 3 프로젝트 130개 (2026-11-03 조회): [ID 앞 8자리, 측정 국가, 언어, 엔진, 프롬프트, 답변(served), 회차, 마지막 측정 MM-DD, 커스텀 태그 수, 첫 프롬프트 원문 앞부분]
+const PROJECTS = [["e0011964",["KR"],
+  [],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"What does Hyundai aim to achieve by bringing the IONIQ 6"],
+  ["46b5750e",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"2026 GV70의 변경 내용을 바탕으로 제네시스가 고객 편의와 선택 폭을 어떤 방향으로 강화했는지 "],
+  ["ff7817b4",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"GV60 마그마 출시를 통해 제네시스가 럭셔리 고성능을 어떤 방향으로 정의하고 있는지 알려줘."],
+  ["91bc7c8e",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"레드닷 디자인 어워드 수상 발표에서 엑스 스콜피오와 마그마 GT 콘셉트의 디자인 특징이 어떻게 구분돼"],
+  ["bb60f101",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"제이디파워 신차품질조사에서 제네시스의 순위 상승과 G70·G80·GV80의 세그먼트 성과를 구체적으로"],
+  ["dd3eca95",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"2027 GV70와 GV70 그래파이트 패키지가 출시되면서 달라진 상품 구성과 주요 특징을, 출처와 "],
+  ["35179cd4",["KR"],
+  [],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"What does Hyundai aim to communicate by bringing the her"],
+  ["c3db10af",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"제네시스 라이브러리에서 강조한 디자인과 고성능 특징을 바탕으로, GV60 마그마가 제네시스 라인업에서"],
+  ["14489036",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"제네시스 라이브러리에서 강조한 전동화 특성을 바탕으로, Electrified GV70가 제네시스 라인"],
+  ["9040fb0e",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"Electrified GV70로 강릉을 여행할 때 어떤 이동 경험과 지역 매력을 느낄 수 있는지, 여"],
+  ["60fa8b23",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-11",0,"GV80 블랙과 조셉 리저우드 셰프가 함께한 다이닝에서는 차량과 요리가 어떤 경험으로 연결되는지, 참"],
+  ["d3685f9d",["PR"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"¿Por qué el totalmente nuevo Tucson lanzado recientement"],
+  ["ca5467cb",["PR"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Selecciona el top 5 de aspectos valorados positivamente "],
+  ["36f38fd4",["DE"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Fasse die Aspekte zusammen, die beim kürzlich vorgestell"],
+  ["b61485f7",["FR"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Sélectionne le top 5 des éléments évalués positivement s"],
+  ["cdce7d97",["PL"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Pod jakimi względami niedawno zaprezentowana całkowicie "],
+  ["c2f25ace",["AU"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"What do people evaluate most positively about the recent"],
+  ["0fc731e2",["SA"],
+  [],
+  ["chatgpt","gemini"],16,96,3,"10-11",2,"Among the negative reviews of the recently launched All-"],
+  ["dfcd99a8",["US"],
+  [],
+  ["deepseek"],8,24,3,"10-11",1,"与竞争车型相比，最近上市的全新 Tucson 在哪些方面获得了正面评价？"],
+  ["3c605eb6",["US"],
+  [],
+  ["deepseek"],8,24,3,"10-11",1,"请整理一下最近上市的全新 Elantra 与竞争车型相比被负面评价的因素。"],
+  ["ae342b77",["KR"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"최근에 런칭된 더 올 뉴 투싼 경쟁차와 비교해서 왜 부정적으로 평가 받고 있어?"],
+  ["73415265",["US"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"What do people criticize most about the recently launche"],
+  ["e4b0c856",["AU"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Select the top 5 positively evaluated aspects of the rec"],
+  ["63c3d437",["SA"],
+  [],
+  ["chatgpt","gemini"],16,96,3,"10-11",2,"اختر أفضل 5 عناصر حظيت بتقييم إيجابي في سيارة Tucson الج"],
+  ["38d3197c",["CA"],
+  [],
+  ["chatgpt","gemini"],16,96,3,"10-11",2,"What do people evaluate most positively about the recent"],
+  ["6f7545e8",["CA"],
+  [],
+  ["chatgpt","gemini"],16,96,3,"10-11",2,"Sélectionne le top 5 des éléments évalués positivement s"],
+  ["6f35db7f",["KR"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"최근에 공개된 더 올 뉴 아반떼의 긍정 평가 요소와 언급 빈도 순으로 top 5를 선정해줘."],
+  ["2d299721",["IT"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Tra le valutazioni negative sulla nuovissima Elantra lan"],
+  ["c34942dd",["CZ"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Co lidé hodnotí nejpozitivněji na nedávno představené zc"],
+  ["2c7a273d",["GB"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"In what respects is the recently unveiled All-New Elantr"],
+  ["b283a120",["ES"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Resume los aspectos por los que el totalmente nuevo Elan"],
+  ["bcfee204",["MX"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Organize os aspectos pelos quais o totalmente novo Elant"],
+  ["500e6bf2",["CL"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"¿Por qué el totalmente nuevo Elantra lanzado recientemen"],
+  ["e1701b06",["US"],
+  [],
+  ["chatgpt","gemini"],8,48,3,"10-11",1,"Why is the recently launched All-New Elantra evaluated n"],
+  ["b6b0b4c3",["PR"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"¿Qué SUV híbrido ofrece el mejor equilibrio general entr"],
+  ["ffc22056",["PL"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Który SUV łączy wysoką efektywność hybrydy z mocą, płynn"],
+  ["a7c91424",["DE"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Welches Familien-SUV passt sich am flexibelsten an wechs"],
+  ["42bc0107",["DE"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Fasse die Punkte zusammen, in denen der kürzlich eingefü"],
+  ["e4b7ff3c",["GB"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Which hybrid SUV offers the most advanced and reliable A"],
+  ["f97db741",["FR"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Quel SUV recommanderiez-vous pour son design extérieur a"],
+  ["42a564e9",["ES"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"¿Qué SUV recomendarías a quienes disfrutan de viajes de "],
+  ["6c5df388",["IT"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Quali SUV ibridi possono alimentare i sistemi elettrici "],
+  ["c43c46af",["PL"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Podsumuj elementy uznawane za mocne strony niedawno wpro"],
+  ["376aae25",["FR"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Parmi les avis négatifs sur le tout nouveau Tucson récem"],
+  ["72cf144b",["US"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Which SUV offers the widest range of advanced technologi"],
+  ["a469703a",["MX"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Qual SUV familiar se adapta melhor a mudanças de estilo "],
+  ["4b8a1347",["CZ"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Jaká je top 5 nejčastěji zmiňovaných bodů mezi negativní"],
+  ["b86f67f9",["GB"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Why is the recently launched All-New Tucson evaluated ne"],
+  ["35ae7ec0",["CA"],
+  [],
+  ["chatgpt","gemini"],96,384,2,"10-09",5,"Quel SUV reste le mieux à jour technologiquement après l"],
+  ["d595778a",["CZ"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Které rodinné SUV se nejlépe přizpůsobí měnícímu se živo"],
+  ["da5d3a08",["SA"],
+  [],
+  ["chatgpt","gemini"],96,384,2,"10-09",5,"ما سيارة الـSUV العائلية التي توفّر أفضل راحة وسهولة لأف"],
+  ["5a3a33b1",["AU"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"Which SUV has a tough, durable-looking exterior that fee"],
+  ["3063c565",["KR"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"스마트폰을 사용하는 것처럼 간단하고 편리한 소프트웨어 경험을 제공하는 SUV를 추천해줘"],
+  ["0c6c7d0b",["CL"],
+  [],
+  ["chatgpt","gemini"],48,192,2,"10-09",4,"¿Qué SUV ofrece las funciones basadas en IA más seguras "],
+  ["70ae065c",["IT"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Quali sono gli aspetti che le persone criticano di più d"],
+  ["08b315c8",["US"],
+  [],
+  ["deepseek"],48,96,2,"10-09",4,"最聪明的混动SUV是哪一款？"],
+  ["c7dbaa04",["MX"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"Entre las valoraciones negativas del totalmente nuevo Tu"],
+  ["1ea555ce",["ES"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"¿Cuáles son los aspectos que más critica la gente del to"],
+  ["11af4e68",["CL"],
+  [],
+  ["chatgpt","gemini"],8,32,2,"10-09",1,"¿Por qué el totalmente nuevo Tucson lanzado recientement"],
+  ["2213704f",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],216,432,1,"10-09",3,"GV80 HEV의 악세서리/유틸리티 옵션이 괜찮아?"],
+  ["e18507da",["GB","US"],
+  ["en"],
+  ["chatgpt","gemini"],8,32,1,"10-09",3,"Please tell me how many years the Kia PV7's vehicle warr"],
+  ["d42ec2dc",["US"],
+  [],
+  ["chatgpt","gemini"],5,10,1,"10-09",2,"What are the key specs and cargo space of the upcoming 2"],
+  ["cfa31176",["KR"],
+  [],
+  ["chatgpt","gemini"],51,102,1,"10-08",3,"중고차 구매 전 성능·상태점검기록부는 왜 확인해야 하고 어떤 내용이 포함돼? 현재 국내 기준으로 점검"],
+  ["21b37beb",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],3,6,1,"10-08",0,"제네시스가 이번 차세대 하이브리드 시스템 공개를 통해 고객에게 전달하려는 주행 경험과 브랜드 메시지는"],
+  ["776c62fc",["GB"],
+  [],
+  ["chatgpt","gemini"],28,56,1,"10-07",0,"Compare the current IONIQ 5 trims in the United Kingdom "],
+  ["0e60d902",["KR"],
+  [],
+  ["chatgpt","gemini"],28,56,1,"10-07",0,"현재 한국에서 판매 중인 아이오닉 5의 트림, 가격, 컬러와 옵션을 설명하고 참고한 출처도 함께 알려"],
+  ["6b5c33a8",["US"],
+  [],
+  ["chatgpt","gemini"],28,56,1,"10-07",0,"Compare the current TUCSON trims in the United States an"],
+  ["35f1f7b3",["IN"],
+  [],
+  ["chatgpt","gemini"],111,222,1,"10-07",1,"Which are the best SUVs under 10 lakh in India in 2026 a"],
+  ["4cb46923",["IN"],
+  [],
+  ["chatgpt","gemini"],50,100,1,"10-07",0,"Best affordable car with ADAS in India"],
+  ["9d01e408",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],237,474,1,"10-07",4,"제네시스 HEV 라인의 내부 편의성은 괜찮아?"],
+  ["843ecb1b",["US"],
+  ["en"],
+  ["chatgpt","gemini"],81,810,1,"10-06",0,"Explain the trims, prices, colors and options for the To"],
+  ["c7f5ab4a",["GB"],
+  ["en"],
+  ["chatgpt","gemini"],36,360,1,"10-06",0,"What exterior colors are currently available for the Kia"],
+  ["e202df42",["KR"],
+  ["ko"],
+  ["chatgpt","gemini"],45,450,1,"10-06",0,"현재 한국에서 판매 중인 현대 팰리세이드의 트림, 가격, 컬러와 옵션을 설명하고 참고한 출처도 함께 "],
+  ["f202182c",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["59311b13",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["f1121c33",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["31f24722",[],
+  [],
+  [],5,0,0,"",2,"제네시스 GV80 하이브리드는 어떤 컨셉으로 출시했어? 제네시스 공식 유튜브 채널에서 출처와 함께 알"],
+  ["c461657f",[],
+  [],
+  [],5,0,0,"",2,"제네시스 GV80 하이브리드의 최대 토크는 얼마야? 출처와 함께 알려줘."],
+  ["10e33f1b",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["59d8638c",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["5ee370c1",[],
+  [],
+  [],5,0,0,"",2,"제네시스 GV80 하이브리드는 정차 중에 어떤 편의 기능을 쓸 수 있어? 출처와 함께 알려줘."],
+  ["34238152",[],
+  [],
+  [],111,0,0,"",3,"현대인증중고차 사이트를 참고해서 내 차를 중고차로 판매하려고 할 때 어떤 과정을 거쳐야 하는지 단계별"],
+  ["4bbd7dde",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["865b7d2c",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["78dd62b8",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["0a284ff8",[],
+  ["en"],
+  [],45,0,0,"",0,"Was the 2026 Hyundai Elantra named an IIHS Top Safety Pi"],
+  ["b4ef0625",[],
+  ["it"],
+  [],165,0,0,"",7,"Does the KIA Stonic have cruise control?"],
+  ["d88a9d87",[],
+  [],
+  [],27,0,0,"",0,"What does Hyundai aim to communicate by bringing the her"],
+  ["f2503735",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["b2368de2",[],
+  [],
+  [],5,0,0,"",2,"제네시스 GV80 하이브리드에는 어떤 휠 디자인이 적용됐어?"],
+  ["479152ae",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["0b673432",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["39d98ebd",[],
+  [],
+  [],5,0,0,"",1,"555"],
+  ["a1b48905",[],
+  ["ko"],
+  [],38,0,0,"",0,"2025년 기준 기아 자본금은 얼마야?"],
+  ["f432ed15",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["a56d923f",[],
+  ["ko"],
+  [],15,0,0,"",0,"튜닝 안 하고 순정 상태로 타기 가장 좋은 패밀리 SUV 추천해줘."],
+  ["e83b6a17",[],
+  [],
+  [],63,0,0,"",0,"Was the seventh-generation Hyundai Elantra sold in Europ"],
+  ["61646e3f",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["908699d2",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["f2f32df9",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["2cb4da2c",[],
+  ["ko"],
+  [],63,0,0,"",2,"현재 한국에서 판매 중인 현대 싼타페의 시작 가격과 트림별 가격을 알려주세요."],
+  ["51f0dc61",[],
+  [],
+  [],1,0,0,"",0,"EV9 구매 시, 전기차 구매 보조 지원금 얼마나 받을 수 있어?"],
+  ["b606977f",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["8e6e4da4",[],
+  ["en"],
+  [],49,0,0,"",2,"For the latest Hyundai Santa Fe currently on sale in the"],
+  ["37325d7e",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["fcc0e386",[],
+  ["ko"],
+  [],17,0,0,"",1,"신규 자동차 트렌드 서비스 오픈 이벤트나 경품 행사 어디서 참여해?"],
+  ["9a04e25f",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["ad243838",[],
+  ["ko"],
+  [],8,0,0,"",1,"다자녀 가족에게 맞는 7인승 SUV 추천해줘"],
+  ["8304a686",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["150b45bc",[],
+  ["en"],
+  [],5,0,0,"",3,"Can you compare car brands with the best Hybrids and pro"],
+  ["1b00465c",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["eaa2aa77",[],
+  [],
+  [],10,0,0,"",0,"How do the top car groups rank in global market share th"],
+  ["b64b1dc0",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["284ca5d6",[],
+  ["en"],
+  [],63,0,0,"",2,"Explain the trims, prices, colors and options for the Ki"],
+  ["c00ecc4e",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["b299b00f",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["1d7e3d86",[],
+  ["de"],
+  [],100,0,0,"",0,"Wie lässt sich Kia Elektromobilität effizient in Unterne"],
+  ["37f35389",[],
+  ["ko"],
+  [],27,0,0,"",4,"강릉 로드트립에서 Electrified GV70의 주행과 실내 경험이 자연 풍경과 지역 공간에 어떻게"],
+  ["6aa9025d",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["d92bce58",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["de300000",[],
+  [],
+  [],12,0,0,"",2,"3열이 넓은 패밀리 SUV 비교해줘"],
+  ["74c0aed6",[],
+  [],
+  [],0,0,0,"",2,""],
+  ["47c05bc6",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["b6704c46",[],
+  [],
+  [],111,0,0,"",2,"중고차 구매 전 엔진룸, 차량외관, 차량 내부에서 각각 살펴봐야할 주요한 체크 항목은 어떤 것들이 있"],
+  ["d90cd518",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["1787ee15",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["75e137c2",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["0602816b",[],
+  [],
+  [],5,0,0,"",2,"제네시스 GV80 하이브리드는 어떤 차야? 출처와 함께 주요 특징을 알려줘."],
+  ["fb84570d",[],
+  [],
+  [],0,0,0,"",0,""],
+  ["fc0e5a28",[],
+  [],
+  [],0,0,0,"",0,""]];
+const LAST_MEASURED = "2026-10-11";
+
+const COUNTRY = { KR: "한국", US: "미국", GB: "영국", PR: "푸에르토리코", DE: "독일", FR: "프랑스", PL: "폴란드", AU: "호주", SA: "사우디아라비아", CA: "캐나다", IT: "이탈리아", CZ: "체코", ES: "스페인", MX: "멕시코", CL: "칠레", IN: "인도" };
+const ENGINE = { chatgpt: "ChatGPT", gemini: "Gemini", deepseek: "DeepSeek" };
+const P = PROJECTS.map(([id, geos, langs, engines, prompts, answers, rounds, last, fields, first]) => ({ id, geos, langs, engines, prompts, answers, rounds, last, fields, first }));
+const byId = Object.fromEntries(P.map((p) => [p.id, p]));
+const countries = (p) => (p.geos.length ? p.geos.map((g) => COUNTRY[g] || g).join(" · ") : "");
+
+// ── 메뉴 (리뉴얼 사이드바의 지금 항목 · 상태: wip = 리뉴얼 화면 없음, key = 외부 계정 대기) ──
+const GLOBAL = [
+  { label: "Overview", icon: "n-dashboard" },
+  { label: "Global prompts", icon: "n-list-checks" },
+  { group: "Answer analysis", icon: "n-message-square-text", kids: [{ label: "Mention" }, { label: "Citation" }] },
+  { group: "AI Agent Funnel", icon: "n-flask-conical", kids: [{ label: "ACR" }, { label: "AI Conversion", st: "key" }] },
+];
+const WEBSITE = [
+  { label: "Overview", icon: "n-dashboard" },
+  { label: "Prompts", icon: "n-list-checks" },
+  { group: "Answer analysis", icon: "n-message-square-text", kids: [{ label: "Mention" }, { label: "Citation" }] },
+  { group: "AI Agent Funnel", icon: "n-flask-conical", kids: [{ label: "AI Conversion", st: "key" }] },
+];
+const ADMIN = [
+  { label: "User management", icon: "n-shield" },
+  { group: "Global config", icon: "n-file-text", kids: [{ label: "Global prompts" }, { label: "Customer interest config" }, { label: "Entity catalog" }, { label: "인용 출처 분류" }] },
+  { label: "Keyword tools", icon: "n-sparkles", st: "key" },
+  { label: "GA4 연동", icon: "n-plug" },
+  { label: "분석 엔진", icon: "n-cpu", st: "wip" },
+  { label: "리포트 관리", icon: "n-file-chart-column", st: "wip" },
+  { group: "측정 크레딧", icon: "n-coins", kids: [{ label: "계정 목록", st: "wip" }] },
+];
+// 레거시 PROJECT_SUB_ITEMS 순서 · 라벨 그대로 (nav.projectDetail). AI Visibility · ACR은 레거시도 숨김.
+const PROJECT_SUB = [
+  { id: "dashboard", label: "Dashboard", icon: "p-layout" },
+  { group: "Intent", icon: "p-search", kids: [{ id: "gk", label: "Google Keyword", st: "wip" }, { id: "social", label: "Social Scraping", st: "wip" }] },
+  { id: "prompt", label: "Prompt", icon: "n-message-square-text" },
+  { group: "Analysis", icon: "p-chart", kids: [{ id: "mention", label: "Mention" }, { id: "citation", label: "Citation" }] },
+  { group: "AI Agent Funnel", icon: "n-flask-conical", kids: [{ id: "conversion", label: "AI Conversion", st: "key" }] },
+  { group: "Setting", icon: "p-settings", kids: [{ id: "general", label: "General", st: "wip" }, { id: "member", label: "Member", st: "wip" }] },
+];
+// 메뉴 → 화면 (본문은 각 단계에서 설계)
+const SUBS = {
+  dashboard: { path: "Dashboard", desc: "이 프로젝트의 KPI · 추이 · 구성비입니다.", screen: "리뉴얼 Overview 부품: KPI 카드 · 추이 · 구성비 · 프롬프트 요약", data: "Gold <code>kpi/summary</code> · 추이 (surface=project)", step: "P2", st: "ok", filter: true },
+  gk: { path: "Intent › Google Keyword", desc: "키워드 검색량 · 검색 결과 · 관련 키워드입니다.", screen: "검색량 · SERP · 관련 키워드, 프롬프트 후보 만들기", data: "Gold <code>kw_*</code> — 프로젝트와 무관한 전체 수집", step: "입력 단계", st: "wip" },
+  social: { path: "Intent › Social Scraping", desc: "소비자 맥락 · 요구입니다.", screen: "맥락 · 요구 · 조합, 프롬프트 후보 만들기", data: "Gold <code>ctx_*</code> — 산업 공통 (D-6)", step: "입력 단계", st: "wip" },
+  prompt: { path: "Prompt", desc: "이 프로젝트가 측정하는 프롬프트와 커스텀 태그입니다.", screen: "Website Prompts 본문 + 커스텀 태그 열", data: "Gold <code>dim_prompt</code> · 커스텀 값", step: "P4", st: "ok", filter: true },
+  mention: { path: "Analysis › Mention", desc: "답변이 브랜드를 언급한 정도입니다.", screen: "리뉴얼 Mention 본문 (W2와 같은 방식)", data: "<code>mention/*</code> (ctx.surface=project)", step: "P3", st: "ok", filter: true },
+  citation: { path: "Analysis › Citation", desc: "답변이 인용한 출처입니다.", screen: "리뉴얼 Citation 본문 (W3과 같은 방식)", data: "<code>citation/project</code>", step: "P3", st: "ok", filter: true },
+  conversion: { path: "AI Agent Funnel › AI Conversion", desc: "AI에서 들어온 방문과 전환입니다.", screen: "리뉴얼 AI Conversion 본문", data: "HUB GA4 저장소 (프로젝트 ↔ 속성)", step: "P5", st: "key", filter: true },
+  general: { path: "Setting › General", desc: "프로젝트 정보 · 엔진 · 자사 URL · 추적 URL · 경쟁사입니다.", screen: "정보 · 엔진 · 자사 / 추적 URL · 경쟁사 · 차종 · 삭제", data: "HUB 입력 — 정본(결정 2) · 측정 실행(결정 3) 뒤", step: "입력 단계", st: "wip" },
+  member: { path: "Setting › Member", desc: "프로젝트 멤버와 초대입니다.", screen: "멤버 · 초대 · 역할", data: "HUB 입력 — 프로젝트 역할(vendor 등) 뒤", step: "입력 단계", st: "wip" },
+};
+const ST_TAG = { ok: ["ok", "", "리뉴얼 화면"], wip: ["wip", "i-wip", "미구현"], key: ["key", "i-key", "GA4 계정 대기"] };
+
+const CAPS = {
+  A: {
+    what: "<b>A · 프로젝트 문맥 구역 (추천)</b> — 사이드바 하나를 그대로 둡니다. 프로젝트를 열면 Project 구역의 ‘Project list’ 아래에 그 프로젝트 카드와 하위 메뉴(레거시 순서 · 라벨)가 펼쳐지고, Global · Website 구역은 접힌 채로 열립니다(제목을 누르면 펼침). 카드의 ⇅로 다른 프로젝트의 같은 메뉴를 엽니다.",
+    pro: ["Global · Website · Admin이 같은 자리에 남아 길을 잃지 않습니다", "지금 프로젝트가 사이드바에 늘 보입니다(제목 위 상위 메뉴명 없음 규칙과 같은 방식)", "프로젝트 메뉴가 1920×915 한 화면에 다 들어옵니다(접힘 덕분)"],
+    con: ["프로젝트를 열 때 Global · Website가 접혀 처음엔 한 번 더 눌러야 펼쳐집니다"],
+  },
+  B: {
+    what: "<b>B · 프로젝트 전용 사이드바 (레거시 방식)</b> — 프로젝트 안에서는 사이드바 전체가 프로젝트 카드 + 하위 메뉴로 바뀌고, 맨 아래 ‘← Project list’로 나갑니다. Global · Website · Admin 구역은 보이지 않습니다.",
+    pro: ["메뉴가 가장 짧고 프로젝트에만 집중합니다", "레거시 SNB와 같은 모양입니다"],
+    con: ["리뉴얼에는 레거시의 위 GNB가 없어, Global · Website · Admin로 가려면 목록으로 먼저 나가야 합니다(레거시보다 한 단계 멂)", "들어가고 나올 때마다 사이드바 전체가 바뀝니다"],
+  },
+  C: {
+    what: "<b>C · 메뉴에 프로젝트 나열</b> — Project 구역에 최근 연 프로젝트 줄을 두고, 펼치면 그 아래 하위 메뉴가 나옵니다. 프로젝트 카드 · 바꾸기 창이 없습니다.",
+    pro: ["최근 프로젝트 사이를 메뉴에서 바로 오갑니다"],
+    con: ["메뉴가 3단(프로젝트 › 묶음 › 메뉴)이 되어 디자인 규칙의 트리(2단) 밖입니다", "이름이 없어 ID 줄만 보여 구별이 어렵습니다(130개 중 최근만)", "‘최근’을 계정마다 저장해야 합니다"],
+  },
+};
+
+// ── 상태 ──
+const S = {
+  opt: "A", view: "list", acct: "admin", pid: "843ecb1b", sub: "dashboard",
+  recent: ["843ecb1b", "9d01e408", "e202df42"],
+  open: { list: { standard: true, website: true, project: true, admin: true }, project: { standard: false, website: false, project: true, admin: true } },
+  q: "", seg: "all", sort: "last", shown: 20,
+};
+const openMap = () => (S.view === "project" && S.opt !== "B" ? S.open.project : S.open.list);
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const icon = (id, cls = "ni") => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const stIcon = (st) => (st === "wip" ? `<span class="st" title="미구현">${icon("i-wip")}</span>` : st === "key" ? `<span class="st" title="GA4 계정 필요">${icon("i-key")}</span>` : "");
+const link = (label, { ico, st, on, act, cls = "" } = {}) =>
+  `<a class="${cls}${on ? " on" : ""}" ${act ? `data-act="${act}"` : ""} ${on ? 'aria-current="page"' : ""}>${ico ? icon(ico) : ""}<span class="l">${label}</span>${stIcon(st)}</a>`;
+
+function menuTree(items, sec) {
+  return items.map((it) => it.kids
+    ? `<div class="ngrp" role="group"><span class="par">${icon(it.icon)}${it.group}</span><div class="tree">${it.kids.map((k) => link(k.label, { st: k.st, act: `out:${sec} › ${k.label}` })).join("")}</div></div>`
+    : link(it.label, { ico: it.icon, st: it.st, act: `out:${sec} › ${it.label}` })).join("");
+}
+function projectTree(nested = false) {
+  return PROJECT_SUB.map((it) => it.kids
+    ? `<div class="ngrp" role="group"><span class="par">${nested ? "" : icon(it.icon)}${it.group}</span><div class="tree">${it.kids.map((k) => link(k.label, { st: k.st, on: S.view === "project" && S.sub === k.id, act: `sub:${k.id}` })).join("")}</div></div>`
+    : link(it.label, { ico: nested ? null : it.icon, st: it.st, on: S.view === "project" && S.sub === it.id, act: `sub:${it.id}` })).join("");
+}
+function projectCard() {
+  const p = byId[S.pid];
+  const meta = [countries(p) || "측정 국가 없음", `프롬프트 ${p.prompts}`, p.last ? `${p.last} 측정` : "측정 없음"].join(" · ");
+  return `<div class="pj"><div><b class="mono">${p.id}</b><small>${esc(meta)}</small></div><button class="icon" id="pj-sw" aria-label="다른 프로젝트 열기" aria-haspopup="dialog" aria-expanded="false">${icon("i-updown", "i")}</button></div>`;
+}
+function section(id, title, inner, here) {
+  return `<details class="sec" data-sec="${id}" ${openMap()[id] ? "open" : ""} ${here ? "data-here" : ""}><summary>${title}</summary>${inner}</details>`;
+}
+
+function renderSide() {
+  const brand = `<div class="sx-brand"><span class="sx-mark" aria-hidden="true">G</span><span class="sx-wm"><b>HMG GEO</b><small>AI 답변 모니터링</small></span></div>`;
+  const acct = S.acct === "admin"
+    ? `<div class="sx-acct"><span class="sx-av" aria-hidden="true">A</span><span class="sx-who"><b>관리자 계정</b><small>admin · 전체 범위</small></span><span class="lang">KO</span></div>`
+    : `<div class="sx-acct"><span class="sx-av" aria-hidden="true">R</span><span class="sx-who"><b>범위 계정</b><small>region · Kia · 유럽</small></span><span class="lang">KO</span></div>`;
+  const tip = `<p class="sx-out" id="sx-out" role="status" hidden></p>`;
+  let nav;
+  if (S.opt === "B" && S.view === "project" && S.acct === "admin") {
+    nav = `<nav class="snb" aria-label="프로젝트 메뉴">${section("project", "Project", projectCard() + projectTree(), true)}</nav>`;
+    return void (side.innerHTML = brand + nav + `<div class="sx-foot">${tip}<nav class="snb">${link("Project list", { ico: "i-back", act: "list" })}</nav>${acct}</div>`);
+  }
+  const top = `<nav class="snb" aria-label="메뉴">${section("standard", "Global", menuTree(GLOBAL, "Global"))}${section("website", "Website", menuTree(WEBSITE, "Website"))}</nav>`;
+  let more = "";
+  if (S.acct === "admin") {
+    let proj = link("Project list", { ico: "n-briefcase", on: S.view === "list", act: "list" });
+    if (S.opt === "A" && S.view === "project") proj += projectCard() + projectTree();
+    if (S.opt === "C") {
+      proj += `<span class="grp">최근 연 프로젝트</span>` + S.recent.map((id) => {
+        const opened = S.view === "project" && id === S.pid;
+        return `<a class="prow${opened ? " open" : ""}" data-act="enter:${id}">${icon("n-briefcase")}<span class="l mono">${id}</span><svg class="ni chev" aria-hidden="true"><use href="#i-chev-r"/></svg></a>` + (opened ? `<div class="tree">${projectTree(true)}</div>` : "");
+      }).join("");
+    }
+    more = `<nav class="snb snb-more" aria-label="프로젝트 · 관리">${section("project", "Project", proj, true)}${section("admin", "Admin", menuTree(ADMIN, "Admin"))}</nav>`;
+  }
+  side.innerHTML = brand + top + more + `<div class="sx-foot">${tip}${acct}</div>`;
+}
+
+// ── 본문 ──
+function cmpCard() {
+  const row = (cls, name, a, b, c, d, v) => `<tr class="${cls}"><td><b>${name}</b></td><td>${a}</td><td>${b}</td><td>${c}</td><td>${d}</td><td>${v}</td></tr>`;
+  return `<section class="card mko cmp"><div class="card-h"><h2>안 비교 (UX 기준)</h2><span class="hint">위 목업 바에서 안을 바꿔 사이드바를 봅니다</span></div>
+  <div class="tblwrap"><table><colgroup><col style="width:150px"><col><col style="width:200px"><col style="width:200px"><col style="width:210px"><col style="width:170px"></colgroup>
+  <thead><tr><th>안</th><th>프로젝트 안에서 Global · Website · Admin 가기</th><th>지금 어느 프로젝트인지</th><th>다른 프로젝트로</th><th>메뉴 깊이</th><th>판단</th></tr></thead><tbody>
+  ${row("rec", "A 프로젝트 문맥 구역", "구역 제목을 펼쳐 바로 — 사이드바는 그대로", "사이드바 카드 (ID, 정본이 생기면 이름)", "카드 ⇅ → 같은 메뉴로", "2단 · 레거시와 같음", "<b>추천</b>")}
+  ${row("", "B 프로젝트 전용 사이드바", "Project list로 나간 뒤 — 위 GNB가 없어 레거시보다 한 단계 멂", "사이드바 카드", "카드 ⇅ → 같은 메뉴로", "2단", "집중은 좋지만 다른 구역이 멀다")}
+  ${row("", "C 메뉴에 프로젝트 나열", "바로", "펼친 프로젝트 줄 (ID)", "메뉴의 다른 줄 — 최근 3개만", "3단 — 디자인 규칙 트리 밖", "ID 줄이 읽히지 않는다")}
+  ${row("out", "D 상세는 페이지 안 탭 (그리지 않음)", "사이드바는 Project list만", "페이지 머리", "목록으로 나가서", "탭 안에 탭 (Mention · Citation 보기 탭)", "제외 — 디자인 규칙 ‘화면 안 전환 탭으로 다른 메뉴 가기’ 금지")}
+  </tbody></table></div>
+  <p class="cmp-n">A의 접힘이 필요한 이유(이 목업을 1920×915로 잰 값): Global · Website를 다 펼친 채로 프로젝트 메뉴를 붙이면 Project 구역이 약 660px에서 시작하고 Analysis가 약 940px로 화면 밖에 놓입니다. 두 구역을 접으면 프로젝트 메뉴 끝(Member)이 약 710px입니다. 프로젝트 밖으로 나오면 구역은 보는 사람이 둔 대로 돌아갑니다.</p></section>`;
+}
+
+function listRows() {
+  let rows = P.filter((p) => (S.seg === "all" ? true : S.seg === "yes" ? p.answers > 0 : p.answers === 0));
+  const q = S.q.trim().toLowerCase();
+  if (q) rows = rows.filter((p) => (p.id + " " + p.first + " " + countries(p) + " " + p.geos.join(" ")).toLowerCase().includes(q));
+  const key = { last: (p) => p.last || "", answers: (p) => p.answers, prompts: (p) => p.prompts }[S.sort];
+  if (S.sort !== "last") rows = [...rows].sort((a, b) => key(b) - key(a));
+  return rows;
+}
+function renderList() {
+  if (S.acct !== "admin") return renderScoped();
+  const all = P.length, yes = P.filter((p) => p.answers > 0).length;
+  const rows = listRows(), shown = rows.slice(0, S.shown);
+  const td = (v, cls = "r") => (v === "" || v == null ? `<td class="${cls} none">—</td>` : `<td class="${cls}">${v}</td>`);
+  const body = shown.map((p) => `<tr class="go" tabindex="0" data-act="enter:${p.id}">
+    <td><span class="id mono">${p.id}</span><span class="pt" title="${esc(p.first)}">${p.first ? esc(p.first) : "프롬프트 없음"}</span></td>
+    ${td(esc(countries(p)), "")}${td(p.langs.join(" · "), "")}${td(p.engines.map((e) => ENGINE[e] || e).join(" · "), "")}
+    ${td(p.prompts.toLocaleString())}${td(p.answers ? p.answers.toLocaleString() : "")}${td(p.rounds || "")}${td(p.last)}${td(p.fields || "")}</tr>`).join("");
+  page.innerHTML = `<div class="pg">
+  <header class="ph"><div><h1>Project list</h1><div class="sub"><span class="desc">프로젝트마다 측정한 프롬프트와 답변입니다. 행을 누르면 그 프로젝트의 Dashboard가 열립니다.</span><span class="pill">${icon("i-cal", "i s14")}마지막 측정 <b>${LAST_MEASURED}</b></span></div></div></header>
+  <section class="card">
+    <div class="tb">
+      <label class="finwrap">${icon("i-search", "i s14")}<input class="finput" id="q" value="${esc(S.q)}" placeholder="ID · 프롬프트 원문 · 국가" aria-label="프로젝트 찾기"></label>
+      <span class="seg" role="group" aria-label="답변">${[["all", "전체", all], ["yes", "답변 있음", yes], ["no", "답변 없음", all - yes]].map(([k, l, c]) => `<button class="${S.seg === k ? "on" : ""}" data-seg="${k}">${l}<span class="c">${c}</span></button>`).join("")}</span>
+      <span class="r">정렬 <span class="seg">${[["last", "마지막 측정"], ["answers", "답변"], ["prompts", "프롬프트"]].map(([k, l]) => `<button class="${S.sort === k ? "on" : ""}" data-sort="${k}">${l}</button>`).join("")}</span></span>
+    </div>
+    <div class="tblwrap"><table><colgroup><col><col style="width:150px"><col style="width:80px"><col style="width:150px"><col style="width:84px"><col style="width:84px"><col style="width:64px"><col style="width:100px"><col style="width:96px"></colgroup>
+      <thead><tr><th>프로젝트</th><th>측정 국가</th><th>언어</th><th>엔진</th><th class="r">프롬프트</th><th class="r">답변</th><th class="r">회차</th><th class="r">마지막 측정</th><th class="r">커스텀 태그</th></tr></thead>
+      <tbody>${body}</tbody></table>${rows.length ? "" : `<div class="empty">맞는 프로젝트가 없습니다.</div>`}</div>
+    ${rows.length > S.shown ? `<div class="tmore"><button class="btn" data-act="more">20개 더 보기</button><span>${shown.length} / ${rows.length}</span></div>` : `<div class="tmore"><span>${rows.length}개</span></div>`}
+  </section>
+  <section class="card q"><div class="card-h"><h2>이름 · 브랜드 · 국가가 없는 이유</h2></div>
+    <p>Gold에는 프로젝트 ID만 있고 이름 · 브랜드 · 국가 · 담당은 원본 운영 DB(<code>app.project</code>)에만 있습니다. 정본이 정해지면(결정 2) 첫 열이 이름이 되고 ID는 그 아래 줄로 내려갑니다. 그 전에는 첫 프롬프트 원문(Gold 값)으로 구별합니다. 측정 국가 · 언어 · 엔진은 측정된 답변의 값이고, 답변이 없는 프로젝트는 ‘—’입니다. ‘새 프로젝트’ 버튼은 입력 단계(결정 3)에서 붙습니다.</p></section>
+  ${cmpCard()}</div>`;
+  const qi = document.getElementById("q");
+  qi.addEventListener("input", () => { S.q = qi.value; S.shown = 20; const pos = qi.selectionStart; renderList(); const n = document.getElementById("q"); n.focus(); n.setSelectionRange(pos, pos); });
+}
+function renderScoped() {
+  page.innerHTML = `<div class="pg"><header class="ph"><div><h1>범위 계정에는 Project가 없습니다</h1><div class="sub"><span class="desc">hq · region · country 계정의 사이드바입니다. 본문은 그 계정이 여는 다른 화면입니다.</span></div></div></header>
+  <section class="card mko q"><div class="card-h"><h2>Project 구역을 숨기는 이유</h2></div>
+    <p>⛔J(2026-10-31)로 project는 관리자만 읽습니다. 프로젝트에는 브랜드 · 국가가 없어 계정 범위를 걸 수 없습니다. 지금 앱은 범위 계정에도 ‘Project list’가 보이고, 열면 미구현 안내 · BFF 403입니다. 정본(결정 2)에 브랜드 · 국가가 생기고 프로젝트 역할(vendor 등)을 정하면 다시 엽니다.</p></section>
+  ${cmpCard()}</div>`;
+}
+function renderProject() {
+  if (S.acct !== "admin") return renderScoped();
+  const s = SUBS[S.sub], p = byId[S.pid], [cls, ico, label] = ST_TAG[s.st];
+  const tag = `<span class="tag ${cls}">${ico ? icon(ico) : ""}${label}</span>`;
+  const body = s.st === "wip"
+    ? `<div class="ph-box"><b>미구현 안내 화면</b>리뉴얼 화면이 없는 메뉴는 앱의 미구현 안내(renewal/[...slug])를 엽니다. ${s.screen} — ${s.step}에서 범위 확인부터 합니다.</div>`
+    : `<div class="frame"><div class="ph-box"><b>필터 패널 296px</b>측정 국가 · 언어 · 엔진 · 기간 · 커스텀 태그(cf_*). 축과 옵션은 레거시 프로젝트 필터와 같고, 저장한 필터 키는 project-&lt;화면&gt;.</div>
+       <div class="ph-box${s.st === "key" ? " veil" : ""}"><b>본문 — ${s.step}에서 설계</b>${s.screen}.<br>읽는 데이터: ${s.data}.${s.st === "key" ? "<br>GA4 계정이 없으면 샘플 화면 위에 막을 덮습니다(디자인 규칙 ‘계정 대기’)." : ""}</div></div>`;
+  const mapRows = Object.entries(SUBS).map(([id, x]) => { const [c, i, l] = ST_TAG[x.st]; return `<tr class="${id === S.sub ? "here" : ""}"><td>${x.path}</td><td>${x.screen}</td><td>${x.data}</td><td>${x.step}</td><td><span class="tag ${c}">${i ? icon(i) : ""}${l}</span></td></tr>`; }).join("");
+  page.innerHTML = `<div class="pg">
+  <header class="ph"><div><h1>${SUBS[S.sub].path.split(" › ").pop()}</h1><div class="sub"><span class="desc">${s.desc}</span>${s.st === "ok" || s.st === "key" ? `<span class="pill">${icon("i-cal", "i s14")}마지막 측정 <b>${p.last ? "2026-" + p.last : "—"}</b></span>` : ""}</div></div></header>
+  ${body}
+  <section class="card mko map"><div class="card-h"><h2>메뉴 → 화면</h2><span class="hint">레거시 순서 · 라벨 그대로. 지금 프로젝트 <span class="mono">${p.id}</span>는 페이지 머리에 다시 쓰지 않고 사이드바 카드에만 둡니다.</span></div>
+    <div class="tblwrap"><table><colgroup><col style="width:230px"><col><col style="width:330px"><col style="width:96px"><col style="width:130px"></colgroup>
+    <thead><tr><th>메뉴</th><th>열리는 화면</th><th>읽는 데이터</th><th>단계</th><th>읽기 단계 뒤</th></tr></thead>
+    <tbody>${mapRows}<tr class="off"><td>AI Visibility · ACR</td><td>메뉴에 두지 않음</td><td>레거시도 숨김 · ACR은 Gold에 2곳뿐</td><td>—</td><td>—</td></tr></tbody></table></div></section>
+  ${cmpCard()}</div>`;
+}
+
+// ── 목업 바 · 바꾸기 창 ──
+function renderCap() {
+  const c = CAPS[S.opt];
+  cap.innerHTML = `<div>${c.what}</div><div><b>좋은 점</b><ul>${c.pro.map((x) => `<li>${x}</li>`).join("")}</ul><b>아쉬운 점</b><ul>${c.con.map((x) => `<li>${x}</li>`).join("")}</ul></div>`;
+  document.querySelectorAll("[data-opt]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.opt === S.opt));
+  document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === S.view));
+  document.querySelectorAll("[data-acct]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.acct === S.acct));
+  document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px");
+}
+function render() { closePop(); renderCap(); renderSide(); (S.view === "list" ? renderList : renderProject)(); }
+function enter(id) {
+  S.pid = id; S.view = "project";
+  S.recent = [id, ...S.recent.filter((x) => x !== id)].slice(0, 3);
+  main.scrollTop = 0; render();
+}
+
+function popRows() {
+  const q = popQ.value.trim().toLowerCase();
+  const rows = P.filter((p) => !q || (p.id + " " + p.first + " " + countries(p) + " " + p.geos.join(" ")).toLowerCase().includes(q));
+  popN.textContent = `${rows.length}개`;
+  popL.innerHTML = rows.slice(0, 60).map((p) => `<button data-pid="${p.id}" ${p.id === S.pid ? 'aria-current="true"' : ""}><span class="t mono">${p.id}</span><span class="m">${esc(countries(p) || "측정 없음")}${p.answers ? ` · 답변 ${p.answers.toLocaleString()}` : ""}</span><span class="p">${p.first ? esc(p.first) : "프롬프트 없음"}</span></button>`).join("") || `<div class="empty">맞는 프로젝트가 없습니다.</div>`;
+}
+function openPop(btn) {
+  const r = btn.closest(".pj").getBoundingClientRect();
+  pop.style.left = r.right + 14 + "px";
+  pop.style.top = Math.max(r.top - 8, 48) + "px";
+  pop.hidden = false; btn.setAttribute("aria-expanded", "true");
+  popQ.value = ""; popRows();
+  popF.textContent = `같은 메뉴(${SUBS[S.sub].path})로 엽니다`;
+  popQ.focus();
+}
+function closePop() { if (!pop.hidden) { pop.hidden = true; const b = document.getElementById("pj-sw"); if (b) { b.setAttribute("aria-expanded", "false"); b.focus(); } } }
+
+const side = document.getElementById("side"), page = document.getElementById("page"), main = document.getElementById("main"), cap = document.getElementById("mk-cap");
+const pop = document.getElementById("pop"), popQ = document.getElementById("pop-q"), popL = document.getElementById("pop-l"), popN = document.getElementById("pop-n"), popF = document.getElementById("pop-f");
+
+document.getElementById("mk").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.opt) S.opt = b.dataset.opt;
+  if (b.dataset.view) S.view = b.dataset.view;
+  if (b.dataset.acct) S.acct = b.dataset.acct;
+  render();
+});
+let tipT;
+side.addEventListener("click", (e) => {
+  const sm = e.target.closest("details.sec > summary");
+  if (sm) { e.preventDefault(); const d = sm.parentElement; d.open = !d.open; openMap()[d.dataset.sec] = d.open; return; }
+  if (e.target.closest("#pj-sw")) { pop.hidden ? openPop(e.target.closest("#pj-sw")) : closePop(); return; }
+  const a = e.target.closest("[data-act]"); if (!a) return;
+  e.preventDefault();
+  const [k, v] = a.dataset.act.split(/:(.*)/s);
+  if (k === "list") { S.view = "list"; render(); }
+  else if (k === "sub") { S.sub = v; S.view = "project"; render(); }
+  else if (k === "enter") { if (S.view === "project" && S.pid === v && S.opt === "C") { S.view = "list"; render(); } else enter(v); }
+  else if (k === "out") {
+    const tip = document.getElementById("sx-out");
+    tip.textContent = `메뉴 견본 — 앱에서는 ‘${v}’ 리뉴얼 화면이 열립니다.`; tip.hidden = false;
+    clearTimeout(tipT); tipT = setTimeout(() => (tip.hidden = true), 3000);
+  }
+});
+page.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-seg],[data-sort],[data-act]"); if (!b) return;
+  if (b.dataset.seg) { S.seg = b.dataset.seg; S.shown = 20; renderList(); }
+  else if (b.dataset.sort) { S.sort = b.dataset.sort; S.shown = 20; renderList(); }
+  else if (b.dataset.act === "more") { S.shown += 20; renderList(); }
+  else if (b.dataset.act.startsWith("enter:")) enter(b.dataset.act.slice(6));
+});
+page.addEventListener("keydown", (e) => { const tr = e.target.closest("tr.go"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); enter(tr.dataset.act.slice(6)); } });
+popQ.addEventListener("input", popRows);
+popL.addEventListener("click", (e) => { const b = e.target.closest("[data-pid]"); if (b) enter(b.dataset.pid); });
+document.getElementById("pop-x").addEventListener("click", closePop);
+document.getElementById("pop-all").addEventListener("click", () => { S.view = "list"; render(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePop(); });
+document.addEventListener("mousedown", (e) => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest("#pj-sw")) closePop(); });
+window.addEventListener("resize", () => document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px"));
+render();
+</script>
+</body></html>
