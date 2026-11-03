@@ -207,10 +207,11 @@ PROJECT_GROUPS = ("time", "geography", "engine")
 
 def project_page_filters(sp: dict, project_id: str | None, groups: Sequence[str] = PROJECT_GROUPS) -> tuple[dict, dict]:
     """The renewal project pages' filters + api ctx (surface project, no account scope: the pages are the
-    administrator's): the axes `groups` and every cf_<uuid> param. 422 without a project id."""
+    administrator's): the axes `groups` and every cf_<uuid> param; `uncapped`: the windows derived from the period are
+    not held to the service week (_week.period_week), as the project reads are not. 422 without a project id."""
     if not is_uuid(project_id):
         raise HTTPException(422, "ctx.project_id must be a project id")
-    filters = read_standard_filters(sp, None, groups)
+    filters = {**read_standard_filters(sp, None, groups), "uncapped": True}
     custom = read_project_custom_field_filters_raw(sp)
     if custom is not None:
         filters["customFieldFilters"] = custom

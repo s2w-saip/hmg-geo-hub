@@ -34,5 +34,8 @@ def period_echo(date_from: str | None, date_to: str | None, week: Any) -> dict |
 
 async def period_week(filters: dict) -> Any:
     """The service week a closed URL period is read under (current_or_503: an unreadable week is 503, never no cap), for
-    the windows derived from that period; None without one: a snapshot or an open end has no window the week moves."""
+    the windows derived from that period; None without one: a snapshot or an open end has no window the week moves, and
+    a project page's filters (`uncapped`, _filters.project_page_filters: the project surface is not held to the week)."""
+    if filters.get("uncapped"):
+        return None
     return await service_week.current_or_503() if has_closed_period(filters) else None

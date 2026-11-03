@@ -153,7 +153,9 @@ export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): Ove
   const { stage, scope, catalogRows, geographyOptions, languageOptions, optionMatrix } = input;
   const isAdmin = scope?.all === true;
   const project = input.surface === "project";
-  const website = input.surface === "website" ? websiteOnlyGroups(stage, languageOptions) : project ? [...PROJECT_ONLY_GROUPS] : null;
+  // the project Citation adds 출처 카테고리 (the original's category chips), as the website one does
+  const website =
+    input.surface === "website" ? websiteOnlyGroups(stage, languageOptions) : project ? [...PROJECT_ONLY_GROUPS, ...(stage === "citation" ? (["source"] as const) : [])] : null;
   const viewScope = scope ? scopeForGeoSurface(scope, input.surface === "website" ? "website" : "standard") : scope;
   const lock = new Set<DimensionGroup>();
   if (!isAdmin) lock.add("brand");

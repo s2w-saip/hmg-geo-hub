@@ -1343,8 +1343,9 @@ async def _body_brands(md, filters, ctx) -> list[dict]:
 @screen("mention/rn-page")
 async def rn_page(q) -> dict:
     """Header values: 당사 label and the selected period (URL → filters), up to the service week's last day."""
-    _, filters, _ = _begin(q)
-    return page_payload(filters, await service_week.current_or_503())
+    c, filters, _ = _begin(q)
+    # a project's reads are not held to the service week (project_dashboard.py)
+    return page_payload(filters, None if c.get("surface") == "project" else await service_week.current_or_503())
 
 
 @screen("mention/rn-asof")

@@ -41,6 +41,13 @@ describe("renewal filter model: project", () => {
     ]);
   });
 
+  it("adds 출처 카테고리 on the Citation page (the original's category chips), and no 경쟁사", () => {
+    const m = overviewPanelModel({ ...base, stage: "citation" }, {});
+    expect(m.visibleGroups.slice(0, 4)).toEqual(["geography", "engine", "time", "source"]);
+    expect(m.visibleGroups).not.toContain("competitor");
+    expect(overviewPanelModel({ ...base, stage: "mention" }, {}).visibleGroups).not.toContain("source");
+  });
+
   it("locks 국가 when the project was measured in one country", () => {
     expect(overviewPanelModel({ ...base, geographyOptions: ["CA"] }, {}).visibleGroups).not.toContain("geography");
   });

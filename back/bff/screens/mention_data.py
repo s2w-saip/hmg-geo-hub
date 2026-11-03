@@ -33,7 +33,7 @@ from bff.access import reader_scope
 from bff.screens._competitors import rank_first_position_rows
 from bff.screens._compare import fetch_period_compare_api, period_shape, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
-from bff.screens._filters import fetch_filter_options, read_standard_filters, website_prompt_options_of
+from bff.screens._filters import fetch_filter_options, project_page_filters, read_standard_filters, website_prompt_options_of
 from bff.screens._query import analysis_query, to_api_params
 from bff.screens._sort import code_unit_key
 from bff.screens._summary import summary_query
@@ -131,9 +131,13 @@ def website_filters(sp: dict, admin: bool = False) -> tuple[dict, dict]:
 
 
 def surface_filters(ctx: dict, sp: dict) -> tuple[dict, dict]:
-    """Filters + api ctx of the global (default) or website (ctx.surface=website) mention page."""
+    """Filters + api ctx of the global (default), website (ctx.surface=website) or project (ctx.surface=project with
+    ctx.project_id, the renewal Project tab: 기간 · 측정 국가 · AI 엔진 · custom tags) mention page."""
     if ctx.get("surface") == "website":
         return website_filters(sp, ctx.get("admin") == "true")
+    if ctx.get("surface") == "project":
+        filters, actx = project_page_filters(sp, ctx.get("project_id"))
+        return {**filters, "cumulative": True}, actx
     return mention_filters(sp)
 
 

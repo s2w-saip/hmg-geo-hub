@@ -13,6 +13,7 @@ Screens (query = route context `ctx.*` + the page's URL params):
   citation/filter-bar       filter panel props (options, calendar)            ctx.surface
   citation/standard         /standard/.../citation body (ctx.variant=renewal: + the renewal model)
   citation/website          /website/.../citation body (ctx.variant=renewal: the renewal page)   ctx.role
+  citation/project          /projects/{id}/analysis/citation body (ctx.variant=renewal: the renewal Project tab page)
   citation/project          /projects/[id]/analysis/citation                   ctx.project_id
   citation/prompts          /citation/prompts sub page                         ctx.surface, ctx.role
   citation/tone-urls        /citation/tone-urls sub page                       ctx.surface, ctx.role, ctx.client_nav
@@ -38,8 +39,8 @@ from bff.screens import citation_model as M
 from bff.screens._compare import fetch_period_compare_api, period_shape, prev_period_filters
 from bff.screens._convert import as_of_date, delta1
 from bff.screens._filters import (
-    filter_dates_view, load_panel_options, read_project_custom_field_filters, read_project_custom_field_filters_raw,
-    read_standard_filters, split_filter_values,
+    PROJECT_GROUPS, filter_dates_view, load_panel_options, project_page_filters, read_project_custom_field_filters,
+    read_project_custom_field_filters_raw, read_standard_filters, split_filter_values,
 )
 from bff.screens._period import kst_today, to_period_delta_view
 from bff.screens._query import analysis_query, is_uuid, js_trim, to_api_params, with_params
@@ -52,6 +53,8 @@ from bff.screens._week import period_echo, period_week
 
 DEGRADE_LABEL = {"global": "standardCitations", "website": "websiteCitations", "project": "projectCitations"}
 WEBSITE_CITATION_GROUPS = ("geography", "language", "engine", "time", "source")
+#: the renewal project Citation's axes (2026-11-03): the project axes + 출처 카테고리 (the original's category chips)
+PROJECT_CITATION_GROUPS = (*PROJECT_GROUPS, "source")
 NON_FILTER_KEYS = frozenset({"tab", "tone", "q", "page", "by", "cursor", "sort", "dir", "limit", "locale", "surface", "projectId",
                              "domainCategory"})
 _CURSOR = re.compile(r"[A-Za-z0-9_-]{1,8192}")
@@ -183,6 +186,12 @@ def website_context(sp: dict, role: str | None) -> tuple[dict, dict]:
     """The website page's filters with the website account rule (site countries: a scope country's city sites stay)."""
     raw = read_standard_filters(sp, reader_scope(), website_groups(role), "website")
     return website_filters(raw), {"surface": "website", "scope": reader_scope()}
+
+
+def project_context(sp: dict, project_id: str | None) -> tuple[dict, dict]:
+    """The renewal project Citation pages' filters (_filters.project_page_filters + 출처 카테고리), cumulative."""
+    filters, actx = project_page_filters(sp, project_id, PROJECT_CITATION_GROUPS)
+    return {**filters, "cumulative": True}, actx
 
 
 def route_context(sp: dict, surface: str, project_id: str | None, role: str | None) -> tuple[dict, dict, list[str]]:
@@ -591,6 +600,12 @@ async def as_of(q) -> dict:
     end the service week's last day at the latest; None = a snapshot, or a period after the week: no round). The
     renewal pills print it from citation/renewal-header, which answers it without this read."""
     ctx, sp = split_context(q)
+    if ctx.get("surface") == "project":
+        # a project's reads are not held to the service week
+        filters, actx = project_context(sp, ctx.get("project_id"))
+        view = await load_view(Reads(filters, actx))
+        return {"asOf": (view["live"] or {}).get("asOf"), "competitorOptions": view["competitorOptions"],
+                "period": period_echo(filters.get("dateFrom"), filters.get("dateTo"), None)}
     week = await service_week.current_or_503()
     if ctx.get("surface") == "website":
         filters, actx = website_context(sp, ctx.get("role"))
@@ -608,6 +623,9 @@ async def renewal_header(q) -> dict:
     with no Gold read, as acr/renewal-header and mention/rn-page (review r2-13: from citation/as-of the pill waited for
     the citation read, 1.4–12.7 s cold). The page's own URL read: the website one on ctx.surface=website."""
     ctx, sp = split_context(q)
+    if ctx.get("surface") == "project":
+        filters = project_context(sp, ctx.get("project_id"))[0]
+        return {"period": period_echo(filters.get("dateFrom"), filters.get("dateTo"), None)}
     filters = website_context(sp, ctx.get("role"))[0] if ctx.get("surface") == "website" else global_context(sp)[0]
     return {"period": period_echo(filters.get("dateFrom"), filters.get("dateTo"), await service_week.current_or_503())}
 
@@ -685,6 +703,8 @@ async def project(q) -> dict:
     """The project citation page: options first (its custom fields read the cf_ URL filters), then the
     citation read and the calendar; CitationsView props and numbers."""
     ctx, sp = split_context(q)
+    if ctx.get("variant") == "renewal":
+        return await project_renewal(ctx, sp)
     pid = ctx.get("project_id") or ""
     base = read_standard_filters(sp)
     options = await load_panel_options({"surface": "project", "projectId": pid, "dateFrom": base.get("dateFrom"),
@@ -706,10 +726,29 @@ async def project(q) -> dict:
             "dataDegraded": view["degraded"]["data"], "degradedSections": view["degraded"], "vm": citations_view_vm(view["live"])}
 
 
+async def project_renewal(ctx: dict, sp: dict) -> dict:
+    """The renewal Project tab's Citation body (2026-11-03, P3): citation/standard's renewal answer on the project's
+    filters (no 경쟁사 axis: the original project page had none). The table and drawer routes read the project
+    (tableSource: projectId and the page's cf_ params)."""
+    pid = ctx.get("project_id")
+    filters, actx = project_context(sp, pid)
+    r = Reads(filters, actx)
+    view, deltas, parts, period = await asyncio.gather(
+        load_view(r), load_deltas(r), load_source_parts(r), load_period_view(r, ctx.get("today")))
+    live, degraded = view["live"], view["degraded"]
+    query = citation_route_query(sp, "project", pid, list((filters.get("customFieldFilters") or {}).keys()))
+    return {"live": live, "dataDegraded": degraded["data"], "sectionDegraded": degraded, "prevCategories": deltas["prevCategories"],
+            "toneSummary": parts["toneSummary"], "tableSource": table_source(view, query), "periodView": period,
+            "rn": renewal_vm(live, deltas, parts, degraded, sp)}
+
+
 def sub_page_context(ctx: dict, sp: dict) -> tuple[dict, dict]:
-    """The sub pages read their page's filters: the website page's (ctx.surface=website) or the standard page's."""
+    """The sub pages read their page's filters: the website page's (ctx.surface=website), the project page's
+    (ctx.surface=project) or the standard page's."""
     if ctx.get("surface") == "website":
         return website_context(sp, ctx.get("role"))
+    if ctx.get("surface") == "project":
+        return project_context(sp, ctx.get("project_id"))
     filters, actx, _ = global_context(sp)
     return filters, actx
 
@@ -759,7 +798,7 @@ async def tone_urls(q) -> dict:
     keeps the counts it reuses under it — the week the shell shows moves on before the page is read again, and the
     week before's counts were kept under the next week's name (review r3-5). Absent without a HUB data DB."""
     ctx, sp = split_context(q)
-    week = await service_week.current_or_503()
+    week = None if ctx.get("surface") == "project" else await service_week.current_or_503()
     filters, actx = sub_page_context(ctx, sp)
     tone = "negative" if one(sp.get("tone")) == "negative" else "positive"
     page_no = page_param(sp)

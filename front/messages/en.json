@@ -6266,6 +6266,12 @@
         "recentEmpty": "No prompt has been measured.",
         "recentAnswers": "{count} answers",
         "statusFoot": "Prompt candidates, members and prompt status (draft, queued, running, done, failed, paused) live only in the original operations DB, so Gold does not show them."
+      },
+      "citation": {
+        "promptsPage": {
+          "title": "Prompts citing own URLs",
+          "description": "Prompts whose answers cited this project's own URLs (the registered base addresses and their pages) at least once, and those that did not."
+        }
       }
     }
   },

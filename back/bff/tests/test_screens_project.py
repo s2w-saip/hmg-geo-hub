@@ -115,5 +115,46 @@ class Dashboard(unittest.TestCase):
         self.assertEqual(out["recent"][0], {"promptId": "p10", "text": "prompt 10", "answers": 10, "lastMeasuredDay": "2026-10-10"})
 
 
+class Analysis(unittest.TestCase):
+    """P3: the renewal Mention and Citation screens read the project with ctx.surface=project."""
+
+    def test_mention_reads_the_projects_filters_and_no_service_week(self):
+        import asyncio
+        from unittest import mock
+        from bff.screens import mention_data as md
+        filters, actx = md.surface_filters({"surface": "project", "project_id": PID},
+                                           {"geography": "CA", f"cf_{FIELD}": "AI", "brand": "Kia", "language": "fr"})
+        self.assertEqual(actx, {"surface": "project", "projectId": PID, "scope": None, "customFields": {FIELD: ["AI"]}})
+        self.assertEqual(filters["region"], ["CA"])
+        self.assertTrue(filters["cumulative"] and filters["uncapped"])
+        self.assertNotIn("brand", filters)
+        self.assertNotIn("lang", filters)
+        # the header's period is the URL's, not held to the service week (the week would 503 without a store)
+        with mock.patch("bff.hub_stores.service_week.current_or_503", side_effect=AssertionError("week read")):
+            out = screen("mention/rn-page", f"ctx.surface=project&ctx.project_id={PID}&time=2026-10-06..2026-10-12", Router({}))
+            self.assertEqual(out["period"], {"from": "2026-10-06", "to": "2026-10-12"})
+            from bff.screens._week import period_week
+            self.assertIsNone(asyncio.run(period_week(filters | {"dateFrom": "2026-10-06", "dateTo": "2026-10-12"})))
+
+    def test_citation_project_context_has_the_source_axis_and_no_week(self):
+        from unittest import mock
+        from bff.screens import citation
+        filters, actx = citation.project_context({"source": "officialHmg", "engine": "gemini", f"cf_{FIELD}": "AI"}, PID)
+        self.assertEqual(filters["sourceCategory"], ["officialHmg"])
+        self.assertTrue(filters["cumulative"])
+        self.assertEqual(actx["projectId"], PID)
+        with mock.patch("bff.hub_stores.service_week.current_or_503", side_effect=AssertionError("week read")):
+            out = screen("citation/renewal-header", f"ctx.surface=project&ctx.project_id={PID}&time=2026-10-06..2026-10-12", Router({}))
+        self.assertEqual(out, {"period": {"from": "2026-10-06", "to": "2026-10-12"}})
+        with self.assertRaises(HTTPException) as cm:
+            screen("citation/renewal-header", "ctx.surface=project&ctx.project_id=nope", Router({}))
+        self.assertEqual(cm.exception.status_code, 422)
+
+    def test_the_citation_table_route_carries_the_project_and_its_tags(self):
+        from bff.screens import citation
+        query = citation.citation_route_query({"engine": "gemini", f"cf_{FIELD}": "AI", "cf_other": "x", "page": "2"}, "project", PID, [FIELD])
+        self.assertEqual(query, f"cf_{FIELD}=AI&engine=gemini&projectId={PID}")
+
+
 if __name__ == "__main__":
     unittest.main()
