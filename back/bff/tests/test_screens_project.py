@@ -115,6 +115,45 @@ class Dashboard(unittest.TestCase):
         self.assertEqual(out["recent"][0], {"promptId": "p10", "text": "prompt 10", "answers": 10, "lastMeasuredDay": "2026-10-10"})
 
 
+class Prompts(unittest.TestCase):
+    """P4: the project's prompts with their tag values; country, engine and period are the lens, tags narrow the rows."""
+
+    ITEMS = [
+        {"prompt_id": "a", "text": "A", "kind": "single", "lang": None, "funnel": None, "regions": None, "targets": [], "answers": 4,
+         "first_measured": "2026-10-06", "last_measured": "2026-10-09", "rounds": ["2026-10-06", "2026-10-09"], "countries": ["CA"],
+         "engine_answers": {"chatgpt": 2, "gemini": 2}, "custom": {FIELD: "AI", "f2": "NX5"}},
+        {"prompt_id": "b", "text": "B", "kind": "single", "lang": "fr", "funnel": None, "regions": None, "targets": [], "answers": 0,
+         "first_measured": None, "last_measured": None, "rounds": [], "countries": [], "engine_answers": {}, "custom": {FIELD: "Design"}},
+        {"prompt_id": "c", "text": "C", "kind": "single", "lang": None, "funnel": None, "regions": None, "targets": [], "answers": 2,
+         "first_measured": "2026-10-09", "last_measured": "2026-10-09", "rounds": ["2026-10-09"], "countries": ["CA"],
+         "engine_answers": {"gemini": 2}, "custom": {}},
+    ]
+
+    def router(self):
+        return Router({f"gold/projects/{PID}": {"data": {"items": self.ITEMS, "fields": [{"field_id": FIELD, "label": "Topic"}],
+                                                          "rounds": ["2026-10-06", "2026-10-09"]}, "meta": PROJECT_META}})
+
+    def test_the_lens_goes_to_gold_and_never_drops_a_row(self):
+        router = self.router()
+        out = screen("projects/prompts", f"ctx.project_id={PID}&geography=CA&engine=Gemini&time=2026-10-06..2026-10-09", router)
+        params = dict(router.calls)[f"gold/projects/{PID}"]
+        self.assertEqual(sorted(params), [("country", "CA"), ("engine", "gemini"), ("from", "2026-10-06"), ("to", "2026-10-09"),
+                                          ("view", "prompts")])
+        self.assertEqual([r["id"] for r in out["rows"]], ["a", "b", "c"])
+        self.assertEqual(out["listed"], 3)
+        self.assertEqual(out["fields"], [{"id": FIELD, "label": "Topic"}])
+        self.assertEqual(out["rows"][0]["custom"], {FIELD: "AI", "f2": "NX5"})
+        self.assertEqual(out["rows"][0]["lastMeasured"], "2026-10-09")
+
+    def test_tags_narrow_the_rows_or_inside_a_field_and_across_fields(self):
+        out = screen("projects/prompts", f"ctx.project_id={PID}&cf_{FIELD}=AI~Design", self.router())
+        self.assertEqual([r["id"] for r in out["rows"]], ["a", "b"])
+        self.assertEqual(out["listed"], 3)
+        other = "11111111-2222-4333-8444-555555555555"
+        out = screen("projects/prompts", f"ctx.project_id={PID}&cf_{FIELD}=AI~Design&cf_{other}=x", self.router())
+        self.assertEqual(out["rows"], [])
+
+
 class Analysis(unittest.TestCase):
     """P3: the renewal Mention and Citation screens read the project with ctx.surface=project."""
 

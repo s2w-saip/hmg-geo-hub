@@ -6272,6 +6272,31 @@
           "title": "자사 URL 인용 프롬프트",
           "description": "이 프로젝트의 자사 URL(등록한 대표 주소와 그 하위 페이지)을 1회 이상 인용한 프롬프트와 인용하지 않은 프롬프트를 나눠 봅니다."
         }
+      },
+      "prompts": {
+        "description": "이 프로젝트가 측정하는 프롬프트와 커스텀 태그 값입니다(Gold 기준, 열람 전용).",
+        "noRound": "이 범위에 측정 회차 없음",
+        "countryHelp": "목록은 그대로 두고, 고른 국가의 측정만 셉니다.",
+        "noPickHint": "필터를 고르지 않으면 이 프로젝트의 모든 프롬프트와 모든 회차의 측정을 보입니다. 태그를 고르면 그 값의 프롬프트만 남습니다.",
+        "searchLabel": "프롬프트 찾기",
+        "searchPlaceholder": "프롬프트 원문 · 태그 값",
+        "count": "프롬프트 {count}개",
+        "countOf": "프롬프트 {count}개 / 목록 {listed}개",
+        "export": "엑셀 내보내기",
+        "exportFilename": "프로젝트-프롬프트",
+        "exportSheetName": "프로젝트 프롬프트",
+        "exportFailed": "내보내지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "empty": "Gold에 이 프로젝트의 프롬프트가 없습니다.",
+        "emptyFiltered": "조건에 맞는 프롬프트가 없습니다.",
+        "note": "프롬프트 후보 · 수동 추가 · 태그 편집 · 측정 실행 · 삭제 · 가져오기와 프롬프트 상태(초안 · 대기 · 실행 중 · 완료 · 실패 · 일시정지)는 원본 운영 DB에만 있어 이 화면은 Gold 값만 보입니다.",
+        "kind": "유형",
+        "funnel": "퍼널",
+        "regions": "Scope 시장 태그",
+        "targets": "타겟 URL",
+        "tags": "커스텀 태그",
+        "countries": "측정 국가",
+        "rounds": "측정 회차 수",
+        "firstMeasured": "첫 측정"
       }
     }
   },

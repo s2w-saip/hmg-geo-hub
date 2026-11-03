@@ -6272,6 +6272,31 @@
           "title": "Prompts citing own URLs",
           "description": "Prompts whose answers cited this project's own URLs (the registered base addresses and their pages) at least once, and those that did not."
         }
+      },
+      "prompts": {
+        "description": "The prompts this project measures and their custom tag values (from Gold, read only).",
+        "noRound": "No round in this range",
+        "countryHelp": "Keeps the list and counts only the measurements in the picked countries.",
+        "noPickHint": "With no pick, every prompt of this project and the measurements of every round. A tag pick keeps the prompts with that value.",
+        "searchLabel": "Find prompts",
+        "searchPlaceholder": "Prompt text · tag value",
+        "count": "{count} prompts",
+        "countOf": "{count} prompts / {listed} listed",
+        "export": "Export to Excel",
+        "exportFilename": "project-prompts",
+        "exportSheetName": "Project prompts",
+        "exportFailed": "Could not export. Please try again in a moment.",
+        "empty": "Gold has no prompt of this project.",
+        "emptyFiltered": "No prompt matches.",
+        "note": "Prompt candidates, manual adds, tag edits, runs, deletes, imports and the prompt status (draft, queued, running, done, failed, paused) live only in the original operations DB, so this page shows Gold's values only.",
+        "kind": "Kind",
+        "funnel": "Funnel",
+        "regions": "Scope market tags",
+        "targets": "Target URLs",
+        "tags": "Custom tags",
+        "countries": "Measured countries",
+        "rounds": "Rounds measured",
+        "firstMeasured": "First measured"
       }
     }
   },

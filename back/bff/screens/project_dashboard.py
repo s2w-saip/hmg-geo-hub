@@ -10,6 +10,7 @@ project's filters (screens._filters.project_page_filters: 기간 · 측정 국�
   projects/dash-composition    the source composition (citations/domains, top 7 + 기타)
   projects/dash-trend          the KPI trend (None under two rounds)
   projects/dash-status         the project's Gold facts and its latest measured prompts
+  projects/prompts             Project › Prompt (P4): the project's prompts with their custom tag values and the lens
 Project reads are live only: no service week and no period compare (the original project page had neither). Every
 value is Gold's; nothing is judged or added (a value Gold does not have is left to the page's '데이터 없음').
 Scoped accounts never get here: access.clamp refuses every surface=project read (F20)."""
@@ -152,3 +153,36 @@ async def dash_status(q) -> dict:
                  "countries": row["countries"], "engines": row["engines"], "customFields": row["custom_fields"],
                  "lastMeasuredDay": day_of(row.get("last_measured"))}
     return {"facts": facts, "recent": recent}
+
+
+# ── Project › Prompt (P4) ─────────────────────────────────────────────────────
+
+def tag_match(custom: dict, picks: dict | None) -> bool:
+    """Gold's custom tag filter rule (prompt_custom_value): OR inside one field, AND across fields."""
+    return all(custom.get(field) in set(vals) for field, vals in (picks or {}).items())
+
+
+@screen("projects/prompts")
+async def project_prompts(q) -> dict:
+    """The project's prompt list: every prompt Gold holds for it with its custom tag values, narrowed by the picked
+    tags (the rows' own values); 측정 국가 · AI 엔진 · 기간 are the lens (the answers a row counts, never the rows).
+    The page searches, sorts and pages these rows itself (as the Project list does: a project holds ≤ 237 prompts).
+    `listed` = rows before the tag picks; `rounds` = the lens's rounds, oldest first."""
+    ctx, sp = split_context(q)
+    filters, actx = project_page_filters(sp, ctx.get("project_id"))
+    pid = ctx["project_id"]
+    lens = {k: v for k, v in analysis_query({k: v for k, v in filters.items() if k != "customFieldFilters"}, {**actx, "customFields": None})["query"].items()
+            if k in ("country", "engine", "from", "to")}
+    data = (await api.get(f"gold/projects/{pid}", {"view": "prompts", **lens}))["data"]
+    picks = filters.get("customFieldFilters")
+    rows = []
+    for p in data["items"]:
+        if not tag_match(p["custom"], picks):
+            continue
+        rows.append({"id": p["prompt_id"], "text": p["text"], "kind": p["kind"], "lang": p["lang"], "funnel": p["funnel"],
+                     "regions": p["regions"], "targets": p["targets"], "answers": p["answers"],
+                     "firstMeasured": day_of(p["first_measured"]), "lastMeasured": day_of(p["last_measured"]),
+                     "rounds": [day_of(d) for d in p["rounds"]], "countries": p["countries"], "engineAnswers": p["engine_answers"],
+                     "custom": p["custom"]})
+    return {"rows": rows, "listed": len(data["items"]), "fields": [{"id": f["field_id"], "label": f["label"]} for f in data["fields"]],
+            "rounds": [day_of(d) for d in data["rounds"]]}

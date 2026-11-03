@@ -235,7 +235,7 @@ describe("project tab", () => {
           "Intent (group)",
           `Google Keyword · 미구현 → ${P}/intent/google-keyword`,
           `Social Scraping · 미구현 → ${P}/intent/social-scraping`,
-          `Prompt · 미구현 → ${P}/prompt`,
+          `Prompt → ${P}/prompt`,
           "Analysis (group)",
           `Mention → ${P}/analysis/mention`,
           `Citation → ${P}/analysis/citation`,
