@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, CircleSlash, FilterX, Hourglass, X } from "lucide-react";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import { PeriodDeltaLine } from "@/components/dash/period-delta-line";
+import { useServiceWeekReadState } from "@/components/service-week/provider";
 import {
   RnBasisChip,
   RnButton,
@@ -24,7 +25,7 @@ import {
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { OWN_KEY, firstPicked, pickKey, type Finding, type RnShellVM, type TypeFinding } from "../_data/screen-types";
 import { COMPARE_COLORS, MentionProvider, type DrawerTarget, deltaTxt, pctTxt, posTxt, useCompare, useMention, type ComparePick, type MentionCtx } from "./mention-context";
-import { CardSkeleton, InfoTip, StateCard, useDegradedText } from "./mention-kit";
+import { CardSkeleton, EmptyRead, InfoTip, StateCard, useDegradedText } from "./mention-kit";
 import { RateBody } from "./mention-rate";
 import { FavorBody } from "./mention-favor";
 import { RankBody } from "./mention-rank";
@@ -61,12 +62,16 @@ function MentionShell() {
   const reset = useRnFilterReset();
   if (!shell.measured) {
     if (shell.degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={dg.all} />;
-    return input.filtered ? (
-      <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
-        <RnButton onClick={reset}>{t("reset")}</RnButton>
-      </StateCard>
-    ) : (
-      <StateCard icon={<Hourglass className="size-5" aria-hidden />} title={tA("empty")} />
+    return (
+      <EmptyRead>
+        {input.filtered ? (
+          <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
+            <RnButton onClick={reset}>{t("reset")}</RnButton>
+          </StateCard>
+        ) : (
+          <StateCard icon={<Hourglass className="size-5" aria-hidden />} title={tA("empty")} />
+        )}
+      </EmptyRead>
     );
   }
   return (
@@ -82,7 +87,9 @@ function Measured({ shell }: { shell: RnShellVM }) {
   const { input, kpi, view, setKpi } = useMentionPage();
   const [pick, setPick] = useState<ComparePick>({ auto: true, brands: [] });
   const [tables, setTables] = useState<ReadonlySet<string>>(new Set());
-  const [drawer, setDrawer] = useState<DrawerTarget | null>(null);
+  // a brand or a signal of the page's answer, with its own reads: the page read again (the service week moved) closes
+  // the sheet (review r3-4)
+  const [drawer, setDrawer] = useServiceWeekReadState<DrawerTarget | null>(null);
   const key = useRnHighlightKey();
   const { hover, flash } = useRnHighlight();
   const ownBrands = shell.ownBrands;
@@ -111,7 +118,7 @@ function Measured({ shell }: { shell: RnShellVM }) {
     engineLabel: (e) => ENGINE_LABEL[e] ?? e,
     openDrawer: setDrawer,
   };
-  const closeDrawer = useCallback(() => setDrawer(null), []);
+  const closeDrawer = useCallback(() => setDrawer(null), [setDrawer]);
   return (
     <MentionProvider value={ctx}>
       {/* always the compact rhythm (2026-10-29, the user's call: the 기본 / 촘촘 toggle is gone) */}

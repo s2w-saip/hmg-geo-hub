@@ -31,10 +31,9 @@ from fastapi import HTTPException
 from bff import api
 from bff.access import reader_scope
 from bff.screens._competitors import rank_first_position_rows
-from bff.screens._compare import fetch_period_compare_api, prev_period_filters
+from bff.screens._compare import fetch_period_compare_api, period_shape, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
 from bff.screens._filters import fetch_filter_options, read_standard_filters, website_prompt_options_of
-from bff.screens._period import resolve_request_compare_period_shape
 from bff.screens._query import analysis_query, to_api_params
 from bff.screens._sort import code_unit_key
 from bff.screens._summary import summary_query
@@ -42,6 +41,7 @@ from bff.screens._trend import (bucket_round_date, fetch_trend, mirror_pct, mond
                                  split_trend_dims, to_brand_trend_result, to_first_position_result,
                                  to_standard_trend_buckets, trend_gap_key_in_axis, trend_grid_of,
                                  with_engine_breakdown)
+from bff.screens._week import period_week
 
 MENTION_TYPES = ("mention", "recommendation", "comparison", "definition", "final_choice")
 SENTIMENT_KEYS4 = ("positive", "neutral", "negative", "mixed")
@@ -523,7 +523,7 @@ async def _geo_countries(filters: dict, ctx: dict, extra: dict | None, brand: st
 async def load_market_reads(filters: dict, ctx: dict, brands: list[str]) -> dict:
     """What mention/rn-markets joins: this window and the one before (a snapshot: the round before; a closed period: the
     period before; an open one has none) for the page's own filters and for each brand column, and the 미언급 counts."""
-    prev = prev_period_filters(filters)
+    prev = prev_period_filters(filters, await period_week(filters))
     extra = None
     if prev is None and not (filters.get("dateFrom") or filters.get("dateTo")):
         prev, extra = filters, {"cycle_offset": 1}
@@ -866,7 +866,7 @@ async def load_brand_share_lines(filters: dict, ctx: dict) -> dict | None:
     """Round mode: every brand's share line, for the ranking's Δ: the KPI brand trend stops at the top rivals, and a
     treemap group's Δ needs all its brands (2026-11-02 premise review). `visibility` carries each round's answers
     (to_brand_trend_result). None in period mode: the rows compare with the period before (load_prev_period_brands)."""
-    if prev_period_filters(filters) is not None:
+    if prev_period_filters(filters, await period_week(filters)) is not None:
         return None
     req = {"surface": ctx["surface"], "bucket": "cycle", "dimension": "brand", "metrics": ["visibility", "share_of_voice"], "splitOwn": True}
     res = await degrade_on_api_failure("standardKpiBrandTrend",
@@ -977,9 +977,10 @@ async def load_type_kpi(filters: dict, ctx: dict) -> dict | None:
 # ── period block of the KPI body ────────────────────────────────────────────
 
 async def load_period_compare(filters: dict, ctx: dict) -> dict:
-    """resolveRequestComparePeriodShape (api source: month -> week -> window) + fetchPeriodCompareApi
+    """resolveRequestComparePeriodShape (api source: month -> week -> window) of the period the reads take (its end the
+    service week's last day at the latest, _compare.period_shape) + fetchPeriodCompareApi
     (degrade "standardPeriodCompare" -> None): {compare, days?, kind, shape}."""
-    shape = resolve_request_compare_period_shape(filters.get("dateFrom"), filters.get("dateTo"))
+    shape = period_shape(filters, await period_week(filters))
     common = query_params(filters, _qctx(ctx))
     compare = await degrade(
         "standardPeriodCompare",
@@ -1001,7 +1002,7 @@ async def load_period_compare(filters: dict, ctx: dict) -> dict:
 async def load_prev_period_brands(filters: dict, ctx: dict) -> list[dict] | None:
     """Period mode: the body's brand rows on the period before ([] = nothing measured then, or the read
     failed); None outside period mode."""
-    prev = prev_period_filters(filters)
+    prev = prev_period_filters(filters, await period_week(filters))
     if prev is None:
         return None
     res = await degrade_on_api_failure(f"{ctx['surface']}MentionsPrevPeriod", lambda: fetch_mention_brands(prev, ctx, PREV_BRANDS_TABLE))
@@ -1012,7 +1013,7 @@ async def load_prev_period_brands(filters: dict, ctx: dict) -> list[dict] | None
 
 async def load_prev_period_engines(filters: dict, ctx: dict) -> dict | None:
     """Period mode: {engine: the engine card's 당사 point} on the period before; None outside period mode."""
-    prev = prev_period_filters(filters)
+    prev = prev_period_filters(filters, await period_week(filters))
     if prev is None:
         return None
     res = await degrade_on_api_failure("standardKpiEngineTrend.prevPeriod",

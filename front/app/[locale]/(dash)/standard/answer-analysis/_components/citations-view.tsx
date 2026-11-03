@@ -102,6 +102,7 @@ import type {
   CitationTrend,
   CitationUrlLive,
 } from "@/lib/scope/result-adapter";
+import { useServiceWeekRead } from "@/components/service-week/provider";
 import { PendingCard, EmptyState, weekStartMD } from "./mentions-view";
 import { AnswerModal } from "./answer-modal";
 import { TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
@@ -185,6 +186,9 @@ async function readTablePage(url: string, signal?: AbortSignal): Promise<TablePa
  *   · 조건(key)이 바뀌면 나가 있는 요청을 끊고, 끊긴 요청과 다른 key 의 응답은 버린다.
  *   · 409 cursor_stale 이면 재시작 번호를 올려 key 를 바꾼다: 그 조건의 첫 페이지를 route 로
  *     다시 읽는다. 기본 순서도 서버 렌더의 첫 페이지·커서(이미 낡음)를 버리고 route 로 읽는다.
+ *   · 페이지의 읽기(useServiceWeekRead)도 key 에 든다: 기준 주가 넘어가 셸이 페이지를 다시 읽으면(router.refresh)
+ *     같은 URL 에 새 첫 페이지·커서가 오고 클라이언트 상태는 남는다. 앞 답 위에서 받은 "더 보기" 행·검색·정렬
+ *     결과와 409 재시작은 버리고 새 답에서 다시 시작한다(review r3-4).
  */
 export function useServerDomainTable(opts: {
   source: CitationTableSource | null | undefined;
@@ -212,13 +216,14 @@ export function useServerDomainTable(opts: {
   const { source, initial, initialViews, q, category = "", sortKey, asc, pageSize } = opts;
   const t = useMemo(() => ({ q: q.trim(), category, sortKey, asc }), [q, category, sortKey, asc]);
   const isDefault = isDefaultDomainQuery(t);
-  // 409 재시작 번호. 그 409 가 난 필터 조건(source.query)에만 붙는다: 필터가 바뀌면 서버가 새
-  // 첫 페이지·커서를 주므로 0 으로 돌아간다.
-  const [restart, setRestart] = useState<{ query: string; n: number } | null>(null);
-  const restartN = source && restart?.query === source.query ? restart.n : 0;
+  const read = useServiceWeekRead();
+  // 409 재시작 번호. 그 409 가 난 필터 조건(source.query)과 페이지의 읽기에만 붙는다: 필터가 바뀌거나 페이지를
+  // 다시 읽으면 서버가 새 첫 페이지·커서를 주므로 0 으로 돌아간다.
+  const [restart, setRestart] = useState<{ query: string; read: number | null; n: number } | null>(null);
+  const restartN = source && restart?.query === source.query && restart.read === read ? restart.n : 0;
   // 서버 첫 페이지(initial)를 쓰는가: 기본 순서이고 그 커서가 아직 낡지 않았을 때만.
   const fromServer = isDefault && restartN === 0;
-  const key = source ? JSON.stringify([source.query, isDefault ? null : t, restartN]) : "";
+  const key = source ? JSON.stringify([source.query, isDefault ? null : t, restartN, read]) : "";
   const [state, setState] = useState<TableState | null>(null);
   const moreReq = useRef<AbortController | null>(null);
 
@@ -290,12 +295,12 @@ export function useServerDomainTable(opts: {
         if (e?.status === 409) {
           // 409 cursor_stale: 세대가 바뀌었다. 받은 추가 페이지를 버리고 첫 페이지부터(2.6).
           if (moreReq.current === ctrl) moreReq.current = null;
-          setRestart({ query: source.query, n: restartN + 1 });
+          setRestart({ query: source.query, read, n: restartN + 1 });
           return;
         }
         settle((prev) => ({ ...prev, status: "error", more: false }));
       });
-  }, [source, base.nextCursor, base.status, t, pageSize, key, fromServer, restartN]);
+  }, [source, base.nextCursor, base.status, t, pageSize, key, fromServer, restartN, read]);
 
   return {
     active: Boolean(source),
@@ -310,7 +315,7 @@ export function useServerDomainTable(opts: {
   };
 }
 
-type DetailState = { url: string } & (
+type DetailState = { url: string; read: number | null } & (
   | { status: "loading" }
   | {
       status: "ready";
@@ -334,19 +339,23 @@ type DetailState = { url: string } & (
  * 받은 상세는 그 URL(= 필터 조건)의 것이다(U7 검증 D1): 필터를 바꿔도 페이지 클라이언트 상태는
  * 남으므로(layout-router 가 검색 파라미터 없이 키를 잡는다), URL 이 다르면 "ready" 가 아니다.
  * 열려 있으면 새 URL 로 다시 읽고, 닫혀 있으면 다음에 열 때 읽는다.
+ * 페이지의 읽기(useServiceWeekRead)도 같다: 기준 주가 넘어가 페이지를 다시 읽으면 URL 은 그대로지만 앞 답 위에서
+ * 읽은 상세는 "ready" 가 아니다(review r3-4).
  */
 export function useDomainDetail(url: string | null, open: boolean): DetailState | null {
+  const read = useServiceWeekRead();
   const [state, setState] = useState<DetailState | null>(null);
   useEffect(() => {
-    if (!url || !open || (state?.url === url && state.status === "ready")) return;
+    if (!url || !open || (state?.url === url && state.read === read && state.status === "ready")) return;
     const ctrl = new AbortController();
-    setState({ url, status: "loading" });
+    setState({ url, read, status: "loading" });
     fetch(url, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("detail failed"))))
       .then((d: Partial<DomainDetailView>) => {
         if (ctrl.signal.aborted) return;
         setState({
           url,
+          read,
           status: "ready",
           urls: d.urls ?? [],
           promptList: d.promptList ?? [],
@@ -356,15 +365,15 @@ export function useDomainDetail(url: string | null, open: boolean): DetailState 
         });
       })
       .catch(() => {
-        if (!ctrl.signal.aborted) setState({ url, status: "error" });
+        if (!ctrl.signal.aborted) setState({ url, read, status: "error" });
       });
     return () => {
       ctrl.abort();
       setState((prev) => (prev?.status === "ready" ? prev : null));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per url while open
-  }, [url, open]);
-  return state && state.url === url ? state : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per url (and read of the page) while open
+  }, [url, open, read]);
+  return state && state.url === url && state.read === read ? state : null;
 }
 
 /** 인용률 카드 정의 문구의 판정 단위(DC-02): legacy = 프롬프트(summary.def), API = 측정(summary.defMeasured). */

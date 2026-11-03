@@ -29,6 +29,7 @@ GA4_REGISTRY_SECRET = ROOT / '.env.ga4-registry-db.local'  # GA4 registry editor
 SOURCE_OVERRIDE_SECRET = ROOT / '.env.source-override-db.local'  # source correction editor role password (data DB)
 INTEREST_SECRET = ROOT / '.env.interest-db.local'  # customer-interest editor role password (data DB)
 ENTITY_ROLE_SECRET = ROOT / '.env.entity-role-db.local'  # entity role editor role password (data DB)
+SERVICE_WEEK_SECRET = ROOT / '.env.service-week-db.local'  # service week job role password (data DB; manage.py only, never the API)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
@@ -46,8 +47,8 @@ CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB edito
 
 
 def sanitize(message):
-    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, SOURCE_OVERRIDE_SECRET,
-                 INTEREST_SECRET, ENTITY_ROLE_SECRET, analytics.SECRET):
+    for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, GA4_REGISTRY_SECRET,
+                 SOURCE_OVERRIDE_SECRET, INTEREST_SECRET, ENTITY_ROLE_SECRET, SERVICE_WEEK_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -325,6 +326,21 @@ ALTER ROLE hmg_entity_role_editor CONNECTION LIMIT 4;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_entity_role_editor;
 COMMIT;""")
     migrate('data-010.sql', '010_entity_roles')
+    # Service week (2026-11-02): the job's role for catalog.service_week and nothing else. Transient like the catalog
+    # writer: manage.py sync-service-week uses it, the API never gets it (no line in .env.hub-edit.local).
+    if not SERVICE_WEEK_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_service_week_writer');").stdout.strip() == 't':
+        raise RuntimeError('The service week role already exists; restore .env.service-week-db.local rather than replacing credentials')
+    week_writer = create_secret(SERVICE_WEEK_SECRET, {'SERVICE_WEEK_WRITER_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_service_week_writer') THEN CREATE ROLE hmg_service_week_writer LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_service_week_writer WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(week_writer['SERVICE_WEEK_WRITER_PASSWORD'])};
+ALTER ROLE hmg_service_week_writer SET statement_timeout='15s';
+ALTER ROLE hmg_service_week_writer CONNECTION LIMIT 2;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_service_week_writer;
+COMMIT;""")
+    migrate('data-011.sql', '011_service_week')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
@@ -366,6 +382,20 @@ def sync(args):
     print(api_python(script).strip())
 
 
+def service_week(args):
+    """sync-service-week: record the service week from Gold's status (service_week.py) with the transient writer.
+    --dry-run decides and prints without writing; before init has made the writer it decides as if nothing were recorded."""
+    config = {'dry_run': args.dry_run}
+    if SERVICE_WEEK_SECRET.exists():
+        config['data'] = (f"postgresql://hmg_service_week_writer:{analytics.env_file(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD']}"
+                          f"@{service_host('analytics')}/hmg_analytics")
+    elif not args.dry_run:
+        raise RuntimeError(f'{SERVICE_WEEK_SECRET.name} is missing: run manage.py init first')
+    # Secrets travel over stdin, never argv, image layers, logs or the frontend.
+    script = (HERE / 'service_week.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
+    print(api_python(script).strip())
+
+
 def verify():
     sql((HERE / 'verify-data.sql').read_text(encoding='utf8'))
     sql((HERE / 'verify-operations.sql').read_text(encoding='utf8'), True)
@@ -381,6 +411,7 @@ def verify():
     override = f"postgresql://hmg_source_override_editor:{analytics.env_file(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']}"
     interest = f"postgresql://hmg_interest_editor:{analytics.env_file(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']}"
     entity_role = f"postgresql://hmg_entity_role_editor:{analytics.env_file(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD']}"
+    week_writer = f"postgresql://hmg_service_week_writer:{analytics.env_file(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
@@ -397,7 +428,9 @@ def verify():
               'interest':interest+f"@{service_host('analytics')}/hmg_analytics",
               'interest_operations':interest+f"@{service_host('operations')}/{OPS_DB}",
               'entity_role':entity_role+f"@{service_host('analytics')}/hmg_analytics",
-              'entity_role_operations':entity_role+f"@{service_host('operations')}/{OPS_DB}"}
+              'entity_role_operations':entity_role+f"@{service_host('operations')}/{OPS_DB}",
+              'service_week':week_writer+f"@{service_host('analytics')}/hmg_analytics",
+              'service_week_operations':week_writer+f"@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')
@@ -832,6 +865,7 @@ COMMANDS = {
     'import-source-lists': import_source_lists,
     'import-interest-keywords': import_interest_keywords,
     'import-entity-roles': import_entity_roles,
+    'sync-service-week': service_week,
 }
 
 if __name__ == '__main__':
@@ -841,6 +875,7 @@ if __name__ == '__main__':
     parser.add_argument('--allow-removals', type=int, default=0, help='sync: accept up to N Gold removals above the guard')
     parser.add_argument('--expect-mass-change', action='store_true', help='sync: accept more than the guard share of new revisions')
     parser.add_argument('--days', type=int, help='ext-key-issue: lifetime in days')
+    parser.add_argument('--dry-run', action='store_true', help='sync-service-week: decide and print, write nothing')
     args = parser.parse_args()
     try:
         COMMANDS[args.command](args)

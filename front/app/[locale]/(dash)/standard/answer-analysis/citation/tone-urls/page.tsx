@@ -42,7 +42,7 @@ export default async function CitationToneUrlsRoute({
   return (
     <div className="flex animate-fade-in flex-col gap-6">
       <PageHeader title={t("title")} description={t("description")} />
-      <CitationToneUrlsPage tone={s.tone} page={s.page} q={s.q} byDomain={s.byDomain} counts={s.counts} />
+      <CitationToneUrlsPage tone={s.tone} page={s.page} q={s.q} byDomain={s.byDomain} counts={s.counts} weekEnd={s.weekEnd} />
     </div>
   );
 }

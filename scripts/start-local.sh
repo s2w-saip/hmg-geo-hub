@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # macOS/Linux counterpart of start-gold.ps1 without Docker: API on 127.0.0.1:5555, Next on 127.0.0.1:3333.
 # HGH_PYTHON selects a Python 3.12 that has back/bff/requirements.txt installed (default: python3).
-# The HUB data/operations stores (native mode, scripts/start-hub-storage.sh) are started and connected when they exist.
+# The HUB data/operations stores (native mode, scripts/start-hub-storage.sh) are started and connected when they exist,
+# and the service week is checked against Gold before the API starts.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 secret="$repo/.env.gold.local"
@@ -15,6 +16,12 @@ listening() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 hub_env=()
 if [ -f "$repo/.local/pg/analytics/PG_VERSION" ] && [ -f "$repo/.local/pg/operations/PG_VERSION" ]; then
     (cd "$repo" && HGH_HUB_NATIVE=1 "$python" -X utf8 back/hub_storage/manage.py start)
+    # The service week (catalog.service_week) before the API starts, so its Gold reads have a week to stop at. A failure
+    # does not stop the API: it keeps the last recorded week, and with none recorded yet its Gold screens answer 503.
+    if ! (cd "$repo" && HGH_HUB_NATIVE=1 "$python" -X utf8 back/hub_storage/manage.py sync-service-week); then
+        echo 'Service week check failed (above). The API starts anyway with the last recorded week; with none recorded its Gold screens answer 503.' >&2
+        echo "  Retry after manage.py init has applied 011: HGH_HUB_NATIVE=1 $python -X utf8 back/hub_storage/manage.py sync-service-week" >&2
+    fi
     for f in .env.analytics.local .env.operations.local .env.hub-edit.local; do
         [ -f "$repo/$f" ] && hub_env+=("$repo/$f")
     done

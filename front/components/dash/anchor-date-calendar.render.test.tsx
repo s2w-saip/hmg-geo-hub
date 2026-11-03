@@ -186,6 +186,34 @@ describe("AnchorDateCalendar — 기본 회차 표시", () => {
   });
 });
 
+// ── 처음 펼치는 달 (서비스 기준 주, 2026-11-02 · 리뷰 r1-14) ────────────────────
+//
+// 달력은 고른 종료일의 달로 열린다. 마지막 회차 뒤에서 끝나는 기간 — 기준 주 뒤까지 가는 URL · 저장 필터, 예:
+// /ko/standard/answer-analysis/mention?time=2026-10-12..2026-11-01 — 이면 모든 날이 비활성이고 '다음 달'도 막힌
+// 11월로 열렸다. 이제 회차가 있는 첫 달과 마지막 달 사이로 당긴다(RnRoundCalendar 와 같은 규칙,
+// round-calendar.render.test.tsx). 고를 수 있는 날 · URL 은 그대로다.
+describe("AnchorDateCalendar — 처음 펼치는 달", () => {
+  const monthOf = (html: string) => /data-anchor-calendar-month="">([^<]+)</.exec(html)?.[1] ?? null;
+  const selectable = (html: string) => (html.match(/data-selectable="1"/g) ?? []).length;
+
+  it("마지막 회차 뒤에서 끝나는 기간은 마지막 회차의 달로, 그 회차를 고를 수 있게 연다", () => {
+    const html = cal({ selectableDates: ["2026-10-05"], value: { from: "2026-10-12", to: "2026-11-01" }, todayKst: "2026-11-02" });
+    expect(monthOf(html)).toBe("2026년 10월");
+    expect(selectable(html)).toBe(1);
+    expect(cell(html, "2026-10-05")).toContain('data-selectable="1"');
+  });
+
+  it("첫 회차 앞의 기간은 첫 회차의 달로 연다", () => {
+    expect(monthOf(cal({ value: { from: "2025-01-01", to: "2025-02-01" } }))).toBe("2026년 8월");
+  });
+
+  it("회차 안의 기간은 그 종료일의 달, 기간이 없으면 최신 회차의 달이다(종전 그대로)", () => {
+    expect(monthOf(cal({ value: { from: "2026-08-31", to: "2026-08-31" } }))).toBe("2026년 8월");
+    expect(monthOf(cal({ value: { from: "2026-09-07" } }))).toBe("2026년 9월");
+    expect(monthOf(cal())).toBe("2026년 9월");
+  });
+});
+
 // ── 뷰 모델이 그 값을 정한다 ────────────────────────────────────────────────
 describe("resolveTimeRangeView — defaultDay", () => {
   it("축 on·선택 없음 → 목록의 최신 날짜", () => {
@@ -203,6 +231,35 @@ describe("resolveTimeRangeView — defaultDay", () => {
 
   it("축 off(목록 없음)면 null — 기본 화면의 정의가 다르다(run 창)", () => {
     expect(resolveTimeRangeViewForTest({ value: null, dates: [] }).defaultDay).toBeNull();
+  });
+});
+
+// 서비스 기준 주(월~일)에 그 표면의 회차가 없으면 기간 없는 화면은 '측정 없음'이다 — BFF(Context.create)가 그 주 앞의 회차를
+// 스냅샷으로 읽지 않는다(결정 '기준 주 세부', 2026-11-02). 리뷰 r4-3(2026-11-03): 달력과 패널 안내는 그때도 목록의 마지막
+// 회차(기준 주 앞)를 '기간 미선택 시 이 회차를 봅니다'로 짚었다. 기준 주 = 2026-10-05(월) ~ 10-11(일), maxDay = 그 끝.
+describe("resolveTimeRangeView — defaultDay 와 서비스 기준 주 (리뷰 r4-3)", () => {
+  const at = (dates: readonly string[], maxDay: string | null, value: string | null = null) =>
+    resolveTimeRangeView({ value, selectableDates: dates, maxDay, todayKst: "2026-11-02", now: new Date("2026-11-02T03:00:00Z") }).defaultDay;
+
+  it("마지막 회차가 기준 주 앞이면 null — 화면이 보는 회차가 없다", () => {
+    expect(at(["2026-09-21", "2026-09-28"], "2026-10-11")).toBeNull();
+    // 기준 주 월요일 바로 앞(일요일)도 앞이다
+    expect(at(["2026-09-28", "2026-10-04"], "2026-10-11")).toBeNull();
+  });
+
+  it("기준 주 안의 회차는 그대로 짚는다 (월 · 금 · 일)", () => {
+    expect(at(["2026-09-28", "2026-10-05"], "2026-10-11")).toBe("2026-10-05");
+    expect(at(["2026-10-02", "2026-10-09"], "2026-10-11")).toBe("2026-10-09");
+    expect(at(["2026-10-11"], "2026-10-11")).toBe("2026-10-11");
+  });
+
+  it("기준 주 뒤의 회차(셸보다 새 기준 주로 읽힌 응답, 다시 읽기 전까지)는 BFF 가 읽은 대로 그 회차다", () => {
+    expect(at(["2026-10-09", "2026-10-16"], "2026-10-11")).toBe("2026-10-16");
+  });
+
+  it("기준 주를 모르면(셸 공급자 없음 · Project · GA4) 종전대로 마지막 회차, 기간을 고르면 종전대로 null", () => {
+    expect(at(["2026-09-21", "2026-09-28"], null)).toBe("2026-09-28");
+    expect(at(["2026-09-21", "2026-09-28", "2026-10-05"], "2026-10-11", "2026-09-21..2026-09-28")).toBeNull();
   });
 });
 

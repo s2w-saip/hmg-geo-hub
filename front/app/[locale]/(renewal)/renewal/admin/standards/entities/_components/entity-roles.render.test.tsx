@@ -109,6 +109,18 @@ describe("EntityRolesManager", () => {
     expect(html(<EntityRolesManager initial={LISTING} savedFilters={{ page: "entity-roles", userId: "u", initial: [] }} />, "en")).toContain("Own · Hyundai");
   });
 
+  // Service week check (2026-11-02): Gold's first_seen is a timestamp; its first 10 characters are the UTC day, so an
+  // entity first seen on 10-12 08:32 KST read as 10-11 — inside the 10/5~10/11 week.
+  it("shows first seen as the KST day, in the list and in the sheet", () => {
+    const late = entity({ entityId: "late", name: "Late", firstSeen: "2026-10-11T23:32:00Z" });
+    const out = html(<EntityRolesManager initial={{ ...LISTING, items: [late] }} savedFilters={{ page: "entity-roles", userId: "u", initial: [] }} />);
+    expect(rowOf(out, "late")).toContain("2026-10-12");
+    expect(rowOf(out, "late")).not.toContain("2026-10-11");
+    const sheet = html(<EntitySheet row={late} onSaved={() => {}} />);
+    expect(sheet).toContain("2026-10-12");
+    expect(sheet).not.toContain("2026-10-11");
+  });
+
   it("has every message in both languages", () => {
     const shape = (o: unknown): unknown => (typeof o === "object" && o ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k, shape(v)])) : "");
     expect(shape(en.hubEntities)).toEqual(shape(ko.hubEntities));

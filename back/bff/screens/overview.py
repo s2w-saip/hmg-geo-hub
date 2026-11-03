@@ -52,7 +52,7 @@ from fastapi import HTTPException
 from bff import api
 from bff.access import reader_scope
 from bff.screens import screen, split_context
-from bff.screens._compare import fetch_period_compare_api, has_closed_period
+from bff.screens._compare import fetch_period_compare_api, has_closed_period, period_shape
 from bff.screens._competitors import (
     brand_key, candidate_brand_keys, competitor_row, to_competitor_brand_values, to_competitor_citation_domains,
 )
@@ -61,7 +61,7 @@ from bff.screens._filters import (
     fetch_filter_dates, filter_dates_view, load_panel_options, load_website_prompt_options, read_standard_filters,
 )
 from bff.screens._js import is_num, js_round
-from bff.screens._period import kst_today, label_key_of, period_caption, period_chip, resolve_request_compare_period_shape, window_cycles
+from bff.screens._period import kst_today, label_key_of, period_caption, period_chip, window_cycles
 from bff.screens._query import RHQ_REGION_COUNTRIES, UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens._summary import (
     DASHBOARD_SUMMARY_PARTS, apply_competitor_sov_from_brands, apply_engine_consistency, consistency, fetch_kpi_summary,
@@ -71,6 +71,7 @@ from bff.screens._trend import (
     OVERVIEW_TREND_METRICS, apply_trend_deltas, fetch_trend, spark_points, spark_y_domain, sparkline_trend,
     to_brand_trend_result, to_first_position_result, to_live_trend, trend_gap_applies,
 )
+from bff.screens._week import period_week
 
 # ── constants (front master data and call shapes) ───────────────────────────
 
@@ -206,9 +207,10 @@ def common_params(filters: dict, surface: str) -> dict:
     return to_api_params(analysis_query(filters, {"surface": surface, "scope": reader_scope()}))
 
 
-def period_context(filters: dict, today: str) -> tuple[dict, int | None, dict]:
-    """The compare shape (anchor axis), its days and the label context of the cards (page.tsx)."""
-    shape = resolve_request_compare_period_shape(filters.get("dateFrom"), filters.get("dateTo"))
+def period_context(filters: dict, today: str, week: Any) -> tuple[dict, int | None, dict]:
+    """The compare shape (anchor axis), its days and the label context of the cards (page.tsx), of the period the reads
+    take (`week`: screens._week.period_week; _compare.period_shape)."""
+    shape = period_shape(filters, week)
     cur_lo = None
     if shape.get("weeks"):
         cur_lo = shape["weeks"]["cur"]["lo"]
@@ -852,7 +854,7 @@ async def cards(q) -> dict:
     ctx, sp = split_context(q)
     filters = global_filters(sp)
     common = common_params(filters, "global")
-    shape, days, label_ctx = period_context(filters, today_of(ctx))
+    shape, days, label_ctx = period_context(filters, today_of(ctx), await period_week(filters))
     (state, kpis), compare = await asyncio.gather(
         load_live_kpis(common, "global"),
         or_none_on_transient(fetch_period_compare_api(filters, common, {
@@ -952,7 +954,7 @@ async def brand_matrix_screen(q) -> dict | None:
         nonlocal trend_failed
         try:
             if period:
-                shape, _, _ = period_context(filters, today_of(_ctx))
+                shape, _, _ = period_context(filters, today_of(_ctx), await period_week(filters))
                 return await fetch_period_compare_api(filters, common, {"surface": "global", "kind": shape["kind"],
                                                                         "metrics": OVERVIEW_COMPARE_METRICS})
             return await load_live_trend(common, "global", OVERVIEW_TREND_METRICS, "day")
@@ -996,7 +998,7 @@ async def website_tiles(ctx: dict, sp: dict, deferred: bool) -> dict:
         return {"state": state}
     if deferred:
         kpis = await deferred_kpis(kpis, common)
-    shape, days, label_ctx = period_context(filters, today_of(ctx))
+    shape, days, label_ctx = period_context(filters, today_of(ctx), await period_week(filters))
     compare = await or_none_on_transient(fetch_period_compare_api(filters, common, {
         "surface": "website", "kind": shape["kind"], "metrics": OVERVIEW_COMPARE_METRICS}))
     return {"state": "ok", "tiles": tiles_view(kpis, compare, days, label_ctx)}

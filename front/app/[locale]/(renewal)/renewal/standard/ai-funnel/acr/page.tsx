@@ -23,7 +23,7 @@ import type { RnAcrHeader, RnAcrScreen } from "./_data/screen-types";
 // Renewal ACR (2026-10-21) — the redesigned /standard/ai-funnel/acr, served side by side
 // with the original. Data: screen acr/renewal (back/bff/screens/acr.py) = the same three reads as
 // acr/page.tsx (ACR answer, filter options, round calendar) and the whole view model; the header's
-// period pill comes from acr/renewal-header (URL only, no reads).
+// period pill comes from acr/renewal-header (the URL period held to the service week, no Gold read).
 
 type Sp = Record<string, string | string[] | undefined>;
 
@@ -48,8 +48,10 @@ export default async function RenewalAcrPage({
   } catch (e) {
     throwForPage(e, locale);
   }
-  // the snapshot pill names its round once the body's read has answered (asOf); the loading skeleton shows it without
-  const header = (asOf: string | null) => (
+  // the snapshot pill names its round once the body's read has answered (asOf); the loading skeleton (undefined) shows
+  // it without. Nothing to name is "—", as on Citation and Mention (review r1-18, 2026-11-03): a period wholly after the
+  // service week (acr/renewal-header answers it with no days) and a snapshot whose read answered no round (none in the week)
+  const header = (asOf: string | null | undefined) => (
     <RnPageHeader
       title={
         <>
@@ -65,7 +67,15 @@ export default async function RenewalAcrPage({
             {t("cadence")}
             <span aria-hidden className="h-3 w-px bg-rn-line-2" />
             <span className="font-semibold tabular-nums text-rn-ink-2">
-              {head.period ? t("periodRange", { from: head.dateFrom ?? "…", to: head.dateTo ?? "…" }) : asOf ? t("snapshotOf", { date: asOf }) : t("snapshot")}
+              {head.period
+                ? head.dateFrom || head.dateTo
+                  ? t("periodRange", { from: head.dateFrom ?? "…", to: head.dateTo ?? "…" })
+                  : "—"
+                : asOf
+                  ? t("snapshotOf", { date: asOf })
+                  : asOf === undefined
+                    ? t("snapshot")
+                    : "—"}
             </span>
           </RnPill>
         </>
@@ -75,7 +85,7 @@ export default async function RenewalAcrPage({
   );
   return (
     <RnFilterRuntime>
-      <Suspense fallback={<PageSkeleton header={header(null)} />}>
+      <Suspense fallback={<PageSkeleton header={header(undefined)} />}>
         <RenewalAcr sp={sp} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} />
       </Suspense>
     </RnFilterRuntime>

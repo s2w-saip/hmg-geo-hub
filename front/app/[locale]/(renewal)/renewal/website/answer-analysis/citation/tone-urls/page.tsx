@@ -50,7 +50,7 @@ export default async function RenewalWebsiteCitationToneUrlsRoute({
   return (
     <RnPageFrame header={header}>
       <RnWebsiteCitationSubFilters query={query} scope={session.user.scope} userId={session.user.id} reset={TONE_URLS_RESET}>
-        <RnCitationToneUrlsView tone={s.tone} page={s.page} q={s.q} byDomain={s.byDomain} counts={s.counts} />
+        <RnCitationToneUrlsView tone={s.tone} page={s.page} q={s.q} byDomain={s.byDomain} counts={s.counts} weekEnd={s.weekEnd} />
       </RnWebsiteCitationSubFilters>
     </RnPageFrame>
   );

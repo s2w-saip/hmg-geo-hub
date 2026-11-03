@@ -6,20 +6,26 @@
 // (website-prompts-read.ts). The URL keeps q · sort · dir · size and the picks (rd · miss · last · eset), so
 // a link restores the list; the page number stays out of it (a new query starts at page 1). A new server
 // render (the panel applied a pick) remounts this body with its answer (page.tsx keys it).
-// Engine and period are a lens (the original's rule): they choose the answers a row counts, never the rows.
+// Engine and period are a lens (the original's rule): they choose the answers a row counts, never the rows. A period
+// that starts after the service week holds no round the BFF reads: the week's card stands in for the lens's results,
+// and the rows keep their catalog columns (review r4-4).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, Download, Loader2, RotateCw } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, CalendarX2, Download, Loader2, RotateCw } from "lucide-react";
 import { RnButton, RnCard, RnEmpty, RnIconButton, RnNote, RnSearchField, RnSelect, RnTextButton, RnToken, useRnToast } from "@/components/renewal-ui";
-import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
-import { splitFilterValues } from "@/components/dash/filter-encoding";
+import { ENGINE_LABEL, shownTimeRange } from "@/components/dash/dimension-filter-panel";
+import { parseTimeRange, splitFilterValues } from "@/components/dash/filter-encoding";
+import { ServiceWeekAfterWeek } from "@/components/service-week/no-round";
+import { ServiceWeekShownEnd, useServiceWeekContext, useServiceWeekEnd } from "@/components/service-week/provider";
+import { periodAfterWeek } from "@/lib/service-week";
 import { languageName } from "@/lib/geo-catalog/language-name";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import { exportFilename } from "@/app/[locale]/(dash)/standard/prompts/_components/prompt-export";
 import { RnListPager } from "../../../_components/prompt-list";
 import { useRnFilterToggle } from "../../../_components/overview-filters";
+import { StateCard } from "../../../standard/answer-analysis/mention/_components/mention-kit";
 import { RnWebsitePromptInsights } from "./website-prompt-insights";
 import { RnWebsitePromptDetail, RnWebsitePromptTable, day, useGeoLabel, useSortLabels } from "./website-prompt-list";
 import {
@@ -43,6 +49,8 @@ const SORTS: readonly WebsitePromptSortKey[] = ["lastMeasuredAt", "answers", "ro
 // a new text column sorts A→Z first, a count or date the largest / latest first
 const firstAsc = (k: WebsitePromptSortKey) => !["answers", "lastMeasuredAt", "firstMeasuredAt", "rounds"].includes(k);
 const READ_DEBOUNCE_MS = 200;
+// the export's first columns: the rows' catalog (prompt, brand, country, language, target URL); the rest are the lens's
+const CATALOG_COLUMNS = 5;
 const OPEN_KEY = "rn-website-prompts-insights";
 const LIST_ID = "rn-website-prompt-list";
 
@@ -63,12 +71,15 @@ export function RnWebsitePrompts({
   const tp = useTranslations("renewal.prompts");
   const tw = useTranslations("renewal.website.prompts");
   const tStd = useTranslations("standardPromptsView");
+  const tWeek = useTranslations("serviceWeek");
   const locale = useLocale();
   const toast = useRnToast();
   const sp = useSearchParams();
   const geoLabel = useGeoLabel();
   const sortLabel = useSortLabels();
   const toggleFilter = useRnFilterToggle();
+  const maxDay = useServiceWeekEnd();
+  const weekCtx = useServiceWeekContext();
 
   const [search, setSearch] = useState(() => sp.get("q") ?? "");
   const [sort, setSort] = useState<Sort>({ key: initial.sort, asc: initial.dir === "asc" });
@@ -188,12 +199,24 @@ export function RnWebsitePrompts({
   };
 
   // ── the lens in force (the panel's engine / period picks) ──
+  // The period as the list reads it: the BFF reads an end past the service week up to the week's last day, as the
+  // header's basis chip and the applied chip say (shownTimeRange, review r1-15); the pick in the line's title (review
+  // r2-11). The line takes that day from ServiceWeekShownEnd — the layout's read on the first paint (review r3-6); the
+  // detail sheet, opened later, prints the same lens.
   const engines = splitFilterValues(sp.get("engine"));
   const period = sp.get("time")?.split("..") ?? null;
-  const lens = [
-    ...engines.map((e) => ENGINE_LABEL[e] ?? e),
-    ...(period && (period[0] || period[1]) ? [`${period[0] || "…"} ~ ${period[1] || "…"}`] : []),
-  ];
+  const picked = period && (period[0] || period[1]) ? { from: period[0] || undefined, to: period[1] || undefined } : null;
+  const lensAt = (end: string | null) => {
+    const shown = picked ? shownTimeRange(picked, end) : null;
+    return {
+      lens: [...engines.map((e) => ENGINE_LABEL[e] ?? e), ...(shown ? [`${shown.from || "…"} ~ ${shown.to || "…"}`] : [])],
+      cut: picked?.to && shown?.to !== picked.to ? tWeek("periodCut", { from: picked.from || "…", to: picked.to, end: shown?.to ?? "…" }) : undefined,
+    };
+  };
+  const lens = lensAt(maxDay).lens;
+  // A period after the service week reads no round (review r4-4): what the page draws of the lens takes the week's card
+  // from the first paint on (ServiceWeekAfterWeek); the sheet a row opens and the export, both later, ask this tab's week.
+  const afterWeek = periodAfterWeek(weekCtx?.latest, parseTimeRange(sp.get("time"))) !== null;
 
   const drillText = (key: DrillKey): string => {
     const v = drill[key];
@@ -224,7 +247,10 @@ export function RnWebsitePrompts({
         day(r.firstMeasuredAt) ?? "", r.rounds.length, r.rounds.join(", "),
         ...engineCols.map((e) => r.engineAnswers[e] ?? 0),
       ]);
-      await downloadXlsx(exportFilename(t("exportFilename"), new Date()), headers, cells, t("exportSheetName"));
+      // a period after the service week: the rows' catalog columns, as the list shows them — the lens's would write 0
+      // answers for prompts Gold measured after the week (review r4-4)
+      const width = afterWeek ? CATALOG_COLUMNS : headers.length;
+      await downloadXlsx(exportFilename(t("exportFilename"), new Date()), headers.slice(0, width), cells.map((c) => c.slice(0, width)), t("exportSheetName"));
     } catch (err) {
       console.error("[renewal/website/prompts] export failed:", err);
       toast(tStd("exportFailed"));
@@ -239,17 +265,26 @@ export function RnWebsitePrompts({
 
   return (
     <>
-      <RnWebsitePromptInsights
-        data={insights}
-        open={open}
-        onToggle={toggleOpen}
-        drill={drill}
-        onDrill={onDrill}
-        onCountry={(code) => toggleFilter("geography", code)}
-        countries={splitFilterValues(sp.get("geography"))}
-        geoLabel={geoLabel}
-        narrowed={drillKeys.length ? { count: total, onJump: () => document.getElementById(LIST_ID)?.scrollIntoView({ behavior: "smooth", block: "start" }) } : undefined}
-      />
+      <ServiceWeekAfterWeek>
+        {(after) =>
+          after ? (
+            // the lens of a period after the service week holds no round: no count of it is the page's to say
+            <StateCard icon={<CalendarX2 className="size-5" aria-hidden />} title={after.title} desc={after.desc} />
+          ) : (
+            <RnWebsitePromptInsights
+              data={insights}
+              open={open}
+              onToggle={toggleOpen}
+              drill={drill}
+              onDrill={onDrill}
+              onCountry={(code) => toggleFilter("geography", code)}
+              countries={splitFilterValues(sp.get("geography"))}
+              geoLabel={geoLabel}
+              narrowed={drillKeys.length ? { count: total, onJump: () => document.getElementById(LIST_ID)?.scrollIntoView({ behavior: "smooth", block: "start" }) } : undefined}
+            />
+          )
+        }
+      </ServiceWeekAfterWeek>
       <RnCard id={LIST_ID} busy={busy} aria-label={tw("count", { count: num(total) })} className="scroll-mt-2">
         <div className="flex flex-wrap items-center gap-2 border-b border-rn-line px-5 py-3">
           <RnSearchField
@@ -301,12 +336,26 @@ export function RnWebsitePrompts({
           </div>
         ) : null}
         {lens.length ? (
-          <p data-rn-lens="" className="m-0 border-b border-rn-line px-5 py-2 text-rn-12 text-rn-muted">
-            <b className="font-semibold text-rn-ink-2">
-              {t("lensTitle")} · {lens.join(" · ")}
-            </b>{" "}
-            — {t("lensHint")}
-          </p>
+          // a period after the service week: the card above names it, and no column here counts its lens
+          <ServiceWeekAfterWeek>
+            {(after) =>
+              after ? null : (
+                <ServiceWeekShownEnd>
+                  {(end) => {
+                    const line = lensAt(end);
+                    return (
+                      <p data-rn-lens="" className="m-0 border-b border-rn-line px-5 py-2 text-rn-12 text-rn-muted">
+                        <b className="font-semibold text-rn-ink-2" title={line.cut}>
+                          {t("lensTitle")} · {line.lens.join(" · ")}
+                        </b>{" "}
+                        — {t("lensHint")}
+                      </p>
+                    );
+                  }}
+                </ServiceWeekShownEnd>
+              )
+            }
+          </ServiceWeekAfterWeek>
         ) : null}
         {failed ? (
           <RnNote className="m-5">
@@ -320,7 +369,7 @@ export function RnWebsitePrompts({
         {total === 0 ? (
           <RnEmpty className="m-5">{tp("emptyFiltered")}</RnEmpty>
         ) : (
-          <RnWebsitePromptTable rows={rows} sort={sort} onSort={onHead} onOpen={setDetail} />
+          <ServiceWeekAfterWeek>{(after) => <RnWebsitePromptTable rows={rows} sort={sort} onSort={onHead} onOpen={setDetail} measured={!after} />}</ServiceWeekAfterWeek>
         )}
         {total > 0 ? (
           <RnListPager
@@ -339,7 +388,7 @@ export function RnWebsitePrompts({
           />
         ) : null}
       </RnCard>
-      <RnWebsitePromptDetail row={detail} axis={data.roundAxis} lens={lens} onClose={() => setDetail(null)} />
+      <RnWebsitePromptDetail row={detail} axis={data.roundAxis} lens={lens} measured={!afterWeek} onClose={() => setDetail(null)} />
     </>
   );
 }

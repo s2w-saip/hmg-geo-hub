@@ -21,6 +21,7 @@ import {
   cx,
   rnHighlightState,
 } from "@/components/renewal-ui";
+import { useServiceWeekRead } from "@/components/service-week/provider";
 import type { AcrDistRow, AcrDistSheet, AcrDistSort, AcrDistState, AcrDistTab, AcrModelSort } from "../_data/screen-types";
 import { fetchAcrSheet } from "../_data/sheet-client";
 import { AcrCardActions, CONTEXT_COLOR, OWN_COLOR, pctTxt, useAcr } from "./acr-context";
@@ -303,16 +304,18 @@ type SheetRead = { sheet: AcrDistSheet | null } | { failed: true };
 const HOVER_INTENT_MS = 150;
 
 /** The 분포 sheet of a tab: the first comes with the page, the others are read when their tab opens, takes the
- * focus (`load`) or holds the pointer (`point` / `unpoint`), once per page URL — the URL holds the filters the
- * view was built from. */
-function useAcrSheet(first: AcrDistSheet | null, key: string | null) {
+ * focus (`load`) or holds the pointer (`point` / `unpoint`), once per page URL and read of the page — the URL holds
+ * the filters the view was built from, and a page read again once the service week moved is a new answer for the
+ * same URL (useServiceWeekRead: the sheets read on the answer before are read again, review r3-4). */
+export function useAcrSheet(first: AcrDistSheet | null, key: string | null) {
   const search = useSearchParams().toString();
+  const page = `${search}\n${useServiceWeekRead() ?? ""}`;
   const [reads, setReads] = useState<Record<string, SheetRead>>({});
   const asked = useRef(new Set<string>());
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const load = useCallback(
     (k: string) => {
-      const id = `${search}\n${k}`;
+      const id = `${page}\n${k}`;
       if (k === first?.key || asked.current.has(id)) return;
       asked.current.add(id);
       fetchAcrSheet(search, k).then(
@@ -323,13 +326,13 @@ function useAcrSheet(first: AcrDistSheet | null, key: string | null) {
         },
       );
     },
-    [search, first],
+    [page, search, first],
   );
   useEffect(() => {
     if (key) load(key);
   }, [load, key]);
   useEffect(() => () => clearTimeout(timer.current), []);
-  const read: SheetRead | undefined = key === null ? undefined : key === first?.key ? { sheet: first } : reads[`${search}\n${key}`];
+  const read: SheetRead | undefined = key === null ? undefined : key === first?.key ? { sheet: first } : reads[`${page}\n${key}`];
   const point = (k: string) => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => load(k), HOVER_INTENT_MS);
@@ -337,7 +340,7 @@ function useAcrSheet(first: AcrDistSheet | null, key: string | null) {
   const unpoint = () => clearTimeout(timer.current);
   const retry = () => {
     if (key === null) return;
-    setReads(({ [`${search}\n${key}`]: _failed, ...m }) => m);
+    setReads(({ [`${page}\n${key}`]: _failed, ...m }) => m);
     load(key);
   };
   return { read, load, point, unpoint, retry };

@@ -28,9 +28,23 @@ vi.mock("./_shell/nav-pending", () => ({
   RnNavPendingProvider: ({ children }: { children: ReactNode }) => children,
   RnNavMain: ({ children }: { children: ReactNode }) => children,
 }));
+// The service week (2026-11-02): the layout starts the read and hands the promise on without waiting for it.
+const wk = vi.hoisted(() => ({ reads: 0, next: null as null | (() => Promise<unknown>) }));
+vi.mock("@/lib/service-week-server", () => ({
+  readServiceWeek: () => {
+    wk.reads += 1;
+    return wk.next ? wk.next() : new Promise(() => {});
+  },
+}));
+vi.mock("@/components/service-week/provider", () => ({
+  RnServiceWeekProvider: function RnServiceWeekProvider({ children }: { children: ReactNode }) {
+    return children;
+  },
+}));
 
 const { default: RenewalLayout, generateMetadata } = await import("./layout");
 const { RnSidebar } = await import("./_shell/rn-sidebar");
+const { RnServiceWeekProvider } = await import("@/components/service-week/provider");
 
 function user(role: User["role"], menuGroups: User["menuGroups"] = null): User {
   return { id: "u1", email: `${role}@example.test`, role, scope: { all: true }, operator: "global", menuGroups } as User;
@@ -58,11 +72,37 @@ async function render(pathname: string, u: User | null) {
 beforeEach(() => {
   req.pathname = "/ko/renewal/dashboard";
   req.user = null;
+  wk.reads = 0;
+  wk.next = null;
 });
 
 describe("renewal layout", () => {
   it("sends a visitor without a session to login", async () => {
     await expect(render("/ko/renewal/dashboard", null)).rejects.toThrow("REDIRECT:/ko/login");
+    expect(wk.reads).toBe(0);
+  });
+
+  it("hands the shell's provider the service week read without waiting for it", async () => {
+    // the read never settles: a layout that waited for it would never return
+    const out = await render("/ko/renewal/dashboard", user("country"));
+    expect(wk.reads).toBe(1);
+    const provider = find(out, RnServiceWeekProvider);
+    expect(provider).not.toBeNull();
+    expect(provider!.props.week).toBeInstanceOf(Promise);
+    // this shell shows the site notes: the provider reads them with a Website page's site picks (review r1-7)
+    expect(provider!.props.notes).toBe(true);
+    // the page sits inside it, with the sidebar
+    expect(find(provider!.props.children as ReactNode, RnSidebar)).not.toBeNull();
+  });
+
+  it("the provider's promise settles to the screen's answer, and to null when the read fails", async () => {
+    const view = { state: "ok", week: { start: "2026-10-05", end: "2026-10-11", month: 10, nth: 2 }, delay: null, checkedAt: null, recordedAt: null, notes: [] };
+    wk.next = () => Promise.resolve(view);
+    const ok = find(await render("/ko/renewal/dashboard", user("country")), RnServiceWeekProvider)!;
+    await expect(ok.props.week).resolves.toEqual(view);
+    wk.next = () => Promise.reject(new Error("503 service_week_unavailable"));
+    const failed = find(await render("/ko/renewal/dashboard", user("country")), RnServiceWeekProvider)!;
+    await expect(failed.props.week).resolves.toBeNull();
   });
 
   it("guards like the (dash) layout: a role outside the Global viewers gets no-access", async () => {

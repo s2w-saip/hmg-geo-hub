@@ -26,6 +26,7 @@ from itertools import combinations
 from typing import Any
 
 from bff.access import BRANDS, reader_scope
+from bff.hub_stores import service_week
 from bff.screens import screen, split_context
 from bff.screens._competitors import competitor_value_of
 from bff.screens._convert import Exact, delta1, exact, pct1_or_null, rank_avg
@@ -33,6 +34,7 @@ from bff.screens._convert import round1 as _exact_round1
 from bff.screens._js import js_round
 from bff.screens._period import kst_today, period_caption, to_period_delta_view
 from bff.screens._sort import locale_compare, table_orders
+from bff.screens._week import period_echo
 
 OWN_KEY = "__own"
 KPI_TABS = ("exposure", "sov", "favorability", "first-rank")
@@ -878,11 +880,10 @@ def own_label_of(filters: dict) -> str:
     return ", ".join(own) if own else "HMG"
 
 
-def period_of(filters: dict) -> dict | None:
-    """dateFrom..dateTo when a period is set (cumulative), None = latest round snapshot."""
-    if not filters.get("dateFrom") and not filters.get("dateTo"):
-        return None
-    return {"from": filters.get("dateFrom"), "to": filters.get("dateTo")}
+def period_of(filters: dict, week: Any = None) -> dict | None:
+    """dateFrom..dateTo when a period is set (cumulative), None = latest round snapshot. Its end is the service week's
+    last day at the latest, as the reads take it; a period after the week is None (screens._week.period_echo)."""
+    return period_echo(filters.get("dateFrom"), filters.get("dateTo"), week)
 
 
 def per_answer_line(period: Any, filters: dict, today: str | None) -> dict | None:
@@ -905,8 +906,8 @@ def per_answer_line(period: Any, filters: dict, today: str | None) -> dict | Non
     return to_period_delta_view(results, vctx)
 
 
-def page_payload(filters: dict) -> dict:
-    return {"ownLabel": own_label_of(filters), "period": period_of(filters)}
+def page_payload(filters: dict, week: Any = None) -> dict:
+    return {"ownLabel": own_label_of(filters), "period": period_of(filters, week)}
 
 
 def tab_value_payload(kpi: str, sub: Any = None, fp: Any = None) -> dict:
@@ -1341,9 +1342,9 @@ async def _body_brands(md, filters, ctx) -> list[dict]:
 
 @screen("mention/rn-page")
 async def rn_page(q) -> dict:
-    """Header values: 당사 label and the selected period (URL → filters)."""
+    """Header values: 당사 label and the selected period (URL → filters), up to the service week's last day."""
     _, filters, _ = _begin(q)
-    return page_payload(filters)
+    return page_payload(filters, await service_week.current_or_503())
 
 
 @screen("mention/rn-asof")

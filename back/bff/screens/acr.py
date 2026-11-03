@@ -25,6 +25,7 @@ from fastapi import HTTPException
 
 from bff import api
 from bff.access import reader_scope
+from bff.hub_stores import service_week
 from bff.screens import screen, split_context
 from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters, to_catalog_rows
@@ -32,6 +33,7 @@ from bff.screens._js import is_num, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens.overview import is_transient
 from bff.screens._sort import locale_compare, sort_by, table_orders
+from bff.screens._week import period_echo
 from bff.screens.sources import source_query
 
 # ── JS helpers ───────────────────────────────────────────────────────────────
@@ -815,10 +817,12 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
 
 @screen("acr/renewal-header")
 async def renewal_header(q) -> dict:
-    """The renewal ACR page header (outside the data Suspense): the period pill. No reads."""
+    """The renewal ACR page header (outside the data Suspense): the period pill, its end the service week's last day at
+    the latest as the reads take it (no days for a period after the week). No Gold read."""
     _, sp = split_context(q)
     st = page_state(sp, read_standard_filters(sp, reader_scope()))
-    return {"period": st["period"], "dateFrom": st["dateFrom"], "dateTo": st["dateTo"]}
+    period = period_echo(st["dateFrom"], st["dateTo"], await service_week.current_or_503()) or {}
+    return {"period": st["period"], "dateFrom": period.get("from"), "dateTo": period.get("to")}
 
 
 @screen("acr/renewal")

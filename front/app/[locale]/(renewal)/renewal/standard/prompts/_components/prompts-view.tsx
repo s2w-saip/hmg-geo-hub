@@ -431,6 +431,8 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
         }
         panel={panel}
         rail={<RnFilterRail count={picked.length} />}
+        // the list covers every round (the header's 수집 기간): the service week's notes take it, not the week (review r1-13)
+        notesPeriod={period}
       >
         <RnTabs
           className="self-start"

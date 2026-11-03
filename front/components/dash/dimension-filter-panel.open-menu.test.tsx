@@ -83,7 +83,7 @@ const { DimensionFilterPanel } = await import("@/components/dash/dimension-filte
 /** 글로벌(월요일 귀속) 회차 격자. */
 const GLOBAL = ["2026-08-31", "2026-09-07", "2026-09-14"];
 
-function render(over: { selectableDates?: string[] } = {}): string {
+function render(over: { selectableDates?: string[]; latestAnchorDay?: string } = {}): string {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <DimensionFilterPanel onlyGroups={["time"]} {...over} />
@@ -185,8 +185,10 @@ describe("축 on · 회차 0개 기간", () => {
 
 describe("비활성 프리셋의 사유가 접근 이름에 실린다", () => {
   it("창에 회차가 없는 프리셋은 aria-label 에 사유가 붙는다", () => {
-    // 최신 회차가 09-14 뿐인 목록 → '주간' 창(오늘 기준)에 회차가 없다.
-    const c = content(render({ selectableDates: ["2026-01-05"] }));
+    // 회차가 01-05 뿐인데 끝점 E 가 03-01 → '주간'(02-23~03-01) 창에 회차가 없다.
+    // (종전에는 E 없이 '오늘' 끝점으로 이 상태를 만들었다. 서비스 기준 주(2026-11-02)부터 E 가 없으면
+    //  마지막 회차가 끝점이라 그 창에는 늘 회차가 있다 — time-preset-week.test.ts.)
+    const c = content(render({ selectableDates: ["2026-01-05"], latestAnchorDay: "2026-03-01" }));
     expect(c).toMatch(/aria-label="[^"]*이 기간에는 측정 회차가 없습니다[^"]*"/);
   });
 });
@@ -260,5 +262,157 @@ describe("프로젝트 지면 조합 — 달력 배선", () => {
     expect(cells(renderProject({ selectableDates: GLOBAL }))).toEqual(
       cells(render({ selectableDates: GLOBAL })),
     );
+  });
+});
+
+// 서비스 기준 주(2026-11-02): 회차 목록이 없는 종전 경로의 날짜 입력은 아무 날이나 고를 수 있었다. 이제 기준 주 끝을
+// 넘지 않는다(시작일은 고른 종료일도 넘지 않는다). 기준 주를 모르면(셸 공급자 없음) 종전 그대로다.
+describe("서비스 기준 주 — (dash) 날짜 입력의 상한", () => {
+  const WEEK = { state: "ok" as const, week: { start: "2026-10-05", end: "2026-10-11", month: 10, nth: 2 }, delay: null, checkedAt: null, recordedAt: null, notes: [] };
+  const dateInputs = (html: string) => [...content(html).matchAll(/<input[^>]*type="date"[^>]*>/g)].map((m) => m[0]);
+
+  it("기준 주 끝이 두 입력의 상한이다", async () => {
+    const ServiceWeekContext = (await import("@/components/service-week/provider")).serviceWeekContext();
+    SEARCH = "";
+    const html = renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <ServiceWeekContext.Provider value={{ initial: Promise.resolve(WEEK), latest: WEEK, applies: true, surface: "global" }}>
+          <DimensionFilterPanel onlyGroups={["time"]} />
+        </ServiceWeekContext.Provider>
+      </NextIntlClientProvider>,
+    );
+    const inputs = dateInputs(html);
+    expect(inputs).toHaveLength(2);
+    for (const input of inputs) expect(input).toContain('max="2026-10-11"');
+  });
+
+  it("기준 주를 모르면 종전대로 상한이 없다", () => {
+    SEARCH = "";
+    for (const input of dateInputs(render())) expect(input).not.toContain("max=");
+  });
+});
+
+// 서비스 기준 주 — 칩 · 직접 선택이 보이는 기간(리뷰 r1-15). BFF 는 기준 주 뒤의 `to` 를 기준 주 끝까지만 읽고(Context.create)
+// 머리글도 그렇게 말하는데, 칩과 직접 선택은 URL 원 범위(2026-09-28 ~ 2026-10-25)를 찍었다. 이제 읽는 기간을 찍고
+// 고른 기간은 title 에 싣는다. URL 은 고른 그대로다(기준 주가 넘어가면 같은 링크가 더 보인다).
+describe("서비스 기준 주 — (dash) 칩 · 직접 선택이 보이는 기간", () => {
+  const WEEK = { state: "ok" as const, week: { start: "2026-10-05", end: "2026-10-11", month: 10, nth: 2 }, delay: null, checkedAt: null, recordedAt: null, notes: [] };
+  const CUT_TITLE = "고른 기간 2026-09-28 ~ 2026-10-25 중 서비스 기준 주의 끝(2026-10-11)까지 보입니다.";
+  const textOf = (html: string) => html.replace(/<[^>]*>/g, "");
+  async function renderWeek(search: string, over: { selectableDates?: string[] } = {}): Promise<string> {
+    const ServiceWeekContext = (await import("@/components/service-week/provider")).serviceWeekContext();
+    SEARCH = search;
+    return renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <ServiceWeekContext.Provider value={{ initial: Promise.resolve(WEEK), latest: WEEK, applies: true, surface: "global" }}>
+          <DimensionFilterPanel onlyGroups={["time"]} {...over} />
+        </ServiceWeekContext.Provider>
+      </NextIntlClientProvider>,
+    );
+  }
+  /** 기간 칩(트리거 버튼) 하나. */
+  const chipOf = (html: string) => /<button[^>]*class="facet-chip[\s\S]*?<\/button>/.exec(html)?.[0] ?? "";
+
+  it("칩은 읽는 기간을 찍고 고른 기간을 title 에 싣는다", async () => {
+    const chip = chipOf(await renderWeek("time=2026-09-28..2026-10-25"));
+    expect(textOf(chip)).toContain("2026-09-28 ~ 2026-10-11");
+    expect(textOf(chip)).not.toContain("2026-10-25");
+    expect(chip).toContain(`title="${CUT_TITLE}"`);
+  });
+
+  it("종료일 입력은 읽는 날을 담는다(제 상한을 넘는 값이 없다)", async () => {
+    const to = [...content(await renderWeek("time=2026-09-28..2026-10-25")).matchAll(/<input[^>]*type="date"[^>]*>/g)].map((m) => m[0])[1];
+    expect(to).toContain('value="2026-10-11"');
+    expect(to).toContain('max="2026-10-11"');
+  });
+
+  it("축 on: 직접 선택 범위와 달력의 끝도 읽는 기간이다", async () => {
+    const c = content(await renderWeek("time=2026-09-28..2026-10-25", { selectableDates: ["2026-09-28", "2026-10-05"] }));
+    const custom = /<div class="flex items-center gap-2 text-\[11px\] tabular-nums text-muted-foreground"[^>]*>[\s\S]*?<\/div>/.exec(c)?.[0] ?? "";
+    expect(textOf(custom)).toBe("2026-09-28~2026-10-11");
+    expect(custom).toContain(`title="${CUT_TITLE}"`);
+    expect(c).toMatch(/<button[^>]*data-day="2026-10-11"[^>]*aria-pressed="true"/);
+    expect(c).toMatch(/<button[^>]*data-day="2026-10-25"[^>]*aria-pressed="false"/);
+  });
+
+  it("기준 주 안의 기간 · 기준 주 뒤에서 시작하는 기간은 고른 그대로, title 없음", async () => {
+    for (const [search, shown] of [
+      ["time=2026-09-28..2026-10-09", "2026-09-28 ~ 2026-10-09"],
+      ["time=2026-10-12..2026-11-01", "2026-10-12 ~ 2026-11-01"],
+    ]) {
+      const chip = chipOf(await renderWeek(search));
+      expect(textOf(chip)).toContain(shown);
+      expect(chip).not.toContain("서비스 기준 주의 끝");
+    }
+  });
+
+  it("기준 주를 모르면(셸 공급자 없음) 종전대로 고른 그대로다", () => {
+    SEARCH = "time=2026-09-28..2026-10-25";
+    const chip = chipOf(render());
+    expect(textOf(chip)).toContain("2026-09-28 ~ 2026-10-25");
+    expect(chip).not.toContain("서비스 기준 주의 끝");
+  });
+
+  // 첫 그림(리뷰 r3-6, 2026-11-03): 셸은 첫 effect 에서야 기준 주를 안다. 그래서 서버 렌더와 브라우저의 첫 렌더에서 칩이
+  // URL 기간(… ~ 10-25)을 찍었다 — 같은 화면의 머리글은 기준 주까지 읽은 기간인데. 칩은 그때 레이아웃이 읽은 기준 주로
+  // 자르고(페이지와 함께 흘러 들어온다), 그 읽기를 아직 모르면 고른 그대로 찍는다. 칩만 그 읽기를 기다린다.
+  it("첫 그림(서버 렌더)도 레이아웃이 읽은 기준 주로 자른다 — 모르면 고른 그대로", async () => {
+    const { RnServiceWeekProvider } = await import("@/components/service-week/provider");
+    const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
+    const first = (week: Promise<typeof WEEK | null>) => {
+      SEARCH = "time=2026-09-28..2026-10-25";
+      return chipOf(
+        renderToStaticMarkup(
+          <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+            <RnServiceWeekProvider week={week}>
+              <DimensionFilterPanel onlyGroups={["time"]} />
+            </RnServiceWeekProvider>
+          </NextIntlClientProvider>,
+        ),
+      );
+    };
+    const chip = first(settled(WEEK));
+    expect(textOf(chip)).toContain("2026-09-28 ~ 2026-10-11");
+    expect(textOf(chip)).not.toContain("2026-10-25");
+    expect(chip).toContain(`title="${CUT_TITLE}"`);
+    for (const week of [new Promise<typeof WEEK | null>(() => {}), settled(null)]) {
+      expect(textOf(first(week))).toContain("2026-09-28 ~ 2026-10-25");
+      expect(first(week)).not.toContain("서비스 기준 주의 끝");
+    }
+  });
+});
+
+// 기준 주에 묶이지 않는 화면(리뷰 r3-8, 2026-11-03): GA4 화면은 GA4 의 마지막 날까지 읽는다. 셸은 거기서도 기준 주를
+// 알지만(`latest`) 그 끝을 날짜 선택에 주지 않는 것은 `applies` 하나뿐인데, 그것을 지키는 시험이 없었다.
+describe("서비스 기준 주 — (dash) 기준 주에 묶이지 않는 화면(GA4)은 제 끝을 쓴다", () => {
+  const WEEK = { state: "ok" as const, week: { start: "2026-10-05", end: "2026-10-11", month: 10, nth: 2 }, delay: null, checkedAt: null, recordedAt: null, notes: [] };
+  const textOf = (html: string) => html.replace(/<[^>]*>/g, "");
+  const chipOf = (html: string) => /<button[^>]*class="facet-chip[\s\S]*?<\/button>/.exec(html)?.[0] ?? "";
+  async function renderGa4(search: string): Promise<string> {
+    const ServiceWeekContext = (await import("@/components/service-week/provider")).serviceWeekContext();
+    SEARCH = search;
+    return renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <ServiceWeekContext.Provider value={{ initial: Promise.resolve(WEEK), latest: WEEK, applies: false, surface: null }}>
+          <DimensionFilterPanel onlyGroups={["time"]} latestAnchorDay="2026-10-25" />
+        </ServiceWeekContext.Provider>
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it("날짜 입력에 기준 주 상한이 없고, 주간은 화면의 마지막 날(10-25)에서 끝난다", async () => {
+    // 주간 = 10-19 ~ 10-25(기준 주의 10-05 ~ 10-11 이 아니다)
+    const c = content(await renderGa4("time=2026-10-19..2026-10-25"));
+    expect(c).toMatch(/data-preset="weekly"[^>]*aria-checked="true"|aria-checked="true"[^>]*data-preset="weekly"/);
+    for (const input of c.match(/<input[^>]*type="date"[^>]*>/g) ?? []) expect(input).not.toContain('max="2026-10-11"');
+  });
+
+  it("기준 주 뒤의 기간은 칩과 종료일 입력에 고른 그대로다", async () => {
+    const html = await renderGa4("time=2026-10-01..2026-10-31");
+    expect(textOf(chipOf(html))).toContain("2026-10-01 ~ 2026-10-31");
+    expect(html).not.toContain("서비스 기준 주의 끝");
+    const to = (content(html).match(/<input[^>]*type="date"[^>]*>/g) ?? [])[1];
+    expect(to).toContain('value="2026-10-31"');
+    expect(to).not.toContain("max=");
   });
 });

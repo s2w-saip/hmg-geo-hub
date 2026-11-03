@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { canAccessRoute } from "@/lib/auth/route-policy";
 import { throwForPage } from "@/lib/hgh/errors";
 import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
+import { answerKey } from "@/lib/service-week-server";
 import { loadPromptsScreens } from "./_data/server";
 import { StandardPromptReadonlyList } from "./_components/prompt-list-readonly";
 import { AuditHistoryView } from "./_components/audit-history-view";
@@ -72,6 +73,9 @@ export default async function StandardPromptsPage({
         <TabsContent value="catalog" className="mt-0">
           <SectionCard title={t("count", { count: catalog.count })}>
             <StandardPromptReadonlyList
+              // 목록이 첫 카탈로그를 상태로 들고 있다: 서비스 기준 주가 넘어가 셸이 페이지를 다시 읽으면(router.refresh)
+              // 새 답으로 다시 마운트하고, 같은 답이면 그대로 둔다(review r2-7)
+              key={answerKey(catalog)}
               remote={{ initial: catalog }}
               scopeAll={scope.all}
               scopeRole={session.user.role}

@@ -179,10 +179,30 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('Entity role credentials can connect to the operations DB')
+    # Service week job role (manage.py sync-service-week): its table on the data server only.
+    week_writer = await asyncpg.connect(config['service_week'], timeout=5)
+    try:
+        await week_writer.fetchval('SELECT count(*) FROM catalog.current_service_week')
+        try:
+            await week_writer.execute('SELECT 1 FROM catalog.prompt LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Service week role reads beyond its table')
+    finally:
+        await week_writer.close()
+    try:
+        forbidden = await asyncpg.connect(config['service_week_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Service week credentials can connect to the operations DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
                       'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied',
                       'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied',
                       'source_override':'correction_tables','source_override_operations_access':'denied',
                       'interest':'interest_lists','interest_operations_access':'denied',
-                      'entity_role':'role_tables','entity_role_operations_access':'denied'}))
+                      'entity_role':'role_tables','entity_role_operations_access':'denied',
+                      'service_week':'service_week_table','service_week_operations_access':'denied'}))

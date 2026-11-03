@@ -255,3 +255,20 @@ describe("presetWindowKst — 프리셋 원본 창 (KST 문자열 산술)", () =
     );
   });
 });
+
+describe("presetWindowKst — 서비스 기준 주 상한 (2026-11-02)", () => {
+  // 기준 주 = 2026-10-05(월) ~ 10-11(일), 오늘 = 2026-11-02. 손계산 리터럴.
+  it("끝점 E 가 없으면 오늘이 아니라 기준 주 끝이 끝점이다", () => {
+    expect(presetWindowKst("weekly", null, null, "2026-11-02", "2026-10-11")).toEqual({ from: "2026-10-05", to: "2026-10-11" });
+  });
+
+  it("E 가 기준 주 뒤면 기준 주 끝으로 당긴다", () => {
+    expect(presetWindowKst("weekly", "2026-10-19", null, "2026-11-02", "2026-10-11")).toEqual({ from: "2026-10-05", to: "2026-10-11" });
+    expect(presetWindowKst("yearly", "2026-10-19", null, "2026-11-02", "2026-10-11")).toEqual({ from: "2025-10-11", to: "2026-10-11" });
+  });
+
+  it("E 가 기준 주 안이면 그대로, 상한이 없으면 종전대로", () => {
+    expect(presetWindowKst("weekly", "2026-10-09", null, "2026-11-02", "2026-10-11")).toEqual({ from: "2026-10-03", to: "2026-10-09" });
+    expect(presetWindowKst("weekly", null, null, "2026-11-02", null)).toEqual({ from: "2026-10-27", to: "2026-11-02" });
+  });
+});

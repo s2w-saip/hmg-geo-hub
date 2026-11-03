@@ -12,27 +12,33 @@ import fixture from "./acr-body.fixture.json";
 // back/bff/tests/test_screens_acr.py; test_front_fixture_is_current keeps it in step): a snapshot and a
 // period of two rounds.
 
+const nav = vi.hoisted(() => ({ search: "" }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
   usePathname: () => "/ko/renewal/standard/ai-funnel/acr",
-  useSearchParams: () => new URLSearchParams(""),
+  useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
 const { RnFilterRuntime } = await import("@/app/[locale]/(renewal)/renewal/_components/filter-runtime");
 const { RnOverviewFilters } = await import("@/app/[locale]/(renewal)/renewal/_components/overview-filters");
 const { RnAcrBody } = await import("./acr-body");
+const { serviceWeekContext } = await import("@/components/service-week/provider");
+const ServiceWeek = serviceWeekContext();
 
 const bodies = fixture as unknown as Record<"snapshot" | "period", RnAcrInput>;
 const T = ko.renewal.acr;
 
-function render(input: RnAcrInput): string {
+// `week`: the shell's service week (components/service-week/provider.tsx); none = a page rendered on its own
+function render(input: RnAcrInput, week: import("@/components/service-week/provider").ServiceWeekContextValue | null = null): string {
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-      <RnFilterRuntime>
-        <RnOverviewFilters props={{ stage: "acr", scope: { all: true } }} savedFilters={{ page: "acr", userId: "test", initial: [] }}>
-          <RnAcrBody input={input} />
-        </RnOverviewFilters>
-      </RnFilterRuntime>
+      <ServiceWeek.Provider value={week}>
+        <RnFilterRuntime>
+          <RnOverviewFilters props={{ stage: "acr", scope: { all: true } }} savedFilters={{ page: "acr", userId: "test", initial: [] }}>
+            <RnAcrBody input={input} />
+          </RnOverviewFilters>
+        </RnFilterRuntime>
+      </ServiceWeek.Provider>
     </NextIntlClientProvider>,
   );
 }
@@ -71,6 +77,47 @@ describe("renewal ACR body: what the page counts, and when", () => {
     const filtered = render(empty(bodies.snapshot));
     expect(filtered).toContain(T.states.noResultDesc);
     expect(filtered).not.toContain("이 기간에는 ACR 측정 회차가 없거나");
+  });
+  it("a snapshot under a service week with no Global round: 측정 없음 and the week, no filter advice", () => {
+    // review r1-19 (2026-11-03): the BFF reads no snapshot of a surface the week holds no round of (Context.create);
+    // the page said '국가·언어·카탈로그 조건을 줄여 보세요' with a reset that cannot bring a round back
+    const week = (global: boolean) => {
+      const view = { state: "ok" as const, week: { start: "2026-07-27", end: "2026-08-02", month: 7, nth: 5 }, delay: null, checkedAt: null, recordedAt: null, rounds: { global, website: true }, notes: [] };
+      return { initial: Promise.resolve(view), latest: view, applies: true, surface: "global" as const, sites: "", notesFor: "" };
+    };
+    const empty = (filtered: boolean): RnAcrInput => ({ ...bodies.snapshot, measured: false, filtered, view: null });
+    for (const filtered of [true, false]) {
+      const html = render(empty(filtered), week(false));
+      expect(html).toContain("측정 없음");
+      expect(html).toContain("서비스 기준 주 7월 5주차(7/27~8/2)에는 Global 측정 회차가 없습니다.");
+      expect(html).not.toContain(T.states.noResultDesc);
+      expect(html).not.toContain(T.states.reset);
+    }
+    // a Global round in the week, or a period in the URL: the page's own states
+    expect(render(empty(true), week(true))).toContain(T.states.noResultDesc);
+    nav.search = "time=2026-07-01..2026-07-31";
+    try {
+      expect(render({ ...empty(true), period: true }, week(false))).toContain("이 기간에는 ACR 측정 회차가 없거나");
+    } finally {
+      nav.search = "";
+    }
+  });
+  it("a period that starts after the service week: the week names it, not the period or the filters (review r3-12)", () => {
+    // review r3-12 (2026-11-03): the BFF reads no round of a period after the week (Context.create), and the page said
+    // '이 기간에는 ACR 측정 회차가 없거나 … 조건을 줄여 보세요' with a reset of every filter
+    const view = { state: "ok" as const, week: { start: "2026-07-27", end: "2026-08-02", month: 7, nth: 5 }, delay: null, checkedAt: null, recordedAt: null, rounds: { global: true, website: true }, notes: [] };
+    const week = { initial: Promise.resolve(view), latest: view, applies: true, surface: "global" as const, sites: "", notesFor: "" };
+    const empty: RnAcrInput = { ...bodies.period, measured: false, filtered: true, period: true, view: null };
+    nav.search = "time=2026-08-03..2026-08-09";
+    try {
+      const html = render(empty, week);
+      expect(html).toContain("아직 보이지 않는 기간");
+      expect(html).toContain("고른 기간(2026-08-03 ~ 2026-08-09)은 서비스 기준 주 7월 5주차(7/27~8/2) 뒤입니다.");
+      expect(html).not.toContain("이 기간에는 ACR 측정 회차가 없거나");
+      expect(html).not.toContain(T.states.reset);
+    } finally {
+      nav.search = "";
+    }
   });
 });
 

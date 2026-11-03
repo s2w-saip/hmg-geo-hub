@@ -2,7 +2,9 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { CalendarX2 } from "lucide-react";
 import { RnDeltaChip, RnInfoTip, RnInfoTipItem, RnSkeleton, RnTag, cx, rnHighlightState } from "@/components/renewal-ui";
+import { RnServiceWeekEmpty } from "@/components/service-week/no-round";
 import type { RnDelta } from "../_data/screen-types";
 import { useMention } from "./mention-context";
 
@@ -16,6 +18,20 @@ export function StateCard({ icon, title, desc, children }: { icon: ReactNode; ti
       {desc ? <p className="m-0 max-w-[600px] text-rn-13 text-rn-muted">{desc}</p> : null}
       {children}
     </section>
+  );
+}
+
+/**
+ * A page whose read came back empty: its own state (`children`), or on a snapshot of a surface the service week holds
+ * no round of the '측정 없음' card naming the week, with no filter advice — no filter brings a round back (review
+ * r1-19, components/service-week/no-round.tsx); likewise on a period that starts after the week, of which the BFF
+ * reads no round (review r3-12).
+ */
+export function EmptyRead({ children }: { children: ReactNode }) {
+  return (
+    <RnServiceWeekEmpty render={(n) => <StateCard icon={<CalendarX2 className="size-5" aria-hidden />} title={n.title} desc={n.desc} />}>
+      {children}
+    </RnServiceWeekEmpty>
   );
 }
 

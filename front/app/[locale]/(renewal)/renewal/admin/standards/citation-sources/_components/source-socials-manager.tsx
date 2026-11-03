@@ -9,6 +9,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { History, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { useServedState } from "@/hooks/use-served-state";
 import {
   RnButton,
   RnCard,
@@ -50,7 +51,8 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
   const tip = useRnTruncTip();
   const errorText = useListError();
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
-  const [listing, setListing] = useState(initial);
+  // Gold's latest round is held to the service week: the page's new answer once it moved replaces the list (review r2-7)
+  const [listing, setListing] = useServedState(initial);
   const [saving, setSaving] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
 

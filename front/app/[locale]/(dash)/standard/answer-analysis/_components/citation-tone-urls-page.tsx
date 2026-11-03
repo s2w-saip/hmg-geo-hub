@@ -34,17 +34,24 @@ type ToneUrlsProps = {
   byDomain: boolean;
   /** null = 서버가 세지 않았다(B045): 같은 필터로 이미 받은 카운트를 다시 쓴다. */
   counts: ToneCounts | null;
+  /** 이 답이 읽힌 서비스 기준 주의 끝(citation/tone-urls `weekEnd`). 없음 = 기준 주 없음. */
+  weekEnd?: string | null;
 };
 
 const NO_COUNTS: ToneCounts = { positive: null, negative: null };
 const COUNTS_STORE_PREFIX = "hgh.toneUrlCounts:";
 
-/** 카운트를 정하는 URL 부분(필터). 탭·검색·페이지·커서·도메인 보기는 빼고 정렬한다. */
-export function toneCountsKey(search: string): string {
+/**
+ * 카운트를 정하는 URL 부분(필터). 탭·검색·페이지·커서·도메인 보기는 빼고 정렬한다.
+ * 서비스 기준 주(2026-11-02)의 끝도 키에 든다: 기간 없는 URL 은 회차를 적지 않으므로, 기준 주가 넘어간 뒤
+ * 같은 필터로 기억한 옛 주의 카운트가 새 주의 목록 옆에 그려지지 않게 한다. 기준 주가 없으면 필터만이다.
+ */
+export function toneCountsKey(search: string, weekEnd?: string | null): string {
   const p = new URLSearchParams(search);
   for (const k of ["tone", "q", "page", "by", "cursor"]) p.delete(k);
   p.sort();
-  return p.toString();
+  const filters = p.toString();
+  return weekEnd ? `${filters}|week=${weekEnd}` : filters;
 }
 
 function countsStore(): Storage | null {
@@ -77,10 +84,15 @@ export function recallToneCounts(key: string): ToneCounts | null {
   }
 }
 
-/** 그릴 카운트: 서버 값, 없으면(null) 같은 필터로 받은 마지막 값, 그것도 없으면 "—". */
-function useShownToneCounts(served: ToneCounts | null): ToneCounts {
+/**
+ * 그릴 카운트: 서버 값, 없으면(null) 같은 필터·같은 기준 주로 받은 마지막 값, 그것도 없으면 "—".
+ * 기준 주는 그 답이 읽힌 주(`weekEnd`)다. 셸이 보이는 주(useServiceWeekEnd)는 기준 주가 넘어가면 화면을 다시 읽기
+ * 전에 먼저 바뀌어, 그 사이에 옛 주의 카운트를 새 주의 키로 기억했다(review r3-5). 갱신 화면(citation-subpages)도
+ * 이 규칙을 쓴다.
+ */
+export function useShownToneCounts(served: ToneCounts | null, weekEnd?: string | null): ToneCounts {
   const sp = useSearchParams();
-  const key = toneCountsKey(sp.toString());
+  const key = toneCountsKey(sp.toString(), weekEnd);
   const last = useRef<{ key: string; counts: ToneCounts } | null>(null);
   if (served && typeof served.positive === "number" && typeof served.negative === "number") {
     last.current = { key, counts: served };
@@ -103,8 +115,8 @@ export function CitationToneUrlsPage(props: ToneUrlsProps) {
   );
 }
 
-function ToneUrlsView({ tone, page, q, byDomain, counts: served }: ToneUrlsProps) {
-  const counts = useShownToneCounts(served);
+function ToneUrlsView({ tone, page, q, byDomain, counts: served, weekEnd }: ToneUrlsProps) {
+  const counts = useShownToneCounts(served, weekEnd);
   const t = useTranslations("answerAnalysis.citations.v2.toneUrlsPage");
   const tKpi = useTranslations("answerAnalysis.mentions.kpi");
   const tCat = useTranslations("citationCategories");

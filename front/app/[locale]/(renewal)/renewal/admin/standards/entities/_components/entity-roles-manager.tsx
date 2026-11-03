@@ -29,6 +29,7 @@ import {
   useRnToast,
   useRnTruncTip,
 } from "@/components/renewal-ui";
+import { formatAsOfDate } from "@/lib/as-of-date";
 import { RnFilterSplit } from "../../../../_components/filter-split";
 import { LIST_TD as TD, RnFilterPanel, RnFilterRail, RnListPager, RnRadioAxis, RnSortHead } from "../../../../_components/prompt-list";
 import { HistorySection, LIST_TH_PLAIN, ListPills } from "../../citation-sources/_components/source-lists-kit";
@@ -263,7 +264,7 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
                       <td className={cx(TD, "text-rn-12 text-rn-ink-2")}>{row.kind ? t(`kind.${row.kind}`) : <span className="text-rn-faint">—</span>}</td>
                       <td className={cx(TD, "text-right text-rn-12 text-rn-ink-2 tabular-nums")}>{nf.format(row.answers)}</td>
                       <td className={cx(TD, "text-right text-rn-12 text-rn-ink-2 tabular-nums")}>{nf.format(row.mentions)}</td>
-                      <td className={cx(TD, "text-rn-12 text-rn-ink-2 tabular-nums")}>{row.firstSeen?.slice(0, 10) ?? "—"}</td>
+                      <td className={cx(TD, "text-rn-12 text-rn-ink-2 tabular-nums")}>{row.firstSeen ? formatAsOfDate(row.firstSeen) : "—"}</td>
                       <td className={TD} data-hub-entity-role={row.role}>
                         {row.role === "competitor" ? <span className="text-rn-12 text-rn-muted">{t("role.competitor")}</span> : <RnTag>{roleLabel(row.role, row.brand)}</RnTag>}
                       </td>

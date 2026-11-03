@@ -17,6 +17,7 @@ from bff import api
 from bff.gold_reader.compare_logic import range_windows
 from bff.screens._convert import filter_notices
 from bff.screens._period import resolve_request_compare_period_shape
+from bff.screens._week import period_echo
 
 COMPARE_METRIC_TO_API = {"visibility": "visibility", "share": "share_of_voice", "favorability": "sentiment",
                          "position": "position", "mentionsPerAnswer": "mentions_per_answer",
@@ -129,14 +130,28 @@ async def fetch_period_compare_api(filters: dict, common: dict, req: dict) -> li
 
 # A Δ next to a period total compares it with the period just before — the window /v1/kpi/compare compares
 # 당사 with — for every row and tile, not only 당사 (2026-10-29 metric review R3: rivals, engines and the
-# Citation categories took their last round's Δ).
-def prev_period_filters(filters: dict) -> dict | None:
-    """The same filters on the period just before the URL period; None outside period mode."""
+# Citation categories took their last round's Δ). Both stop at the service week: the windows, the kind and the days
+# are those of the URL period as the reads take it (screens._week.period_echo; 2026-11-02 review: for 09-28..10-25
+# under the week 10-05..10-11 당사 compared with 09-14..09-27 and every other row with 08-31..09-27).
+def prev_period_filters(filters: dict, week: Any) -> dict | None:
+    """The same filters on the period just before the URL period, its end the service week's last day at the latest
+    (`week`: screens._week.period_week); None outside period mode, and for a period after the week, which holds no
+    round (kpi/compare compares nothing there: no_data)."""
 
     if not has_closed_period(filters):
         return None
-    shape = resolve_request_compare_period_shape(filters["dateFrom"], filters["dateTo"])
-    w = range_windows(shape["kind"], date.fromisoformat(filters["dateFrom"]), date.fromisoformat(filters["dateTo"]))
+    period = period_echo(filters["dateFrom"], filters["dateTo"], week)
+    if period is None:
+        return None
+    shape = resolve_request_compare_period_shape(period["from"], period["to"])
+    w = range_windows(shape["kind"], date.fromisoformat(period["from"]), date.fromisoformat(period["to"]))
     if w is None or w.prev is None:
         return None
     return {**filters, "dateFrom": w.prev.lo.isoformat(), "dateTo": w.prev.hi.isoformat()}
+
+
+def period_shape(filters: dict, week: Any) -> dict:
+    """The compare shape (anchor axis: month -> week -> window) of the URL period as the reads take it: the kind
+    kpi/compare is asked for, its days and labels. A period after the service week is none (its compare: no_data)."""
+    period = period_echo(filters.get("dateFrom"), filters.get("dateTo"), week) or {}
+    return resolve_request_compare_period_shape(period.get("from"), period.get("to"))

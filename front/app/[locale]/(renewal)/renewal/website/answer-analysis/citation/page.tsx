@@ -22,6 +22,7 @@ import {
 } from "../../../_components/overview-filters";
 import type { RnCitationInput, RnWebsiteCitationScreen } from "../../../standard/answer-analysis/citation/_components/citation-input";
 import { RnCitationBody } from "../../../standard/answer-analysis/citation/_components/citation-body";
+import { RnCitationPeriodText, type RnCitationHeader } from "../../../standard/answer-analysis/citation/_components/citation-period";
 import { websiteCitationFilterProps } from "./_shared/website-citation-filters";
 
 // Renewal Website › Citation (2026-10-30, W3) — the renewal Citation body on the website surface, next to
@@ -29,6 +30,7 @@ import { websiteCitationFilterProps } from "./_shared/website-citation-filters";
 // for the header date, `citation/filter-bar` for the panel, `citation/website` for the body) with
 // ctx.surface=website; the body reads `citation/website` with ctx.variant=renewal: the renewal model on the
 // website data, the 공식(당사) tile and the URL funnel (the original's URL rate cards, per engine and with Δ).
+// The header's period comes from `citation/renewal-header` (no Gold read); only a snapshot reads `citation/as-of`.
 
 export const maxDuration = 120;
 
@@ -54,11 +56,13 @@ export default async function RenewalWebsiteCitationPage({
   if (!session) throw new UnauthorizedError();
   const sp = await searchParams;
   const query: ScreenQuery = { ...sp, "ctx.surface": "website", "ctx.role": session.user.role };
-  // URL state: any citation filter axis set (empty result vs no measurement), the picked period
+  // URL state: any citation filter axis set (empty result vs no measurement), the picked period (the body's mode; the
+  // header prints the BFF's period: citation-period.tsx)
   const filtered = WEBSITE_CITATION_AXES.some((k) => sp[k] != null && sp[k] !== "");
   const range = parseTimeRange(sp.time);
   const period = range?.from || range?.to ? { from: range.from ?? null, to: range.to ?? null } : null;
-  const asOf = screenGet<CitationAsOfScreen>("citation/as-of", query).then((m) => m.asOf);
+  const head = period ? screenGet<RnCitationHeader>("citation/renewal-header", query) : null;
+  const asOf = head ? null : screenGet<CitationAsOfScreen>("citation/as-of", query).then((m) => m.asOf);
 
   const header = (
     <RnPageHeader
@@ -76,13 +80,7 @@ export default async function RenewalWebsiteCitationPage({
             {tOv("cadence")}
             <span aria-hidden className="h-3 w-px bg-rn-line-2" />
             <span className="font-semibold tabular-nums text-rn-ink-2">
-              {period ? (
-                t("periodRange", { from: period.from ?? "…", to: period.to ?? "…" })
-              ) : (
-                <Suspense fallback="…">
-                  <AsOfText asOf={asOf} />
-                </Suspense>
-              )}
+              <Suspense fallback="…">{head ? <RnCitationPeriodText head={head} /> : <AsOfText asOf={asOf!} />}</Suspense>
             </span>
           </RnPill>
         </>

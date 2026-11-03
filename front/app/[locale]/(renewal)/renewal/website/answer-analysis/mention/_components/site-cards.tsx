@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, use, useState, type ReactNode } from "react";
+import { Suspense, use, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight } from "lucide-react";
 import { RnBasisChip, RnCard, RnCardHead, RnSkeleton, RnSparkline, RnToneChip, cx, type RnTone } from "@/components/renewal-ui";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { MentionViewScreen, SummaryDelta } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/mention-screen";
+import { useServiceWeekReadState } from "@/components/service-week/provider";
 import { posTxt } from "../../../../standard/answer-analysis/mention/_components/mention-context";
 import { InfoTip, useDegradedText } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
 import { KPI_QUESTION, TabDelta, useMentionPage } from "../../../../standard/answer-analysis/mention/_components/mention-tabs";
@@ -73,7 +74,8 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
   const dg = useDegradedText();
   const locale = useLocale();
   const { input, kpi, view, setKpi, showBrands } = useMentionPage();
-  const [missingOpen, setMissingOpen] = useState(false);
+  // the sheet reads its list on the page's answer: the page read again (the service week moved) closes it (review r3-4)
+  const [missingOpen, setMissingOpen] = useServiceWeekReadState(false);
   const vm = use(cards);
   const asOf = pageAsOf ? use(pageAsOf) : null;
   if (!vm.summary) return null;

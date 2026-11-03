@@ -196,3 +196,96 @@ describe("달력 주 비교(WoW)는 직접 선택·옛 공유 URL 로 계속 도
     expect(shape.days).toBe(31);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// 서비스 기준 주(2026-11-02) — 프리셋은 기준 주 끝(maxDay)을 넘지 않는다
+// ════════════════════════════════════════════════════════════════════════════
+//
+// 모든 화면이 기준 주까지만 보이므로 프리셋의 끝점도 그 주를 넘지 않는다. 끝점 E 가 없으면
+// (ACR · Website Prompts: 화면이 latestAnchorDay 를 주지 않는다) 마지막 선택 가능 회차, 그것도
+// 없으면 기준 주 끝이 끝점이다 — 브라우저의 오늘이 아니다. 기대값은 손계산 리터럴이다.
+// 기준 주 = 2026-10-05(월) ~ 2026-10-11(일). 오늘 = 2026-11-02(월).
+
+describe("서비스 기준 주 상한 (maxDay)", () => {
+  const TODAY = "2026-11-02";
+  const NOW = new Date("2026-11-02T03:00:00Z");
+  const enc = (v: ReturnType<typeof resolveTimeRangeView>, preset: TimePreset) => v.presets.find((p) => p.preset === preset)?.encoded ?? null;
+
+  it("끝점 E 가 없으면 마지막 회차가 끝점이다 (브라우저의 오늘 아님) — ACR 의 2026-11-02 결함", () => {
+    const v = resolveTimeRangeView({ value: null, selectableDates: ["2026-09-28", "2026-10-05"], todayKst: TODAY, now: NOW });
+    expect(enc(v, "weekly")).toBe("2026-09-29..2026-10-05");
+    expect(enc(v, "monthly")).toBe("2026-09-06..2026-10-05");
+    expect(enc(v, "yearly")).toBe("2025-10-05..2026-10-05");
+  });
+
+  it("E 가 기준 주 뒤면(옛 화면 응답) 기준 주 끝에서 멈춘다", () => {
+    const v = resolveTimeRangeView({
+      value: null,
+      endDay: "2026-10-19",
+      selectableDates: ["2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19"],
+      maxDay: "2026-10-11",
+      todayKst: TODAY,
+      now: NOW,
+    });
+    expect(enc(v, "weekly")).toBe("2026-10-05..2026-10-11");
+    expect(enc(v, "monthly")).toBe("2026-09-12..2026-10-11");
+  });
+
+  it("E 가 기준 주 안이면 그대로다", () => {
+    const v = resolveTimeRangeView({ value: null, endDay: "2026-10-09", selectableDates: ["2026-10-02", "2026-10-09"], maxDay: "2026-10-11", todayKst: TODAY, now: NOW });
+    expect(enc(v, "weekly")).toBe("2026-10-03..2026-10-09");
+  });
+
+  it("회차 목록이 없는 종전 경로도 기준 주 끝이 끝점이다", () => {
+    const v = resolveTimeRangeView({ value: null, endDay: null, selectableDates: [], maxDay: "2026-10-11", todayKst: TODAY, now: NOW });
+    expect(enc(v, "weekly")).toBe("2026-10-05..2026-10-11");
+    expect(enc(v, "biweekly")).toBe("2026-09-28..2026-10-11");
+    expect(enc(v, "monthly")).toBe("2026-09-12..2026-10-11");
+    expect(enc(v, "yearly")).toBe("2025-10-11..2026-10-11");
+    const late = resolveTimeRangeView({ value: null, endDay: "2026-10-30", maxDay: "2026-10-11", todayKst: TODAY, now: NOW });
+    expect(enc(late, "weekly")).toBe("2026-10-05..2026-10-11");
+  });
+
+  it("어느 경로든 모든 프리셋의 끝이 기준 주 끝 이하다", () => {
+    for (const selectableDates of [[], ["2026-10-05", "2026-10-12"]]) {
+      const v = resolveTimeRangeView({ value: null, endDay: "2026-10-30", selectableDates, maxDay: "2026-10-11", todayKst: TODAY, now: NOW });
+      for (const p of v.presets) if (p.encoded) expect(p.encoded.split("..")[1] <= "2026-10-11").toBe(true);
+    }
+  });
+
+  it("기준 주를 모르면(공급자 없음 · Project) 종전 경로는 종전대로 오늘이 끝점이다", () => {
+    const v = resolveTimeRangeView({ value: null, endDay: null, selectableDates: [], todayKst: TODAY, now: NOW });
+    expect(enc(v, "weekly")!.split("..")[1]).toBe(presetRange("weekly", NOW).to);
+  });
+});
+
+// 서비스 기준 주 — 보이는 범위 `shown`(리뷰 r1-15). BFF(Context.create)는 기준 주 뒤의 `to` 를 기준 주 끝까지만 읽으므로
+// 칩 · 직접 선택 · 달력이 보이는 끝도 그 날에서 멈춘다. URL · 커밋값 `range` 는 고른 그대로다(기준 주가 넘어가면 같은
+// URL 이 더 보인다). 시작이 기준 주 뒤면 읽을 회차가 없어 고른 그대로 둔다(화면은 '측정 없음' · 회차 0개 안내).
+describe("서비스 기준 주 — 보이는 범위 (shown)", () => {
+  const TODAY = "2026-11-02";
+  const NOW = new Date("2026-11-02T03:00:00Z");
+  const view = (value: string, maxDay: string | null, selectableDates: string[] = ["2026-09-28", "2026-10-05"]) =>
+    resolveTimeRangeView({ value, selectableDates, maxDay, todayKst: TODAY, now: NOW });
+
+  it("기준 주 뒤의 끝은 기준 주 끝에서 멈추고, 커밋값은 고른 그대로다", () => {
+    const v = view("2026-09-28..2026-10-25", "2026-10-11");
+    expect(v.shown).toEqual({ from: "2026-09-28", to: "2026-10-11" });
+    expect(v.range).toEqual({ from: "2026-09-28", to: "2026-10-25" });
+    expect(view("..2026-10-25", "2026-10-11").shown).toEqual({ to: "2026-10-11" });
+  });
+
+  it("회차 목록이 없는 종전 경로도 같다", () => {
+    expect(view("2026-09-28..2026-10-25", "2026-10-11", []).shown).toEqual({ from: "2026-09-28", to: "2026-10-11" });
+  });
+
+  it("기준 주 안의 끝 · 열린 끝 · 기준 주 뒤에서 시작하는 기간은 고른 그대로다", () => {
+    expect(view("2026-09-28..2026-10-11", "2026-10-11").shown).toEqual({ from: "2026-09-28", to: "2026-10-11" });
+    expect(view("2026-09-28..", "2026-10-11").shown).toEqual({ from: "2026-09-28" });
+    expect(view("2026-10-12..2026-11-01", "2026-10-11").shown).toEqual({ from: "2026-10-12", to: "2026-11-01" });
+  });
+
+  it("기준 주를 모르면 종전대로 고른 그대로다", () => {
+    expect(view("2026-09-28..2026-10-25", null).shown).toEqual({ from: "2026-09-28", to: "2026-10-25" });
+  });
+});

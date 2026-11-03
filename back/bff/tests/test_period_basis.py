@@ -158,9 +158,10 @@ class MentionPeriod(unittest.TestCase):
     period Δ "직전 회차 대비". A rival's Δ next to its period total compares it with the period before."""
 
     def test_the_previous_period_is_the_compare_window(self):
-        prev = mention_data.prev_period_filters({"dateFrom": "2026-09-21", "dateTo": "2026-10-05", "geography": ["US"]})
+        # no service week (no HUB data DB): the URL period as it is (bff.tests.test_screens_service_week.PeriodBefore)
+        prev = mention_data.prev_period_filters({"dateFrom": "2026-09-21", "dateTo": "2026-10-05", "geography": ["US"]}, None)
         self.assertEqual(prev, {"dateFrom": "2026-09-06", "dateTo": "2026-09-20", "geography": ["US"]})
-        self.assertIsNone(mention_data.prev_period_filters({"dateFrom": None, "dateTo": None}))
+        self.assertIsNone(mention_data.prev_period_filters({"dateFrom": None, "dateTo": None}, None))
 
     def hero(self):
         return {"pct": 76.6, "delta": {"value": 1.4}, "points": []}

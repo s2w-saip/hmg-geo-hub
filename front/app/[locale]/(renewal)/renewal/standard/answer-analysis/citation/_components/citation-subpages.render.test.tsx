@@ -15,6 +15,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { RnCitationPromptsView, RnCitationToneUrlsView } = await import("./citation-subpages");
+const { rememberToneCounts, toneCountsKey } = await import("@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-tone-urls-page");
+const ServiceWeekContext = (await import("@/components/service-week/provider")).serviceWeekContext();
 
 const render = (node: ReactNode) =>
   renderToStaticMarkup(
@@ -41,6 +43,47 @@ describe("renewal Citation sub pages", () => {
     expect(html).not.toContain("총 5646개");
     expect(html).toContain("3,330");
     expect(html).toContain(ko.renewal.citation.sub.colCitations);
+  });
+
+  // The service week (2026-11-02): tab counts kept for the same filters before the week advanced are not drawn
+  // beside the new week's rows (an in-page move gets counts null from the BFF). The week is the one the page's answer
+  // was read under (citation/tone-urls `weekEnd`), not the shell's, which moves first (review r3-5).
+  it("tone URL tab counts kept under the previous service week are not drawn under the new one", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", { sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) } });
+    try {
+      const next = { state: "ok" as const, week: { start: "2026-10-12", end: "2026-10-18", month: 10, nth: 3 }, delay: null, checkedAt: null, recordedAt: null, notes: [] };
+      const under = (end: string) =>
+        render(
+          // the shell already shows the next week: the counts follow the answer's
+          <ServiceWeekContext.Provider value={{ initial: Promise.resolve(next), latest: next, applies: true, surface: "global" }}>
+            <RnCitationToneUrlsView tone="positive" q="" byDomain={false} counts={null} weekEnd={end} page={{ rows: [], total: 1, page: 1, pageSize: 50, nextCursor: null, win: { page: 1, pages: 1, from: 1, to: 1 } } as never} />
+          </ServiceWeekContext.Provider>,
+        );
+      rememberToneCounts(toneCountsKey("page=100&cursor=4950", "2026-10-11"), { positive: 348, negative: 665 });
+      expect(under("2026-10-18")).toContain("긍정 답변에 인용된 URL(—)");
+      expect(under("2026-10-11")).toContain("긍정 답변에 인용된 URL(348)");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("an empty list of a snapshot the service week holds no round of says 측정 없음 and the week, not the conditions", () => {
+    // review r1-19 (2026-11-03): the BFF reads no snapshot of a surface the week holds no round of, and the lists said
+    // '조건에 맞는 프롬프트가 없습니다' — no condition brings a round back
+    const view = (global: boolean) => ({ state: "ok" as const, week: { start: "2026-07-27", end: "2026-08-02", month: 7, nth: 5 }, delay: null, checkedAt: null, recordedAt: null, rounds: { global, website: true }, notes: [] });
+    const empty = { rows: [], total: 0, page: 1, pageSize: 50, nextCursor: null, win: { page: 1, pages: 1, from: 0, to: 0 } } as never;
+    const under = (global: boolean, node: ReactNode) =>
+      render(<ServiceWeekContext.Provider value={{ initial: Promise.resolve(view(global)), latest: view(global), applies: true, surface: "global" }}>{node}</ServiceWeekContext.Provider>);
+    const prompts = <RnCitationPromptsView tab="owned" q="SUV" ownedCount={null} uncitedCount={null} page={empty} />;
+    const tones = <RnCitationToneUrlsView tone="positive" q="" byDomain={false} counts={null} page={empty} />;
+    const said = "서비스 기준 주 7월 5주차(7/27~8/2)에는 Global 측정 회차가 없습니다.";
+    expect(under(false, prompts)).toContain(said);
+    expect(under(false, prompts)).not.toContain(ko.answerAnalysis.citations.v2.promptsPage.empty);
+    expect(under(false, tones)).toContain(said);
+    // a round of the surface in the week: the list's own words
+    expect(under(true, prompts)).toContain(ko.answerAnalysis.citations.v2.promptsPage.empty);
+    expect(under(true, tones)).not.toContain(said);
   });
 
   it("tone URL list: range, total and pager with thousands separators", () => {

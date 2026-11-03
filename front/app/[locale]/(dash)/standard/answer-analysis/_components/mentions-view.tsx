@@ -59,6 +59,7 @@ import {
   type TrendSeriesSplit,
   type TypeShareView,
 } from "../_data/mention-screen";
+import { useServiceWeekRead, useServiceWeekReadState } from "@/components/service-week/provider";
 import { composeGroups } from "./filter-groups";
 import { BrandRankTable } from "./brand-rank-table";
 import { SignalPromptsDialog } from "./signal-prompts-dialog";
@@ -232,13 +233,15 @@ export function MentionsView({
 /**
  * The head-to-head target the user picked: the screen recomputes the comparison and the type stack
  * for it (mention/view-compare through /api/scope/mention-compare). Until it answers, the previous
- * comparison stays on screen.
+ * comparison stays on screen (useShownCompare). Kept per URL and read of the page: a page read again
+ * once the service week moved reads the pick again (useServiceWeekRead, review r3-4).
  */
 function usePickedCompare(source: CompareSource, manualTarget: string | null): ComparePartsScreen | null {
   const searchParams = useSearchParams();
   const spStr = searchParams?.toString() ?? "";
+  const read = useServiceWeekRead();
   const [picked, setPicked] = useState<{ key: string; parts: ComparePartsScreen } | null>(null);
-  const reqKey = manualTarget == null ? null : `${spStr}|${manualTarget}`;
+  const reqKey = manualTarget == null ? null : `${spStr}|${read ?? ""}|${manualTarget}`;
   const last = useRef<string | null>(null);
   useEffect(() => {
     if (reqKey == null || manualTarget == null) return;
@@ -260,6 +263,25 @@ function usePickedCompare(source: CompareSource, manualTarget: string | null): C
   return reqKey != null && picked?.key === reqKey ? picked.parts : null;
 }
 
+/**
+ * The head-to-head shown: the screen's own until a target is picked, then the picked target's once read; until it
+ * answers, the comparison shown before stays. Not one shown before the page was read again (the service week moved):
+ * that is the week before's, so the new answer's own shows until the pick is read for it (review r3-4).
+ */
+export function useShownCompare(
+  vm: Pick<MentionViewScreen, "comparison" | "typeShare">,
+  source: CompareSource,
+  manualTarget: string | null,
+): ComparePartsScreen {
+  const read = useServiceWeekRead();
+  const picked = usePickedCompare(source, manualTarget);
+  const own = { comparison: vm.comparison ?? null, typeShare: vm.typeShare ?? null };
+  const shown = useRef<{ read: number | null; parts: ComparePartsScreen }>({ read, parts: own });
+  if (manualTarget == null || (!picked && shown.current.read !== read)) shown.current = { read, parts: own };
+  else if (picked) shown.current = { read, parts: picked };
+  return shown.current.parts;
+}
+
 export function MentionsSummarySection({
   vm,
   compareSource,
@@ -270,17 +292,15 @@ export function MentionsSummarySection({
   const t = useTranslations("answerAnalysis.mentions");
   const tRoot = useTranslations("answerAnalysis");
   const { data, subKpis, prevSubKpis, prevBasisDate, degraded } = vm;
-  // 감정·유형 세그먼트 드릴다운 대상 (null = 닫힘).
-  const [signal, setSignal] = useState<{ signal: string; label: string } | null>(null);
+  // 감정·유형 세그먼트 드릴다운 대상 (null = 닫힘). 그 목록은 이 답 위에서 읽었다: 기준 주가 넘어가 페이지를 다시
+  // 읽으면 닫는다(review r3-4).
+  const [signal, setSignal] = useServiceWeekReadState<{ signal: string; label: string } | null>(null);
   // 4.1.7: 헤드투헤드 비교 대상 빠른 전환 — 이미 측정된 외부 브랜드 중 하나를
   // 직접 골라 비교한다. null = 기본(지정 브랜드 or 자동 SOV 1위, 화면이 고른다).
   const [manualTarget, setManualTarget] = useState<string | null>(null);
-  const picked = usePickedCompare(compareSource, manualTarget);
-  // 고른 대상의 결과가 오기 전에는 직전 결과(기본 또는 직전 선택)를 그대로 둔다.
-  const shown = useRef<ComparePartsScreen>({ comparison: vm.comparison ?? null, typeShare: vm.typeShare ?? null });
-  if (manualTarget == null) shown.current = { comparison: vm.comparison ?? null, typeShare: vm.typeShare ?? null };
-  else if (picked) shown.current = picked;
-  const { comparison, typeShare } = shown.current;
+  // 고른 대상의 결과가 오기 전에는 직전 결과(기본 또는 직전 선택)를 그대로 둔다(기준 주가 넘어가 다시 읽은 페이지는
+  // 새 답의 기본, useShownCompare).
+  const { comparison, typeShare } = useShownCompare(vm, compareSource, manualTarget);
   const deltas = vm.deltas;
 
   if (!data) {

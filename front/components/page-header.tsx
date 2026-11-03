@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { ServiceWeekChip } from "@/components/service-week/chip";
 
+// The title row ends with the service-week chip (2026-11-02: the week the page's Gold rounds are held to); it renders
+// nothing outside the (dash) shell's provider and on a page not held to the week (Project, GA4 days, the Admin screens).
 export function PageHeader({
   eyebrow,
   title,
@@ -36,6 +39,7 @@ export function PageHeader({
           {meta ? (
             <div className="text-sm font-medium text-muted-foreground">{meta}</div>
           ) : null}
+          <ServiceWeekChip />
         </div>
         {description ? (
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">

@@ -41,6 +41,31 @@ vi.mock("@/components/dash/gnb-rail", () => ({
     return null;
   },
 }));
+// The service week (2026-11-02): read behind its own module (never through the fetches counted here), handed to the
+// shell's provider unawaited; the delay notice and the '측정 없음' of a week with no round of the page's surface sit at
+// the top of main (review r2-12).
+const wk = vi.hoisted(() => ({ reads: 0 }));
+vi.mock("@/lib/service-week-server", () => ({
+  readServiceWeek: () => {
+    wk.reads += 1;
+    return new Promise(() => {});
+  },
+}));
+vi.mock("@/components/service-week/provider", () => ({
+  RnServiceWeekProvider: function RnServiceWeekProvider({ children }: { children: unknown }) {
+    return children;
+  },
+}));
+vi.mock("@/components/service-week/notes", () => ({
+  ServiceWeekDelayNotice: function ServiceWeekDelayNotice() {
+    return null;
+  },
+}));
+vi.mock("@/components/service-week/no-round", () => ({
+  ServiceWeekNoRoundNotice: function ServiceWeekNoRoundNotice() {
+    return null;
+  },
+}));
 
 interface World {
   profile: ProfileRow | null;
@@ -67,6 +92,9 @@ vi.mock("@/lib/db/repositories/request-cache", () => ({
 const { default: DashLayout } = await import("./layout");
 const { GnbRail } = await import("@/components/dash/gnb-rail");
 const { Sidebar, SidebarMobileTrigger } = await import("@/components/dash/sidebar");
+const { RnServiceWeekProvider } = await import("@/components/service-week/provider");
+const { ServiceWeekDelayNotice } = await import("@/components/service-week/notes");
+const { ServiceWeekNoRoundNotice } = await import("@/components/service-week/no-round");
 
 const PID = "c0000000-0000-4000-8000-000000000003";
 const json = (status: number, body: unknown) =>
@@ -236,6 +264,28 @@ describe("GNB rail, SNB routes and route guard: same for the same account on bot
     w.cur = { profile: null, project: null, membership: null };
     expect(await render("legacy")).toEqual({ thrown: "REDIRECT:/ko/login" });
     expect(await render("api")).toEqual({ thrown: "REDIRECT:/ko/login" });
+  });
+});
+
+describe("service week (2026-11-02)", () => {
+  it("the shell's provider gets the read unawaited; the delay notice and the week's '측정 없음' head main, above the page", async () => {
+    w.cur = { profile: ACCOUNTS.hqMenus, project: null, membership: null };
+    req.pathname = "/ko/dashboard";
+    wk.reads = 0;
+    vi.stubEnv("HGH_SOURCE_SESSION", "api");
+    // the read never settles: a layout that waited for it would never return
+    const tree = await DashLayout({ children: "PAGE", params: Promise.resolve({ locale: "ko" }) });
+    expect(wk.reads).toBe(1);
+    const provider = find(tree, RnServiceWeekProvider)!;
+    expect(provider.props.week).toBeInstanceOf(Promise);
+    expect(find(provider.props.children, GnbRail)).not.toBeNull();
+    const main = find(tree, "main")!;
+    const inner = (main.props.children as Found).props.children as unknown[];
+    expect((inner[0] as Found).type).toBe(ServiceWeekDelayNotice);
+    expect((inner[1] as Found).type).toBe(ServiceWeekNoRoundNotice);
+    expect(inner[2]).toBe("PAGE");
+    // only the session read reached the backend
+    expect(w.fetches).toEqual(["/v1/auth/me"]);
   });
 });
 

@@ -18,14 +18,21 @@ async def read(ctx):
     kind = ctx.q.get("kind", "window")
     if kind not in {"window", "calendarMonth", "calendarWeek", "cycle"}:
         raise HTTPException(422, "Unknown comparison kind")
-    end = date.fromisoformat(ctx.q["to"]) if ctx.q.get("to") else max(ctx.dates) if ctx.dates else None
+    # the service week: an end after it is its last day (meta.compare.windows never names a later day), and a period
+    # that starts after it, or a surface with no round in it to compare (kind cycle), compares nothing (no_data)
+    end = ctx.capped(date.fromisoformat(ctx.q["to"])) if ctx.q.get("to") else max(ctx.dates) if ctx.dates else None
     window = None
+    empty = False
     try:
         if end:
             start = date.fromisoformat(ctx.q["from"]) if ctx.q.get("from") else None
             if kind == "cycle":
                 latest = ctx.dates[0] if ctx.dates else None
+                if latest and ctx.week is not None and latest < ctx.week.start:
+                    latest, empty = None, True
                 window = logic.cycle_windows(latest, ctx.dates[1] if len(ctx.dates) > 1 else None) if latest else None
+            elif start and ctx.week is not None and start > ctx.week.end:
+                empty = True
             elif start:
                 window = logic.range_windows(kind, start, end)
             elif kind == "window":
@@ -37,7 +44,7 @@ async def read(ctx):
                 window = logic.calendar_months_of(end)
             else:
                 window = logic.calendar_weeks_of(end)
-            if window is None:
+            if window is None and not empty:
                 raise ValueError()
     except (ValueError, OverflowError):
         raise HTTPException(422, "Invalid comparison period") from None
@@ -53,14 +60,16 @@ async def read(ctx):
     scan_ctx = copy(ctx)
     scan_ctx.selected_dates = [d for d in ctx.dates if window and window.label_of(d)]
     for family, population in (("mention", "mentions"), ("citation", "citations")):
+        # the ledger reads dim_cycle itself, not ctx.dates: it stops at the service week too
         cycles = await ctx.conn.fetch("""SELECT c.*,EXISTS(SELECT 1 FROM gold.release_item ri
             WHERE ri.release_id=$4 AND ri.family='fact' AND ri.state='ready'
               AND ri.slice_key='cyc:'||c.cyc_key::text) AS in_release
             FROM gold.dim_cycle c WHERE c.surface=$1
               AND ($2::smallint IS NULL OR c.project_key=$2)
               AND (c.view_date IS NULL OR c.view_date<=$3::date)
-              AND (c.servable OR c.status<>0)""", ctx.sf, ctx.project_key,
-              datetime.now(ZoneInfo("Asia/Seoul")).date(), ctx.release["release_id"])
+              AND (c.servable OR c.status<>0)
+              AND ($5::date IS NULL OR c.round_date<=$5::date)""", ctx.sf, ctx.project_key,
+              datetime.now(ZoneInfo("Asia/Seoul")).date(), ctx.release["release_id"], ctx.week.end if ctx.week is not None else None)
         published = {lab: set() for lab in sums}
         for c in cycles:
             if c["hidden_scope"] in ((1, 3) if family == "mention" else (1, 2)):
@@ -97,7 +106,7 @@ async def read(ctx):
     for metric in metrics:
         family, unit = logic.METRIC_FAMILY[metric], logic.METRIC_UNIT[metric]
         lp, lc = ledgers[("prev", family)], ledgers[("cur", family)]
-        reason = logic.suppression_of(window, lp, lc) if window else "no_prev"
+        reason = logic.suppression_of(window, lp, lc) if window else "no_data" if empty else "no_prev"
         p, c = prev[metric], cur[metric]
         if metric == "position":
             p, c = p or {"sum": 0, "count": 0}, c or {"sum": 0, "count": 0}

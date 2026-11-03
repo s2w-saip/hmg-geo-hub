@@ -7,6 +7,9 @@ import { canAccessRoute } from "@/lib/auth/route-policy";
 import type { AllowedScope } from "@/lib/auth/types";
 import { screenGet, type ScreenQuery } from "@/lib/screen";
 import { throwForPage } from "@/lib/hgh/errors";
+import { parseTimeRange } from "@/components/dash/filter-encoding";
+import type { ServiceWeekPagePeriod } from "@/lib/service-week";
+import { answerKey } from "@/lib/service-week-server";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../_components/filter-runtime";
 import { loadSavedFilters } from "../../_components/saved-filters-server";
@@ -65,6 +68,12 @@ export default async function RenewalWebsitePromptsPage({
   // awaited in the body section; the page may fail on the options first
   list.catch(() => undefined);
   insights.catch(() => undefined);
+  // The rounds the list counts, first to last (every round with no 기간): the header's basis chip and, with no 기간, the
+  // service week's notes (review r1-13, 2026-11-03: the default view is no snapshot of the week, so its notes are those
+  // of its rounds). A 기간 gives the notes the URL range, as on the other pages: the lens reads every round of it, a
+  // site's round Gold left out among them (review r2-10)
+  const rounds = list.then(roundRange, () => null);
+  const notesPeriod = parseTimeRange(sp.time) ? undefined : rounds;
   const [t, tOv, props, saved] = await Promise.all([
     getTranslations("website.prompts"),
     getTranslations("dashboard.overview"),
@@ -87,7 +96,7 @@ export default async function RenewalWebsitePromptsPage({
                     {tOv("cadence")}
                     <span aria-hidden className="h-3 w-px bg-rn-line-2" />
                     <Suspense fallback={<RnSkeleton className="h-3 w-32" />}>
-                      <LensRounds list={list} />
+                      <LensRounds rounds={rounds} />
                     </Suspense>
                   </RnPill>
                 </>
@@ -97,6 +106,7 @@ export default async function RenewalWebsitePromptsPage({
           }
           panel={<RnOverviewFilterPanel axisHelp={{ engine: tw("engineHelp"), time: tw("timeHelp") }} hint={tw("noPickHint")} />}
           rail={<RnOverviewFilterRail />}
+          notesPeriod={notesPeriod}
         >
           <RnOverviewApplied />
           <RnBusyScope className="flex flex-col gap-4">
@@ -110,16 +120,18 @@ export default async function RenewalWebsitePromptsPage({
   );
 }
 
+/** The list's rounds (its lens's, oldest first) as a period: the first and the last day; null without a round. */
+function roundRange(v: WebsitePromptsPage): ServiceWeekPagePeriod {
+  const axis = v.roundAxis ?? [];
+  return axis.length ? { from: axis[0].slice(0, 10), to: axis[axis.length - 1].slice(0, 10) } : null;
+}
+
 // The header's basis chip (the other Website pages' 측정 회차 chip): the rounds the list's measured columns count —
 // the lens (기간 axis) or, unpicked, every round. The list's own read; its failure leaves the body to say so.
-async function LensRounds({ list }: { list: Promise<WebsitePromptsPage> }) {
+async function LensRounds({ rounds }: { rounds: Promise<ServiceWeekPagePeriod> }) {
   const tw = await getTranslations("renewal.website.prompts");
-  const axis = await list.then((v) => v.roundAxis).catch(() => null);
-  return (
-    <span className="font-semibold tabular-nums text-rn-ink-2">
-      {axis?.length ? tw("basisRounds", { from: axis[0].slice(0, 10), to: axis[axis.length - 1].slice(0, 10) }) : "—"}
-    </span>
-  );
+  const range = await rounds;
+  return <span className="font-semibold tabular-nums text-rn-ink-2">{range ? tw("basisRounds", range) : "—"}</span>;
 }
 
 // The original page's filter options (website/prompts-options): its 국가 · 언어 · 브랜드 lists and round calendar.
@@ -143,7 +155,8 @@ async function filterOptions(scope: AllowedScope, sp: SP, ctx: ScreenQuery, loca
   };
 }
 
-// A new server answer (the panel applied a pick) replaces the body's state: keyed by the query it answers.
+// A new server answer (the panel applied a pick) replaces the body's state: keyed by the query it answers, and by the
+// answer itself — the shell's re-read once the service week moved brings a new one to the same query (review r2-7).
 async function PromptsBody({ list, insights, locale, bodyKey }: { list: Promise<WebsitePromptsPage>; insights: Promise<WebsitePromptInsights>; locale: string; bodyKey: string }) {
   let initial: [WebsitePromptsPage, WebsitePromptInsights];
   try {
@@ -151,7 +164,7 @@ async function PromptsBody({ list, insights, locale, bodyKey }: { list: Promise<
   } catch (e) {
     throwForPage(e, locale);
   }
-  return <RnWebsitePrompts key={bodyKey} initial={initial[0]} initialInsights={initial[1]} />;
+  return <RnWebsitePrompts key={`${bodyKey}|${answerKey(...initial)}`} initial={initial[0]} initialInsights={initial[1]} />;
 }
 
 function keyOf(sp: SP): string {

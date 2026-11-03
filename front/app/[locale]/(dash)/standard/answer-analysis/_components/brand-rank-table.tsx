@@ -27,6 +27,7 @@ import { ColInfo } from "@/components/dash/col-info";
 import { dateStamp } from "@/lib/export/csv";
 import { downloadXlsx } from "@/lib/export/xlsx";
 import { cn } from "@/lib/utils";
+import { useServiceWeekReadState } from "@/components/service-week/provider";
 import type { MentionsBrandLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
 import type { BrandRowValues, BrandSortKey, BrandTableView } from "../_data/mention-screen";
 import { TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
@@ -82,7 +83,9 @@ export function BrandRankTable({
 
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  // 펼친 행의 드릴다운(프롬프트·인용 출처 목록, 행 상세)은 그 답 위에서 읽었다: 기준 주가 넘어가 페이지를 다시 읽으면
+  // 접는다(review r3-4)
+  const [expanded, setExpanded] = useServiceWeekReadState<string | null>(null);
   const [multi, setMulti] = useState(multiToggle && initialMulti);
 
   // 행과 화면 값(순번·일반·복수 언급 값)을 짝지어 둔다 — 정렬 순서는 이 배열의 인덱스다.

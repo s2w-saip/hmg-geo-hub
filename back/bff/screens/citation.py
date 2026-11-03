@@ -9,6 +9,7 @@ section's degraded flag; a 4xx reaches the page). The view-model rules are citat
 
 Screens (query = route context `ctx.*` + the page's URL params):
   citation/as-of            header pill date + filter bar competitor options   ctx.surface
+  citation/renewal-header   renewal header pill period (no Gold read)          ctx.surface, ctx.role
   citation/filter-bar       filter panel props (options, calendar)            ctx.surface
   citation/standard         /standard/.../citation body (ctx.variant=renewal: + the renewal model)
   citation/website          /website/.../citation body (ctx.variant=renewal: the renewal page)   ctx.role
@@ -31,21 +32,23 @@ from fastapi import HTTPException
 
 from bff import api
 from bff.access import reader_scope
+from bff.hub_stores import service_week
 from bff.screens import screen, split_context
 from bff.screens import citation_model as M
-from bff.screens._compare import fetch_period_compare_api, prev_period_filters
+from bff.screens._compare import fetch_period_compare_api, period_shape, prev_period_filters
 from bff.screens._convert import as_of_date, delta1
 from bff.screens._filters import (
     filter_dates_view, load_panel_options, read_project_custom_field_filters, read_project_custom_field_filters_raw,
     read_standard_filters, split_filter_values,
 )
-from bff.screens._period import kst_today, resolve_request_compare_period_shape, to_period_delta_view
+from bff.screens._period import kst_today, to_period_delta_view
 from bff.screens._query import analysis_query, is_uuid, js_trim, to_api_params, with_params
 from bff.screens._sort import code_unit_key
 from bff.screens._summary import provenance_of, summary_query, url_prompt_rates
 from bff.screens._trend import (
     overview_card_delta, overview_trend_values, split_trend_dims, to_standard_trend_buckets, trend_query,
 )
+from bff.screens._week import period_echo, period_week
 
 DEGRADE_LABEL = {"global": "standardCitations", "website": "websiteCitations", "project": "projectCitations"}
 WEBSITE_CITATION_GROUPS = ("geography", "language", "engine", "time", "source")
@@ -324,7 +327,7 @@ async def load_view(r: Reads) -> dict:
 async def load_deltas(r: Reads) -> dict:
     """loadCitationDeltas: the Overview card Δ (share trend) and the previous round's category totals. In
     period mode the values are period totals: every share (공식(HMG) too) compares with the period before."""
-    prev_filters = prev_period_filters(r.filters)
+    prev_filters = prev_period_filters(r.filters, await period_week(r.filters))
     if prev_filters is not None:
         before = Reads(prev_filters, r.ctx)
         (cur, _), (prev, _) = await asyncio.gather(degrade(r.sources()), degrade(before.sources()))
@@ -358,8 +361,9 @@ async def load_source_parts(r: Reads) -> dict:
 
 async def load_period_view(r: Reads, today: str | None) -> dict | None:
     """The month line: calendar month only (axis on: month -> week -> window), citations per answer;
-    a backend outage drops it, toPeriodDeltaView of the results."""
-    shape = resolve_request_compare_period_shape(r.filters.get("dateFrom"), r.filters.get("dateTo"))
+    a backend outage drops it, toPeriodDeltaView of the results. The shape is the period's as the reads take it
+    (_compare.period_shape: its end the service week's last day at the latest)."""
+    shape = period_shape(r.filters, await period_week(r.filters))
     if not shape.get("months"):
         return None
     results, _ = await degrade(fetch_period_compare_api(r.filters, r.common, {
@@ -404,7 +408,7 @@ async def load_own_share_line(r: Reads) -> dict:
     brand scope, not the 공식(HMG) category: on the website the two shares differ (2026-10-30: 24.9 % vs 61.7 %).
     Δ: the Overview card's (previous round, the share trend), in period mode the period before's own share. The
     share trend has no 출처 axis, so a source filter drops the line and the round Δ (as the card Δ, R4)."""
-    prev_filters = prev_period_filters(r.filters)
+    prev_filters = prev_period_filters(r.filters, await period_week(r.filters))
     filtered = bool(r.filters.get("sourceCategory"))
 
     async def line():
@@ -450,7 +454,7 @@ async def load_url_reach(r: Reads, deltas: asyncio.Future) -> dict:
     cur = url_funnel(cur_res)
     if not cur["measured"]:
         return {"status": "none"}
-    prev_filters = prev_period_filters(r.filters)
+    prev_filters = prev_period_filters(r.filters, await period_week(r.filters))
     basis: dict = {"basis": None, "date": None}
     if prev_filters is not None:
         before: Reads | None = Reads(prev_filters, r.ctx)
@@ -583,15 +587,29 @@ def renewal_vm(live: dict | None, deltas: dict, parts: dict, degraded: dict, sp:
 async def as_of(q) -> dict:
     """What the header pill and the filter bar read from the citation read (loadCitationsView): its round
     date (loadCitationsAsOf) and the competitor options of the main domains call. Global with the
-    ?competitor= picks, website without."""
+    ?competitor= picks, website without. `period`: the URL period the pill names, {from, to} as the reads take it (its
+    end the service week's last day at the latest; None = a snapshot, or a period after the week: no round). The
+    renewal pills print it from citation/renewal-header, which answers it without this read."""
     ctx, sp = split_context(q)
+    week = await service_week.current_or_503()
     if ctx.get("surface") == "website":
         filters, actx = website_context(sp, ctx.get("role"))
         view = await load_view(Reads(filters, actx))
     else:
         filters, actx, competitor = global_context(sp)
         view = await load_view(Reads(filters, actx, competitor))
-    return {"asOf": (view["live"] or {}).get("asOf"), "competitorOptions": view["competitorOptions"]}
+    return {"asOf": (view["live"] or {}).get("asOf"), "competitorOptions": view["competitorOptions"],
+            "period": period_echo(filters.get("dateFrom"), filters.get("dateTo"), week)}
+
+
+@screen("citation/renewal-header")
+async def renewal_header(q) -> dict:
+    """The renewal Citation pages' header pill in period mode (outside the data Suspense): citation/as-of's `period`
+    with no Gold read, as acr/renewal-header and mention/rn-page (review r2-13: from citation/as-of the pill waited for
+    the citation read, 1.4–12.7 s cold). The page's own URL read: the website one on ctx.surface=website."""
+    ctx, sp = split_context(q)
+    filters = website_context(sp, ctx.get("role"))[0] if ctx.get("surface") == "website" else global_context(sp)[0]
+    return {"period": period_echo(filters.get("dateFrom"), filters.get("dateTo"), await service_week.current_or_503())}
 
 
 @screen("citation/filter-bar")
@@ -736,8 +754,12 @@ async def prompts(q) -> dict:
 @screen("citation/tone-urls")
 async def tone_urls(q) -> dict:
     """The positive / negative URL sub page (loadToneUrlPage): rows, the tab counts (None = reuse the
-    shown ones on an in-page cursor / search move, ctx.client_nav=1), the page window."""
+    shown ones on an in-page cursor / search move, ctx.client_nav=1), the page window. `weekEnd`: the service week
+    the answer was read under, read before Gold is (the kept week only moves on: never one after the rows'). The page
+    keeps the counts it reuses under it — the week the shell shows moves on before the page is read again, and the
+    week before's counts were kept under the next week's name (review r3-5). Absent without a HUB data DB."""
     ctx, sp = split_context(q)
+    week = await service_week.current_or_503()
     filters, actx = sub_page_context(ctx, sp)
     tone = "negative" if one(sp.get("tone")) == "negative" else "positive"
     page_no = page_param(sp)
@@ -755,6 +777,8 @@ async def tone_urls(q) -> dict:
 
     got, _ = await degrade(_restartable_page(cursor, run))
     out: dict = {"tone": tone, "q": text, "byDomain": by_domain}
+    if week is not None:
+        out["weekEnd"] = week.end.isoformat()
     if not got:
         return {**out, "page": None, "counts": {"positive": None, "negative": None}}
     res, restarted = got

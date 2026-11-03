@@ -80,8 +80,19 @@ export function AnchorDateCalendar({
 
   const dates = selectableDates;
   const latest = dates.length > 0 ? dates[dates.length - 1] : todayKst;
-  // 처음 펼칠 때 보여 줄 달 — 선택된 종료일 > 시작일 > 목록의 최신 날짜 순.
-  const initial = parseDay(value.to ?? value.from ?? latest) ?? parseDay(todayKst)!;
+  // 처음 펼칠 때 보여 줄 달 — 선택된 종료일 > 시작일 > 목록의 최신 날짜 순이되, 목록이 있으면 회차가 있는 첫 달과
+  // 마지막 달 사이로 당긴다. 마지막 회차 뒤에서 끝나는 기간(서비스 기준 주 뒤까지 가는 URL · 저장 필터, 2026-11-02)
+  // 이면 모든 날이 비활성이고 '다음 달'도 막힌 달로 열렸다(리뷰 r1-14, RnRoundCalendar 와 같은 규칙).
+  const wanted = parseDay(value.to ?? value.from ?? latest) ?? parseDay(todayKst)!;
+  const firstRound = dates.length > 0 ? parseDay(dates[0]) : null;
+  const lastRound = dates.length > 0 ? parseDay(latest) : null;
+  const ord = (p: { y: number; m: number }) => p.y * 12 + p.m;
+  const initial =
+    lastRound && ord(wanted) > ord(lastRound)
+      ? lastRound
+      : firstRound && ord(wanted) < ord(firstRound)
+        ? firstRound
+        : wanted;
   const [cursor, setCursor] = useState<{ y: number; m: number }>({
     y: initial.y,
     m: initial.m,

@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
+from bff.hub_stores import service_week
+
 SURFACES = {"global": 1, "website": 2, "project": 3}
 BRANDS = {"hyundai": 1, "kia": 2, "genesis": 4, "hmg": 7}
 BRAND_NAMES = {1: "Hyundai", 2: "Kia", 4: "Genesis"}
@@ -51,7 +53,37 @@ class SQL:
         return f"${len(self.args)}{('::' + cast) if cast else ''}"
 
 
+def calendar_round(release: str, today: str) -> str:
+    """The round calendar's test of a cycle `c` (Context.dates): Gold serves it, no operator hid it, it is visible on
+    `today` (Korea's day) and its fact slice is ready in `release` (SQL expressions). shared/service-week asks it of the
+    service week (week_notes.ROUNDS_SQL), so the shell says '측정 없음' where the reads take no snapshot (review r4-2)."""
+    return (f"c.servable AND coalesce(c.hidden_scope,0)<>1 AND (c.view_date IS NULL OR c.view_date <= {today}) "
+            f"AND EXISTS (SELECT 1 FROM gold.release_item ri WHERE ri.release_id={release} AND ri.family='fact' "
+            f"AND ri.state='ready' AND ri.slice_key='cyc:' || c.cyc_key::text)")
+
+
+# A read's rounds, newest first: $1 surface, $2 project_key (None = every site), $3 today in Korea, $4 the release,
+# $5 the service week's last day (None = no cap)
+CALENDAR_SQL = f"""SELECT DISTINCT c.round_date
+    FROM gold.dim_cycle c
+    WHERE c.surface=$1 AND ($2::smallint IS NULL OR c.project_key=$2) AND {calendar_round("$4", "$3::date")}
+      AND ($5::date IS NULL OR c.round_date <= $5::date)
+    ORDER BY c.round_date DESC"""
+
+
 class Context:
+    """One read on Gold's pinned release with its filters bound.
+
+    The service week (hub_stores/service_week.py, decisions '발행 시점 판정' · '기준 주 세부', 2026-11-02) caps the global
+    and website reads here, so every caller is capped (readers.read, answers.detail, the Admin stores): `dates` stop at
+    the week's last day, a release build of a later round (or of a cycle the read does not see) is not read, a `to`
+    after it reads up to it and a `from` after it selects nothing, and a snapshot of a surface with no round in the
+    week is empty ('측정 없음'). The project surface, a Context built directly (tests) and a HUB data DB that is not
+    configured are not capped (`week` None).
+    Rule C4: a read of a Gold table that is no release item — Gold's report_value, publication, pub_cell and
+    pub_cell_web — binds round_date=ANY(ctx.dates) or the cyc_keys of those rounds; neither cap reaches it (a build or a
+    row with no cycle is kept), bff.tests.test_gold_service_week.RuleC4."""
+
     def __init__(self, conn: Any, q: Any) -> None:
         self.conn, self.q = conn, q
         self.surface = q.get("surface", "global")
@@ -66,6 +98,8 @@ class Context:
                 raise HTTPException(422, f"Unknown brand: {brand}")
             self.bits |= BRANDS[brand.lower()]
         self.bits = self.bits or 7
+        # the service week the read stops at (create() on the global and website surfaces), None = no cap
+        self.week: service_week.Week | None = None
         self.project_key: int | None = None
         self.release: dict = {}
         self.builds: dict[str, list[int]] = {}
@@ -81,8 +115,13 @@ class Context:
         self.catalog_prompts: list[int] | None = None
 
     @classmethod
-    async def create(cls, conn: Any, q: Any) -> Context:
+    async def create(cls, conn: Any, q: Any, *, capped: bool = True) -> Context:
+        """`capped` False: a read of no Gold round (keyword and social research, the project list) leaves the service
+        week out, so it never waits on or fails with the HUB data DB. On the global and website surfaces it reads no
+        round calendar either: its meta names no round (as_of None), never one after the week (review r2-4)."""
         self = cls(conn, q)
+        if capped and self.sf in (1, 2):
+            self.week = await service_week.current_or_503()
         signature = os.environ.get("HGH_GOLD_RULE_SIGNATURE") or None
         rows = await conn.fetch("""SELECT * FROM gold.active_release
             WHERE scope=$1 AND read_mode=$2 AND ($3::text IS NULL OR rule_signature=$3)
@@ -92,10 +131,18 @@ class Context:
         if len(rows) != 1:
             raise HTTPException(503, "Multiple Gold rule signatures; configure HGH_GOLD_RULE_SIGNATURE")
         self.release = dict(rows[0])
-        for row in await conn.fetch("""SELECT i.family,i.build_id,c.round_date FROM gold.release_item i
+        week_end = self.week.end if self.week is not None else None
+        for row in await conn.fetch("""SELECT i.family,i.build_id,i.slice_key,c.round_date FROM gold.release_item i
                 JOIN gold.build b USING(build_id)
                 LEFT JOIN gold.dim_cycle c ON i.slice_key='cyc:' || c.cyc_key::text
                 WHERE i.release_id=$1 AND i.state='ready' AND b.status='validated'""", self.release["release_id"]):
+            # a build of a round after the service week is not read, not even by the reads that bind builds without a
+            # date (filter options, the catalog, ACR coverage, an answer's detail); one of no cycle ('rpub:all',
+            # 'site:…') stays (rule C4). A cycle slice whose dim_cycle row the read does not see (Gold mid-reload, a
+            # state the HUB job refuses to judge) has no known round: not read either, as `dates` leave it out
+            if week_end is not None and (row["round_date"] > week_end if row["round_date"] is not None
+                                         else row["slice_key"].startswith("cyc:")):
+                continue
             self.builds.setdefault(row["family"], []).append(row["build_id"])
             if row["round_date"] is not None:
                 self.build_dates[row["build_id"]] = row["round_date"]
@@ -108,15 +155,10 @@ class Context:
             if row is None:
                 raise HTTPException(404, "Project not present in Gold")
             self.project_key = row["project_key"]
-        self.dates = [r["round_date"] for r in await conn.fetch("""SELECT DISTINCT c.round_date
-            FROM gold.dim_cycle c
-            WHERE c.surface=$1 AND c.servable AND coalesce(c.hidden_scope,0)<>1
-              AND ($2::smallint IS NULL OR c.project_key=$2)
-              AND (c.view_date IS NULL OR c.view_date <= $3::date)
-              AND EXISTS (SELECT 1 FROM gold.release_item ri
-                  WHERE ri.release_id=$4 AND ri.family='fact' AND ri.state='ready'
-                    AND ri.slice_key='cyc:' || c.cyc_key::text)
-            ORDER BY c.round_date DESC""", self.sf, self.project_key, datetime.now(ZoneInfo("Asia/Seoul")).date(), self.release["release_id"])]
+        if capped or self.sf == 3:   # a read of no round on the global or website surface has no calendar (above)
+            self.dates = [r["round_date"] for r in await conn.fetch(
+                CALENDAR_SQL, self.sf, self.project_key, datetime.now(ZoneInfo("Asia/Seoul")).date(), self.release["release_id"],
+                week_end)]
         try:
             start = date.fromisoformat(q["from"]) if q.get("from") else None
             end = date.fromisoformat(q["to"]) if q.get("to") else None
@@ -125,10 +167,18 @@ class Context:
         if start and end and start > end:
             raise HTTPException(422, "from must not exceed to")
         if start or end:
+            # `dates` stop at the service week: a `to` after it reads up to it, a `from` after it selects nothing
             self.selected_dates = [d for d in self.dates if (start is None or d >= start) and (end is None or d <= end)]
         else:
             offset = max(0, int(q.get("cycle_offset", "0")))
-            self.selected_dates = self.dates[offset:offset + 1]
+            if offset == 0 and self.week is not None and not any(self.week.start <= d <= self.week.end for d in self.dates):
+                # no round of this surface in the service week: no snapshot, the screens' '측정 없음' (decision '기준 주
+                # 세부': such a surface does not hold the week back, and an older round is not shown under its name;
+                # shared/service-week's `rounds` asks the calendar the same, review r4-2).
+                # A previous round (cycle_offset 1, …) still reads the capped list.
+                self.selected_dates = []
+            else:
+                self.selected_dates = self.dates[offset:offset + 1]
         # Overview check (2026-11-02): an EXISTS on catalog_entry per cell row (no prompt_key index) planned a nested
         # loop on card reads, 13 s and past the 15 s limit; the keys read once and bound take 0.5-1 s, same rows.
         b = SQL()
@@ -137,6 +187,10 @@ class Context:
                 FROM gold.catalog_entry ce WHERE ce.build_id=ANY({b.bind(self.builds.get('fact', []), 'bigint[]')})
                 AND (ce.brand_bit & {b.bind(self.bits | 8)})<>0 AND {' AND '.join(tax)}""", *b.args)]
         return self
+
+    def capped(self, day: date | None) -> date | None:
+        """`day`, at the latest the service week's last day (an uncapped read keeps it)."""
+        return min(day, self.week.end) if day is not None and self.week is not None else day
 
     @property
     def own_names(self) -> list[str]:
@@ -184,9 +238,11 @@ class Context:
         if dates:
             parts.append(f"{alias}.round_date=ANY({b.bind(self.selected_dates, 'date[]')})")
             hidden = (1, 2) if (population or measure_family) == "citations" else (1, 3)
+            # the service week again, for a read that sets its own dates (the selected ones already stop there)
+            week = f" AND cy.round_date<={b.bind(self.week.end, 'date')}" if self.week is not None else ""
             parts.append(f"EXISTS(SELECT 1 FROM gold.dim_cycle cy WHERE cy.cyc_key={alias}.cyc_key "
                          f"AND cy.servable AND coalesce(cy.hidden_scope,0) NOT IN {hidden} "
-                         f"AND (cy.view_date IS NULL OR cy.view_date<={b.bind(datetime.now(ZoneInfo('Asia/Seoul')).date(), 'date')}))")
+                         f"AND (cy.view_date IS NULL OR cy.view_date<={b.bind(datetime.now(ZoneInfo('Asia/Seoul')).date(), 'date')}){week})")
         if self.project_key is not None:
             parts.append(f"{alias}.project_key={b.bind(self.project_key, 'smallint')}")
         if population:

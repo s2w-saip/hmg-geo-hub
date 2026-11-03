@@ -36,6 +36,10 @@ import {
 import { hghSource } from "@/lib/hgh/client";
 import { localReadOnly } from "@/lib/local-readonly";
 import { projectMetaForSnb } from "@/lib/hgh/adapters/project-gate";
+import { readServiceWeek } from "@/lib/service-week-server";
+import { RnServiceWeekProvider } from "@/components/service-week/provider";
+import { ServiceWeekDelayNotice } from "@/components/service-week/notes";
+import { ServiceWeekNoRoundNotice } from "@/components/service-week/no-round";
 import type { User } from "@/lib/auth/types";
 
 // Authenticated area: reads the session + project meta per request (Supabase + DB on the
@@ -152,6 +156,10 @@ export default async function DashLayout({
     redirect(`/${locale}/no-access`);
   }
 
+  // The service week (2026-11-02), as in the renewal layout: read now, never awaited; the page header's chip and the
+  // delay notice at the top of main take it in their own Suspense (neither shows on /projects).
+  const week = readServiceWeek().catch(() => null);
+
   const tApp = await getTranslations("app");
 
   const role = session.user.role;
@@ -192,46 +200,54 @@ export default async function DashLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      {/* ─── Common top header — always visible, full width.
-          Carries wordmark + (mobile drawer trigger) + locale switcher.
-          The 1depth group nav lives in the GNB rail below; the header is
-          purely brand chrome + global affordances per v19. */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 bg-card px-4 shadow-soft sm:px-6">
-        <div className="flex items-center gap-3">
-          <SidebarMobileTrigger
-            routes={routes}
-            projectMeta={projectMeta}
-            locale={locale}
-          />
-          <Link
-            href="/"
-            className="inline-flex items-center"
-            aria-label={tApp("name")}
-          >
-            <Wordmark variant="hmg" className="h-8 w-auto" />
-            <span className="sr-only">{tApp("name")}</span>
-          </Link>
+    <RnServiceWeekProvider week={week}>
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        {/* ─── Common top header — always visible, full width.
+            Carries wordmark + (mobile drawer trigger) + locale switcher.
+            The 1depth group nav lives in the GNB rail below; the header is
+            purely brand chrome + global affordances per v19. */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 bg-card px-4 shadow-soft sm:px-6">
+          <div className="flex items-center gap-3">
+            <SidebarMobileTrigger
+              routes={routes}
+              projectMeta={projectMeta}
+              locale={locale}
+            />
+            <Link
+              href="/"
+              className="inline-flex items-center"
+              aria-label={tApp("name")}
+            >
+              <Wordmark variant="hmg" className="h-8 w-auto" />
+              <span className="sr-only">{tApp("name")}</span>
+            </Link>
+          </div>
+          <LocaleSwitcher />
+        </header>
+
+        {/* ─── Beta-period notice strip — persistent on every (dash) page. */}
+        <BetaNoticeBanner />
+
+        {/* ─── Beta-period operational notice popup (first entry per session). */}
+        <BetaNoticeDialog />
+
+        {/* ─── Body row: GNB rail (1depth) | SNB column (2depth + 3depth) | main. */}
+        <div className="flex flex-1">
+          <GnbRail tabs={railTabs} user={railUser} locale={locale} />
+          <Sidebar routes={routes} projectMeta={projectMeta} locale={locale} />
+          <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-10">
+            {/* the service week's delay notice scrolls with the page: no sticky chrome (top-24 = header + beta strip is fixed);
+                below it the '측정 없음' of a week with no round of the page's surface (review r2-12) */}
+            <div className="mx-auto max-w-6xl">
+              <ServiceWeekDelayNotice />
+              <ServiceWeekNoRoundNotice />
+              {children}
+            </div>
+          </main>
         </div>
-        <LocaleSwitcher />
-      </header>
 
-      {/* ─── Beta-period notice strip — persistent on every (dash) page. */}
-      <BetaNoticeBanner />
-
-      {/* ─── Beta-period operational notice popup (first entry per session). */}
-      <BetaNoticeDialog />
-
-      {/* ─── Body row: GNB rail (1depth) | SNB column (2depth + 3depth) | main. */}
-      <div className="flex flex-1">
-        <GnbRail tabs={railTabs} user={railUser} locale={locale} />
-        <Sidebar routes={routes} projectMeta={projectMeta} locale={locale} />
-        <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-10">
-          <div className="mx-auto max-w-6xl">{children}</div>
-        </main>
+        <Toaster position="bottom-right" richColors closeButton />
       </div>
-
-      <Toaster position="bottom-right" richColors closeButton />
-    </div>
+    </RnServiceWeekProvider>
   );
 }

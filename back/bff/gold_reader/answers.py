@@ -1,6 +1,9 @@
 """Real answer bodies, citations, occurrences, and drill-down lists."""
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from fastapi import HTTPException
 from starlette.datastructures import QueryParams
 
@@ -48,13 +51,18 @@ async def detail(ctx: Context, job_id: str) -> dict:
         if job["surface"] == 3:
             params.append(("project_id", str(project["project_id"] or project["scope_project_id"])))
         ctx = await Context.create(ctx.conn, QueryParams(params))
+    if ctx.week is not None and job["round_date"] is not None and job["round_date"] > ctx.week.end:
+        raise HTTPException(404, "Answer is after the service week")
+    # the cycle gates of the lists (Context.predicate, the calendar's hidden_scope): a link opens no answer they hide
     row = await ctx.conn.fetchrow("""SELECT f.*,j.job_id,j.measured_at,p.prompt_id,p.text,p.kind,
         e.code AS engine,c.code AS country,l.code AS lang,cy.cycle_id,b.answer_text,b.model_slug
         FROM gold.answer_fact f JOIN gold.job_index j USING(answer_key)
         JOIN gold.dim_prompt p ON p.prompt_key=f.prompt_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
         JOIN gold.dim_country c ON c.geo_key=f.geo_key JOIN gold.dim_lang l ON l.lang_key=f.lang_key
-        LEFT JOIN gold.dim_cycle cy ON cy.cyc_key=f.cyc_key LEFT JOIN gold.answer_body b USING(answer_key)
-        WHERE f.answer_key=$1 AND f.build_id=ANY($2::bigint[]) LIMIT 1""", job["answer_key"], ctx.builds.get("fact", []))
+        JOIN gold.dim_cycle cy ON cy.cyc_key=f.cyc_key LEFT JOIN gold.answer_body b USING(answer_key)
+        WHERE f.answer_key=$1 AND f.build_id=ANY($2::bigint[])
+          AND cy.servable AND coalesce(cy.hidden_scope,0)<>1 AND (cy.view_date IS NULL OR cy.view_date<=$3::date) LIMIT 1""",
+        job["answer_key"], ctx.builds.get("fact", []), datetime.now(ZoneInfo("Asia/Seoul")).date())
     if row is None:
         raise HTTPException(404, "Answer is not in the active Gold release")
     mentions = await ctx.conn.fetch("""SELECT m.*,br.name AS parent_brand,br.own_bit,

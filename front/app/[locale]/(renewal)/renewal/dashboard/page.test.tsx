@@ -11,6 +11,7 @@ const st = vi.hoisted(() => ({
   holdFilters: false,
   failMatrix: false,
   savedPages: [] as string[],
+  cards: null as unknown,
 }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, usePathname: () => "/", useRouter: () => ({}) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({}), useSearchParams: () => new URLSearchParams(), notFound: () => { throw new Error("nf"); }, redirect: () => { throw new Error("rd"); } }));
@@ -42,7 +43,7 @@ vi.mock("@/lib/screen", () => ({
       case "overview/as-of":
         return Promise.resolve({ asOf: "2026-10-05" });
       case "overview/cards":
-        return Promise.resolve({ state: "ok", cards: [{ key: "visibility" }], compareTitle: null });
+        return Promise.resolve(st.cards ?? { state: "ok", cards: [{ key: "visibility" }], compareTitle: null });
       case "overview/card-trend":
         return Promise.resolve({ degraded: false, cards: {}, count: 1 });
       case "overview/card-competitors":
@@ -94,6 +95,7 @@ beforeEach(() => {
   st.holdFilters = false;
   st.failMatrix = false;
   st.savedPages = [];
+  st.cards = null;
 });
 
 describe("renewal overview page", () => {
@@ -133,5 +135,14 @@ describe("renewal overview page", () => {
     const got = await collect(await render({}));
     const deferred = got.get("RnOverviewBody")!.deferred as Record<string, Promise<unknown>>;
     expect(await deferred.matrix).toBe("failed");
+  });
+
+  it("no data: the empty notice, or the service week's '측정 없음' when the week holds no Global round", async () => {
+    // review r1-19 (2026-11-03): the BFF reads no snapshot of a surface the week holds no round of, and overview/cards
+    // answers empty; components/service-week/no-round.tsx says so in the browser
+    st.cards = { state: "empty" };
+    const got = await collect(await render({}));
+    expect(got.get("RnOverviewBody")).toBeUndefined();
+    expect(got.get("RnServiceWeekEmptyLine")!.children).toBe("empty");
   });
 });

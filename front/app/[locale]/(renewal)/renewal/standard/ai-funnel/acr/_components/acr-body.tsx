@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUpRight, ChevronDown, FilterX, Hourglass, TrendingUp, X } from "lucide-react";
+import { ArrowUpRight, CalendarX2, ChevronDown, FilterX, Hourglass, TrendingUp, X } from "lucide-react";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
+import { RnServiceWeekEmpty } from "@/components/service-week/no-round";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
 import {
   RnBasisChip,
@@ -44,12 +45,18 @@ export function RnAcrBody({ input }: { input: RnAcrInput }) {
   const reset = useRnFilterReset();
   const { view } = input;
   if (!input.measured || !view) {
-    return input.filtered ? (
-      <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("states.noResultTitle")} desc={t(input.period ? "states.noResultDescPeriod" : "states.noResultDesc")}>
-        <RnButton onClick={reset}>{t("states.reset")}</RnButton>
-      </StateCard>
-    ) : (
-      <StateCard icon={<Hourglass className="size-5" aria-hidden />} title={tLive("empty.title")} desc={tLive("empty.desc", { count: input.acrPromptCount })} />
+    // a snapshot of a week with no Global round says so, with no filter advice (review r1-19, service-week/no-round.tsx),
+    // as does a period that starts after the week (review r3-12)
+    return (
+      <RnServiceWeekEmpty render={(n) => <StateCard icon={<CalendarX2 className="size-5" aria-hidden />} title={n.title} desc={n.desc} />}>
+        {input.filtered ? (
+          <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("states.noResultTitle")} desc={t(input.period ? "states.noResultDescPeriod" : "states.noResultDesc")}>
+            <RnButton onClick={reset}>{t("states.reset")}</RnButton>
+          </StateCard>
+        ) : (
+          <StateCard icon={<Hourglass className="size-5" aria-hidden />} title={tLive("empty.title")} desc={tLive("empty.desc", { count: input.acrPromptCount })} />
+        )}
+      </RnServiceWeekEmpty>
     );
   }
   return (

@@ -9,17 +9,17 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ExternalLink, Loader2, MessageSquareText, Search } from "lucide-react";
 import { RnButton, RnCard, RnCardHead, RnTag, cx } from "@/components/renewal-ui";
 import { FilterContentDim, FilterTransitionProvider } from "@/components/dash/filter-transition";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
 import { useCursorPaging, useSubpageNav, type CursorAware } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-prompts-page";
-import { recallToneCounts, rememberToneCounts, toneCountsKey, type ToneCounts } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-tone-urls-page";
+import { useShownToneCounts, type ToneCounts } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-tone-urls-page";
 import type { PageWindow } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/citation-view";
 import { applySearchEvent, initSearchSync, receiveServerQuery, settleWithServerQuery, type SearchEventDeps } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/subpage-search";
 import type { CitationOwnedPromptPage, CitationTone, CitationToneUrlPage } from "@/lib/db/repositories/scope-aggregates";
 import { displayCitationUrl } from "@/lib/url-display";
+import { RnServiceWeekEmptyLine } from "@/components/service-week/no-round";
 import { engineLabel, useCatLabel } from "./citation-context";
 import { numTxt } from "../../mention/_components/mention-context";
 import { useDegradedText } from "../../mention/_components/mention-kit";
@@ -167,7 +167,10 @@ function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" 
           {page == null ? (
             <p className={EMPTY}>{degradedText.all}</p>
           ) : page.rows.length === 0 ? (
-            <p className={EMPTY}>{t("empty")}</p>
+            // a snapshot of a week with no round of the page's surface says so, not '조건에 맞는 …' (review r1-19)
+            <p className={EMPTY}>
+              <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] border-collapse text-rn-13" data-rn-subtable="prompts">
@@ -243,23 +246,9 @@ function PromptsView({ tab, page, q, ownedCount, uncitedCount }: { tab: "owned" 
 
 // ── 긍정/부정 답변에 인용된 URL ───────────────────────────────────────────────
 
-const NO_COUNTS: ToneCounts = { positive: null, negative: null };
-
-/** Counts to draw: the server's, else the last ones for the same filters (B045), else "—". */
-function useShownToneCounts(served: ToneCounts | null): ToneCounts {
-  const sp = useSearchParams();
-  const key = toneCountsKey(sp.toString());
-  const last = useRef<{ key: string; counts: ToneCounts } | null>(null);
-  if (served && typeof served.positive === "number" && typeof served.negative === "number") last.current = { key, counts: served };
-  useEffect(() => {
-    if (served) rememberToneCounts(key, served);
-  }, [key, served]);
-  if (served) return served;
-  if (last.current?.key === key) return last.current.counts;
-  return recallToneCounts(key) ?? NO_COUNTS;
-}
-
-type ToneProps = { tone: CitationTone; page: CursorAware<CitationToneUrlPage> | null; q: string; byDomain: boolean; counts: ToneCounts | null };
+// The tab counts are the original's (useShownToneCounts, B045): the server's, else the last ones for the same filters
+// under the week the answer was read under (`weekEnd`, review r3-5), else "—".
+type ToneProps = { tone: CitationTone; page: CursorAware<CitationToneUrlPage> | null; q: string; byDomain: boolean; counts: ToneCounts | null; weekEnd?: string | null };
 
 export function RnCitationToneUrlsView(props: ToneProps) {
   return (
@@ -269,8 +258,8 @@ export function RnCitationToneUrlsView(props: ToneProps) {
   );
 }
 
-function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
-  const counts = useShownToneCounts(served);
+function ToneView({ tone, page, q, byDomain, counts: served, weekEnd }: ToneProps) {
+  const counts = useShownToneCounts(served, weekEnd);
   const t = useTranslations("answerAnalysis.citations.v2.toneUrlsPage");
   const tR = useTranslations("renewal.citation.sub");
   const degradedText = useDegradedText();
@@ -315,7 +304,9 @@ function ToneView({ tone, page, q, byDomain, counts: served }: ToneProps) {
           {page == null ? (
             <p className={EMPTY}>{degradedText.all}</p>
           ) : page.rows.length === 0 ? (
-            <p className={EMPTY}>{t("empty")}</p>
+            <p className={EMPTY}>
+              <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>
+            </p>
           ) : (
             <ul className="m-0 flex list-none flex-col border-t border-rn-line p-0" data-rn-subtable="tone">
               {page.rows.map((r, i) => (

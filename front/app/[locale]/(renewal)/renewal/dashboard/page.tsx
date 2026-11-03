@@ -24,6 +24,7 @@ import {
   onTransient,
 } from "@/app/[locale]/(dash)/dashboard/_data/screen-fallbacks";
 import { RnCard, RnEmpty, RnNote, RnPageHeader, RnPill, RnSkeleton } from "@/components/renewal-ui";
+import { RnServiceWeekEmptyLine } from "@/components/service-week/no-round";
 import { RnBusyScope, RnFilterRuntime } from "../_components/filter-runtime";
 import { loadSavedFilters } from "../_components/saved-filters-server";
 import {
@@ -192,9 +193,10 @@ async function OverviewSection({ reads, locale, qs }: { reads: BodyReads; locale
     view = { state: "degraded" };
   }
   if (view.state !== "ok") {
+    // no data: the service week's '측정 없음' instead when the week holds no Global round (review r1-19)
     return (
       <RnCard className="p-6">
-        <RnEmpty>{view.state === "degraded" ? tKpi("degraded") : t("empty")}</RnEmpty>
+        <RnEmpty>{view.state === "degraded" ? tKpi("degraded") : <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>}</RnEmpty>
       </RnCard>
     );
   }

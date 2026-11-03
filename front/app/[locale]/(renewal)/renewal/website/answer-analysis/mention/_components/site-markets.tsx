@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { RnCardHead, RnEmpty, RnSegmented, cx } from "@/components/renewal-ui";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
+import { useServiceWeekReadState } from "@/components/service-week/provider";
 import { useRnFilterToggle } from "../../../../_components/overview-filters";
 import { MentionCardActions, pctTxt, posTxt, useMention } from "../../../../standard/answer-analysis/mention/_components/mention-context";
 import { DeltaChip, InfoTip } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
@@ -81,7 +82,8 @@ export function RnSiteMarkets({ vm }: { vm: RnMarketsVM }) {
   const { ownLabel } = useMention();
   const { kpi } = useMentionPage();
   const [order, setOrder] = useState<MarketOrder>("rivals");
-  const [missing, setMissing] = useState<string | null>(null);
+  // a market's sheet reads its list on the page's answer: the page read again (the service week moved) closes it (review r3-4)
+  const [missing, setMissing] = useServiceWeekReadState<string | null>(null);
   const rows = useMemo(() => orderMarkets(vm.rows, order, kpi), [vm.rows, order, kpi]);
   const n = (v: number) => v.toLocaleString(locale);
   const kpiTxt = (v: number | null) => (kpi === "first-rank" ? posTxt(v) : pctTxt(v));

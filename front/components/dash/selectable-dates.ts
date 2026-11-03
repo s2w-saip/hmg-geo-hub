@@ -274,6 +274,9 @@ export function suggestWeekWindow(
  * 종전 `presetRange` 와 같은 의미이되 시계가 하나다: 끝점 `E` 가 없으면 **KST 의
  * 오늘**을 쓴다(종전에는 브라우저 로컬 달력의 오늘이었다).
  *
+ * 서비스 기준 주(2026-11-02): `maxDay`(기준 주 끝)가 주어지면 끝점은 그 날을 넘지 않고,
+ * `E` 가 없을 때도 오늘 대신 그 날이 끝점이다 — 모든 화면이 기준 주까지만 보인다.
+ *
  * @param todayKst `kstToday(now)` 의 결과를 주입받는다(순수 함수로 두기 위해).
  */
 export function presetWindowKst(
@@ -281,8 +284,11 @@ export function presetWindowKst(
   endDay: string | null | undefined,
   minDay: string | null | undefined,
   todayKst: string,
+  maxDay?: string | null,
 ): { from: string; to: string } {
-  const end = isDay(endDay) ? endDay : todayKst;
+  const cap = isDay(maxDay) ? maxDay : null;
+  const want = isDay(endDay) ? endDay : (cap ?? todayKst);
+  const end = cap && want > cap ? cap : want;
 
   const span = TRAILING_DAYS[preset];
   const from0 = span ? addDays(end, -(span - 1)) : addYears(end, -1);

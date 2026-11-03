@@ -21,6 +21,7 @@
 # 개별 관리
 python -X utf8 back/hub_storage/manage.py status
 python -X utf8 back/hub_storage/manage.py sync-gold-catalog
+python -X utf8 back/hub_storage/manage.py sync-service-week
 python -X utf8 back/hub_storage/manage.py verify
 python -X utf8 back/hub_storage/manage.py backup
 ```
@@ -29,7 +30,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 시작 스크립트는 기존 analytics 마이그레이션을 확인하고 새 DB/증분 마이그레이션을 적용한 뒤 API를 재시작한다. 실제 Gold 프로젝트·프롬프트만 가져온다. 기존 Next 프로세스는 유지한다. 반복 실행은 변경 없는 정의에 새 버전을 만들지 않는다. 적용된 SQL의 체크섬이 바뀌면 중단하므로 변경은 새 마이그레이션으로 추가한다.
 
-로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절), 계정 관리용 `hmg_account_editor`, GA4 속성 등록부용 `hmg_ga4_registry_editor`(아래 절), 인용 출처 교정용 `hmg_source_override_editor`(아래 절)만 전달한다. 카탈로그 쓰기 계정과 운영 쓰기 계정은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
+로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절), 계정 관리용 `hmg_account_editor`, GA4 속성 등록부용 `hmg_ga4_registry_editor`(아래 절), 인용 출처 교정용 `hmg_source_override_editor`(아래 절)만 전달한다. 카탈로그 쓰기 계정, 운영 쓰기 계정, 서비스 기준 주 계정(`hmg_service_week_writer`, `.env.service-week-db.local`, 아래 절)은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
 
 ## 프로젝트·프롬프트의 기준
 
@@ -170,6 +171,23 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                 
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-entity-roles   # 처음 값(한 번만)
 ```
 
+## 서비스 기준 주 (2026-11-02)
+
+모든 화면은 Gold 데이터를 서비스 기준 주 하나까지만 보인다(admin-todo 결정 '발행 시점 판정' · '기준 주 세부'). 주는 월요일~일요일(ISO)이고, 이름은 그 주 목요일이 속한 달의 몇째 주다(10/5~10/11 = 10월 2주차). Global(월요일 회차)과 Website(금요일 회차)가 같은 주에 들고, 프로젝트 표면은 대상이 아니다.
+
+- **저장(`011_service_week`, 데이터 DB):** `catalog.service_week`에 기준 주나 그 주의 회차 묶음이 바뀔 때마다 한 행을 쌓는다(이력). 행은 주의 월요일(`week_start`, CHECK), 표면별로 완료되고 숨기지 않은 Gold 회차(`global_cycles` · `website_cycles` = `dim_cycle.cycle_id`, 빈 배열 = 그 표면 '측정 없음'), 그때의 Gold `active_release` · `data_version`(기록용, 읽기를 여기에 고정하지 않는다), 기록 시각, 마지막으로 확인한 시각(`checked_at`)이다. 같은 주가 다시 확인되면 새 행 없이 `checked_at`만 바뀐다. `catalog.current_service_week`가 최신 행과 `week_end`(일요일)를 준다.
+- **판정(규칙 A, `service_week.py`):** 회차는 `round_date`가 든 주에 속한다. 완료 = 발행(status 2) · servable · 활성 `publication` · 오늘(KST) 보이는 `view_date` · 그 표면의 모든 활성 release(live · card · grid)에 ready · validated `fact` 항목. 숨기지 않은 미완료 회차가 수집 중(status 0)이거나, 사이트의 주 대표로 closed(status 1, Website는 `cycle_pick_basis.fleet_visible`, Global은 항상)이거나, 발행 · servable이면 그 주를 막는다. 전체 숨김, 대체된 중복(status 2 · servable 아님), 대표가 아닌 closed는 막지 않는다. 끝난 주(일요일 < 오늘 KST) 가운데 막는 회차가 없고 보일 회차가 하나라도 있는 가장 최근 주가 기준 주다. 한 표면에 회차가 없는 주는 Gold가 그 표면의 더 뒤 회차를 가질 때만 기준이 되고(건너뛴 주, 그 표면은 ‘측정 없음’), 아니면 그 표면이 아직 적재되지 않은 것으로 보고 막는다(2026-11-03, 결정 ‘미적재 표면’). 기준 주는 뒤로 가지 않는다(더 이른 주만 후보이면 기록된 주를 둔다). Gold 상태를 믿고 기다리지 않으며, Gold가 지난 주를 재발행하면 화면이 Gold live release를 읽어 그대로 따른다.
+- **안전장치:** Gold는 표마다 따로 다시 적재되므로, 섞인 읽기(데이터 버전 역행, 회차 없는 활성 `publication` · release 항목, 겹친 회차 키 · ID, 날짜 없는 회차, 표면 · 읽기 방식마다 둘 이상인 활성 release)는 아무것도 기록하지 않고 거부한다. 후보도 기록된 주도 없으면 실패로 끝난다. Gold가 응답을 멈추면(멈춘 서버, 반쯤 끊긴 연결) 작업이 스스로 그만둔다: 연결 30초, 문장 90초(Gold의 60초 statement_timeout보다 길다)가 지나면 연결을 바로 끊고 아무것도 기록하지 않은 채 실패로 끝나므로, `vm.sh`의 잠금이 풀리고 `start-local.sh`는 API를 띄운다. HUB 데이터 DB도 같다: 연결 · 문장마다 60초가 지나면 그 연결로는 롤백도 보내지 않고 바로 끊은 뒤(열린 트랜잭션은 서버가 되돌린다) 실패로 끝난다. 커밋 응답을 기다리다 멈춘 경우만 서버가 깨어난 뒤 그 기록이 들어갈 수 있다. 끝까지 간 실행은 연결을 닫되 서버가 10초 안에 받지 않으면 끊고, 결과는 그대로 둔다. 실행은 advisory lock 617427422로 하나씩 한다.
+- **계정과 권한:** `hmg_service_week_writer`(비밀번호 `.env.service-week-db.local`)는 관리 명령만 쓰는 일시 계정이다. 이 표의 INSERT(seq · 시각 열 제외)와 `checked_at` UPDATE, SELECT만 있고, DELETE, 기록된 주 · 회차 · 시각 변경, 다른 catalog 표, 운영 DB 접속은 없다. API는 데이터 DB 조회 계정으로 읽기만 하고, 외부 API 계정은 읽지 못한다.
+- **실행:** 로컬은 `scripts/start-local.sh`가 API를 띄우기 전에 한 번 돌린다(실패해도 API는 뜬다). VM은 cron이 매시 10분 `vm.sh service-week`로 돌린다(아래 '내부 VM'). 출력은 JSON 한 줄(`week_start` · `week_end` · `label` · `changed` · `held` · 표면별 회차 수 · `delay_days`)이고, `--dry-run`은 쓰지 않고 판정만 출력한다(쓰기 계정이 아직 없으면 기록된 주 없이 판정). 기존 설치는 `init`으로 011을 적용하고 한 번 돌린 뒤 API를 재시작한다. 기준 주가 기록되기 전에는 API의 Global · Website 화면이 503이다. 2026-11-02 판정: 10월 2주차(10/5~10/11, Global 1 · Website 96 회차), 끝난 지 22일.
+
+```bash
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                          # 011_service_week, hmg_service_week_writer, .env.service-week-db.local
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py sync-service-week             # 기준 주 확인 · 기록
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py sync-service-week --dry-run   # 판정만
+HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh             # API 재시작 (기준 주 확인 포함)
+```
+
 ## 외부 API (2026-10-28)
 
 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키를 가진 외부 호출자에게 읽기 전용으로 준다. 가공 결과(지표·판정·이전 회차 분석), 회차·측정 작업 원장, GA4 속성, 답변·인용 원문은 주지 않는다. 앱은 `back/ext/app.py`, 구조·범위·변경 감지 규칙은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
@@ -192,7 +210,7 @@ m ext-list                               # 호출자·키(해시 제외)·허용
 cd back && uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json   # .env.ext-api.local 필요
 ```
 
-**내부 VM(taeho-dev).** Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
+**내부 VM(taeho-dev).** Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 10분에 `vm.sh service-week`(서비스 기준 주, 위 절), 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. `service-week FAILED` 줄은 그 실행이 아무것도 기록하지 않았다는 뜻이고(사유는 줄 끝), 화면은 마지막 기준 주를 그대로 쓴다. 011을 처음 적용하면 `vm.sh bff` 뒤에 `vm.sh service-week`를 한 번 손으로 돌린다. crontab 줄은 `scripts/vm.sh` 머리말에 있다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
 
 ## 외부 조회 경계 (DB 직접 공개, 미개방)
 
@@ -208,6 +226,6 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 ## 검증
 
-`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
+`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. 서비스 기준 주 계정은 `catalog.service_week`에 행을 더하고 `checked_at`만 바꾼다(기록된 주 · 회차 · Gold 기록 · 시각 변경, seq · 시각 지정, DELETE, 다른 catalog 표 읽기, 스키마 객체 만들기, 운영 DB 접속 거부). 권한 자체도 보므로 `checked_at` 밖의 열(나중에 더한 열 포함) UPDATE나 DELETE · TRUNCATE · REFERENCES · TRIGGER 권한이 생기면 verify가 실패한다. 월요일이 아닌 주, 두 표면 모두 빈 회차, NULL 회차 ID, 객체가 아닌 기록, 기록보다 이른 확인 시각은 DB가 거부한다. API 조회 계정은 최신 주를 읽되 쓰지 못하고, 외부 API 계정 · Gold 가져오기 계정 · 카탈로그 편집 계정은 기준 주 표에 닿지 못한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 서비스 기준 주 규칙과 쓰기는 `test_hub_service_week.py`(쓰기 · 실행 흐름은 기본 실행에서 가짜 연결로, 실제 표 쓰기와 넘치는 권한을 잡는 verify 확인, PostgreSQL에서의 Gold 읽기는 `HGH_SERVICE_WEEK_TEST_DB_URL`이 있을 때), 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, `010_entity_roles`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, `010_entity_roles`, `011_service_week`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`, `004_hub_accounts`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

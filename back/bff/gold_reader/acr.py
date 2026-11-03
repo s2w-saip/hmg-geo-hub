@@ -253,6 +253,10 @@ async def coverage(ctx: Context) -> dict:
     b = SQL()
     all_rounds = ctx.predicate(b, family="acr", dates=False, dimensions=False, taxonomy=False)
     rounds = await ctx.conn.fetch(f"SELECT DISTINCT f.round_date FROM gold.acr_cell_fact f WHERE {all_rounds} AND f.acr_in", *b.args)
+    # only the calendar's rounds (servable, not hidden, visible today, up to the service week): the ACR builds of the
+    # release hold rounds the calendar does not offer
+    calendar = set(ctx.dates)
+    rounds = [r for r in rounds if r["round_date"] in calendar]
     b = SQL()
     where = ctx.predicate(b, family="acr", dimensions=False, taxonomy=False)
     countries = await ctx.conn.fetch(f"""SELECT DISTINCT c.code FROM gold.acr_cell_fact f JOIN gold.dim_country c ON c.geo_key=f.geo_key

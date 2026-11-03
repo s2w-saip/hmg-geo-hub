@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { canAccessRoute } from "@/lib/auth/route-policy";
 import { throwForPage } from "@/lib/hgh/errors";
 import { effectiveScopeCountries } from "@/lib/rhq";
+import { answerKey } from "@/lib/service-week-server";
 import { loadPromptsScreens } from "@/app/[locale]/(dash)/standard/prompts/_data/server";
 import { loadSavedFilters } from "../../_components/saved-filters-server";
 import { RnPromptsView } from "./_components/prompts-view";
@@ -40,6 +41,9 @@ export default async function RenewalStandardPromptsPage({
 
   return (
     <RnPromptsView
+      // the view keeps the catalog in state: a new answer (the shell's re-read once the service week moved) mounts it
+      // again with that answer, the same one keeps its order, page and open row (review r2-7)
+      key={answerKey(catalog)}
       remote={{ initial: catalog }}
       scopeAll={scope.all}
       scopeRole={session.user.role}

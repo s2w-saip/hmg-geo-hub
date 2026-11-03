@@ -93,10 +93,12 @@ async def prompts(ctx: Context) -> dict:
         # A prompt's country is where it is measured, as in every Gold cell: one site row can hold several markets
         # (Genesis Saudi Arabia: one project, SA-Dammam, with Jeddah and Riyadh prompts), so a prompt measured elsewhere
         # takes that country. Read first and bound as values: a CTE here keeps the job scans below from running in
-        # parallel (0.2 → 0.9 s on a country).
+        # parallel (0.2 → 0.9 s on a country). Its latest job up to the service week's last day (job_index is no
+        # release item: the calendar cap does not reach it).
         moved = await ctx.conn.fetch("""SELECT DISTINCT ON(j.prompt_key) j.prompt_key,j.geo_key
             FROM gold.job_index j JOIN gold.dim_project s USING(project_key)
-            WHERE j.surface=2 AND j.geo_key IS DISTINCT FROM s.site_geo_key ORDER BY j.prompt_key,j.round_date DESC""")
+            WHERE j.surface=2 AND j.geo_key IS DISTINCT FROM s.site_geo_key AND ($1::date IS NULL OR j.round_date<=$1::date)
+            ORDER BY j.prompt_key,j.round_date DESC""", ctx.week.end if ctx.week is not None else None)
         geo = f"unnest({b.bind([r['prompt_key'] for r in moved], 'bigint[]')},{b.bind([r['geo_key'] for r in moved], 'int[]')})"
         listed = f"""FROM gold.dim_prompt p JOIN gold.dim_project dp USING(project_key)
             LEFT JOIN {geo} g(prompt_key,geo_key) ON g.prompt_key=p.prompt_key

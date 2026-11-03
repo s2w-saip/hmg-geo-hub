@@ -35,11 +35,14 @@ export function RnRoundCalendar({
   };
 }) {
   const latest = selectableDates[selectableDates.length - 1] ?? null;
-  const initial = parseDay(value.to ?? value.from ?? latest ?? "") ?? { y: 2026, m: 1, d: 1 };
-  const [cursor, setCursor] = useState({ y: initial.y, m: initial.m });
-  const set = useMemo(() => new Set(selectableDates), [selectableDates]);
   const lo = parseDay(selectableDates[0] ?? "");
   const hi = parseDay(latest ?? "");
+  // Opens on the picked end's month, kept between the first and the last month with rounds: a period from past the
+  // last round (a URL or a saved filter from before the service week, 2026-11-02) would open on a month of disabled days.
+  const wanted = parseDay(value.to ?? value.from ?? latest ?? "") ?? { y: 2026, m: 1, d: 1 };
+  const initial = hi && wanted.y * 12 + wanted.m > hi.y * 12 + hi.m ? hi : lo && wanted.y * 12 + wanted.m < lo.y * 12 + lo.m ? lo : wanted;
+  const [cursor, setCursor] = useState({ y: initial.y, m: initial.m });
+  const set = useMemo(() => new Set(selectableDates), [selectableDates]);
   const idx = cursor.y * 12 + cursor.m;
   const atFirst = !lo || idx <= lo.y * 12 + lo.m;
   const atLast = !hi || idx >= hi.y * 12 + hi.m;

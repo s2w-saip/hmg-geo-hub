@@ -7307,5 +7307,35 @@
       "label": "DataForSEO · OpenRouter account needed",
       "body": "Search volume runs on a DataForSEO account and prompt generation on an OpenRouter account. Once they are connected, you can run both here."
     }
+  },
+  "serviceWeek": {
+    "week": "{monthName} week {nth}",
+    "range": "{from}–{to}",
+    "weekWithRange": "{monthName} week {nth} ({from}–{to})",
+    "title": "Service week — Gold's measurement results are shown only for rounds completed up to this week.",
+    "late": "{days} days late",
+    "lateTitle": "{days} days have passed since this week ended, and the next week's results have not been confirmed complete yet.",
+    "unconfigured": "No service week",
+    "unconfiguredTitle": "No service week is set, so Gold's measurement results are shown up to the latest round.",
+    "unreadable": "Service week unavailable",
+    "unreadableTitle": "The service week could not be read. It is read again when you move to another screen or reopen this one.",
+    "delayNote": "Publication delayed: the results of {next} have not been confirmed complete yet, so Gold's measurement results are shown up to {week}.",
+    "checkedAt": "(Gold last checked {time})",
+    "surface": {
+      "global": "Global",
+      "website": "Website"
+    },
+    "noteUnpublished": "{surface} {week}: {count, plural, one {# site} other {# sites}} Gold did not publish {count, plural, one {is} other {are}} not in this week's values.",
+    "noteHidden": "{surface} {week}: {count, plural, one {# site} other {# sites}} hidden by an administrator {count, plural, one {is} other {are}} not in this week's values.",
+    "noteBoth": "{surface} {week}: sites Gold did not publish ({unpublished}) and sites hidden by an administrator ({hidden}) are not in this week's values.",
+    "periodCut": "Picked {from} ~ {to}; shown up to the end of the service week ({end}).",
+    "noRound": {
+      "title": "No measurement",
+      "desc": "The service week {week} has no {surface} round."
+    },
+    "afterWeek": {
+      "title": "Period not shown yet",
+      "desc": "The picked period ({from} ~ {to}) is after the service week {week}. Gold's measurement results are shown only for rounds completed up to that week."
+    }
   }
 }

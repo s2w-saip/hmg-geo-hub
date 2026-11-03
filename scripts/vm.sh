@@ -7,6 +7,9 @@
 #               because the network between the office and the VM passes 80xx ports (8443 and 9443 time out)
 #   sync        cron, hourly: the Gold catalog import (refused reads are recorded and retried next run)
 #   check-sync  cron: WARN when the last successful import is older than HGH_SYNC_STALE_HOURS (3)
+#   service-week cron, hourly at minute 10: the service week check (manage.py sync-service-week, in the BFF container):
+#               a new catalog.service_week row when Gold completed a later week or the week's cycles changed, else the
+#               newest row's checked_at; a refused read records nothing and the screens keep the last week
 #   ga4         the GA4 collector (back/analytics/ga4_collect.py) once, by hand: its arguments pass through
 #               (--dry-run, --backfill 180, --from/--to, --property). It runs in a throwaway container of the BFF
 #               image on the host network (the HUB data DB on 127.0.0.1, GA4 on the internet); the secrets travel in
@@ -14,7 +17,9 @@
 #               kept on the renewal Admin › GA4 연동 screen (analytics.ga4_registry).
 #   ga4-cron    cron, daily: `ga4` with its defaults (the last 3 days again). The production and dev builds share
 #               the one HUB data DB, so this one schedule serves both; a run by hand only replaces the same days.
-# sync, check-sync and ga4-cron append one line each to .local/vm-cron.log.
+# sync, check-sync, service-week and ga4-cron append one line each to .local/vm-cron.log. The user's crontab (installed by
+# hand; this script installs nothing) for service-week, after manage.py init has applied 011:
+#   10 * * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh service-week >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo"
@@ -102,6 +107,16 @@ check-sync)
         log "check-sync WARN last successful import: $hours h ago (limit $limit h)"; exit 1
     fi
     log "check-sync ok last successful import $hours h ago" ;;
+service-week)
+    exec 9>.local/vm-service-week.lock
+    flock -n 9 || { log 'service-week skipped: the previous run is still going'; exit 0; }
+    if out="$(python3 -X utf8 back/hub_storage/manage.py sync-service-week 2>&1)"; then
+        log "service-week ok $(printf '%s' "$out" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin)
+print(" ".join(f"{k}={d[v]}" for k, v in (("week","week_start"),("changed","changed"),("held","held"),("global","global_cycles"),
+      ("website","website_cycles"),("delay_days","delay_days"))))')"
+    else
+        log "service-week FAILED $(printf '%s' "$out" | tail -1 | cut -c1-400)"; exit 1
+    fi ;;
 ga4)
     shift
     ga4_run "$@" ;;
@@ -118,5 +133,5 @@ print(" ".join(p["property"]+"/"+p["country"]+"="+p["status"]+(" "+p["from"]+"..
     log "ga4 $state $line"
     [ "$state" = ok ] ;;
 *)
-    echo "usage: $0 bff|ext|proxy|sync|check-sync|ga4|ga4-cron" >&2; exit 2 ;;
+    echo "usage: $0 bff|ext|proxy|sync|check-sync|service-week|ga4|ga4-cron" >&2; exit 2 ;;
 esac

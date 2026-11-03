@@ -265,12 +265,14 @@ def catalog() -> Figure:
 def external() -> Figure:
     """hmg_analytics external API boundary: back/hub_storage/data-005.sql; the HUB's source classification inputs
     data-007.sql (corrections) and data-008.sql (seeds, official social accounts, code table); its customer-interest
-    inputs data-009.sql (seed keywords, community sources); its entity roles data-010.sql."""
+    inputs data-009.sql (seed keywords, community sources); its entity roles data-010.sql; the service week
+    data-011.sql (a HUB job's record beside the sync log, not exported)."""
     f = Figure("ext", 1530, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
                "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 "
                "출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, "
                "Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · "
-               "interest_keyword · interest_source · entity_role로 발행된다.")
+               "interest_keyword · interest_source · entity_role로 발행된다. 엔티티 역할 옆의 service_week는 Global · Website 화면이 Gold를 읽는 마지막 주"
+               "(서비스 기준 주)의 이력이고, HUB 작업이 쓰며 외부 API로 나가지 않는다.")
     f.table("catalog.reference_set", 16, 40, 280, "기준값 한 종류의 한 버전이다. 하나라도 바뀌면 그 종류 전체를 새 set으로 쌓는다.", [
         ("PK", "set_id", "uuid"), ("UK", "family", "text"), ("UK", "version", "integer"), ("", "item_count", "integer"),
         ("", "sha256", "text"), ("", "source", "=gold|hub|hub_edit"), ("", "source_release", "jsonb"), ("", "change_seq", "bigint"),
@@ -333,6 +335,12 @@ def external() -> Figure:
         ("PK", "entity_id", "uuid"), ("", "rep_name", "text"), ("", "role", "=own|excluded"), ("", "brand", "text"), ("", "note", "text"),
         ("", "status", "=active|cleared"), ("", "origin", "=gold_import|hub"), ("", "updated_at", "timestamptz"),
         ("", "updated_by", "uuid")], notes=["활성 행 → set entity_role"])
+    # the service week (data-011): written by manage.py sync-service-week, read by the BFF; not exported
+    f.table("catalog.service_week", 336, y5, 250, "화면이 Gold를 읽는 마지막 주와 회차다. 바뀔 때만 한 행을 쌓고, 지우지 않는다.", [
+        ("PK", "seq", "bigint identity"), ("", "week_start", "date (월요일)"), ("", "global_cycles", "uuid[]"),
+        ("", "website_cycles", "uuid[]"), ("", "gold_release", "jsonb"), ("", "gold_versions", "jsonb"),
+        ("", "recorded_at", "timestamptz"), ("", "checked_at", "timestamptz")],
+        notes=["최신 행 = current_service_week 뷰", "같은 주를 다시 확인하면 checked_at만"])
     f.fk("source_override_event", "skey", "source_override", to="skey")
     f.fk("reference_item", "set_id", "reference_set")
     f.fk("api_key", "client_id", "api_client")

@@ -25,6 +25,12 @@ async def close_pool():
         _pool = None
 
 
+def configured() -> bool:
+    """HGH_ANALYTICS_DB_URL was set (the pool is open). A configured store that is down still raises ConnectionError
+    subclasses from connection() (asyncpg: ConnectionRefusedError), so that error alone does not mean 'not configured'."""
+    return _pool is not None
+
+
 @asynccontextmanager
 async def connection():
     if _pool is None:

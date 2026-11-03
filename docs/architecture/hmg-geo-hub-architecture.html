@@ -178,8 +178,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-02(Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
-    <code>back/hub_storage/data-002~008.sql</code>, <code>operations-001~004.sql</code></p>
+  <p class="asof">마지막 갱신 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+    <code>back/hub_storage/data-002~011.sql</code>, <code>operations-001~004.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
     <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
@@ -197,7 +197,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-path">요청이 지나가는 길</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리, GA4 속성 등록부와 인용 출처 교정뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 FastAPI BFF(5555)를 HTTP로 부른다. BFF는 모듈별로 운영 DB, 데이터 DB, 외부 Gold DB에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리, GA4 속성 등록부와 인용 출처 교정뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다. Global · Website의 Gold 읽기는 데이터 DB에 기록된 서비스 기준 주(catalog.service_week)의 마지막 날까지만 한다.">
         <defs>
           <marker id="f1a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f1w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -287,7 +287,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <rect class="box" x="530" y="340" width="160" height="70" rx="6"/>
         <text class="m b" x="544" y="362">screens/</text>
         <text class="m mu" x="544" y="380">/v1/screens/{name}</text>
-        <text class="mu" x="544" y="399">86개 빌더 · 계정 범위 필터</text>
+        <text class="mu" x="544" y="399">96개 빌더 · 계정 범위 필터</text>
 
         <rect class="box" x="530" y="430" width="160" height="82" rx="6"/>
         <text class="m b" x="544" y="451">api.get()</text>
@@ -307,7 +307,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu" x="1024" y="170">system.* 계정·권한·감사</text>
         <text class="mu sm" x="1024" y="188">계정별 저장한 필터</text>
 
-        <rect class="hubbox" x="1010" y="214" width="174" height="206" rx="8"/>
+        <rect class="hubbox" x="1010" y="214" width="174" height="250" rx="8"/>
         <text class="b" x="1024" y="238">HUB 데이터 DB</text>
         <text class="m" x="1024" y="258">hmg_analytics</text>
         <text class="m mu" x="1024" y="275">:55436</text>
@@ -317,12 +317,13 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu sm" x="1024" y="361">GA4 · SEO (수집 전)</text>
         <text class="m" x="1024" y="386">published.*</text>
         <text class="mu sm" x="1024" y="403">외부 공개용 뷰</text>
+        <text class="m" x="1024" y="428">catalog.service_week</text>
+        <text class="mu sm" x="1024" y="445">서비스 기준 주</text>
 
-        <rect class="goldbox" x="1010" y="440" width="174" height="92" rx="8"/>
-        <text class="b" x="1024" y="464">외부 Gold DB</text>
-        <text class="m" x="1024" y="484">gold · 사내망</text>
-        <text class="mu sm" x="1024" y="504">active_release 고정</text>
-        <text class="mu sm" x="1024" y="521">읽기만 함</text>
+        <rect class="goldbox" x="1010" y="476" width="174" height="64" rx="8"/>
+        <text class="b" x="1024" y="497">외부 Gold DB</text>
+        <text class="m" x="1024" y="514">gold · 사내망 · 읽기만</text>
+        <text class="mu sm" x="1024" y="531">active_release 고정</text>
 
         <path class="e" d="M920,108H1010" marker-end="url(#f1a)"/>
         <text class="mu sm" x="965" y="100" text-anchor="middle">계정·역할·범위</text>
@@ -337,10 +338,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <path class="e" d="M920,384H1010" marker-end="url(#f1a)"/>
         <text class="mu sm" x="965" y="376" text-anchor="middle">GA4·SEO</text>
         <path class="ew" d="M920,410H1010" marker-end="url(#f1w)"/>
-        <text class="sm w" x="965" y="430" text-anchor="middle">GA4 등록부만</text>
-        <text class="sm w" x="965" y="444" text-anchor="middle">출처 교정만</text>
-        <path class="e" d="M920,472H1010" marker-end="url(#f1a)"/>
-        <text class="mu sm" x="965" y="464" text-anchor="middle">측정 사실</text>
+        <text class="sm w" x="965" y="402" text-anchor="middle">GA4 등록부만</text>
+        <text class="sm w" x="965" y="426" text-anchor="middle">출처 교정만</text>
+        <path class="e" d="M920,454H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="446" text-anchor="middle">기준 주</text>
+        <path class="e" d="M920,488H1010" marker-end="url(#f1a)"/>
+        <text class="mu sm" x="965" y="480" text-anchor="middle">측정 사실</text>
       </svg>
     </div>
     <figcaption>
@@ -352,13 +355,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       </div>
       <p><strong>그림 1.</strong> 브라우저 요청은 모두 middleware 관문을 지나 Next 서버에서 끝난다. BFF를 부르는 것은 Next 서버이고,
         DB 자격증명은 BFF만 갖는다. 빨간 선 네 개가 앱이 DB에 쓰는 경로의 전부다(계정 관리, 계정별 저장한 필터, 글로벌 프롬프트 INSERT, GA4 속성 등록부 · 인용 출처 분류 · 고객 관심 데이터 · 엔티티 역할).
-        Next 서버는 BFF를 부를 때마다 쿠키의 토큰을 Bearer로 붙이고, BFF는 토큰 없는 화면·데이터 읽기를 401로 거절한다.</p>
+        Next 서버는 BFF를 부를 때마다 쿠키의 토큰을 Bearer로 붙이고, BFF는 토큰 없는 화면·데이터 읽기를 401로 거절한다.
+        <code>gold_reader</code>에서 데이터 DB로 가는 ‘기준 주’ 선은 Gold 읽기가 멈출 서비스 기준 주를 읽는 길이다(아래).</p>
     </figcaption>
   </figure>
 
   <ul class="points">
     <li><b>Next는 계산하지 않는다.</b> 페이지는 <code>/v1/screens/{name}</code>에서 완성된 뷰모델을 받아 그리기만 한다.
-      지표 계산은 BFF의 <code>screens/</code> 빌더 95개가 맡는다.
+      지표 계산은 BFF의 <code>screens/</code> 빌더 96개가 맡는다.
       페이지를 연 뒤 브라우저가 더 읽는 부분(글로벌 · Website 프롬프트 목록의 검색 · 정렬 · 다음 쪽과 엑셀 행, Website 프롬프트 인사이트, ACR 분포 시트를 탭을 열 때 하나씩)은
       <code>/api/standard/*</code> · <code>/api/website/prompts/*</code> 얇은 프록시가 같은 방식으로 화면 빌더에 넘긴다.
       로컬 모드는 <code>/api/hub/*</code> 밖의 GET 아닌 요청을 막으므로, 이런 읽기는 서버 액션(POST)이 아니라 GET 프록시로 둔다.</li>
@@ -367,7 +371,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     <li><b>Gold 읽기 캐시</b>(2026-10-29). 화면 빌더가 읽는 Gold <code>/v1</code> 읽기의 답(JSON)을 BFF 프로세스 메모리에 둔다(<code>gold_reader/cache.py</code>, <code>api.get</code> 안).
       키는 경로·쿼리이고, 둔 답은 Gold 상태가 그때와 같을 때만 쓴다. Gold 상태 = 쿼리 하나(약 10ms)로 읽는 지문:
       active release와 그 항목·빌드 상태, <code>gold.data_version</code>, gold 표마다 relfilenode(통째 재적재는 표를 새로 쓴다 — 10-28 재적재는 <code>data_version</code>을 바꾸지 않았다),
-      <code>dim_cycle</code> 노출 열, gold 표 쓰기 수(<code>pg_stat</code>, 트랜잭션 밖이라 1초쯤 늦다), 그리고 날짜(서울).
+      <code>dim_cycle</code> 노출 열, gold 표 쓰기 수(<code>pg_stat</code>, 트랜잭션 밖이라 1초쯤 늦다), 그리고 날짜(서울)와 서비스 기준 주(행 번호 <code>seq</code> · 마지막 날, 2026-11-02).
+      기준 주가 바뀌면 Gold가 그대로여도 둔 답을 쓰지 않는다.
       읽기 앞뒤 지문이 같을 때만 둔다(그 사이에 쓰기가 없었다는 뜻 — 적재 도중 두 세대가 섞인 답은 답하되 두지 않는다).
       최대 10분(<code>HGH_GOLD_CACHE_S</code>, 0이면 끔), 합계 256MB(<code>HGH_GOLD_CACHE_MB</code>)를 넘으면 오래 안 쓴 것부터 버리고, 그 1/10을 넘는 답은 두지 않는다.
       Gold가 모든 적재에서 버전을 올리고 적재 완료 표시를 두면(개편 Q18) 쓰기 수 대신 그것을 지문에 쓴다.</li>
@@ -376,7 +381,24 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       Gold는 표를 하나씩 다시 적재하므로, 비었거나 차원 행 없는 키가 보이거나 읽는 사이 <code>data_version</code>이 바뀐 결과는 답하되 두지 않는다.
       복사본 재적재는 <code>data_version</code>을 바꾸지 않으므로 둔 값도 10분(<code>HGH_FILTER_OPTIONS_CACHE_S</code>, 0이면 끔)이 지나면 다시 읽는다.</li>
     <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code>·<code>analytics/properties</code>(AI Conversion 국가 선택지 = 계정이 읽을 수 있는 GA4 속성, 2026-10-30) 세 경로만 HUB 데이터 DB로 가고,
-      나머지 <code>/v1/*</code>는 Gold로 간다. Gold는 <code>active_release</code>와 검증된 빌드에 고정해서 읽는다.</li>
+      나머지 <code>/v1/*</code>는 Gold로 간다. Gold는 <code>active_release</code>와 검증된 빌드에 고정해서 읽고, Global · Website 회차는 서비스 기준 주까지만 읽는다(다음 항목).</li>
+    <li><b>Gold 회차는 서비스 기준 주까지만 읽는다</b>(2026-11-02, 결정 ‘발행 시점 판정’ · ‘기준 주 세부’). 서비스 기준 주는 끝난 ISO 주(월~일) 가운데 Gold가 Global · Website 회차를 모두 발행해 기다리는 회차가 없는 가장 최근 주이고(그 주에 회차가 없는 표면은 Gold에 그 표면의 더 뒤 회차가 있을 때만 건너뛴 주로 보고, 없으면 아직 적재되지 않은 것으로 보아 기다린다 — 2026-11-03, 결정 ‘미적재 표면’), 서비스 전체가 하나를 같이 쓴다(2026-11-02: 10월 2주차, 10/5~10/11).
+      HUB 작업 <code>manage.py sync-service-week</code>(<code>back/hub_storage/service_week.py</code>)가 Gold의 회차 · 발행 상태를 읽어 데이터 DB <code>catalog.service_week</code>에 기록하고(<a href="#writes">그림 2</a>), 기준 주는 뒤로 가지 않는다.
+      BFF는 <code>hub_stores/service_week.py</code>가 데이터 DB 조회 연결로 읽은 그 주를 <code>gold_reader/context.py</code>의 <code>Context.create</code>에서 global · website 읽기에 건다:
+      그 주 일요일 뒤 회차의 빌드와 날짜를 빼고, 기간 끝(<code>to</code>)이 그 뒤이면 그 일요일까지 읽고, 시작(<code>from</code>)이 그 뒤이면 아무것도 고르지 않는다.
+      기간 없는 최신 회차 읽기는 그 주에 회차가 없는 표면이면 ‘측정 없음’이다(이전 회차를 그 주 이름으로 보이지 않는다).
+      Context가 고르지 않는 읽기(비교의 회차 원장, Website 프롬프트의 측정 국가, 답변 상세)도 같은 날에서 막는다. project 표면과 회차를 읽지 않는 <code>gold/*</code>(프로젝트 목록 · 키워드 · 소셜)에는 걸지 않는다. <code>gold/*</code>는 Global · Website 회차 달력도 읽지 않아 <code>meta</code>에 회차가 없다(2026-11-03, 리뷰 r2-4).
+      행에 남기는 Gold 발행본(<code>gold_release</code>)은 기록용이고 읽기를 거기에 고정하지 않으므로, Gold가 지난 주를 다시 발행하면 화면도 따른다.
+      화면 머리의 기준 주 칩, 끝난 지 10일이 넘으면 보이는 지연 안내, Gold가 발행하지 않았거나 관리자가 숨긴 사이트가 있는 주의 안내는 화면 <code>shared/service-week</code>(Gold 리더 <code>cycles/week-notes</code>)가 준다.
+      그 리더는 global · website 표면에서만 읽는다(project 표면은 422, 2026-11-03, 리뷰 r2-6). 주 안내는 그 주의 회차 날짜(<code>days</code>: 그 주에 보인 회차와 빠진 사이트의 회차)
+      가운데 하나가 화면 기간 안에 있을 때만 붙는다. 7일 프리셋처럼 그 주의 다른 날만 걸친 기간에는 붙지 않는다(2026-11-03, 리뷰 r2-10).
+      그 화면의 <code>rounds</code>는 표면마다 그 주에 회차가 있는지이고, 기간 없이 읽은 화면의 빈 결과는 회차가 없는 표면이면 필터 안내 대신 ‘측정 없음’과 그 주 이름을 보인다(2026-11-03, 리뷰 r1-19).
+      그 값은 <code>cycles/week-notes</code>가 같이 읽는 Gold 회차 달력이다: <code>Context.create</code>가 회차를 고르는 조건 그대로, 읽기가 고르는 발행본(live · card · grid) 가운데 하나라도 그 주 회차를 가지면 있다. 안내를 못 읽으면 모른다(null).
+      HUB 작업이 기록한 완료 회차(<code>global_cycles</code> · <code>website_cycles</code>)는 쓰지 않는다. 기준 주를 붙잡은 동안 Gold가 그 주 회차를 다시 열어도 기록은 그대로이기 때문이다(2026-11-03, 리뷰 r4-2).
+      시작이 기준 주 뒤인 기간(위: 아무것도 고르지 않는다)의 빈 결과도 필터 안내나 0 대신 ‘아직 보이지 않는 기간’과 그 주 이름을 보인다(2026-11-03, 리뷰 r3-12).
+      원본 (dash) 화면은 빈 결과를 원래 빈 문구나 0으로 그리므로(Website 언급 · 인용), 그때 main 맨 위 지연 안내 아래에 같은 줄을 보인다(2026-11-03, 리뷰 r2-12). 기간 없이 모든 회차를 읽는 프롬프트 화면(Global · Website)에는 보이지 않는다(2026-11-03, 리뷰 r3-11).
+      그 사이트는 그 화면이 읽는 사이트다: 리뉴얼 셸이 Website 화면 URL의 국가(<code>geography</code>) · 언어(<code>language</code>) · 엔진(<code>engine</code>)과 관리자의 브랜드(<code>brand</code>)를 넘기면 화면들과 같은 규칙으로 읽고, 레이아웃의 첫 읽기(고른 값 없음)는 고른 값이 없는 화면에만 쓴다(2026-11-03).
+      화면 읽기가 사이트의 셀을 고르는 축 그대로다: 기준 주 마지막 날까지 그 사이트의 job(Gold <code>job_index</code>, 어느 회차든) 하나가 고른 국가(프롬프트가 측정된 국가 — 사이트 SA-Dammam인 Genesis 사우디는 Jeddah · Riyadh에서 측정된다) · 언어 · 엔진에 모두 맞으면 그 화면의 사이트이고, job이 아직 없는 사이트는 자기 국가로 고른다(2026-11-03, 리뷰 r5-1).</li>
     <li><b>읽기는 계정 범위 안에서만 한다</b>(2026-10-29, <code>bff/access.py</code>). 화면과 <code>/v1/*</code> 읽기는 토큰의 계정으로 돌고,
       관리자가 아닌 계정(HQ·권역·국가)은 두 곳에서 좁혀진다. 화면 빌더는 그 계정의 범위로 필터를 읽어 원래 화면처럼 브랜드를 잠그고 국가를 좁힌다.
       모든 데이터 읽기(<code>api.get</code>과 <code>/v1/*</code> 경로, Gold와 HUB 데이터 DB 모두)는 쿼리의 <code>brand</code>를 범위 안 브랜드로,
@@ -396,15 +418,24 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="conn" aria-labelledby="h-conn">
-  <h2 id="h-conn">BFF의 DB 연결 일곱 개</h2>
+  <h2 id="h-conn">BFF의 DB 연결 열 개</h2>
   <p class="sub prose">연결마다 계정이 다르고, 모두 <code>statement_timeout</code> 15초가 걸려 있다. Gold 연결이 없으면 API가 뜨지 않고,
-    나머지 여섯은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.</p>
+    나머지 아홉은 없으면 그 기능만 빠진다. 그래서 HUB 저장소 없이 Gold만으로도 화면 대부분이 돈다.
+    데이터 DB 조회 연결은 2026-11-02부터 Global · Website Gold 읽기의 상한인 서비스 기준 주(<code>catalog.current_service_week</code>, <code>hub_stores/service_week.py</code>)도 읽는다.
+    이 연결을 두지 않으면 상한도 빠져 Gold 최신 회차까지 읽는다(화면 칩 ‘기준 주 미정’). 두었는데 기준 주를 아직 한 번도 읽지 못했으면 상한 없이 읽는 대신 그 읽기가 503이다.
+    기준 주는 처음 한 번만 기다려 읽고(2초까지), 그 뒤에는 들고 있는 값을 바로 쓰면서 60초(<code>HGH_SERVICE_WEEK_CACHE_S</code>)마다 뒤에서 다시 읽는다. 다시 읽기가 실패하면 마지막 주를 그대로 쓴다.
+    셸의 기준 주 읽기(<code>shared/service-week</code>)만은 Gold 연결을 잡기 전이라 답하기 전에 매번 다시 읽는다(2초까지, 실패한 뒤 5초 동안은 들고 있는 값).
+    Gold 읽기 캐시의 지문은 기준 주를 기다리지 않고 들고 있는 값만 쓴다(아직 없으면 ‘못 읽음’). 그래서 회차를 읽지 않는 읽기(project 표면 · <code>gold/*</code>)는 데이터 DB를 기다리지 않는다(2026-11-03, 리뷰 r2-5).
+    그래서 기준 주가 바뀌는 순간 열린 화면은 셸의 기준 주 읽기와 본문의 화면 읽기가 서로 다른 주일 수 있다. 셸은 레이아웃이 읽은 주를 한 번 더 읽어 끝이 다르면 본문을 다시 읽고,
+    BFF가 그 주로 바뀐 지 5초 안이면(<code>shared/service-week</code>의 <code>justMoved</code>) 본문을 한 번 다시 읽는다(2026-11-03, 리뷰 r1-16).
+    페이지를 옮길 때 셸의 다시 읽기는 새 페이지를 그리는 중에 나가 본문의 화면 읽기보다 먼저 BFF에 닿을 수 있는데, 셸의 읽기가 기준 주를 다시 읽고 답하므로 그 뒤의 화면 읽기는 셸이 받은 주를 받는다(그 사이에 작업이 다음 주를 기록한 때만 빼고, 2026-11-03, 리뷰 r5-2).
+    기준 주를 쓰는 <code>hmg_service_week_writer</code>는 카탈로그 · 운영 쓰기 계정처럼 <code>manage.py</code>가 실행 중에만 쓰는 계정이라 BFF 연결이 아니다(<a href="#writes">그림 2</a>).</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>연결</th><th>환경변수</th><th>대상</th><th>할 수 있는 일</th><th>풀</th></tr></thead>
       <tbody>
         <tr><td class="k">Gold 조회</td><td><code>HGH_GOLD_DB_URL</code></td><td><code>gold</code> 사내망</td><td>읽기 전용, repeatable read. 없으면 기동 실패</td><td class="mono">≤ 6</td></tr>
-        <tr><td class="k">데이터 DB 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>hmg_analytics</code></td><td>읽기 전용</td><td class="mono">≤ 4</td></tr>
+        <tr><td class="k">데이터 DB 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>hmg_analytics</code></td><td>읽기 전용. Gold 읽기가 멈출 서비스 기준 주(<code>catalog.current_service_week</code>)도 이 연결로 읽는다. 없을 때와 못 읽을 때는 위</td><td class="mono">≤ 4</td></tr>
         <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>hmg_operations</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
@@ -422,7 +453,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-writes">누가 어디에 쓰는가</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 여섯 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, BFF 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, BFF 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, BFF 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하며 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 여섯 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, BFF 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, BFF 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, BFF 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하고, Gold의 회차 · 발행 상태를 읽어 서비스 기준 주를 catalog.service_week에 기록하며(바뀔 때만 한 행, 아니면 확인 시각만), 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
         <defs>
           <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -442,11 +473,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu" x="332" y="92">측정·응답·멘션·인용 원천</text>
         <text class="mu" x="332" y="111">HUB는 쓰지 않음</text>
 
-        <rect class="box" x="616" y="24" width="260" height="100" rx="6"/>
+        <rect class="box" x="616" y="24" width="260" height="112" rx="6"/>
         <text class="b" x="632" y="50">manage.py 관리 명령</text>
         <text class="m mu" x="632" y="70">sync-gold-catalog · 공개 승인</text>
         <text class="m mu" x="632" y="88">set-admin · 외부 호출자·키</text>
-        <text class="mu" x="632" y="111">쓰기 계정은 실행 중에만 씀</text>
+        <text class="m mu" x="632" y="106">sync-service-week (기준 주)</text>
+        <text class="mu" x="632" y="125">쓰기 계정은 실행 중에만 씀</text>
 
         <path class="e" d="M316,74H256" marker-end="url(#f2a)"/>
         <text class="mu sm" x="286" y="66" text-anchor="middle">분류 코드</text>
@@ -504,8 +536,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- writes -->
         <path class="ew" d="M136,124V236" marker-end="url(#f2w)"/>
         <text class="sm w" x="146" y="172">INSERT 전용 계정</text>
-        <path class="ew" d="M680,124V156H296V236" marker-end="url(#f2w)"/>
-        <text class="sm w" x="478" y="148" text-anchor="middle">sync: 바뀐 정의만 새 버전으로</text>
+        <path class="ew" d="M680,136V162H296V236" marker-end="url(#f2w)"/>
+        <text class="sm w" x="478" y="154" text-anchor="middle">sync: 바뀐 정의만 새 버전으로 · 기준 주</text>
         <path class="ew" d="M876,74H1070V190" marker-end="url(#f2w)"/>
         <text class="sm w" x="973" y="66" text-anchor="middle">관리자 등록 · UUID 참조</text>
         <path class="ew" d="M1070,464V432" marker-end="url(#f2w)"/>
@@ -556,6 +588,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 통째로 바꿔 쓰고,
         결과(수집됨 · 권한 대기 · 실패 · 중지됨)를 <code>ga4_collect_status</code>에 남긴다. 화면은 그 값을 그대로 보인다.
         GA4 자격 증명(<code>.env.ga4.local</code>)은 이 프로세스만 읽고, BFF와 브라우저는 GA4를 부르지 않는다. 자격 증명을 인계받으면 돌린다.
+        <code>manage.py</code>에서 catalog로 가는 sync 선은 2026-11-02부터 <code>sync-service-week</code>도 쓴다: <code>hmg_service_week_writer</code>로 <code>catalog.service_week</code>(<code>data-011.sql</code>)만 쓴다.
+        Gold의 회차 · 발행 상태를 읽어 서비스 기준 주나 그 주의 회차가 바뀌면 한 행을 더하고, 아니면 최신 행의 확인 시각(<code>checked_at</code>)만 바꾼다. 실행은 advisory lock 617427422로 하나씩 하고, API는 이 계정을 받지 않는다.
         공개 승인과 외부 호출자·키도 <code>manage.py</code> 명령으로만 쓴다. 외부 API는 읽기만 한다.
         Gold에는 아무도 쓰지 않는다. 표 단위 구조는 <a href="#erd-ops">운영 DB ERD</a>와 <a href="#erd-data">데이터 DB ERD</a>에 있다.</p>
     </figcaption>
@@ -706,6 +740,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       모든 화면이 HUB 로그인을 요구하므로 BFF는 Gold 외에 <code>.env.analytics.local</code>·<code>.env.operations.local</code>·<code>.env.hub-edit.local</code>(읽기 연결, 프롬프트 편집·저장한 필터·계정 관리 역할, 로그인 토큰 비밀)도 받는다. 하나라도 없으면 <code>vm.sh bff</code>가 멈추고, 두 HUB 연결이 healthz에서 ok여야 배치가 끝난다.
       관리자 계정은 VM에서 <code>manage.py set-admin</code>으로 따로 등록한다.
       매시 30분 <code>vm.sh check-sync</code>가 마지막 성공이 3시간을 넘었으면 <code>.local/vm-cron.log</code>에 WARN을 남긴다. 알림 채널은 아직 없다.
+      서비스 기준 주(2026-11-02)는 cron이 매시 10분 <code>vm.sh service-week</code>로 확인한다. BFF 컨테이너 안에서 <code>manage.py sync-service-week</code>를 돌리고(앞 실행이 남아 있으면 <code>.local/vm-service-week.lock</code>으로 건너뜀),
+      결과 한 줄(주 · 바뀜 · 유지 · 표면별 회차 수 · 지연 일수)을 <code>vm-cron.log</code>에 남긴다. <code>service-week FAILED</code> 줄은 아무것도 기록하지 않았다는 뜻이고, 화면은 마지막 기준 주를 그대로 쓴다. crontab 줄은 <code>scripts/vm.sh</code> 머리말에 있다.
       GA4 수집기(2026-10-29 결정)는 VM에서 돈다. production build와 dev build는 HUB 데이터 DB 하나를 같이 쓰므로 수집도 하나다:
       cron이 하루 한 번 <code>vm.sh ga4-cron</code>(09:15 UTC, 모든 시간대의 어제가 끝난 뒤)을, 사람은 필요할 때 <code>vm.sh ga4 …</code>(인자는 수집기 그대로)를 돌린다.
       BFF 이미지로 띄운 일회용 컨테이너가 호스트 네트워크에서 127.0.0.1의 데이터 DB와 인터넷의 GA4에 닿고, 비밀은 <code>.env.analytics-ingest.local</code>·<code>.env.ga4.local</code> env 파일로만 넘긴다.
@@ -996,7 +1032,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-erd-data">HUB 데이터 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_analytics</span></h2>
   <p class="sub prose">스키마 일곱 개를 세 묶음으로 나눠 그린다. <code>catalog</code>·<code>publication</code>·<code>published</code>는 HUB 카탈로그와 공개 승인(그림 5),
     기준값·동기화 기록·외부 호출자와 <code>ext</code> 뷰는 외부 API 경계(그림 6), <code>analytics</code>·<code>ref</code>·<code>ops</code>는 GA4·SEO(그림 7~9)다.
-    근거: <code>back/hub_storage/data-002~005.sql</code>,
+    서비스 기준 주(<code>catalog.service_week</code>)는 외부로 나가지 않지만 동기화 기록처럼 Gold를 읽는 HUB 작업의 기록이라 그림 6에 둔다.
+    근거: <code>back/hub_storage/data-002~011.sql</code>,
     <code>back/analytics/schema.sql</code>·<code>operations.sql</code>. 범례는 그림 4와 같다.</p>
 
   <figure>
@@ -1166,7 +1203,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ext -->
-<svg viewBox="0 0 1200 1530" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · interest_keyword · interest_source · entity_role로 발행된다.">
+<svg viewBox="0 0 1200 1530" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · interest_keyword · interest_source · entity_role로 발행된다. 엔티티 역할 옆의 service_week는 Global · Website 화면이 Gold를 읽는 마지막 주(서비스 기준 주)의 이력이고, HUB 작업이 쓰며 외부 API로 나가지 않는다.">
 <defs><marker id="ext-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ext-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="280" height="266" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H290q6,0 6,6V70z"/>
@@ -1559,6 +1596,32 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="64" y="1485">updated_by</text>
 <text class="m sm ty" x="286" y="1485" text-anchor="end">uuid</text>
 <text class="mu sm" x="28" y="1503">활성 행 → set entity_role</text>
+<rect class="tbox" x="336" y="1250" width="250" height="266" rx="6"/>
+<path class="th" d="M336,1280V1256q0,-6 6,-6H580q6,0 6,6V1280z"/>
+<line class="rule" x1="336" y1="1280" x2="586" y2="1280"/>
+<line class="hair" x1="348" y1="1322" x2="574" y2="1322"/>
+<text class="m b" x="348" y="1270"><tspan class="tsch">catalog.</tspan>service_week</text>
+<text class="desc" x="348" y="1297">화면이 Gold를 읽는 마지막 주와 회차다.</text>
+<text class="desc" x="348" y="1313">바뀔 때만 한 행을 쌓고, 지우지 않는다.</text>
+<text class="kb pk" x="346" y="1341">PK</text>
+<text class="m" x="384" y="1341">seq</text>
+<text class="m sm ty" x="576" y="1341" text-anchor="end">bigint identity</text>
+<text class="m" x="384" y="1359">week_start</text>
+<text class="m sm ty" x="576" y="1359" text-anchor="end">date (월요일)</text>
+<text class="m" x="384" y="1377">global_cycles</text>
+<text class="m sm ty" x="576" y="1377" text-anchor="end">uuid[]</text>
+<text class="m" x="384" y="1395">website_cycles</text>
+<text class="m sm ty" x="576" y="1395" text-anchor="end">uuid[]</text>
+<text class="m" x="384" y="1413">gold_release</text>
+<text class="m sm ty" x="576" y="1413" text-anchor="end">jsonb</text>
+<text class="m" x="384" y="1431">gold_versions</text>
+<text class="m sm ty" x="576" y="1431" text-anchor="end">jsonb</text>
+<text class="m" x="384" y="1449">recorded_at</text>
+<text class="m sm ty" x="576" y="1449" text-anchor="end">timestamptz</text>
+<text class="m" x="384" y="1467">checked_at</text>
+<text class="m sm ty" x="576" y="1467" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="348" y="1485">최신 행 = current_service_week 뷰</text>
+<text class="mu sm" x="348" y="1503">같은 주를 다시 확인하면 checked_at만</text>
 <path class="e" d="M296,755.0H316.0V737H336" marker-end="url(#ext-a)"/>
 <path class="e" d="M336,127.0H296" marker-end="url(#ext-a)"/>
 <path class="e" d="M296,455.0H336" marker-end="url(#ext-a)"/>
@@ -1597,7 +1660,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         같은 줄의 오른쪽(2026-11-02, <code>data-009.sql</code>)은 Admin › 고객 관심 데이터 관리의 시드 키워드(<code>interest_keyword</code>, 키는 Gold <code>dim_keyword.term_norm</code>과 같은 규칙)와 커뮤니티 소스(<code>interest_source</code>)다. 지우지 않고 중지는 <code>stopped</code>이며, 이력 표도 같은 모양이다.
         커뮤니티 소스는 Gold에 대응 목록이 없고 아직 읽는 수집기도 없어, 화면은 Gold 소셜 스냅샷의 host와 나란히 보일 뿐 반영 여부를 말하지 않는다.
         맨 아래 줄(2026-11-02, <code>data-010.sql</code>)은 Admin › 엔티티 카탈로그의 역할(<code>entity_role</code>)이다. 키는 Gold <code>entity_id</code>이고(두 DB 사이 키는 없어 BFF가 Gold를 먼저 읽어 확인한다), 경쟁사는 기본값이라 저장하지 않으며, 경쟁사로 되돌리면 <code>cleared</code>로 남는다.
-        Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.</p>
+        Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.
+        엔티티 역할 오른쪽(2026-11-02, <code>data-011.sql</code>)은 서비스 기준 주(<code>service_week</code>)다. 기준 주나 그 주의 회차(표면별 Gold <code>dim_cycle.cycle_id</code>, 빈 배열은 그 표면 ‘측정 없음’)가 바뀔 때만 한 행을 더하고,
+        같은 주를 다시 확인하면 그 행의 <code>checked_at</code>(마지막으로 확인한 시각)만 바꾼다. <code>catalog.current_service_week</code> 뷰가 최신 행과 <code>week_end</code>(일요일)를 준다.
+        <code>manage.py sync-service-week</code>가 <code>hmg_service_week_writer</code>로 쓰고, BFF는 데이터 DB 조회 계정으로 읽기만 한다. 기준값 종류가 아니어서 외부 API(<code>ext</code>)로 나가지 않는다.</p>
     </figcaption>
   </figure>
 
@@ -2300,6 +2366,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>출처 시드 · 공식 소셜 계정 · 코드표 (HUB 정본)</td><td>데이터 DB <code>catalog.source_seed</code>·<code>source_social</code>·<code>source_code</code> → 기준값 종류 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 탭 · 처음 값은 원본 앱 파일(시드 795 · 소셜 9)과 코드 19개 · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>시드 키워드 · 커뮤니티 수집 소스 (HUB 정본)</td><td>데이터 DB <code>catalog.interest_keyword</code>·<code>interest_source</code> → 기준값 종류 <code>interest_keyword</code>·<code>interest_source</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 고객 관심 데이터 관리 · 키워드 처음 값은 Gold 시드 84개 · 소스는 비어 있고 원본 운영 DB 값은 받지 못함 · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>엔티티 역할 (HUB 정본)</td><td>데이터 DB <code>catalog.entity_role</code> → 기준값 종류 <code>entity_role</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 엔티티 카탈로그 · 처음 값은 Gold 명부 19건(자사 5 · 제외 14) · 파이프라인이 읽는 합의는 대기</span></td></tr>
+        <tr><td>서비스 기준 주 (Global · Website 화면이 Gold를 읽는 마지막 주, 머리 칩 · 지연 안내 · 주별 안내)</td><td>데이터 DB <code>catalog.service_week</code> ← <code>manage.py sync-service-week</code> (Gold <code>dim_cycle</code> · <code>cycle_pick_basis</code> · <code>publication</code> · <code>active_release</code> · <code>release_item</code>)</td><td><span class="pill on">들어옴</span> <span class="muted">2026-11-02 판정 10월 2주차(10/5~10/11, Global 1 · Website 96 회차) · 끝난 지 22일이라 지연 안내가 보임</span></td></tr>
         <tr><td>사용자·멤버십·SW 설정·감사 이력</td><td>운영 DB <code>system.*</code></td><td><span class="pill off">관리자 외 비어 있음</span></td></tr>
       </tbody>
     </table>
@@ -2321,6 +2388,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
           Gold 가져오기는 주기 실행(Gold 재적재 시간을 피해서)이 필요하다</td></tr>
         <tr><td class="k">GA4 수집</td><td colspan="2">저장소 루트에서 <code>python -X utf8 back/analytics/ga4_collect.py</code>(최근 3일을 다시 받음, 처음은 <code>--backfill 180</code>, 확인만은 <code>--dry-run</code>).
           VM에서는 <code>bash scripts/vm.sh ga4 …</code>(수동) · <code>vm.sh ga4-cron</code>(하루 한 번). 속성 목록은 데이터 DB <code>analytics.ga4_registry</code>이고 리뉴얼 Admin › GA4 연동(<code>/renewal/admin/ga4</code>)에서 고친다(2026-10-29, 예전 파일 등록부는 없앰)</td></tr>
+        <tr><td class="k">서비스 기준 주</td><td colspan="2">저장소 루트에서 <code>python -X utf8 back/hub_storage/manage.py sync-service-week</code>(macOS는 앞에 <code>HGH_HUB_NATIVE=1</code>, 판정만 보려면 <code>--dry-run</code>).
+          처음 구성 스크립트 둘은 Gold 가져오기 뒤에 한 번 돌리고, macOS <code>start-local.sh</code>는 API를 띄우기 전마다 돌린다(실패해도 API는 뜨고 마지막에 기록된 주를 쓴다. 기록된 주가 없으면 Global · Website 화면의 Gold 읽기가 503).
+          VM에서는 cron이 매시 10분 <code>bash scripts/vm.sh service-week</code>를 돌린다. 쓰기 계정 비밀번호는 <code>.env.service-week-db.local</code>이고 관리 명령만 읽는다</td></tr>
         <tr><td class="k">비밀 파일</td><td colspan="2"><code>.env.gold.local</code> · <code>.env.analytics.local</code> · <code>.env.operations.local</code> · <code>.env.hub-edit.local</code> · <code>.env.ext-api.local</code>
           · 수집기용 <code>.env.analytics-ingest.local</code> · <code>.env.ga4.local</code> (모두 git 제외)</td></tr>
       </tbody>
@@ -2357,7 +2427,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 
 <footer>
   <p>근거: <code>back/bff/app.py</code> · <code>back/bff/api.py</code> · <code>back/bff/hub_stores/*</code> · <code>back/bff/gold_reader/db.py</code> ·
-    <code>back/hub_storage/*.sql</code> · <code>back/hub_storage/sync_catalog.py</code> · <code>back/ext/app.py</code> · <code>back/analytics/schema.sql</code> · <code>back/analytics/ga4_collect.py</code> · <code>back/hub_storage/README.md</code> · <code>front/middleware.ts</code> ·
+    <code>back/hub_storage/*.sql</code> · <code>back/hub_storage/sync_catalog.py</code> · <code>back/hub_storage/service_week.py</code> · <code>back/ext/app.py</code> · <code>back/analytics/schema.sql</code> · <code>back/analytics/ga4_collect.py</code> · <code>back/hub_storage/README.md</code> · <code>front/middleware.ts</code> ·
     <code>front/lib/hgh/client.ts</code> · <code>scripts/start-local.sh</code> · <code>scripts/start-gold.ps1</code></p>
 </footer>
 

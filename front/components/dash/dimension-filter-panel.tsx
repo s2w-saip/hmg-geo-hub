@@ -38,12 +38,15 @@ import { scopeForGeoSurface } from "@/lib/scope/website-virtual-geo";
 import { AnchorDateCalendar } from "@/components/dash/anchor-date-calendar";
 import {
   countRounds,
+  isDay,
   kstToday,
   normalizeSelectableDates,
   presetWindowKst,
   snapPresetWindow,
   suggestWeekWindow,
+  weekMondayOfDay,
 } from "@/components/dash/selectable-dates";
+import { ServiceWeekShownEnd, useServiceWeekEnd } from "@/components/service-week/provider";
 import { rhqForCountry, rhqLabel } from "@/lib/rhq";
 import { pseudoCountryParent } from "@/lib/geo-catalog/pseudo-country";
 import {
@@ -563,8 +566,9 @@ export type DimensionFilterPanelProps = {
    * 다르다: 수집 시작일은 instant 를 넘겨 클라이언트가 로컬 일자로 접는 반면,
    * `E` 는 서버가 이미 **UTC 일**로 확정한 값이라 그대로 쓴다(접으면 어긋난다).
    *
-   * 미전달·해소 불가(원장 미적용·DB 오류·그 표면에 노출 회차 0)면 **오늘**로 폴백 =
-   * 종전 동작.
+   * 미전달·해소 불가(원장 미적용·DB 오류·그 표면에 노출 회차 0)면 마지막 선택 가능 회차,
+   * 그것도 없으면 서비스 기준 주의 끝, 기준 주도 모르면 **오늘**로 폴백한다. 어느 경우든
+   * 기준 주 끝을 넘지 않는다(2026-11-02, `resolveTimeRangeView`).
    */
   latestAnchorDay?: string | null;
   /**
@@ -2069,7 +2073,7 @@ export const TIME_PRESET_ORDER: readonly TimePreset[] = [
 
 export interface TimeRangeView {
   /**
-   * 화면에 보여 주고 커밋할 범위 = **URL 원 범위 그대로**.
+   * 커밋할 범위 = **URL 원 범위 그대로**. 보이는 범위는 `shown` 이다(서비스 기준 주 뒤의 끝만 다르다).
    *
    * ⚠️ 종전에는 여기가 스냅된 값이었다(검증 B1·B2·W2). 그 설계의 대가가 셋이었다:
    *   · 서버 술어는 원 범위로 도는데 칩은 스냅값을 보여 줘 **고르지도 않은 회차가
@@ -2080,6 +2084,11 @@ export interface TimeRangeView {
    * 스냅은 정확성에 기여하지 않는다.
    */
   range: { from?: string; to?: string };
+  /**
+   * 화면이 **읽는** 범위 = `range` 의 끝을 서비스 기준 주의 끝(`maxDay`)에서 멈춘 것(`shownTimeRange`, 리뷰 r1-15).
+   * 칩 · 직접 선택 · 날짜 입력 · 달력이 이것을 보인다. 기준 주를 모르면 `range` 와 같다.
+   */
+  shown: { from?: string; to?: string };
   /** URL·입력으로 들어온 원래 값. 지금은 `range` 와 같다(계약을 남겨 둔다). */
   requested: { from?: string; to?: string };
   /** 원 범위가 회차 격자 위에 있지 않다(= 스냅을 **제안**할 수 있다). */
@@ -2097,10 +2106,26 @@ export interface TimeRangeView {
    * 다(집계층 `anchorLatestRoundClause`). 달력이 그 날을 표시해야 카드의 숫자와
    * 화면이 서로를 설명한다. 선택이 있으면 `null`(그 선택이 정본).
    * 종전 경로에서도 `null` 이다 — 기본 화면의 정의가 다르다(run 창).
+   * 그 날이 서비스 기준 주 앞이어도 `null` 이다 — 그 화면은 '측정 없음'이다(리뷰 r4-3).
    */
   defaultDay: string | null;
   /** 프리셋별 커밋값. `null` = 그 창에 회차가 없다 → 비활성 + 사유 툴팁. */
   presets: { preset: TimePreset; encoded: string | null }[];
+}
+
+/**
+ * 화면이 **읽는** 기간 — 끝을 서비스 기준 주의 마지막 날(`maxDay`)에서 멈춘다(리뷰 r1-15). BFF 는 기준 주 뒤의 `to` 를
+ * 그 날까지만 읽고(`Context.create`) 머리글도 그 기간을 말한다. 칩 · 직접 선택이 고른 끝을 그대로 찍으면 한 화면에 기간이
+ * 둘이 된다(머리글 09-28 ~ 10-11, 칩 09-28 ~ 10-25). 표시 전용이다: URL · 커밋값은 고른 그대로 둔다 — 기준 주가 넘어가면
+ * 같은 URL 이 더 보인다. 시작이 기준 주 뒤면 읽을 회차가 없으므로(화면은 '측정 없음' · 회차 0개 안내) 고른 그대로,
+ * 기준 주를 모르면(셸 공급자 없음 · Project) 종전 그대로다.
+ */
+export function shownTimeRange(
+  range: { from?: string; to?: string },
+  maxDay: string | null | undefined,
+): { from?: string; to?: string } {
+  if (!isDay(maxDay) || !range.to || range.to <= maxDay || (range.from && range.from > maxDay)) return range;
+  return { ...range, to: maxDay };
 }
 
 /**
@@ -2109,6 +2134,11 @@ export interface TimeRangeView {
  *
  * `selectableDates` 가 비면(`undefined`·빈 배열) **종전 계산을 그대로** 돌려준다:
  * 스냅 없음 · 프리셋은 `presetRange(preset, endDay ?? now, minDay)` · `rounds` 는 null.
+ *
+ * 서비스 기준 주(2026-11-02): 모든 화면이 기준 주까지만 보인다. 그래서 프리셋의 끝점은
+ * `endDay`(E), 없으면 마지막 선택 가능 회차, 그것도 없으면 `maxDay`(기준 주 끝)이고 어느
+ * 경우든 `maxDay` 를 넘지 않는다. 브라우저의 오늘은 기준 주를 모를 때(셸 공급자 없음 ·
+ * Project) 회차 목록도 없는 종전 경로에서만 쓴다. 보이는 범위 `shown` 의 끝도 `maxDay` 에서 멈춘다.
  */
 export function resolveTimeRangeView(args: {
   value: string | null;
@@ -2119,15 +2149,25 @@ export function resolveTimeRangeView(args: {
   todayKst: string;
   /** 종전 경로의 끝점 폴백 — 브라우저 로컬 달력의 오늘. */
   now: Date;
+  /** 서비스 기준 주의 마지막 날(YYYY-MM-DD) — 프리셋의 상한이자 끝점 폴백. 모르면 없음. */
+  maxDay?: string | null;
 }): TimeRangeView {
-  const { value, minDay, endDay, todayKst, now } = args;
+  const { value, minDay, todayKst, now } = args;
   const requested = parseTimeRange(value) ?? {};
   const dates = normalizeSelectableDates(args.selectableDates ?? []);
   const anchored = dates.length > 0;
+  const maxDay = isDay(args.maxDay) ? args.maxDay : null;
+  // 끝점 E 를 기준 주 끝 안으로: 없으면(또는 날짜가 아니면) 기준 주 끝, 기준 주도 모르면 null.
+  const capped = (day: string | null | undefined): string | null => {
+    const d = isDay(day) ? day : null;
+    if (!maxDay) return d;
+    return d && d < maxDay ? d : maxDay;
+  };
 
   if (!anchored) {
     return {
       range: requested,
+      shown: shownTimeRange(requested, maxDay),
       requested,
       didSnap: false,
       suggested: null,
@@ -2136,10 +2176,12 @@ export function resolveTimeRangeView(args: {
       defaultDay: null,
       presets: TIME_PRESET_ORDER.map((preset) => ({
         preset,
-        encoded: encodeTimeRange(presetRange(preset, endDay ?? now, minDay))!,
+        encoded: encodeTimeRange(presetRange(preset, capped(args.endDay) ?? now, minDay))!,
       })),
     };
   }
+  // E 가 없으면(ACR · Website Prompts 는 화면이 latestAnchorDay 를 주지 않는다) 마지막 회차가 끝점이다.
+  const endDay = isDay(args.endDay) ? args.endDay : dates[dates.length - 1];
 
   // 원 범위를 **그대로** 쓴다.
   const range = requested;
@@ -2153,15 +2195,21 @@ export function resolveTimeRangeView(args: {
   //    적용하면 직전 구간도 하루가 되어 카드 5개의 증감이 전부 `―` 가 된다. 주 창이면
   //    `calendarWeek` 으로 읽혀 WoW 가 산다. 정본은 `suggestWeekWindow` 머리 주석.
   const suggested = empty ? suggestWeekWindow(requested, dates) : null;
+  // 기간 미선택 화면이 보는 회차 = 목록의 최신 날짜(오름차순의 마지막). 서비스 기준 주(`maxDay` 가 끝인 월~일)를 알면 그 주의
+  // 월요일 이후일 때만이다 — BFF 는 기준 주에 회차가 없는 표면의 스냅샷을 읽지 않고(Context.create: 앞 회차를 그 주의
+  // 이름으로 보이지 않는다, 결정 '기준 주 세부') 화면은 '측정 없음'인데, 그 위에서 달력 · 안내가 앞 회차를 짚었다(리뷰 r4-3).
+  const latest = dates[dates.length - 1] ?? null;
+  const snapshot = latest && (!maxDay || latest >= weekMondayOfDay(maxDay)) ? latest : null;
   return {
     range,
+    shown: shownTimeRange(range, maxDay),
     requested,
     didSnap: suggested !== null,
     suggested,
     anchored: true,
     rounds,
-    // 아무것도 안 골랐을 때만. 목록은 오름차순이라 마지막이 최신 회차다.
-    defaultDay: range.from || range.to ? null : (dates[dates.length - 1] ?? null),
+    // 아무것도 안 골랐을 때만.
+    defaultDay: range.from || range.to ? null : snapshot,
     // ⚠️ **프리셋은 종류를 불문하고 스냅하지 않는다**(검증 B1·B2·N3). 원본 창을 그대로
     //    URL 에 싣는다. 기간 술어가 `round_date BETWEEN` 이라 원본 창으로도 **같은 회차
     //    집합**을 고르므로 스냅은 정확성에 기여하지 않는데, 대가는 셋이나 됐다:
@@ -2177,7 +2225,7 @@ export function resolveTimeRangeView(args: {
     //
     //    비활성 판정은 그대로다 — 창 안에 회차가 없으면 고를 수 없다(고르면 빈 화면).
     presets: TIME_PRESET_ORDER.map((preset) => {
-      const raw = presetWindowKst(preset, endDay, minDay, todayKst);
+      const raw = presetWindowKst(preset, endDay, minDay, todayKst, maxDay);
       const hasRound = snapPresetWindow(raw, dates) !== null;
       return { preset, encoded: hasRound ? encodeTimeRange(raw) : null };
     }),
@@ -2209,11 +2257,12 @@ function TimeRangeFilter({
   minDay?: string | null;
   /**
    * 프리셋의 **끝점** `E` = 그 표면의 최신 노출 회차 앵커일(YYYY-MM-DD, UTC 일).
-   * 없으면 오늘 = 종전 동작 (GGMD-107 C2).
+   * 없으면 마지막 회차 · 서비스 기준 주 끝 · 오늘 순(GGMD-107 C2, 2026-11-02 — `resolveTimeRangeView`).
    */
   endDay?: string | null;
 }) {
   const t = useTranslations("dashboard.filters.timeRange");
+  const tWeek = useTranslations("serviceWeek");
 
   // ── 앵커 축 경로 (스펙 §5.1) ───────────────────────────────────────────────
   // 분기는 전부 순수 뷰 모델(`resolveTimeRangeView`)에 있다. 목록이 비면 그 함수가
@@ -2224,6 +2273,8 @@ function TimeRangeFilter({
   );
   // KST 의 오늘. 종전 경로의 `new Date()`(브라우저 로컬 달력)와 달리 시계가 하나다.
   const todayKst = useMemo(() => kstToday(), []);
+  // 서비스 기준 주의 끝(2026-11-02) — 프리셋과 날짜 입력의 상한. 셸 공급자가 없거나 Project 면 null(종전 그대로).
+  const maxDay = useServiceWeekEnd();
   const view = resolveTimeRangeView({
     value,
     minDay,
@@ -2231,9 +2282,16 @@ function TimeRangeFilter({
     selectableDates: dates,
     todayKst,
     now: new Date(),
+    maxDay,
   });
-  const { range, requested, didSnap, suggested, anchored, rounds, defaultDay } = view;
+  const { range, shown, requested, didSnap, suggested, anchored, rounds, defaultDay } = view;
   const active = !!(range.from || range.to);
+  // 칩 · 직접 선택 · 날짜 입력 · 달력은 화면이 읽는 기간(`shown`)을 보이고, 끝이 서비스 기준 주 뒤라 잘렸으면 고른 기간을
+  // title 로 알린다(리뷰 r1-15). 커밋은 고른 그대로(`range`)다.
+  const cutTitle =
+    range.to && shown.to !== range.to
+      ? tWeek("periodCut", { from: range.from ?? "…", to: range.to, end: shown.to ?? "…" })
+      : undefined;
   // 고른 범위에 회차가 하나도 없다 — 화면이 조용히 비는 상태다. 칩과 드롭다운 둘 다에서
   // 말하고, 가장 가까운 회차로 가는 동작을 **제안**한다(자동으로 옮기지 않는다: 서버
   // 술어는 URL 원 범위를 쓰므로 표시와 데이터가 갈리면 안 된다 — 검증 W2).
@@ -2241,6 +2299,8 @@ function TimeRangeFilter({
 
   // 종료일 입력의 하한 = 시작일과 수집 시작일 중 **늦은** 쪽.
   const toMin = [range.from, minDay].filter(Boolean).sort().pop() ?? undefined;
+  // 상한 = 서비스 기준 주의 끝, 시작일은 종료일도 넘지 않는다(둘 중 **이른** 쪽).
+  const fromMax = [range.to, maxDay].filter(Boolean).sort()[0] ?? undefined;
 
   const setSide = (side: "from" | "to", day: string) => {
     onChange(encodeTimeRange({ ...range, [side]: day || undefined }));
@@ -2263,14 +2323,11 @@ function TimeRangeFilter({
         >
           <span className="truncate">{label}</span>
           {active ? (
-            <span
-              className={cn(
-                "text-[11px] tabular-nums",
-                emptyWindow ? "text-muted-foreground line-through" : "text-brand-700",
-              )}
-            >
-              {range.from ?? "…"} ~ {range.to ?? "…"}
-            </span>
+            // 칩은 첫 그림(서버 렌더 · 브라우저의 첫 렌더)부터 읽는 기간을 찍는다 — 셸이 기준 주를 알기 전에는 레이아웃이 읽은
+            // 기준 주로 자른다(리뷰 r3-6). 메뉴는 열린 뒤에야 그려지므로 셸이 아는 끝(`maxDay`)을 쓴다.
+            <ServiceWeekShownEnd>
+              {(end) => <TimeChipRange range={range} end={end} empty={emptyWindow} />}
+            </ServiceWeekShownEnd>
           ) : null}
           <ChevronDown className="h-3.5 w-3.5 opacity-60" aria-hidden />
         </button>
@@ -2339,10 +2396,10 @@ function TimeRangeFilter({
             {t("custom")}
           </span>
           {anchored ? (
-            <div className="flex items-center gap-2 text-[11px] tabular-nums text-muted-foreground">
-              <span>{range.from ?? "…"}</span>
+            <div className="flex items-center gap-2 text-[11px] tabular-nums text-muted-foreground" title={cutTitle}>
+              <span>{shown.from ?? "…"}</span>
               <span aria-hidden>~</span>
-              <span>{range.to ?? "…"}</span>
+              <span>{shown.to ?? "…"}</span>
             </div>
           ) : (
             (["from", "to"] as const).map((side) => (
@@ -2350,8 +2407,9 @@ function TimeRangeFilter({
                 <span className="w-12 shrink-0 text-muted-foreground">{t(side)}</span>
                 <input
                   type="date"
-                  value={range[side] ?? ""}
-                  max={side === "from" ? range.to : undefined}
+                  // 읽는 날(`shown`) — 고른 끝이 기준 주 뒤여도 제 상한(max)을 넘는 값을 담지 않는다
+                  value={shown[side] ?? ""}
+                  max={side === "from" ? fromMax : (maxDay ?? undefined)}
                   // 수집 시작일 이전은 고를 수 없다(QA #20). 종료일은 시작일과 수집
                   // 시작일 중 늦은 쪽이 하한.
                   min={side === "to" ? toMin : (minDay ?? undefined)}
@@ -2365,7 +2423,7 @@ function TimeRangeFilter({
         {anchored ? (
           <AnchorDateCalendar
             selectableDates={dates}
-            value={range}
+            value={shown}
             onChange={(next) => onChange(encodeTimeRange(next))}
             todayKst={todayKst}
             minDay={minDay ?? null}
@@ -2396,6 +2454,27 @@ function TimeRangeFilter({
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * 기간 칩의 범위 — 화면이 읽는 기간(끝을 서비스 기준 주의 끝 `end` 에서 멈춘 것, `shownTimeRange`)이고, 잘렸으면 고른 기간을
+ * title 로 알린다(리뷰 r1-15). `empty`: 그 범위에 회차가 없다(취소선).
+ */
+function TimeChipRange({ range, end, empty }: { range: { from?: string; to?: string }; end: string | null; empty: boolean }) {
+  const tWeek = useTranslations("serviceWeek");
+  const shown = shownTimeRange(range, end);
+  const cutTitle =
+    range.to && shown.to !== range.to
+      ? tWeek("periodCut", { from: range.from ?? "…", to: range.to, end: shown.to ?? "…" })
+      : undefined;
+  return (
+    <span
+      className={cn("text-[11px] tabular-nums", empty ? "text-muted-foreground line-through" : "text-brand-700")}
+      title={cutTitle}
+    >
+      {shown.from ?? "…"} ~ {shown.to ?? "…"}
+    </span>
   );
 }
 

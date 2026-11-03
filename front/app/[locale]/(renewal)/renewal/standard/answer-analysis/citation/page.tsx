@@ -27,12 +27,13 @@ import {
 } from "../../../_components/overview-filters";
 import type { RnCitationInput, RnCitationVm } from "./_components/citation-input";
 import { RnCitationBody } from "./_components/citation-body";
+import { RnCitationPeriodText, type RnCitationHeader } from "./_components/citation-period";
 
 // Renewal Citation (2026-10-21) — the redesigned /standard/answer-analysis/citation, served side
 // by side with the original. Data: the SAME screens as citation/page.tsx (`citation/as-of` for the
 // header date and the 경쟁사 options, `citation/filter-bar` for the panel, `citation/standard`
 // with ctx.variant=renewal for the body: the original's data plus the renewal model), handed to the
-// client body as promises of that one answer.
+// client body as promises of that one answer; the header's period from `citation/renewal-header` (no Gold read).
 
 export const maxDuration = 120;
 
@@ -55,12 +56,13 @@ export default async function RenewalCitationPage({
   if (!session) throw new UnauthorizedError();
   const sp = await searchParams;
   const query = { ...sp, "ctx.surface": "global" };
-  // URL state: any citation filter axis set (empty result vs no measurement), the picked period
+  // URL state: any citation filter axis set (empty result vs no measurement), the picked period (the body's mode; the
+  // header prints the BFF's period: citation-period.tsx)
   const filtered = CITATION_AXES.some((k) => sp[k] != null && sp[k] !== "");
   const range = parseTimeRange(sp.time);
   const period = range?.from || range?.to ? { from: range.from ?? null, to: range.to ?? null } : null;
   const meta = screenGet<CitationAsOfScreen>("citation/as-of", query);
-  const asOf = meta.then((m) => m.asOf);
+  const head = period ? screenGet<RnCitationHeader>("citation/renewal-header", query) : null;
 
   const header = (
     <RnPageHeader
@@ -78,13 +80,7 @@ export default async function RenewalCitationPage({
             {tOv("cadence")}
             <span aria-hidden className="h-3 w-px bg-rn-line-2" />
             <span className="font-semibold tabular-nums text-rn-ink-2">
-              {period ? (
-                t("periodRange", { from: period.from ?? "…", to: period.to ?? "…" })
-              ) : (
-                <Suspense fallback="…">
-                  <AsOfText asOf={asOf} />
-                </Suspense>
-              )}
+              <Suspense fallback="…">{head ? <RnCitationPeriodText head={head} /> : <AsOfText asOf={meta.then((m) => m.asOf)} />}</Suspense>
             </span>
           </RnPill>
         </>

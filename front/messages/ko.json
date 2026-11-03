@@ -7307,5 +7307,35 @@
       "label": "DataForSEO · OpenRouter 계정 필요",
       "body": "검색량 조회는 DataForSEO, 프롬프트 생성은 OpenRouter 계정으로 동작합니다. 계정이 연결되면 여기서 직접 조회 · 생성할 수 있습니다."
     }
+  },
+  "serviceWeek": {
+    "week": "{month}월 {nth}주차",
+    "range": "{from}~{to}",
+    "weekWithRange": "{month}월 {nth}주차({from}~{to})",
+    "title": "서비스 기준 주 — Gold 측정 결과는 이 주까지 완료된 회차만 보입니다.",
+    "late": "발행 지연 {days}일",
+    "lateTitle": "기준 주가 끝난 지 {days}일이 지났지만 다음 주 결과가 아직 완료로 확인되지 않았습니다.",
+    "unconfigured": "기준 주 미정",
+    "unconfiguredTitle": "기준 주가 정해져 있지 않아 Gold 측정 결과는 최신 회차까지 보입니다.",
+    "unreadable": "기준 주를 읽지 못함",
+    "unreadableTitle": "기준 주를 읽지 못했습니다. 화면을 옮기거나 다시 열면 다시 읽습니다.",
+    "delayNote": "발행 지연: {next} 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 {week}까지 보입니다.",
+    "checkedAt": "(Gold 마지막 확인 {time})",
+    "surface": {
+      "global": "Global",
+      "website": "Website"
+    },
+    "noteUnpublished": "{surface} {week}: Gold가 발행하지 않은 사이트 {count}곳은 이 주 값에 들어 있지 않습니다.",
+    "noteHidden": "{surface} {week}: 관리자가 숨긴 사이트 {count}곳은 이 주 값에 들어 있지 않습니다.",
+    "noteBoth": "{surface} {week}: Gold가 발행하지 않은 사이트 {unpublished}곳과 관리자가 숨긴 사이트 {hidden}곳은 이 주 값에 들어 있지 않습니다.",
+    "periodCut": "고른 기간 {from} ~ {to} 중 서비스 기준 주의 끝({end})까지 보입니다.",
+    "noRound": {
+      "title": "측정 없음",
+      "desc": "서비스 기준 주 {week}에는 {surface} 측정 회차가 없습니다."
+    },
+    "afterWeek": {
+      "title": "아직 보이지 않는 기간",
+      "desc": "고른 기간({from} ~ {to})은 서비스 기준 주 {week} 뒤입니다. Gold 측정 결과는 이 주까지 완료된 회차만 보입니다."
+    }
   }
 }

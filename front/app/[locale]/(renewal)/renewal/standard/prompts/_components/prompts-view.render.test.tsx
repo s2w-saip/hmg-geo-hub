@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { PromptRow, PromptsHistory, PromptsPage } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
+import type { ServiceWeekView } from "@/lib/service-week";
 
 // Renewal Global prompts list (2026-10-28, for a 1920×1050 window): one line per prompt, a column per
 // attribute, cut-off cells tipped on hover; a row opens the detail sheet with everything it carries.
@@ -20,6 +21,7 @@ vi.mock("./prompt-history", async (orig) => ({
 }));
 
 const { RnToastProvider } = await import("@/components/renewal-ui");
+const ServiceWeekContext = (await import("@/components/service-week/provider")).serviceWeekContext();
 const { RnPromptsView } = await import("./prompts-view");
 const { RnPromptDetail } = await import("./prompt-detail");
 const { RnAuditHistory } = await import("./prompt-history");
@@ -315,6 +317,48 @@ describe("renewal Global prompts wording", () => {
     const on = strip(wrap(<RnAuditHistory initial={HISTORY} load={async () => HISTORY} />));
     expect(on).toContain(H.history.shownCount.replace("{count}", "0"));
     expect(on).toContain(H.empty);
+  });
+});
+
+// Review r1-13 (2026-11-03): the list covers every round, the header naming them (수집 기간 first ~ latest), so the
+// service week's notes take that period — not the service week, as a snapshot page does.
+describe("renewal Global prompts: the service week's notes", () => {
+  const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
+  const WEEK = { start: "2026-10-05", end: "2026-10-11", month: 10, nth: 2 };
+  // a Global week Gold left a site out of (2026-08-10..08-16: its Thursday 08-13, 8월 2주차)
+  const VIEW: ServiceWeekView = {
+    state: "ok",
+    week: WEEK,
+    delay: null,
+    checkedAt: null,
+    recordedAt: null,
+    notes: [{ surface: "global", week: { start: "2026-08-10", end: "2026-08-16", month: 8, nth: 2 }, unpublished: 1, hidden: 0 }],
+  };
+  const shown = (period: { from: string; to: string } | null) =>
+    wrap(
+      <ServiceWeekContext.Provider value={{ initial: settled(VIEW), latest: VIEW, applies: true, surface: "global", sites: "", notesFor: "" }}>
+        <RnPromptsView
+          remote={{ initial: PAGE, load: async () => PAGE }}
+          scopeAll
+          scopeRole="admin"
+          scopeBrands={[]}
+          scopeRegions={[]}
+          scopeCountries={[]}
+          period={period}
+          history={HISTORY}
+          initialTab="catalog"
+          savedFilters={{ page: "prompts", userId: "test", initial: [] }}
+        />
+      </ServiceWeekContext.Provider>,
+    );
+
+  it("a noted week in the collection period gets its note", () => {
+    expect(strip(shown({ from: "2026-06-08", to: "2026-10-05" }))).toContain("Global 8월 2주차: Gold가 발행하지 않은 사이트 1곳은 이 주 값에 들어 있지 않습니다.");
+  });
+
+  it("none outside it, nor without a period (no round to show)", () => {
+    expect(shown({ from: "2026-09-01", to: "2026-10-05" })).not.toContain("data-rn-service-week-notes");
+    expect(shown(null)).not.toContain("data-rn-service-week-notes");
   });
 });
 

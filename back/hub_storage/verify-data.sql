@@ -456,4 +456,75 @@ DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM catalog.entity_role_event) THEN RAISE EXCEPTION 'The API reader cannot read the role history'; END IF;
 END $$;
 RESET ROLE;
+-- The service week job's role (011): its one table, new rows and checked_at only, never a recorded week, its cycles, its
+-- Gold record or its time. Its grants are checked as well as tried, so a column or privilege added later is caught too.
+-- The API reader sees the newest week; the external API and the API's catalog roles do not reach it.
+SET LOCAL ROLE hmg_service_week_writer;
+INSERT INTO catalog.service_week(week_start,global_cycles,website_cycles,gold_release,gold_versions)
+VALUES('2026-09-28','{00000000-0000-4000-8000-0000000000a1}','{00000000-0000-4000-8000-0000000000b1}','{"global":{"live":{"version":27}}}','{"cycle":3183}');
+INSERT INTO catalog.service_week(week_start,global_cycles,website_cycles,gold_release,gold_versions)
+VALUES('2026-10-05','{00000000-0000-4000-8000-0000000000a2}','{}','{"global":{"live":{"version":27}}}','{"cycle":3184}');
+UPDATE catalog.service_week SET checked_at=now()+interval '1 hour' WHERE seq=(SELECT max(seq) FROM catalog.service_week);
+DO $$ BEGIN
+ IF (SELECT week_start FROM catalog.current_service_week)<>'2026-10-05' THEN RAISE EXCEPTION 'The newest row is not the service week'; END IF;
+ BEGIN UPDATE catalog.service_week SET week_start='2026-10-12'; RAISE EXCEPTION 'Writer moves a recorded week'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.service_week SET website_cycles='{}'; RAISE EXCEPTION 'Writer rewrites recorded cycles'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.service_week SET recorded_at=now(); RAISE EXCEPTION 'Writer rewrites a record time'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.service_week; RAISE EXCEPTION 'Writer deletes history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ IF EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='catalog.service_week'::regclass AND attnum>0 AND NOT attisdropped
+           AND attname<>'checked_at' AND has_column_privilege(attrelid,attnum,'UPDATE')) THEN
+   RAISE EXCEPTION 'Writer can UPDATE a column other than checked_at'; END IF;
+ IF has_table_privilege('catalog.service_week','DELETE,TRUNCATE,REFERENCES,TRIGGER') THEN
+   RAISE EXCEPTION 'Writer has DELETE, TRUNCATE, REFERENCES or TRIGGER on the history'; END IF;
+ BEGIN INSERT INTO catalog.service_week(seq,week_start,global_cycles,gold_release,gold_versions) OVERRIDING SYSTEM VALUE
+       VALUES(99,'2026-10-12','{00000000-0000-4000-8000-0000000000a3}','{}','{}'); RAISE EXCEPTION 'Writer sets seq';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions,recorded_at)
+       VALUES('2026-10-12','{00000000-0000-4000-8000-0000000000a3}','{}','{}',now()); RAISE EXCEPTION 'Writer sets recorded_at';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions,checked_at)
+       VALUES('2026-10-12','{00000000-0000-4000-8000-0000000000a3}','{}','{}',now()); RAISE EXCEPTION 'Writer sets checked_at on a new row';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.prompt; RAISE EXCEPTION 'Writer reads the catalog'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN CREATE TABLE catalog.forbidden_week(id int); RAISE EXCEPTION 'Writer creates schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions) VALUES('2026-10-13','{00000000-0000-4000-8000-0000000000a3}','{}','{}');
+       RAISE EXCEPTION 'A week that does not start on Monday'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.service_week(week_start,gold_release,gold_versions) VALUES('2026-10-12','{}','{}');
+       RAISE EXCEPTION 'A week with no cycle on either surface'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions) VALUES('2026-10-12','{NULL}','{}','{}');
+       RAISE EXCEPTION 'A NULL cycle id'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions) VALUES('2026-10-12','{00000000-0000-4000-8000-0000000000a3}','[]','{}');
+       RAISE EXCEPTION 'A release record that is not an object'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE catalog.service_week SET checked_at=recorded_at-interval '1 hour'; RAISE EXCEPTION 'A check before the record';
+       EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_analytics_reader;
+DO $$ BEGIN
+ IF (SELECT week_start FROM catalog.current_service_week)<>'2026-10-05' OR (SELECT count(*) FROM catalog.service_week)<2 THEN
+   RAISE EXCEPTION 'The API reader cannot read the service week'; END IF;
+ IF (SELECT extract(isodow FROM week_end) FROM catalog.current_service_week)<>7
+    OR (SELECT checked_at<=recorded_at FROM catalog.current_service_week) THEN RAISE EXCEPTION 'The current week reads wrong'; END IF;
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions) VALUES('2026-10-12','{00000000-0000-4000-8000-0000000000a3}','{}','{}');
+       RAISE EXCEPTION 'The API reader writes the service week'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ BEGIN PERFORM 1 FROM catalog.service_week; RAISE EXCEPTION 'ext role reads the service week'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM catalog.current_service_week; RAISE EXCEPTION 'ext role reads the current week'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_catalog_writer;
+DO $$ BEGIN
+ BEGIN INSERT INTO catalog.service_week(week_start,global_cycles,gold_release,gold_versions) VALUES('2026-10-12','{00000000-0000-4000-8000-0000000000a3}','{}','{}');
+       RAISE EXCEPTION 'The Gold catalog import writes the service week'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+SET LOCAL ROLE hmg_catalog_editor;
+DO $$ BEGIN
+ BEGIN UPDATE catalog.service_week SET checked_at=now(); RAISE EXCEPTION 'The API catalog editor touches the service week';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
 ROLLBACK;

@@ -19,6 +19,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 //        truncation line, only when the route sends them
 //   B048/B049 the export buttons run one export at a time, a failure becomes the existing toast
 //        (no raw JSON page, no silent failure), and the API file keeps its Content-Disposition name
+// The service week (review r3-4): the shell re-reads the page once the week moved (router.refresh: the same URL, a
+// new answer, the client state kept), and the rows and details read on top of the answer before stayed. The hooks
+// take the page's read from the shell's context (components/service-week/provider.tsx useServiceWeekRead): this
+// runtime's useContext hands them `rt.provide`'s value (none = no shell, as before).
 
 type Deps = readonly unknown[] | undefined;
 type Slot = { v?: unknown; deps?: Deps; cleanup?: (() => void) | void };
@@ -69,6 +73,12 @@ const rt = vi.hoisted(() => {
     if (!slots[i]) slots[i] = { v: { current: init } };
     return slots[i].v as { current: T };
   }
+  // the shell's service week context (the only context these hooks read); null = no shell
+  let context: unknown = null;
+  const useContext = () => context;
+  const provide = (value: unknown) => {
+    context = value;
+  };
   function mount<P, R>(hook: (p: P) => R, props: NoInfer<P>) {
     slots = [];
     scheduled = false;
@@ -91,7 +101,7 @@ const rt = vi.hoisted(() => {
       },
     };
   }
-  return { useState, useEffect, useMemo: memoSlot, useCallback: callbackSlot, useRef, mount };
+  return { useState, useEffect, useMemo: memoSlot, useCallback: callbackSlot, useRef, useContext, provide, mount };
 });
 
 vi.mock("react", async (importOriginal) => {
@@ -103,6 +113,7 @@ vi.mock("react", async (importOriginal) => {
     useMemo: rt.useMemo,
     useCallback: rt.useCallback,
     useRef: rt.useRef,
+    useContext: rt.useContext,
   };
 });
 vi.mock("next/navigation", () => ({
@@ -129,6 +140,7 @@ type Call = { url: string; signal?: AbortSignal; reply: (status: number, body: u
 let calls: Call[] = [];
 beforeEach(() => {
   calls = [];
+  rt.provide(null);
   vi.stubGlobal("fetch", (url: string, init?: { signal?: AbortSignal }) =>
     new Promise<Response>((resolve, reject) => {
       const signal = init?.signal;
@@ -391,6 +403,110 @@ describe("useServerDomainTable: 'load more' adds the page's category views after
   });
 });
 
+// ── review r3-4: a new read of the page (the service week moved) ─────────────
+
+describe("useServerDomainTable: a new read of the page starts from its first page (review r3-4)", () => {
+  // router.refresh hands the new week's first page and cursor for the same URL; the rows read on top of the week
+  // before ('더 보기', a search, a 409 restart) went on after it: W2's page one, then W1's page two and its cursor
+  const W2 = [row("w2a", 1), row("w2b", 2)];
+  const useWeekTable = (p: { q: string; initial: typeof INITIAL; nextCursor: string }) =>
+    useServerDomainTable({
+      source: { query: "surface=website", nextCursor: p.nextCursor, total: 9 },
+      initial: p.initial,
+      q: p.q,
+      sortKey: "citations",
+      asc: false,
+      pageSize: 2,
+    });
+
+  it("default order: the week before's '더 보기' rows and cursor are gone, nothing is read for it", async () => {
+    rt.provide({ applies: true, read: 0 });
+    const h = rt.mount(useWeekTable, { q: "", initial: INITIAL, nextCursor: "s1" });
+    h.result.current.loadMore();
+    await flush();
+    calls[0].reply(200, { rows: [row("c", 3), row("d", 4)], nextCursor: "s2", total: 9 });
+    await flush();
+    expect([domains(h), h.result.current.nextCursor]).toEqual([["a", "b", "c", "d"], "s2"]);
+    rt.provide({ applies: true, read: 1 });
+    h.rerender({ q: "", initial: W2, nextCursor: "t1" });
+    await flush();
+    expect([domains(h), h.result.current.nextCursor, calls.length]).toEqual([["w2a", "w2b"], "t1", 1]);
+    h.result.current.loadMore();
+    await flush();
+    expect(qs(calls[1].url).get("cursor")).toBe("t1");
+  });
+
+  it("a search: read again for the new answer, the week before's rows not shown meanwhile", async () => {
+    rt.provide({ applies: true, read: 0 });
+    const h = rt.mount(useWeekTable, { q: "k", initial: INITIAL, nextCursor: "s1" });
+    await flush();
+    calls[0].reply(200, { rows: [row("k-w1", 1)], nextCursor: null, total: 1 });
+    await flush();
+    expect(domains(h)).toEqual(["k-w1"]);
+    rt.provide({ applies: true, read: 1 });
+    h.rerender({ q: "k", initial: W2, nextCursor: "t1" });
+    expect([h.result.current.status, domains(h)]).toEqual(["loading", []]);
+    await flush();
+    expect(calls.map((c) => qs(c.url).get("q"))).toEqual(["k", "k"]);
+    calls[1].reply(200, { rows: [row("k-w2", 1)], nextCursor: null, total: 1 });
+    await flush();
+    expect(domains(h)).toEqual(["k-w2"]);
+  });
+
+  it("after a 409 restart: the new answer's own first page (the restart was the answer before's)", async () => {
+    rt.provide({ applies: true, read: 0 });
+    const h = rt.mount(useWeekTable, { q: "", initial: INITIAL, nextCursor: "s1" });
+    h.result.current.loadMore();
+    await flush();
+    calls[0].reply(409, { error: "cursor_stale" });
+    await flush();
+    calls[1].reply(200, { rows: [row("a", 1), row("z", 2)], nextCursor: "f2", total: 12 });
+    await flush();
+    rt.provide({ applies: true, read: 1 });
+    h.rerender({ q: "", initial: W2, nextCursor: "t1" });
+    await flush();
+    expect([domains(h), h.result.current.nextCursor, calls.length]).toEqual([["w2a", "w2b"], "t1", 2]);
+  });
+});
+
+describe("useDomainDetail: a new read of the page reads the detail again (review r3-4)", () => {
+  const url = domainDetailUrl("surface=website", "a.example");
+  const detail = (tag: string) => ({ urls: [{ url: `https://a.example/${tag}`, title: "", count: 1, aiProvider: "", promptText: "", country: null }], promptList: [] });
+
+  it("an open row: read again, the week before's list not shown meanwhile", async () => {
+    rt.provide({ applies: true, read: 0 });
+    const h = rt.mount((p: { open: boolean }) => useDomainDetail(url, p.open), { open: true });
+    calls[0].reply(200, detail("w1"));
+    await flush();
+    expect(h.result.current).toMatchObject({ status: "ready", urls: [{ url: "https://a.example/w1" }] });
+    rt.provide({ applies: true, read: 1 });
+    h.rerender({ open: true });
+    expect(h.result.current).toBeNull();
+    await flush();
+    expect(calls.map((c) => c.url)).toEqual([url, url]);
+    calls[1].reply(200, detail("w2"));
+    await flush();
+    expect(h.result.current).toMatchObject({ status: "ready", urls: [{ url: "https://a.example/w2" }] });
+  });
+
+  it("a closed row's kept detail: nothing read while it is closed, read again when it opens", async () => {
+    rt.provide({ applies: true, read: 0 });
+    const h = rt.mount((p: { open: boolean }) => useDomainDetail(url, p.open), { open: true });
+    calls[0].reply(200, detail("w1"));
+    await flush();
+    h.rerender({ open: false });
+    await flush();
+    rt.provide({ applies: true, read: 1 });
+    h.rerender({ open: false });
+    await flush();
+    expect(calls).toHaveLength(1);
+    h.rerender({ open: true });
+    await flush();
+    expect(calls).toHaveLength(2);
+    expect(h.result.current).toMatchObject({ status: "loading" });
+  });
+});
+
 // ── P6 B047: the counts before the detail caps ──────────────────────────────
 
 describe("useDomainDetail: urlTotal / promptTotal when the route sends them (B047)", () => {
@@ -407,7 +523,8 @@ describe("useDomainDetail: urlTotal / promptTotal when the route sends them (B04
     await flush();
     calls[1].reply(200, list);
     await flush();
-    expect(Object.keys(h.result.current ?? {}).sort()).toEqual(["promptList", "status", "url", "urls"]);
+    // the state's own keys (its URL, the page's read it was loaded under) and the route's lists, no totals
+    expect(Object.keys(h.result.current ?? {}).sort()).toEqual(["promptList", "read", "status", "url", "urls"]);
   });
 });
 

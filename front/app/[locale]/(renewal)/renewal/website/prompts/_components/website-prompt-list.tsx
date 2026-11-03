@@ -56,11 +56,14 @@ export function RnWebsitePromptTable({
   sort,
   onSort,
   onOpen,
+  measured = true,
 }: {
   rows: WebsitePromptRow[];
   sort: Sort;
   onSort: (key: WebsitePromptSortKey) => void;
   onOpen: (row: WebsitePromptRow) => void;
+  /** false: the lens reads no round (a period after the service week, review r4-4) — the rows without their measured columns */
+  measured?: boolean;
 }) {
   const t = useTranslations("website.prompts");
   const tc = useTranslations("renewal.website.prompts.columns");
@@ -77,17 +80,21 @@ export function RnWebsitePromptTable({
           <col className="w-[84px]" />
           <col className="w-[164px]" />
           <col className="w-[260px]" />
-          <col className="w-[96px]" />
-          <col className="w-[100px]" />
+          {measured ? (
+            <>
+              <col className="w-[96px]" />
+              <col className="w-[100px]" />
+            </>
+          ) : null}
         </colgroup>
         <thead>
           <tr className="text-left text-rn-12 text-rn-muted">
             {head("prompt", label.prompt, "pl-5")}
             {head("brand", label.brand)}
             {head("country", tc("market"))}
-            {head("targetUrl", label.targetUrl)}
-            {head("answers", label.answers)}
-            {head("lastMeasuredAt", label.lastMeasuredAt, "pr-5")}
+            {head("targetUrl", label.targetUrl, measured ? undefined : "pr-5")}
+            {measured ? head("answers", label.answers) : null}
+            {measured ? head("lastMeasuredAt", label.lastMeasuredAt, "pr-5") : null}
           </tr>
         </thead>
         <tbody>
@@ -110,7 +117,7 @@ export function RnWebsitePromptTable({
                   {geoLabel(r.countryCode)} · {languageName(r.langCode, locale)}
                 </span>
               </td>
-              <td className={TD}>
+              <td className={cx(TD, !measured && "pr-5")}>
                 {/* the target page is what the row is about: the link opens it, the row its sheet */}
                 <a
                   href={targetHref(r.targetUrl)}
@@ -123,12 +130,16 @@ export function RnWebsitePromptTable({
                   {r.targetUrl}
                 </a>
               </td>
-              <td className={TD}>
-                <Answers row={r} />
-              </td>
-              <td className={cx(TD, "pr-5 text-rn-12 whitespace-nowrap tabular-nums")}>
-                {day(r.lastMeasuredAt) ?? <span className="text-rn-muted">{t("notMeasured")}</span>}
-              </td>
+              {measured ? (
+                <>
+                  <td className={TD}>
+                    <Answers row={r} />
+                  </td>
+                  <td className={cx(TD, "pr-5 text-rn-12 whitespace-nowrap tabular-nums")}>
+                    {day(r.lastMeasuredAt) ?? <span className="text-rn-muted">{t("notMeasured")}</span>}
+                  </td>
+                </>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -178,8 +189,23 @@ function Answers({ row }: { row: WebsitePromptRow }) {
   );
 }
 
-/** The detail sheet: the full text (copyable), the row's attributes and its measurement under the lens. */
-export function RnWebsitePromptDetail({ row, axis, lens, onClose }: { row: WebsitePromptRow | null; axis: string[]; lens: string[]; onClose: () => void }) {
+/**
+ * The detail sheet: the full text (copyable), the row's attributes and its measurement under the lens — none when the
+ * lens reads no round (`measured` false: a period after the service week, review r4-4).
+ */
+export function RnWebsitePromptDetail({
+  row,
+  axis,
+  lens,
+  measured = true,
+  onClose,
+}: {
+  row: WebsitePromptRow | null;
+  axis: string[];
+  lens: string[];
+  measured?: boolean;
+  onClose: () => void;
+}) {
   const t = useTranslations("website.prompts");
   const tp = useTranslations("renewal.prompts");
   const tw = useTranslations("renewal.website.prompts");
@@ -215,7 +241,7 @@ export function RnWebsitePromptDetail({ row, axis, lens, onClose }: { row: Websi
             <Field label={tw("domainLabel")}>{row.domain || null}</Field>
           </dl>,
         )}
-        {section(
+        {measured ? section(
           tw("measurement"),
           <>
             {lens.length ? <p className="m-0 mb-2 text-rn-12 text-rn-muted">{tw("measurementLens", { lens: lens.join(" · ") })}</p> : null}
@@ -245,7 +271,7 @@ export function RnWebsitePromptDetail({ row, axis, lens, onClose }: { row: Websi
               </Field>
             </dl>
           </>,
-        )}
+        ) : null}
       </div>
     </RnDrawer>
   );

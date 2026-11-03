@@ -2,7 +2,7 @@
 from fastapi import HTTPException
 from starlette.datastructures import QueryParams
 
-from bff.gold_reader import acr, advanced, answers, catalog, citations, compare, drilldown, insights, metrics, projects
+from bff.gold_reader import acr, advanced, answers, catalog, citations, compare, drilldown, insights, metrics, projects, week_notes
 from bff.gold_reader.context import Context
 from bff.gold_reader.db import connection
 
@@ -14,7 +14,8 @@ METRICS = {"filters/options": metrics.options, "filters/dates": metrics.dates,
 async def read(path: str, q: QueryParams) -> dict:
     """One Gold /v1 GET in one read-only transaction on the pinned release."""
     async with connection() as conn:
-        ctx = await Context.create(conn, q)
+        # gold/projects · keywords · social read no global or website round: the service week leaves them out
+        ctx = await Context.create(conn, q, capped=not path.startswith("gold/"))
         if path in METRICS:
             return await METRICS[path](ctx)
         if path == "source":
@@ -30,7 +31,8 @@ async def dispatch(path, ctx):
                 "kpi/compare": compare.read, "mentions/prompts": drilldown.mention_prompts,
                 "mentions/missing-prompts": drilldown.missing_prompts,
                 "mentions/market-gaps": drilldown.market_gaps,
-                "citations/prompts": drilldown.citation_prompts, "citations/sources/tone": drilldown.tone}
+                "citations/prompts": drilldown.citation_prompts, "citations/sources/tone": drilldown.tone,
+                "cycles/week-notes": week_notes.read}
     if path == "gold/projects":
         return await projects.listing(ctx)
     if path == "gold/keywords":

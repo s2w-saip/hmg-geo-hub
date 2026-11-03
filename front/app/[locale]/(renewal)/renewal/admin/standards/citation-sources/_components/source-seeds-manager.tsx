@@ -9,6 +9,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { useServedState } from "@/hooks/use-served-state";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Loader2, Plus, RotateCcw, Undo2 } from "lucide-react";
@@ -76,7 +77,8 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
   const errorText = useListError();
   const fromUrl = useMemo(() => queryToSeedFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [listing, setListing] = useState(initial);
+  // Gold's latest round is held to the service week: the page's new answer once it moved replaces the list (review r2-7)
+  const [listing, setListing] = useServedState(initial);
   const [filters, setFilters] = useState<SeedFilter>(fromUrl.filters);
   const [search, setSearch] = useState(fromUrl.search);
   const [sort, setSort] = useState(DEFAULT_SEED_SORT);

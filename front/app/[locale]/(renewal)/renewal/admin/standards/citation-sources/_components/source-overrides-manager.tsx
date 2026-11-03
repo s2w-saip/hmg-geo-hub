@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { useServedState } from "@/hooks/use-served-state";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { AlertTriangle, ArrowDownWideNarrow, ArrowUpNarrowWide, Database, History, Loader2, RotateCcw } from "lucide-react";
@@ -85,7 +86,8 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
   const tip = useRnTruncTip();
   const fromUrl = useMemo(() => queryToFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [listing, setListing] = useState(initial);
+  // Gold's latest round is held to the service week: the page's new answer once it moved replaces the list (review r2-7)
+  const [listing, setListing] = useServedState(initial);
   const [filters, setFilters] = useState<SourceFilter>(fromUrl.filters);
   const [search, setSearch] = useState(fromUrl.search);
   const [otherOnly, setOtherOnly] = useState(fromUrl.otherOnly);
@@ -99,7 +101,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
   const categoryOrder = useMemo(() => new Map(listing.categories.map((c, i) => [c.slug, i] as const)), [listing.categories]);
   const reload = useCallback(() => {
     sourceApi.list().then(setListing, () => toast(t("error.source_unavailable")));
-  }, [t, toast]);
+  }, [setListing, t, toast]);
 
   // URL mirrors the picks (shareable, restorable); shallow — no server round trip.
   useEffect(() => {

@@ -51,7 +51,7 @@ export default async function RenewalCitationToneUrlsRoute({
   }
   return (
     <RnPageFrame header={header}>
-      <RnCitationToneUrlsView tone={s.tone} page={s.page} q={s.q} byDomain={s.byDomain} counts={s.counts} />
+      <RnCitationToneUrlsView tone={s.tone} page={s.page} q={s.q} byDomain={s.byDomain} counts={s.counts} weekEnd={s.weekEnd} />
     </RnPageFrame>
   );
 }

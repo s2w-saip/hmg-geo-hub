@@ -385,4 +385,9 @@ export interface CitationToneUrlsScreen {
   byDomain: boolean;
   page: (CitationToneUrlPage & SubpageWindow) | null;
   counts: { positive: number | null; negative: number | null } | null;
+  /**
+   * 이 답이 읽힌 서비스 기준 주의 끝(YYYY-MM-DD). 화면이 다시 쓰는 탭 카운트는 이 주로 기억한다(review r3-5).
+   * 없음 = 기준 주 없음(HUB 데이터 DB 없음).
+   */
+  weekEnd?: string;
 }

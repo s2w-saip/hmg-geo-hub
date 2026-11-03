@@ -152,8 +152,11 @@ describe("renewal website overview page", () => {
     const degraded = await collect(await render({}));
     expect(degraded.get("RnWebsiteOverviewBody")).toBeUndefined();
     expect(degraded.get("RnEmpty")!.children).toBe("degraded");
+    expect(degraded.get("RnServiceWeekEmptyLine")).toBeUndefined();
     st.fail = new Set();
     st.summary = { state: "empty" };
-    expect((await collect(await render({}))).get("RnEmpty")!.children).toBe("empty");
+    // no data: the notice, or the service week's '측정 없음' when the week holds no Website round (review r1-19: under
+    // the week of 07-27 website/summary answers empty; components/service-week/no-round.tsx decides in the browser)
+    expect((await collect(await render({}))).get("RnServiceWeekEmptyLine")!.children).toBe("empty");
   });
 });

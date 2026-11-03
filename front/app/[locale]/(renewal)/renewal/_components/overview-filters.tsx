@@ -12,11 +12,13 @@ import {
   competitorAxisEnabled,
   isoDay,
   resolveTimeRangeView,
+  shownTimeRange,
   type DimensionGroup,
   type Draft,
 } from "@/components/dash/dimension-filter-panel";
 import { encodeTimeRange, splitFilterValues } from "@/components/dash/filter-encoding";
 import { kstToday } from "@/components/dash/selectable-dates";
+import { ServiceWeekShownEnd, useServiceWeekEnd } from "@/components/service-week/provider";
 import { isRegionSelected, toggleRhqRegion } from "@/components/dash/rhq-region-toggle";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
 import { citationCategorySlug } from "@/lib/citation-categorizer/taxonomy";
@@ -74,7 +76,10 @@ interface Ctx {
   filterQuery: string;
   valueLabel: (g: DimensionGroup, v: string) => string;
   regionLabel: (id: string) => string;
-  timeLabel: (encoded: string) => string;
+  /** `end` (the service week's last day, ServiceWeekShownEnd's): the period as the screens read it, its end at the latest that day; without, as picked */
+  timeLabel: (encoded: string, end?: string | null) => string;
+  /** the picked period when the screens read less of it (its end past `end`): the title of a shown label */
+  timeTitle: (encoded: string, end: string | null) => string | undefined;
   change: (fn: (d: Draft, nav: string[]) => { draft: Draft; nav?: string[] }, opts?: { undoMsg?: string }) => void;
   applyQuery: (query: string) => void;
   saved: ReturnType<typeof useSavedFilters>;
@@ -126,6 +131,7 @@ export function RnOverviewFilters({
 }) {
   const tf = useTranslations("dashboard.filters");
   const tTime = useTranslations("dashboard.filters.timeRange");
+  const tWeek = useTranslations("serviceWeek");
   const tr = useTranslations("renewal.filters");
   const tCat = useTranslations("citationCategories");
   const locale = useLocale();
@@ -255,15 +261,31 @@ export function RnOverviewFilters({
     [langFmt, locale, tCat, tf],
   );
   const regionLabel = useCallback((id: string) => rhqLabel(id, locale === "en" ? "en" : "ko") ?? id, [locale]);
-  const timeView = useTimeView(props, draft);
+  // the service week's end as this tab knows it (null until the shell's first read): the presets a saved filter names
+  const maxDay = useServiceWeekEnd();
+  // The applied chip and the time section print the period as the screens read it, its end at the latest `end` (the
+  // service week's last day): the BFF reads a `to` past the week up to that day and the header says so (review r1-15:
+  // '기간 2026-09-28 ~ 2026-10-25' next to a header of 09-28 ~ 10-11). They take `end` from ServiceWeekShownEnd, the
+  // layout's read on the first paint (review r3-6), and name the presets of that end, as the time section does. The URL
+  // keeps the pick, so a later week shows more under the same link; a saved filter's summary — and the name it suggests
+  // — is the filter as saved.
   const timeLabel = useCallback(
-    (encoded: string) => {
-      const preset = timeView.presets.find((p) => p.encoded === encoded);
+    (encoded: string, end?: string | null) => {
+      const preset = timeViewOf(props, null, end === undefined ? maxDay : end).presets.find((p) => p.encoded === encoded);
       if (preset) return tTime(preset.preset);
       const [from, to] = encoded.split("..");
-      return `${from || "…"} ~ ${to || "…"}`;
+      const r = end === undefined ? { from, to } : shownTimeRange({ from: from || undefined, to: to || undefined }, end);
+      return `${r.from || "…"} ~ ${r.to || "…"}`;
     },
-    [tTime, timeView.presets],
+    [maxDay, props, tTime],
+  );
+  const timeTitle = useCallback(
+    (encoded: string, end: string | null) => {
+      const [from, to] = encoded.split("..");
+      const read = shownTimeRange({ from: from || undefined, to: to || undefined }, end).to;
+      return to && read !== to ? tWeek("periodCut", { from: from || "…", to, end: read ?? "…" }) : undefined;
+    },
+    [tWeek],
   );
 
   const value: Ctx = {
@@ -275,6 +297,7 @@ export function RnOverviewFilters({
     valueLabel,
     regionLabel,
     timeLabel,
+    timeTitle,
     change,
     applyQuery,
     saved,
@@ -291,34 +314,43 @@ export function RnOverviewFilters({
   );
 }
 
-function useTimeView(props: OverviewFilterProps, draft: Draft) {
+/** The time axis of the period `value`, held to `maxDay` — the service week's end (2026-11-02): no preset reaches past it; null = not known, as before. */
+function timeViewOf(props: OverviewFilterProps, value: string | null, maxDay: string | null) {
   const minDay = props.collectionStartDay ? isoDay(new Date(props.collectionStartDay)) : null;
-  return resolveTimeRangeView({
-    value: draft.time?.[0] ?? null,
-    minDay,
-    endDay: props.latestAnchorDay ?? null,
-    selectableDates: props.selectableDates,
-    todayKst: kstToday(),
-    now: new Date(),
-  });
+  return {
+    maxDay,
+    ...resolveTimeRangeView({
+      value,
+      minDay,
+      endDay: props.latestAnchorDay ?? null,
+      selectableDates: props.selectableDates,
+      todayKst: kstToday(),
+      now: new Date(),
+      maxDay,
+    }),
+  };
 }
 
 /** Applied-condition summary of a filter query (saved filters, tokens). */
 function useSummaries() {
-  const { model, valueLabel, regionLabel, timeLabel } = useFilters();
+  const { model, valueLabel, regionLabel, timeLabel, timeTitle } = useFilters();
   const tf = useTranslations("dashboard.filters");
   const tr = useTranslations("renewal.filters");
   const tokensOf = useCallback(
-    (d: Draft): { group: DimensionGroup; label: string; text: string }[] => {
-      const out: { group: DimensionGroup; label: string; text: string }[] = [];
+    /** `end` (ServiceWeekShownEnd's): the period as the screens read it, the pick in `title` (the applied chips); without, as saved */
+    (d: Draft, end?: string | null): { group: DimensionGroup; label: string; text: string; title?: string }[] => {
+      const out: { group: DimensionGroup; label: string; text: string; title?: string }[] = [];
       for (const s of model.sections) {
         for (const axis of s.axes) {
           if (axis === "rhqRegion") continue;
           const vals = d[axis] ?? [];
           if (!vals.length) continue;
           let text: string;
-          if (axis === "time") text = timeLabel(vals[0]);
-          else {
+          let title: string | undefined;
+          if (axis === "time") {
+            text = timeLabel(vals[0], end);
+            title = end === undefined ? undefined : timeTitle(vals[0], end);
+          } else {
             const whole = axis === "geography" ? wholeRegions(model, vals) : null;
             if (whole) text = tr("regionCountries", { regions: whole.map((id) => tr("wholeRegion", { region: regionLabel(id) })).join(", "), count: vals.length });
             else {
@@ -326,12 +358,12 @@ function useSummaries() {
               text = labels.length > 3 ? tr("moreValues", { first: labels.slice(0, 2).join(", "), count: labels.length - 2 }) : labels.join(", ");
             }
           }
-          out.push({ group: axis, label: tf(`group.${axis}` as "group.geography"), text });
+          out.push({ group: axis, label: tf(`group.${axis}` as "group.geography"), text, title });
         }
       }
       return out;
     },
-    [model, regionLabel, tf, timeLabel, tr, valueLabel],
+    [model, regionLabel, tf, timeLabel, timeTitle, tr, valueLabel],
   );
   const summarize = useCallback(
     (query: string) => {
@@ -453,6 +485,15 @@ export function RnOverviewFilterPanel({
                 </Suspense>
               );
             }
+            // the time section prints the period read and holds its pickers to the week's end from the first paint on
+            // (the layout's read until this tab knows the week, review r3-6)
+            if (axis === "time") {
+              return (
+                <ServiceWeekShownEnd key={axis}>
+                  {(end) => <AxisSection axis={axis} open={open[axis] ?? false} onToggle={toggle} help={axisHelp?.[axis]} end={end} />}
+                </ServiceWeekShownEnd>
+              );
+            }
             return <AxisSection key={axis} axis={axis} open={open[axis] ?? false} onToggle={toggle} help={axisHelp?.[axis]} />;
           })}
         </div>
@@ -499,7 +540,7 @@ function CompetitorSection({ options: pending, open, onToggle }: { options: Prom
   return <AxisSection axis="competitor" open={open} onToggle={onToggle} options={options} disabled={!competitorAxisEnabled(draft.source)} />;
 }
 
-function AxisSection({ axis, open, onToggle, options, disabled, help }: { axis: PanelAxis; open: boolean; onToggle: () => void; options?: readonly string[]; disabled?: boolean; help?: ReactNode }) {
+function AxisSection({ axis, open, onToggle, options, disabled, help, end = null }: { axis: PanelAxis; open: boolean; onToggle: () => void; options?: readonly string[]; disabled?: boolean; help?: ReactNode; /** the time axis: the service week's last day (ServiceWeekShownEnd) */ end?: string | null }) {
   const ctx = useFilters();
   const { model, draft, change, regionLabel } = ctx;
   const tf = useTranslations("dashboard.filters");
@@ -507,7 +548,7 @@ function AxisSection({ axis, open, onToggle, options, disabled, help }: { axis: 
   const title = axis === "rhqRegion" ? tf("group.rhqRegion") : tf(`group.${axis}` as "group.geography");
   const selectedRegions = axis === "rhqRegion" ? model.regions.filter((id) => isRegionSelected(id, draft.geography ?? [], model.countryToRhq)) : [];
   const picked = axis === "rhqRegion" ? selectedRegions.length : (draft[axis]?.length ?? 0);
-  const timeSummary = axis === "time" && draft.time?.[0] ? ctx.timeLabel(draft.time[0]) : undefined;
+  const timeSummary = axis === "time" && draft.time?.[0] ? ctx.timeLabel(draft.time[0], end) : undefined;
   const clear = () => {
     if (axis === "rhqRegion") {
       // the app's 권역 clear: drop the nav and the countries it selected
@@ -518,7 +559,7 @@ function AxisSection({ axis, open, onToggle, options, disabled, help }: { axis: 
     <RnPanelSection title={title} open={open} onToggle={onToggle} badge={axis === "time" ? undefined : picked} summary={timeSummary} note={disabled ? tr("axisNeedsCompetitor") : undefined} focusKey={`s:${axis}`}>
       {help ? <p className="mx-2.5 mb-1.5 text-rn-12 leading-[1.45] break-keep text-rn-muted">{help}</p> : null}
       {axis === "time" ? (
-        <TimeBody />
+        <TimeBody end={end} />
       ) : axis === "rhqRegion" ? (
         <div role="group" aria-label={title}>
           {model.regions.map((id) => (
@@ -614,13 +655,17 @@ function ValueList({ group, options: given, disabled = false }: { group: Dimensi
   );
 }
 
-function TimeBody() {
+/** `end`: the service week's last day (ServiceWeekShownEnd) — the presets, the date inputs and the calendar stop there. */
+function TimeBody({ end }: { end: string | null }) {
   const ctx = useFilters();
   const { props, draft, change } = ctx;
   const tTime = useTranslations("dashboard.filters.timeRange");
   const locale = useLocale();
-  const view = useTimeView(props, draft);
   const value = draft.time?.[0] ?? null;
+  const view = timeViewOf(props, value, end);
+  // what it shows is the period as read (view.shown: the end at the latest the service week's last day, the pick in the
+  // title, review r1-15); what it commits keeps the pick (view.range)
+  const cutTitle = value ? ctx.timeTitle(value, end) : undefined;
   const set = (encoded: string | null) => change((d) => ({ draft: encoded ? { ...d, time: [encoded] } : clearGroup(d, "time") }));
   const empty = view.anchored && !!(view.range.from || view.range.to) && (view.rounds ?? 0) === 0;
   const monthFmt = useMemo(() => new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", timeZone: "UTC" }), [locale]);
@@ -658,8 +703,8 @@ function TimeBody() {
           {tTime("custom")}
         </span>
         {view.range.from || view.range.to ? (
-          <span className="font-semibold text-rn-navy tabular-nums">
-            {view.range.from ?? "…"} ~ {view.range.to ?? "…"}
+          <span className="font-semibold text-rn-navy tabular-nums" title={cutTitle}>
+            {view.shown.from ?? "…"} ~ {view.shown.to ?? "…"}
           </span>
         ) : null}
       </div>
@@ -667,7 +712,7 @@ function TimeBody() {
         <div className="mx-0.5">
           <RnRoundCalendar
             selectableDates={props.selectableDates ?? []}
-            value={view.range}
+            value={view.shown}
             defaultDay={view.defaultDay}
             onChange={(next) => set(encodeTimeRange(next))}
             labels={{
@@ -687,7 +732,9 @@ function TimeBody() {
               <span className="w-12 shrink-0">{tTime(side)}</span>
               <input
                 type="date"
-                value={view.range[side] ?? ""}
+                value={view.shown[side] ?? ""}
+                // no day past the service week; the start no later than the picked end either
+                max={(side === "from" ? [view.range.to, view.maxDay].filter(Boolean).sort()[0] : view.maxDay) ?? undefined}
                 onChange={(e) => set(encodeTimeRange({ ...view.range, [side]: e.target.value || undefined }))}
                 className="h-8 w-full rounded-md border border-rn-line-2 px-2 text-rn-12 text-rn-ink focus:border-rn-navy focus:outline-none"
               />
@@ -714,13 +761,18 @@ function TimeBody() {
 // ─── applied conditions under the page title ───────────────────────────────
 
 export function RnOverviewApplied() {
+  // the period chip prints the period read from the first paint on (the layout's read until this tab knows the week, review r3-6)
+  return <ServiceWeekShownEnd>{(end) => <Applied end={end} />}</ServiceWeekShownEnd>;
+}
+
+function Applied({ end }: { end: string | null }) {
   const ctx = useFilters();
   const { draft, change, openedWith, setOpenedWith, props } = ctx;
   const { busy } = useRnFilterRuntime();
   const tr = useTranslations("renewal.filters");
   const ts = useTranslations("renewal.saved");
   const { tokensOf } = useSummaries();
-  const tokens = tokensOf(draft);
+  const tokens = tokensOf(draft, end);
   return (
     <>
       {tokens.length || busy ? (
@@ -729,7 +781,7 @@ export function RnOverviewApplied() {
             <RnToken
               key={tk.group}
               label={tk.label}
-              value={tk.text}
+              value={tk.title ? <span title={tk.title}>{tk.text}</span> : tk.text}
               removeLabel={tr("removeToken", { label: tk.label })}
               onRemove={() =>
                 change((d) =>

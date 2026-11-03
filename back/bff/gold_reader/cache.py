@@ -8,7 +8,8 @@ Gold's state is one fingerprint, read in one statement (~10 ms):
     and data_version did not move),
   - dim_cycle's visibility (servable, hidden_scope, view_date move without a release),
   - every gold table's write counters (pg_stat: any row written; not transactional, they lag about a second),
-plus the day. A kept answer is served while the fingerprint is the one it was read under, for at most
+plus the day and the service week the reads stop at (hub_stores/service_week.py: an advance writes the HUB data DB, not
+Gold). A kept answer is served while the fingerprint is the one it was read under, for at most
 HGH_GOLD_CACHE_S seconds (default 600, 0 = off) as a backstop.
 
 An answer is kept only when the fingerprint taken after the read equals the one taken before it: the read's
@@ -29,6 +30,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from bff.gold_reader.db import connection
+from bff.hub_stores import service_week
 
 log = logging.getLogger("hgh.gold")
 
@@ -62,7 +64,19 @@ _keeping: set[asyncio.Task] = set()
 async def _fingerprint() -> str:
     async with connection() as conn:
         state = await conn.fetchval(STATE_SQL)
-    return f"{state}|{datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()}"
+    return f"{state}|{datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()}|{_week()}"
+
+
+def _week() -> str:
+    """The service week of the reads (its row: a re-recorded week is another one), as the provider keeps it: never
+    waited for here, as a read of no round (the project pages, keyword research) must not wait on the data DB (review
+    r2-5). None kept yet, it is 'unavailable': a capped read waits for the week in Context.create or answers 503, and
+    the probe after it names the week it got; the others are kept under that state and read again once it is known."""
+    try:
+        week = service_week.peek()
+    except service_week.ServiceWeekUnavailable:
+        return "unavailable"
+    return "none" if week is None else f"{week.seq}:{week.end.isoformat()}"
 
 
 async def state(started_after: float) -> str:

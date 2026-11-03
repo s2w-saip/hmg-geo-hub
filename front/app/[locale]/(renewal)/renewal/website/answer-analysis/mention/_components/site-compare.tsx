@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { RnBasisChip, RnCardHead, RnSkeleton, cx } from "@/components/renewal-ui";
 import type { ComparePartsScreen } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/mention-screen";
+import { useServiceWeekRead } from "@/components/service-week/provider";
 import { ComparePicker } from "../../../../standard/answer-analysis/mention/_components/mention-body";
 import { pctTxt, posTxt, useCompare, useMention } from "../../../../standard/answer-analysis/mention/_components/mention-context";
 import { InfoTip } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
@@ -26,11 +27,14 @@ export function RnSiteCompare({ initial, admin }: { initial: Promise<ComparePart
   );
 }
 
-/** The parts for the compare brand: the page's read when it is the page's target, else a read of its own. */
-function usePicked(initial: ComparePartsScreen, brand: string | undefined, admin: boolean): ComparePartsScreen {
+/** The parts for the compare brand: the page's read when it is the page's target, else a read of its own — kept per
+ * URL and read of the page, so a page read again once the service week moved reads the pick again (the page's own
+ * parts meanwhile, review r3-4). */
+export function usePicked(initial: ComparePartsScreen, brand: string | undefined, admin: boolean): ComparePartsScreen {
   const sp = useSearchParams()?.toString() ?? "";
+  const read = useServiceWeekRead();
   const need = brand && initial.comparison?.target.brand !== brand ? brand : null;
-  const key = need ? `${sp}|${need}` : null;
+  const key = need ? `${sp}|${read ?? ""}|${need}` : null;
   const [picked, setPicked] = useState<{ key: string; parts: ComparePartsScreen } | null>(null);
   const last = useRef<string | null>(null);
   useEffect(() => {

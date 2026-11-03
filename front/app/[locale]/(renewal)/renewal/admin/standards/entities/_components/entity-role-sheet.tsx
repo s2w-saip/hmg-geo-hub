@@ -9,6 +9,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { RnButton, RnCheckRow, RnTag, cx } from "@/components/renewal-ui";
+import { formatAsOfDate } from "@/lib/as-of-date";
 import { RnDetailField } from "../../../../_components/prompt-list";
 import { HistorySection, StateMark } from "../../citation-sources/_components/source-lists-kit";
 import { SourceRequestError } from "../../citation-sources/_components/source-overrides-api";
@@ -225,7 +226,8 @@ export function EntitySheet({ row, onSaved }: { row: EntityRow; onSaved: () => v
           <RnDetailField label={t("field.numbers")}>
             <span className="tabular-nums">{t("numbers", { answers: nf.format(row.answers), mentions: nf.format(row.mentions) })}</span>
           </RnDetailField>
-          <RnDetailField label={t("field.firstSeen")}>{row.firstSeen?.slice(0, 10)}</RnDetailField>
+          {/* Gold's timestamp on the KST calendar (its first 10 characters are the UTC day) */}
+          <RnDetailField label={t("field.firstSeen")}>{row.firstSeen ? formatAsOfDate(row.firstSeen) : null}</RnDetailField>
           <RnDetailField label={t("field.goldRole")}>{row.gold ? roleLabel(row.gold.role ?? "competitor", row.gold.brand) : null}</RnDetailField>
           <RnDetailField label={t("field.state")}>
             <EntityState row={row} />

@@ -23,6 +23,7 @@ import {
   type RnFinding,
 } from "@/components/renewal-ui";
 import { PeriodDeltaLine } from "@/components/dash/period-delta-line";
+import { useServiceWeekReadState } from "@/components/service-week/provider";
 import { useRnFilterReset, useRnFilterToggle } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { useActiveCitationCategories, useActiveCompetitors } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-url-axes";
 import type { CitationDomainLive, CitationsLive, CitationTrend } from "@/lib/scope/result-adapter";
@@ -38,7 +39,7 @@ import {
   type RnShareTile,
 } from "./citation-input";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
-import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, StateCard, TwinTable, useDegradedText } from "../../mention/_components/mention-kit";
+import { CardSkeleton, DegradedNote, DeltaChip, EmptyRead, InfoTip, StateCard, TwinTable, useDegradedText } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, deltaTxt, slotLabel } from "../../mention/_components/mention-context";
 import { DomainBumpCard, DomainDrawer, DomainTableCard } from "./citation-domains";
 import { ReachCard, WebsitePromptsCard } from "./citation-website";
@@ -68,19 +69,27 @@ function CitationShell({ input }: { input: RnCitationInput }) {
   const reset = useRnFilterReset();
   if (!live) {
     if (degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={dg.all} />;
-    return input.filtered ? (
-      <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
-        <RnButton onClick={reset}>{t("reset")}</RnButton>
-      </StateCard>
-    ) : (
-      <StateCard icon={<Hourglass className="size-5" aria-hidden />} title={tA("empty")} />
+    return (
+      <EmptyRead>
+        {input.filtered ? (
+          <StateCard icon={<FilterX className="size-5" aria-hidden />} title={t("noResultTitle")} desc={t("noResultDesc")}>
+            <RnButton onClick={reset}>{t("reset")}</RnButton>
+          </StateCard>
+        ) : (
+          <StateCard icon={<Hourglass className="size-5" aria-hidden />} title={tA("empty")} />
+        )}
+      </EmptyRead>
     );
   }
-  return (
+  const measured = (
     <RnHighlightProvider>
       <Measured input={input} live={live} />
     </RnHighlightProvider>
   );
+  // a read of no citations names no round (citation_model empty_citations_live) and draws zeros, as the original page
+  // did — except a snapshot of a surface the service week holds no round of, which says so (review r1-19), and a period
+  // that starts after the week, which the BFF reads no round of (review r3-12)
+  return live.asOf == null ? <EmptyRead>{measured}</EmptyRead> : measured;
 }
 
 function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive }) {
@@ -92,7 +101,8 @@ function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive
   const active = useActiveCitationCategories();
   const [tables, setTables] = useState<ReadonlySet<string>>(new Set());
   const [axis, setAxis] = useState<MatrixAxis>("engine");
-  const [drawer, setDrawer] = useState<CitationDomainLive | null>(null);
+  // a row of the page's answer: the page read again (the service week moved) closes its sheet (review r3-4)
+  const [drawer, setDrawer] = useServiceWeekReadState<CitationDomainLive | null>(null);
   const lit = useRnHighlightKey();
   const { hover, flash } = useRnHighlight();
   const ctx: CitationCtx = {
@@ -115,7 +125,7 @@ function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive
     setAxis,
     openDomain: setDrawer,
   };
-  const closeDrawer = useCallback(() => setDrawer(null), []);
+  const closeDrawer = useCallback(() => setDrawer(null), [setDrawer]);
   return (
     <CitationProvider value={ctx}>
       <div className="@container/rnpage flex flex-col gap-2.5">

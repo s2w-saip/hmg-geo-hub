@@ -24,6 +24,11 @@ Changes since recording (additive, each derived only from functions pinned by ot
   outside the top 10; the competitor average and the rank chart leave it out). The 18 `mention/rn-fix-*` ·
   `rn-live-*` bundle tapes got `pin_top_rival=true` on their one `trend` dimension=brand entry (the key only); the
   bodies are the recorded answers, which hold no pinned rival, so no output changes.
+- 2026-11-02 `citation/as-of` (all 3 cases): `period` added — the URL period the Citation header pill names, as the
+  reads take it (`screens._week.period_echo` of `read_standard_filters`' dateFrom/dateTo: its end the service week's
+  last day at the latest, decision '발행 시점 판정'). The pages printed the URL's own range, past the week. None of the
+  3 URLs carries a period, so each output gains `"period": null` and nothing else; the replay has no HUB data DB, so
+  no service week caps it (bff.tests.test_screens_service_week pins the capped echoes).
 
 Deliberate changes (what the screen shows changed by decision):
 - 2026-11-02 catalog options, one value per spelling (score sheet defect: Gold spells 47 depth3 and 3 depth2 values in two cases, `to_catalog_rows` listed both). The capitalised spelling stays. `shared/fn-to-catalog-rows` is re-pinned, and 31 cases change only in `catalogRows`.

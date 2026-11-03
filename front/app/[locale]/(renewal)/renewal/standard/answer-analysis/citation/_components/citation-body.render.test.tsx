@@ -25,7 +25,11 @@ const { RnFilterRuntime } = await import("@/app/[locale]/(renewal)/renewal/_comp
 const { RnOverviewFilters } = await import("@/app/[locale]/(renewal)/renewal/_components/overview-filters");
 const { RnCitationBody } = await import("./citation-body");
 const { rnVmFor } = await import("./citation-rn.fixture");
+const { serviceWeekContext } = await import("@/components/service-week/provider");
 type Input = import("./citation-input").RnCitationInput;
+const ServiceWeek = serviceWeekContext();
+// the shell's service week (components/service-week/provider.tsx), null = a page rendered on its own
+let WEEK: import("@/components/service-week/provider").ServiceWeekContextValue | null = null;
 
 const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
 
@@ -111,7 +115,7 @@ const render = (p: Parts, search = "", website?: Input["website"], rnSearch = we
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
       <RnFilterRuntime>
         <RnOverviewFilters props={{ stage: "citation", scope: { all: true } }} savedFilters={{ page: "citation", userId: "test", initial: [] }}>
-          {(<RnCitationBody input={i} />) as ReactNode}
+          <ServiceWeek.Provider value={WEEK}>{(<RnCitationBody input={i} />) as ReactNode}</ServiceWeek.Provider>
         </RnOverviewFilters>
       </RnFilterRuntime>
     </NextIntlClientProvider>,
@@ -199,6 +203,66 @@ describe("renewal Citation body", () => {
     expect(render(input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
     // a failed read says it could not load (the shared copy said every failure "timed out")
     expect(render(input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all);
+  });
+  it("a snapshot of a surface the service week holds no round of: 측정 없음 and the week, not zeros or the filter advice", () => {
+    // review r1-19 (2026-11-03): under the week of 07-27 (no Website round on live Gold) citation/website answered
+    // live {total 0, asOf null} — no round read — and the page drew 인용 0건 with its Δ chips
+    const none = live({ summary: { total: 0, uniqueDomains: 0 }, asOf: null, domains: [], categories: null, trend: null, categoryTrend: null, engineCategories: null, promptSplit: null });
+    const at = (website: boolean, search: string, p: Parts = input({ data: none })) => {
+      const view = { state: "ok" as const, week: { start: "2026-07-27", end: "2026-08-02", month: 7, nth: 5 }, delay: null, checkedAt: null, recordedAt: null, rounds: { global: true, website }, notes: [] };
+      WEEK = { initial: settled(view), latest: view, applies: true, surface: "website", sites: "", notesFor: "" };
+      try {
+        return render(p, search, site(), "", input());
+      } finally {
+        WEEK = null;
+      }
+    };
+    for (const search of ["", "engine=chatgpt"]) {
+      const html = at(false, search);
+      expect(html, search).toContain("측정 없음");
+      expect(html, search).toContain("서비스 기준 주 7월 5주차(7/27~8/2)에는 Website 측정 회차가 없습니다.");
+      expect(html, search).not.toContain('data-rn-cmeta=""');
+      expect(html, search).not.toContain(T.states.reset);
+    }
+    expect(at(false, "", input({ data: null, filtered: true }))).toContain("Website 측정 회차가 없습니다.");
+    // a round of the surface in the week, or a period (it reads the rounds before the week): the page as before
+    expect(at(true, "")).toContain('data-rn-cmeta=""');
+    expect(at(false, "time=2026-07-01..2026-07-31")).toContain('data-rn-cmeta=""');
+    expect(at(false, "time=2026-07-01..2026-07-31", input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
+    // a failed read still says so
+    expect(at(false, "", input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all);
+  });
+  it("a period that starts after the service week: the week names it, not zeros under a source-filter headline (review r3-12)", () => {
+    // review r3-12 (2026-11-03): time=2026-10-12..2026-10-18 under the week of 10-05 read no round (the BFF's cap), and
+    // Global Citation drew '공식(HMG) 카테고리가 출처 필터에서 빠져 있습니다 — 인용 0회' over '—' tiles
+    const none = live({ summary: { total: 0, uniqueDomains: 0 }, asOf: null, domains: [], categories: null, trend: null, categoryTrend: null, engineCategories: null, promptSplit: null });
+    const view = { state: "ok" as const, week: { start: "2026-07-27", end: "2026-08-02", month: 7, nth: 5 }, delay: null, checkedAt: null, recordedAt: null, rounds: { global: true, website: true }, notes: [] };
+    // the frozen model of the bare URL, with the 공식(HMG) share of a read of no citations (none: the headline above)
+    const noHmg = (vm: Vm): Vm => ({ ...vm, lens: { ...vm.lens, hmg: { ...vm.lens.hmg, value: null } } });
+    const at = (website: boolean, search: string, p: Parts = input({ data: none })) => {
+      WEEK = { initial: settled(view), latest: view, applies: true, surface: website ? "website" : "global", sites: "", notesFor: "" };
+      try {
+        return website ? render(p, search, site(), "", input()) : render(p, search, undefined, "", input(), noHmg);
+      } finally {
+        WEEK = null;
+      }
+    };
+    const headlineNoHmg = T.summary.headlineNoHmg.split(" — ")[0];
+    for (const website of [false, true]) {
+      for (const p of [input({ data: none }), input({ data: null, filtered: true })]) {
+        const html = at(website, "time=2026-08-03..2026-08-09", p);
+        expect(html, String(website)).toContain("아직 보이지 않는 기간");
+        expect(html, String(website)).toContain("고른 기간(2026-08-03 ~ 2026-08-09)은 서비스 기준 주 7월 5주차(7/27~8/2) 뒤입니다.");
+        expect(html, String(website)).not.toContain(headlineNoHmg);
+        expect(html, String(website)).not.toContain('data-rn-cmeta=""');
+        expect(html, String(website)).not.toContain(T.states.noResultTitle);
+      }
+    }
+    // a period that reaches into the week reads its rounds: the page as before (the model draws the headline the review saw)
+    expect(at(false, "time=2026-07-27..2026-08-09")).toContain(headlineNoHmg);
+    expect(at(false, "time=2026-07-27..2026-08-09")).toContain('data-rn-cmeta=""');
+    expect(at(true, "time=2026-07-27..2026-08-09")).toContain('data-rn-cmeta=""');
+    expect(at(false, "time=2026-07-27..2026-08-09", input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
   });
   it("tone tiles: api vs legacy basis chip", () => {
     expect(render(input())).toContain(T.tone.chipLegacy);
