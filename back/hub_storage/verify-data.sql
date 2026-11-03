@@ -573,4 +573,41 @@ DO $$ BEGIN
     OR has_table_privilege('hmg_project_editor','catalog.project','INSERT') OR has_table_privilege('hmg_project_editor','catalog.reference_set','INSERT')
  THEN RAISE EXCEPTION 'The project editor has more than INSERT on project catalogs'; END IF;
 END $$;
+-- Source list versions (013): every change of a 인용 출처 분류 list is one whole-row version, written by the trigger only
+-- (a bookkeeping-only update is none); nobody else writes or rewrites a version; every current row is its latest version.
+SET LOCAL ROLE hmg_source_override_editor;
+INSERT INTO catalog.source_seed(skey,category,origin,updated_by) VALUES('rollback-only-version.example','newsMedia','hub',gen_random_uuid());
+UPDATE catalog.source_seed SET category='blogsReviews',updated_at=now() WHERE skey='rollback-only-version.example';
+UPDATE catalog.source_seed SET updated_at=now() WHERE skey='rollback-only-version.example';
+DO $$ BEGIN
+ IF (SELECT array_agg(category ORDER BY version) FROM catalog.source_seed_version WHERE skey='rollback-only-version.example')
+    IS DISTINCT FROM ARRAY['newsMedia','blogsReviews'] THEN RAISE EXCEPTION 'A seed change is not one version each'; END IF;
+ BEGIN INSERT INTO catalog.source_seed_version(skey,version,category,status,origin,recorded_at,change_seq)
+       VALUES('rollback-only-version.example',9,'x','active','hub',now(),1); RAISE EXCEPTION 'List role writes a version';
+       EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.source_code_version SET name_ko='x'; RAISE EXCEPTION 'List role rewrites a version'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.source_override_version; RAISE EXCEPTION 'List role deletes versions'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+DO $$
+DECLARE
+    t text;
+    k text;
+    bad bigint;
+    r text;
+BEGIN
+ FOR t, k IN VALUES ('source_override','skey'),('source_seed','skey'),('source_social','account_key'),('source_code','kind,code') LOOP
+   EXECUTE format($q$SELECT count(*) FROM (SELECT to_jsonb(c)-'created_at'-'updated_at'-'updated_by' AS v FROM catalog.%1$I c) a
+       FULL JOIN (SELECT DISTINCT ON (%3$s) to_jsonb(v)-'version'-'recorded_at'-'recorded_by'-'change_seq' AS v FROM catalog.%2$I v
+                  ORDER BY %3$s,v.version DESC) b USING (v) WHERE a.v IS NULL OR b.v IS NULL$q$, t, t || '_version', k) INTO bad;
+   IF bad > 0 THEN RAISE EXCEPTION '%: % current rows differ from their latest version', t, bad; END IF;
+   EXECUTE format('SELECT count(*) FROM (SELECT count(*) n,max(version) m FROM catalog.%I GROUP BY %s) g WHERE n<>m', t || '_version', k) INTO bad;
+   IF bad > 0 THEN RAISE EXCEPTION '%: versions are not 1..n', t; END IF;
+   FOREACH r IN ARRAY ARRAY['hmg_source_override_editor','hmg_analytics_reader','hmg_catalog_writer','hmg_catalog_editor'] LOOP
+     IF has_table_privilege(r, 'catalog.' || t || '_version', 'INSERT') OR has_table_privilege(r, 'catalog.' || t || '_version', 'UPDATE')
+        OR has_table_privilege(r, 'catalog.' || t || '_version', 'DELETE') THEN
+       RAISE EXCEPTION '% can write %_version', r, t; END IF;
+   END LOOP;
+ END LOOP;
+END $$;
 ROLLBACK;

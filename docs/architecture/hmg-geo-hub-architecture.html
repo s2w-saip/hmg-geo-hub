@@ -584,6 +584,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <code>hmg_source_override_editor</code>로 출처 분류 입력과 그 이력만 쓴다. 교정(<code>catalog.source_override</code>, <code>data-007.sql</code>)에 더해 2026-10-30부터 시드(<code>source_seed</code>)·공식 소셜 계정(<code>source_social</code>)·코드표(<code>source_code</code>, <code>data-008.sql</code>)도 이 화면에서 고친다.
         외부 API 목록(기준값 종류 <code>source_override</code>·<code>source_seed</code>·<code>source_social</code>·<code>source_code</code>, source <code>hub_edit</code>)은
         이 계정이 직접 쓰지 못하고 종류마다 있는 발행 함수 <code>catalog.publish_source_*()</code>가 catalog lock 안에서 기록한다.
+        2026-11-03부터(<code>data-013.sql</code>) 네 표의 행이 바뀔 때마다 트리거 <code>catalog.record_source_version()</code>이 행 전체를 다음 버전(<code>source_*_version</code>, <code>change_seq</code>)으로 쌓는다. 이 계정은 버전을 읽기만 한다.
         2026-11-02부터 고객 관심 데이터 관리 화면이 같은 선을 쓴다: <code>hmg_interest_editor</code>로 시드 키워드(<code>interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>, <code>data-009.sql</code>)와 그 이력만 쓰고, 발행 함수 <code>catalog.publish_interest_*()</code>가 같은 방식으로 기록한다.
         엔티티 카탈로그 화면도 같은 선을 쓴다: <code>hmg_entity_role_editor</code>로 역할(<code>entity_role</code>, <code>data-010.sql</code>)과 그 이력만 쓰고, 발행 함수 <code>catalog.publish_entity_roles()</code>가 기록한다. 초안·미리보기·승인은 두지 않는다(적용은 파이프라인의 Gold 재가공이다).
         2026-11-03부터 Project › Prompt 화면은 글로벌 프롬프트 편집과 같은 catalog INSERT 선을 쓴다: <code>hmg_project_editor</code>로 프로젝트 표면 카탈로그의 프롬프트 · 프롬프트 버전 · 프로젝트 버전(커스텀 태그 열)만 더한다(<code>data-012.sql</code>). 버전 행이 곧 발행이다(<code>change_seq</code>, 외부 API <code>ext.prompts</code>).
@@ -1208,7 +1209,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ext -->
-<svg viewBox="0 0 1200 1530" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · interest_keyword · interest_source · entity_role로 발행된다. 엔티티 역할 옆의 service_week는 Global · Website 화면이 Gold를 읽는 마지막 주(서비스 기준 주)의 이력이고, HUB 작업이 쓰며 외부 API로 나가지 않는다.">
+<svg viewBox="0 0 1200 1530" role="img" aria-label="HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과 그 버전, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · interest_keyword · interest_source · entity_role로 발행된다. 엔티티 역할 옆의 service_week는 Global · Website 화면이 Gold를 읽는 마지막 주(서비스 기준 주)의 이력이고, HUB 작업이 쓰며 외부 API로 나가지 않는다.">
 <defs><marker id="ext-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ext-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="280" height="266" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H290q6,0 6,6V70z"/>
@@ -1627,6 +1628,29 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="576" y="1467" text-anchor="end">timestamptz</text>
 <text class="mu sm" x="348" y="1485">최신 행 = current_service_week 뷰</text>
 <text class="mu sm" x="348" y="1503">같은 주를 다시 확인하면 checked_at만</text>
+<rect class="tbox" x="626" y="1250" width="270" height="230" rx="6"/>
+<path class="th" d="M626,1280V1256q0,-6 6,-6H890q6,0 6,6V1280z"/>
+<line class="rule" x1="626" y1="1280" x2="896" y2="1280"/>
+<line class="hair" x1="638" y1="1322" x2="884" y2="1322"/>
+<text class="m b" x="638" y="1270"><tspan class="tsch">catalog.</tspan>source_*_version</text>
+<text class="desc" x="638" y="1297">출처 분류 네 표의 버전이다. 바뀔 때마다 행</text>
+<text class="desc" x="638" y="1313">전체를 한 버전으로 쌓는다.</text>
+<text class="kb pk" x="636" y="1341">PK FK</text>
+<text class="m" x="674" y="1341">(표마다 키)</text>
+<text class="m sm ty" x="886" y="1341" text-anchor="end">text</text>
+<text class="kb pk" x="636" y="1359">PK</text>
+<text class="m" x="674" y="1359">version</text>
+<text class="m sm ty" x="886" y="1359" text-anchor="end">integer</text>
+<text class="m" x="674" y="1377">(그 표의 값 열 전부)</text>
+<text class="m sm ty" x="886" y="1377" text-anchor="end">…</text>
+<text class="m" x="674" y="1395">recorded_at</text>
+<text class="m sm ty" x="886" y="1395" text-anchor="end">timestamptz</text>
+<text class="m" x="674" y="1413">recorded_by</text>
+<text class="m sm ty" x="886" y="1413" text-anchor="end">uuid</text>
+<text class="m" x="674" y="1431">change_seq</text>
+<text class="m sm ty" x="886" y="1431" text-anchor="end">bigint</text>
+<text class="mu sm" x="638" y="1449">트리거만 씀 · 최신 버전 = 현재 행</text>
+<text class="mu sm" x="638" y="1467">고치거나 지우는 계정 없음</text>
 <path class="e" d="M296,755.0H316.0V737H336" marker-end="url(#ext-a)"/>
 <path class="e" d="M336,127.0H296" marker-end="url(#ext-a)"/>
 <path class="e" d="M296,455.0H336" marker-end="url(#ext-a)"/>
@@ -1662,6 +1686,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         맨 아래 줄(2026-10-30, <code>data-008.sql</code>)은 같은 화면의 시드(<code>source_seed</code>, 뺀 시드는 <code>removed</code>)·공식 소셜 계정(<code>source_social</code>, 중지는 <code>stopped</code>)·코드표(<code>source_code</code>)다.
         코드표 행은 <code>manage.py import-source-lists</code>로만 들어오고 화면에서는 이름·설명·카테고리 순서만 고친다(카테고리 번호는 Gold <code>answer_fact.cit_c&lt;k&gt;</code> 열과 묶여 있다).
         세 이력 표는 같은 모양이고, 발행 함수가 각각 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code> set을 기록한다.
+        네 표에는 버전 표(<code>source_*_version</code>, 2026-11-03, <code>data-013.sql</code>)가 하나씩 붙는다. 프롬프트 버전처럼 키마다 1, 2, …로 번호를 매기고, 바뀐 뒤의 행 전체 · 기록 시각 · 기록자(<code>updated_by</code>) · <code>change_seq</code>를 담는다.
+        트리거만 쓰고 고치거나 지우는 계정은 없으며, 시각 · 기록자만 바뀐 UPDATE는 버전을 만들지 않는다. 현재 행은 늘 최신 버전과 같다(<code>verify-data.sql</code>).
+        그 전 기록은 이력 표를 현재 행부터 거꾸로 되짚어 버전으로 옮겼다. 그래서 <code>change_seq ≤ n</code> 한 시점에서 프롬프트와 출처 분류 입력을 함께든 따로든 읽을 수 있다.
         같은 줄의 오른쪽(2026-11-02, <code>data-009.sql</code>)은 Admin › 고객 관심 데이터 관리의 시드 키워드(<code>interest_keyword</code>, 키는 Gold <code>dim_keyword.term_norm</code>과 같은 규칙)와 커뮤니티 소스(<code>interest_source</code>)다. 지우지 않고 중지는 <code>stopped</code>이며, 이력 표도 같은 모양이다.
         커뮤니티 소스는 Gold에 대응 목록이 없고 아직 읽는 수집기도 없어, 화면은 Gold 소셜 스냅샷의 host와 나란히 보일 뿐 반영 여부를 말하지 않는다.
         맨 아래 줄(2026-11-02, <code>data-010.sql</code>)은 Admin › 엔티티 카탈로그의 역할(<code>entity_role</code>)이다. 키는 Gold <code>entity_id</code>이고(두 DB 사이 키는 없어 BFF가 Gold를 먼저 읽어 확인한다), 경쟁사는 기본값이라 저장하지 않으며, 경쟁사로 되돌리면 <code>cleared</code>로 남는다.
@@ -2339,6 +2366,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k mono">hmg_source_override_editor</td><td>API 인용 출처 분류 · <code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>catalog.source_override</code> INSERT와 <code>category</code>·<code>status</code>·<code>updated_at</code>·<code>updated_by</code> UPDATE,
           <code>source_override_event</code> INSERT, 이 둘 SELECT, <code>catalog.publish_source_overrides()</code> 실행. 2026-10-30부터(<code>data-008.sql</code>) <code>source_seed</code>(카테고리·상태)·<code>source_social</code>(매칭 규칙·상태) INSERT와 UPDATE,
           <code>source_code</code> 이름·설명·순서 UPDATE(INSERT 없음), 세 이력 표 INSERT, <code>publish_source_seeds()</code>·<code>publish_source_socials()</code>·<code>publish_source_codes()</code> 실행. 키·출처·메모 변경과 DELETE 없음.
+          버전 표 <code>source_*_version</code>은 SELECT만(<code>data-013.sql</code>, 트리거가 씀).
           <code>reference_set</code>에 직접 쓰지 못하고(발행 함수만 <code>hub_edit</code> set을 기록, 다른 역할은 트리거가 거부), 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_interest_editor</td><td>API 고객 관심 데이터 관리 · <code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>catalog.interest_keyword</code> INSERT와 수집 조건·소스·브랜드·메모·상태·시각·행위자 UPDATE, <code>interest_source</code> INSERT와 채널·브랜드·메모·상태·시각·행위자 UPDATE, 두 이력 표 INSERT, 이 넷 SELECT,
           <code>publish_interest_keywords()</code>·<code>publish_interest_sources()</code> 실행(<code>data-009.sql</code>). 키·원문(<code>term</code>·<code>url</code>)·출처 변경과 DELETE 없음. <code>reference_set</code>에 직접 쓰지 못하고, 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>

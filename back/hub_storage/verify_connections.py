@@ -125,6 +125,7 @@ async def main(config):
     try:
         await override.fetchval('SELECT count(*) FROM catalog.source_override')
         await override.fetchval('SELECT count(*) FROM catalog.source_seed')  # 008: the source lists, same role
+        await override.fetchval('SELECT count(*) FROM catalog.source_seed_version')  # 013: their versions, read only
         try:
             await override.execute('SELECT 1 FROM catalog.prompt LIMIT 1')
         except asyncpg.InsufficientPrivilegeError:

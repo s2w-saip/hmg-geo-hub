@@ -357,6 +357,9 @@ ALTER ROLE hmg_project_editor CONNECTION LIMIT 4;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_project_editor;
 COMMIT;""")
     migrate('data-012.sql', '012_project_prompts')
+    # Source list versions (2026-11-03): every change of the 인용 출처 분류 inputs is one whole-row version (a trigger;
+    # no new role, the screen's role only reads them).
+    migrate('data-013.sql', '013_source_versions')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'

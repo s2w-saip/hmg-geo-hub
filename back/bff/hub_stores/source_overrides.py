@@ -14,7 +14,8 @@ Writes use hmg_source_override_editor (HGH_SOURCE_OVERRIDE_EDITOR_DB_URL), which
 history and call catalog.publish_source_overrides(), nothing else. Every write runs under the catalog lock
 (617427413, the Gold import's), records a source_override_event row and publishes the active corrections as the
 reference family `source_override` for the external API when they changed (change_seq). A revert keeps the row
-(status cleared). Gold is read before the lock, never under it."""
+(status cleared). The data store records the whole row as its next version on every change (data-013,
+catalog.source_override_version, change_seq like prompt revisions). Gold is read before the lock, never under it."""
 from __future__ import annotations
 
 import json

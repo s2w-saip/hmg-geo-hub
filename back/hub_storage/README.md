@@ -131,13 +131,14 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh     
 같은 화면의 시드 · 공식 소셜 · 코드표 탭이다(admin-todo 결정 코드표 · G · '2 남은 범위'). Gold에는 결과(`dim_category`, `dim_source.category_src` 4 · 2)만 있고, 원래 값은 원본 앱의 분류기 파일이었다(`front/lib/citation-categorizer`: `taxonomy.ts` · `seed.json` · `official-social.ts`). 그 파일들은 기존 화면이 그대로 쓰고, 가져온 뒤의 정본은 이 표들이다.
 
 - **저장(`008_source_lists`, 데이터 DB):** `catalog.source_seed`(도메인 키 → 카테고리, `active` · `removed`), `catalog.source_social`(계정 키 = 표시 키의 소문자, 도메인, 매칭 규칙 `[{prefix, boundary}]` 1~10개, `active` · `stopped`, 카테고리는 Official (HMG) 고정), `catalog.source_code`(`category` 13개: 번호 = Gold `category_key` = `answer_fact.cit_c<k>`, `layer` 6개: 번호 = `category_src` = 우선순위; 이름(영 · 한) · 순서 · 설명). 표마다 이력 표(`*_event`)가 있고 지우지 않는다.
+- **버전(`013_source_versions`, 2026-11-03):** 교정 · 시드 · 공식 소셜 · 코드표 네 표는 행이 바뀔 때마다 트리거 `catalog.record_source_version()`이 행 전체를 다음 버전으로 `catalog.<표>_version`에 쌓는다. 키마다 1, 2, …로 번호를 매기고, 기록 시각 · 기록자(`updated_by`) · `change_seq`(프롬프트 버전과 같은 순번)를 담는다. 시각 · 기록자만 바뀐 UPDATE는 버전을 만들지 않는다. 트리거만 쓰고, 화면 역할과 조회 계정은 SELECT만 한다. 현재 행은 늘 최신 버전과 같다(`verify`가 확인). 013 전의 변경은 이력 표를 현재 행부터 거꾸로 되짚어 버전으로 옮겼고, 발행된 set 21개가 모두 그 시점의 버전과 같다(`bff.tests.test_hub_source_versions`). 목록 단위 버전은 그대로 발행 set(`reference_set.version`)이다.
 - **업스트림 전달:** 쓰기마다 `catalog.publish_source_seeds()` · `publish_source_socials()` · `publish_source_codes()`가 기준값 종류 `source_seed` · `source_social` · `source_code`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `publish-reference <종류>`.
 - **처음 값:** `import-source-lists`가 목록마다 한 번 넣는다(이미 있는 목록은 그대로 둔다). 코드표는 Gold `dim_category`(번호 · 영문 이름 · 순서)와 화면 문구(`citationCategories`, `hubSourceOverrides.source`), 시드는 `seed.json` 795개(영문 카테고리 이름 → slug), 공식 소셜은 `official-social.ts` 9개.
 - **계정과 권한:** 교정과 같은 `hmg_source_override_editor`가 쓴다(화면 하나의 입력 묶음). 시드는 카테고리 · 상태, 소셜은 매칭 규칙 · 상태, 코드표는 이름 · 설명 · 순서만 UPDATE한다. 코드표 행 추가 · 삭제, 키 · 출처 · 메모 변경, DELETE, 공용 발행 함수 직접 실행은 없다.
 - **API:** `GET|POST /v1/hub/source-seeds`, `POST …/remove`, `GET …/history?skey=`; `GET|POST /v1/hub/source-socials`, `POST …/stop|resume`, `GET …/history?key=`; `GET|POST /v1/hub/source-codes`, `POST …/order`, `GET …/history?kind=&code=` (관리자만). 브라우저는 Next `/api/hub/source-seeds` · `source-socials` · `source-codes`를 거친다.
 
 ```bash
-HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                  # 008_source_lists (같은 역할에 권한 추가)
+HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                  # 008_source_lists (같은 역할에 권한 추가) · 013_source_versions (버전 표와 트리거)
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-lists   # 처음 값(목록마다 한 번)
 ```
 

@@ -13,7 +13,8 @@ Code rows are only imported (manage.py import-source-lists); the screen changes 
 order, never adds or removes one.
 
 Writes use the 인용 출처 분류 role (hmg_source_override_editor, the pool of source_overrides.py) under the catalog lock,
-record an event row and publish the list (source_seed / source_social / source_code, source hub_edit) when it changed."""
+record an event row and publish the list (source_seed / source_social / source_code, source hub_edit) when it changed.
+The data store records the whole row as its next version on every change (data-013, catalog.source_*_version)."""
 from __future__ import annotations
 
 import json
