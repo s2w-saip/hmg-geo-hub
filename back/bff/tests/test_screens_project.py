@@ -154,6 +154,28 @@ class Prompts(unittest.TestCase):
         self.assertEqual(out["rows"], [])
 
 
+class Conversion(unittest.TestCase):
+    """P5: the project's GA4 properties only (the analytics reader's own mapping); none yet = the sample veil's state."""
+
+    def test_reads_the_projects_properties_and_offers_their_markets(self):
+        prop = {"property_id": "123", "brand_bit": 1, "country": "CA", "status": "active"}
+        router = Router({"analytics/conversion": {"data": {"kind": "conversion", "properties": [prop], "period": {}},
+                                                  "meta": {"reason": "no_measurements"}}})
+        out = screen("conversion/renewal", f"ctx.project_id={PID}&engine=gemini", router)
+        calls = [dict(params) for path, params in router.calls]
+        self.assertTrue(all(c.get("project_id") == PID for c in calls))
+        self.assertNotIn("analytics/properties", [path for path, _ in router.calls])
+        self.assertEqual(out["props"]["geographyOptions"], ["CA"])
+        self.assertEqual(out["body"]["state"], "empty")
+
+    def test_no_property_is_the_sample_state_and_a_bad_id_is_refused(self):
+        router = Router({"analytics/conversion": {"data": {"kind": "conversion", "properties": []}, "meta": {"reason": "no_properties"}}})
+        self.assertEqual(screen("conversion/renewal", f"ctx.project_id={PID}", router)["body"]["state"], "noprop")
+        with self.assertRaises(HTTPException) as cm:
+            screen("conversion/renewal", "ctx.project_id=nope", router)
+        self.assertEqual(cm.exception.status_code, 422)
+
+
 class Analysis(unittest.TestCase):
     """P3: the renewal Mention and Citation screens read the project with ctx.surface=project."""
 

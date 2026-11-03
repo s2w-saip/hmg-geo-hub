@@ -31,7 +31,15 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
 // A project's pages (paths under /projects/{id}, "" = Dashboard) that have a renewal page; the others open the
 // project tab's "not implemented" page (renewal/projects/[id]/[...sub], menu option D, 2026-11-03).
 // rn-sidebar.render.test.tsx keeps this list in step with the page files under renewal/projects/[id]/.
-export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>(["", "prompt", "analysis/mention", "analysis/citation", "analysis/citation/prompts", "analysis/citation/tone-urls"]);
+export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>([
+  "",
+  "prompt",
+  "analysis/mention",
+  "analysis/citation",
+  "analysis/citation/prompts",
+  "analysis/citation/tone-urls",
+  "ai-funnel/conversion",
+]);
 
 export type RnAccount = "ga4" | "dataforseo";
 
@@ -42,4 +50,10 @@ export const ACCOUNT_PAGES: Readonly<Record<string, RnAccount>> = {
   "/standard/ai-funnel/conversion": "ga4",
   "/website/ai-funnel/conversion": "ga4",
   "/admin/keyword-tools": "dataforseo",
+};
+
+// A project's pages (as RENEWAL_PROJECT_PAGES) whose data needs an outside account the HUB does not hold yet: the project
+// tab's sidebar marks them with the key, and the page shows its sample under the veil (2026-11-03, P5).
+export const ACCOUNT_PROJECT_PAGES: Readonly<Record<string, RnAccount>> = {
+  "ai-funnel/conversion": "ga4",
 };

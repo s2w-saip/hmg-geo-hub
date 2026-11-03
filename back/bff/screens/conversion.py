@@ -48,11 +48,14 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from fastapi import HTTPException
+
 from bff import api
 from bff.hub_stores.analytics_reader import BRAND_NAMES
 from bff.screens import screen, split_context
 from bff.screens._days import blocks_of, days_of, period_choice, prev_period, reader_query
 from bff.screens._filters import split_filter_values
+from bff.screens._query import is_uuid
 from bff.screens.visibility import path_of
 
 TOP_PAGES = 3
@@ -346,10 +349,21 @@ async def renewal_header(q) -> dict:
 @screen("conversion/renewal")
 async def renewal(q) -> dict:
     """{props: RnOverviewFilters option props (scope added by the page), body: the state and, when measured,
-    the whole view model}. Reads: the registered properties and the period, then the previous period of the same length."""
-    _, sp = split_context(q)
+    the whole view model}. Reads: the registered properties and the period, then the previous period of the same length.
+    ctx.project_id (the renewal Project tab, 2026-11-03, P5): the project's GA4 properties only — the reader's own
+    mapping (analytics_reader.conversion: the HUB project row's site brand and country = the property's); the panel
+    offers the markets of those."""
+    ctx, sp = split_context(q)
     query = reader_query(sp)
-    listed, res = await asyncio.gather(api.get("analytics/properties", {}), api.get("analytics/conversion", query))
+    project_id = ctx.get("project_id")
+    if project_id:
+        if not is_uuid(project_id):
+            raise HTTPException(422, "ctx.project_id must be a project id")
+        query["project_id"] = project_id
+        mapped = (await api.get("analytics/conversion", {"project_id": project_id}))["data"].get("properties") or []
+        listed, res = {"data": {"properties": mapped}}, await api.get("analytics/conversion", query)
+    else:
+        listed, res = await asyncio.gather(api.get("analytics/properties", {}), api.get("analytics/conversion", query))
     props = {"stage": "conversion", **property_options(listed["data"].get("properties") or [])}
     data, meta = res["data"], res.get("meta") or {}
     properties = data.get("properties") or []

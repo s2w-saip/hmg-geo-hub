@@ -240,7 +240,7 @@ describe("project tab", () => {
           `Mention → ${P}/analysis/mention`,
           `Citation → ${P}/analysis/citation`,
           "AI Agent Funnel (group)",
-          `AI Conversion · 미구현 → ${P}/ai-funnel/conversion`,
+          `AI Conversion · 계정 ga4 → ${P}/ai-funnel/conversion`,
           "Setting (group)",
           `General · 미구현 → ${P}/setting`,
           `Member · 미구현 → ${P}/member`,

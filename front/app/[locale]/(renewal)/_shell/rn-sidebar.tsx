@@ -17,7 +17,7 @@ import { cx } from "@/components/renewal-ui";
 import { MAIN_TAB, projectAt, projectHref } from "../renewal/projects/_components/project-model";
 import { useRnNavPending } from "./nav-pending";
 import { RnProjectCard } from "./rn-project-tab";
-import { ACCOUNT_PAGES, RENEWAL_PAGES, RENEWAL_PROJECT_PAGES, type RnAccount } from "./renewal-pages";
+import { ACCOUNT_PAGES, ACCOUNT_PROJECT_PAGES, RENEWAL_PAGES, RENEWAL_PROJECT_PAGES, type RnAccount } from "./renewal-pages";
 
 // Sidebar of the renewal shell (S급 테마, 2026-10-23; rules: docs/design/ui/design-rules.html '틀'):
 // brand · Global | Website sections (each folds) · Project · Admin · account. One sidebar, no
@@ -218,6 +218,7 @@ function ProjectTabNav({ id, here, label }: { id: string; here: string; label: s
     path: projectHref(id, path),
     label: tNav(`projectDetail.${key}`),
     unimplemented: !RENEWAL_PROJECT_PAGES.has(path),
+    account: ACCOUNT_PROJECT_PAGES[path],
   });
   const items: NavItem[] = PROJECT_SUB_ITEMS.map((item) => {
     if (!item.children?.length) return { ...leaf(item.path, item.i18nKey), icon: item.icon, children: [] };
