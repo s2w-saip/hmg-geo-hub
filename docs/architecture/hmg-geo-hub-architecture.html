@@ -387,7 +387,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       BFF는 <code>hub_stores/service_week.py</code>가 데이터 DB 조회 연결로 읽은 그 주를 <code>gold_reader/context.py</code>의 <code>Context.create</code>에서 global · website 읽기에 건다:
       그 주 일요일 뒤 회차의 빌드와 날짜를 빼고, 기간 끝(<code>to</code>)이 그 뒤이면 그 일요일까지 읽고, 시작(<code>from</code>)이 그 뒤이면 아무것도 고르지 않는다.
       기간 없는 최신 회차 읽기는 그 주에 회차가 없는 표면이면 ‘측정 없음’이다(이전 회차를 그 주 이름으로 보이지 않는다).
-      Context가 고르지 않는 읽기(비교의 회차 원장, Website 프롬프트의 측정 국가, 답변 상세)도 같은 날에서 막는다. project 표면과 회차를 읽지 않는 <code>gold/*</code>(프로젝트 목록 · 키워드 · 소셜)에는 걸지 않는다. <code>gold/*</code>는 Global · Website 회차 달력도 읽지 않아 <code>meta</code>에 회차가 없다(2026-11-03, 리뷰 r2-4).
+      Context가 고르지 않는 읽기(비교의 회차 원장, Website 프롬프트의 측정 국가, 답변 상세)도 같은 날에서 막는다. project 표면과 회차를 읽지 않는 <code>gold/*</code>(프로젝트 목록 · 키워드 · 소셜)에는 걸지 않는다. GA4 · SEO 화면(AI Conversion · AI Visibility)은 HUB가 날마다 모으는 데이터라 기준 주와 따로 두고 칩 · 지연 안내도 보이지 않는다(2026-11-03, 사용자 결정). <code>gold/*</code>는 Global · Website 회차 달력도 읽지 않아 <code>meta</code>에 회차가 없다(2026-11-03, 리뷰 r2-4).
       행에 남기는 Gold 발행본(<code>gold_release</code>)은 기록용이고 읽기를 거기에 고정하지 않으므로, Gold가 지난 주를 다시 발행하면 화면도 따른다.
       화면 머리의 기준 주 칩, 끝난 지 10일이 넘으면 보이는 지연 안내, Gold가 발행하지 않았거나 관리자가 숨긴 사이트가 있는 주의 안내는 화면 <code>shared/service-week</code>(Gold 리더 <code>cycles/week-notes</code>)가 준다.
       그 리더는 global · website 표면에서만 읽는다(project 표면은 422, 2026-11-03, 리뷰 r2-6). 주 안내는 그 주의 회차 날짜(<code>days</code>: 그 주에 보인 회차와 빠진 사이트의 회차)
