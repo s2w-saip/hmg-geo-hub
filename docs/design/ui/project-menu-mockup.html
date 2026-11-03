@@ -41,6 +41,7 @@
   .mk-title { font-weight: 600; }
   .mk-group { display: inline-flex; align-items: center; gap: 4px; }
   .mk-group > span { color: #9aa3ad; margin-right: 2px; }
+  .mk-group[hidden] { display: none; }
   .mk-btn { border: 1px solid #3a414b; background: transparent; color: #cfd4da; font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
   .mk-btn[aria-pressed="true"] { background: #e6e8eb; color: #1c1f24; border-color: #e6e8eb; font-weight: 600; }
   .mk-note { color: #9aa3ad; margin-left: auto; }
@@ -163,6 +164,8 @@
   tr.go:hover td, tr.go:focus-visible td { background: var(--navy-25); }
   tr.go:focus-visible { outline: none; }
   td .id { font-weight: 700; }
+  td .ext { margin-left: 6px; vertical-align: -2px; color: var(--ink-faint); }
+  tr.go:hover td .ext { color: var(--navy); }
   td .pt { display: block; margin-top: 1px; font-size: 12px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   td.none { color: var(--ink-faint); }
   .tmore { display: flex; align-items: center; gap: 12px; padding: 12px 24px 16px; font-size: 12px; color: var(--ink-muted); }
@@ -195,9 +198,9 @@
 <div class="mk" id="mk">
   <div class="mk-row">
     <span class="mk-tag">목업</span><span class="mk-title">Project 메뉴 구성 · 설계 중</span>
-    <span class="mk-group" role="group" aria-label="안"><span>안</span>
-      <button class="mk-btn" data-opt="A">A 프로젝트 문맥 구역 · 추천</button><button class="mk-btn" data-opt="B">B 프로젝트 전용 사이드바</button><button class="mk-btn" data-opt="C">C 메뉴에 프로젝트 나열</button></span>
-    <span class="mk-group" role="group" aria-label="화면"><span>화면</span>
+    <span class="mk-group" role="group" aria-label="안" data-main-only><span>안</span>
+      <button class="mk-btn" data-opt="D">D 프로젝트는 새 탭 · 추천</button><button class="mk-btn" data-opt="A">A 프로젝트 문맥 구역</button><button class="mk-btn" data-opt="B">B 프로젝트 전용 사이드바</button><button class="mk-btn" data-opt="C">C 메뉴에 프로젝트 나열</button></span>
+    <span class="mk-group" role="group" aria-label="화면" data-main-only><span>화면</span>
       <button class="mk-btn" data-view="list">목록</button><button class="mk-btn" data-view="project">프로젝트 안</button></span>
     <span class="mk-group" role="group" aria-label="계정"><span>계정</span>
       <button class="mk-btn" data-acct="admin">관리자</button><button class="mk-btn" data-acct="scoped">범위 계정</button></span>
@@ -238,6 +241,7 @@
   <symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/></symbol>
   <symbol id="i-updown" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
   <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
@@ -690,8 +694,13 @@ const SUBS = {
 const ST_TAG = { ok: ["ok", "", "리뉴얼 화면"], wip: ["wip", "i-wip", "미구현"], key: ["key", "i-key", "GA4 계정 대기"] };
 
 const CAPS = {
+  D: {
+    what: "<b>D · 프로젝트는 새 탭 (추천)</b> — 메인 사이드바의 Project 구역은 ‘Project list’ 하나로 지금 그대로 둡니다. 목록에서 프로젝트를 누르면 프로젝트 탭이 새로 열리고, 그 탭의 사이드바에는 프로젝트 카드(⇅ 바꾸기)와 하위 메뉴만 있습니다. 프로젝트 탭은 하나를 다시 씁니다(다른 프로젝트를 누르면 그 탭이 바뀜, ⌘ · Ctrl 클릭은 탭을 더 엶). 브라우저 탭 제목에 프로젝트가 붙습니다. <b>목록 행을 누르면 실제로 새 탭이 열립니다.</b>",
+    pro: ["메인 사이드바가 지금 그대로라 복잡해지지 않습니다", "Global · Website · Admin은 원래 탭에 남아, 브라우저 탭만 바꾸면 됩니다", "프로젝트 탭은 B처럼 짧아 프로젝트에만 집중합니다", "Global 화면과 프로젝트 화면을 탭 두 개로 나란히 둘 수 있습니다", "선례: Website Overview 카드가 분석 화면을 새 탭으로 엽니다(W1)"],
+    con: ["화면이 두 탭으로 나뉩니다 — 행에 새 탭 아이콘을 붙여 미리 알립니다", "프로젝트 탭에는 Global · Website 메뉴가 없고, ‘Project list’는 원래 탭에서 엽니다"],
+  },
   A: {
-    what: "<b>A · 프로젝트 문맥 구역 (추천)</b> — 사이드바 하나를 그대로 둡니다. 프로젝트를 열면 Project 구역의 ‘Project list’ 아래에 그 프로젝트 카드와 하위 메뉴(레거시 순서 · 라벨)가 펼쳐지고, Global · Website 구역은 접힌 채로 열립니다(제목을 누르면 펼침). 카드의 ⇅로 다른 프로젝트의 같은 메뉴를 엽니다.",
+    what: "<b>A · 프로젝트 문맥 구역</b> — 사이드바 하나를 그대로 둡니다. 프로젝트를 열면 Project 구역의 ‘Project list’ 아래에 그 프로젝트 카드와 하위 메뉴(레거시 순서 · 라벨)가 펼쳐지고, Global · Website 구역은 접힌 채로 열립니다(제목을 누르면 펼침). 카드의 ⇅로 다른 프로젝트의 같은 메뉴를 엽니다.",
     pro: ["Global · Website · Admin이 같은 자리에 남아 길을 잃지 않습니다", "지금 프로젝트가 사이드바에 늘 보입니다(제목 위 상위 메뉴명 없음 규칙과 같은 방식)", "프로젝트 메뉴가 1920×915 한 화면에 다 들어옵니다(접힘 덕분)"],
     con: ["프로젝트를 열 때 Global · Website가 접혀 처음엔 한 번 더 눌러야 펼쳐집니다"],
   },
@@ -708,8 +717,12 @@ const CAPS = {
 };
 
 // ── 상태 ──
+// 안 D의 프로젝트 탭: 목록에서 window.open(…#tab=project&pid=…, "hgh-project")으로 열린 이 파일
+const HASH = new URLSearchParams(location.hash.slice(1));
+const TAB = HASH.get("tab") === "project" && PROJECTS.some((r) => r[0] === HASH.get("pid"));
+if (!TAB) window.name = "hgh-main";
 const S = {
-  opt: "A", view: "list", acct: "admin", pid: "843ecb1b", sub: "dashboard",
+  opt: "D", view: TAB ? "project" : "list", acct: "admin", pid: TAB ? HASH.get("pid") : "843ecb1b", sub: TAB && HASH.get("sub") in { dashboard: 1, gk: 1, social: 1, prompt: 1, mention: 1, citation: 1, conversion: 1, general: 1, member: 1 } ? HASH.get("sub") : "dashboard",
   recent: ["843ecb1b", "9d01e408", "e202df42"],
   open: { list: { standard: true, website: true, project: true, admin: true }, project: { standard: false, website: false, project: true, admin: true } },
   q: "", seg: "all", sort: "last", shown: 20,
@@ -748,9 +761,11 @@ function renderSide() {
     : `<div class="sx-acct"><span class="sx-av" aria-hidden="true">R</span><span class="sx-who"><b>범위 계정</b><small>region · Kia · 유럽</small></span><span class="lang">KO</span></div>`;
   const tip = `<p class="sx-out" id="sx-out" role="status" hidden></p>`;
   let nav;
-  if (S.opt === "B" && S.view === "project" && S.acct === "admin") {
+  if ((S.opt === "B" || S.opt === "D") && S.view === "project" && S.acct === "admin") {
     nav = `<nav class="snb" aria-label="프로젝트 메뉴">${section("project", "Project", projectCard() + projectTree(), true)}</nav>`;
-    return void (side.innerHTML = brand + nav + `<div class="sx-foot">${tip}<nav class="snb">${link("Project list", { ico: "i-back", act: "list" })}</nav>${acct}</div>`);
+    // B: 이 사이드바로 돌아감 · D: 원래 탭(메인)의 목록을 엶
+    const back = S.opt === "B" ? link("Project list", { ico: "i-back", act: "list" }) : `<a data-act="main" title="원래 탭에서 엽니다">${icon("n-briefcase")}<span class="l">Project list</span><span class="st">${icon("i-ext")}</span></a>`;
+    return void (side.innerHTML = brand + nav + `<div class="sx-foot">${tip}<nav class="snb">${back}</nav>${acct}</div>`);
   }
   const top = `<nav class="snb" aria-label="메뉴">${section("standard", "Global", menuTree(GLOBAL, "Global"))}${section("website", "Website", menuTree(WEBSITE, "Website"))}</nav>`;
   let more = "";
@@ -774,12 +789,13 @@ function cmpCard() {
   return `<section class="card mko cmp"><div class="card-h"><h2>안 비교 (UX 기준)</h2><span class="hint">위 목업 바에서 안을 바꿔 사이드바를 봅니다</span></div>
   <div class="tblwrap"><table><colgroup><col style="width:150px"><col><col style="width:200px"><col style="width:200px"><col style="width:210px"><col style="width:170px"></colgroup>
   <thead><tr><th>안</th><th>프로젝트 안에서 Global · Website · Admin 가기</th><th>지금 어느 프로젝트인지</th><th>다른 프로젝트로</th><th>메뉴 깊이</th><th>판단</th></tr></thead><tbody>
-  ${row("rec", "A 프로젝트 문맥 구역", "구역 제목을 펼쳐 바로 — 사이드바는 그대로", "사이드바 카드 (ID, 정본이 생기면 이름)", "카드 ⇅ → 같은 메뉴로", "2단 · 레거시와 같음", "<b>추천</b>")}
+  ${row("rec", "D 프로젝트는 새 탭", "원래 탭으로 — 메인 사이드바는 지금 그대로", "사이드바 카드 + 브라우저 탭 제목", "카드 ⇅ → 같은 탭 · 같은 메뉴로", "2단 · 레거시와 같음", "<b>추천</b> — 메인 메뉴가 늘지 않는다")}
+  ${row("", "A 프로젝트 문맥 구역", "구역 제목을 펼쳐 바로 — 사이드바는 그대로", "사이드바 카드 (ID, 정본이 생기면 이름)", "카드 ⇅ → 같은 메뉴로", "2단 · 레거시와 같음", "한 사이드바에 다 들어가 복잡하다")}
   ${row("", "B 프로젝트 전용 사이드바", "Project list로 나간 뒤 — 위 GNB가 없어 레거시보다 한 단계 멂", "사이드바 카드", "카드 ⇅ → 같은 메뉴로", "2단", "집중은 좋지만 다른 구역이 멀다")}
   ${row("", "C 메뉴에 프로젝트 나열", "바로", "펼친 프로젝트 줄 (ID)", "메뉴의 다른 줄 — 최근 3개만", "3단 — 디자인 규칙 트리 밖", "ID 줄이 읽히지 않는다")}
-  ${row("out", "D 상세는 페이지 안 탭 (그리지 않음)", "사이드바는 Project list만", "페이지 머리", "목록으로 나가서", "탭 안에 탭 (Mention · Citation 보기 탭)", "제외 — 디자인 규칙 ‘화면 안 전환 탭으로 다른 메뉴 가기’ 금지")}
+  ${row("out", "E 상세는 페이지 안 탭 (그리지 않음)", "사이드바는 Project list만", "페이지 머리", "목록으로 나가서", "탭 안에 탭 (Mention · Citation 보기 탭)", "제외 — 디자인 규칙 ‘화면 안 전환 탭으로 다른 메뉴 가기’ 금지")}
   </tbody></table></div>
-  <p class="cmp-n">A의 접힘이 필요한 이유(이 목업을 1920×915로 잰 값): Global · Website를 다 펼친 채로 프로젝트 메뉴를 붙이면 Project 구역이 약 660px에서 시작하고 Analysis가 약 940px로 화면 밖에 놓입니다. 두 구역을 접으면 프로젝트 메뉴 끝(Member)이 약 710px입니다. 프로젝트 밖으로 나오면 구역은 보는 사람이 둔 대로 돌아갑니다.</p></section>`;
+  <p class="cmp-n">D의 탭: 프로젝트 탭은 이름 있는 탭 하나(<code>hgh-project</code>)를 다시 써서 목록을 여러 번 눌러도 탭이 쌓이지 않습니다. 이미 열린 프로젝트 탭으로 브라우저가 화면을 옮겨 주는지는 브라우저마다 확인이 필요합니다. A의 접힘이 필요한 이유(이 목업을 1920×915로 잰 값): Global · Website를 다 펼친 채로 프로젝트 메뉴를 붙이면 Project 구역이 약 660px에서 시작하고 Analysis가 약 940px로 화면 밖에 놓입니다. 두 구역을 접으면 프로젝트 메뉴 끝(Member)이 약 710px입니다. 프로젝트 밖으로 나오면 구역은 보는 사람이 둔 대로 돌아갑니다.</p></section>`;
 }
 
 function listRows() {
@@ -795,12 +811,13 @@ function renderList() {
   const all = P.length, yes = P.filter((p) => p.answers > 0).length;
   const rows = listRows(), shown = rows.slice(0, S.shown);
   const td = (v, cls = "r") => (v === "" || v == null ? `<td class="${cls} none">—</td>` : `<td class="${cls}">${v}</td>`);
+  const ext = S.opt === "D" ? `<svg class="i s14 ext" aria-label="새 탭"><use href="#i-ext"/></svg>` : "";
   const body = shown.map((p) => `<tr class="go" tabindex="0" data-act="enter:${p.id}">
-    <td><span class="id mono">${p.id}</span><span class="pt" title="${esc(p.first)}">${p.first ? esc(p.first) : "프롬프트 없음"}</span></td>
+    <td><span class="id mono">${p.id}</span>${ext}<span class="pt" title="${esc(p.first)}">${p.first ? esc(p.first) : "프롬프트 없음"}</span></td>
     ${td(esc(countries(p)), "")}${td(p.langs.join(" · "), "")}${td(p.engines.map((e) => ENGINE[e] || e).join(" · "), "")}
     ${td(p.prompts.toLocaleString())}${td(p.answers ? p.answers.toLocaleString() : "")}${td(p.rounds || "")}${td(p.last)}${td(p.fields || "")}</tr>`).join("");
   page.innerHTML = `<div class="pg">
-  <header class="ph"><div><h1>Project list</h1><div class="sub"><span class="desc">프로젝트마다 측정한 프롬프트와 답변입니다. 행을 누르면 그 프로젝트의 Dashboard가 열립니다.</span><span class="pill">${icon("i-cal", "i s14")}마지막 측정 <b>${LAST_MEASURED}</b></span></div></div></header>
+  <header class="ph"><div><h1>Project list</h1><div class="sub"><span class="desc">프로젝트마다 측정한 프롬프트와 답변입니다. 행을 누르면 그 프로젝트의 Dashboard가 ${S.opt === "D" ? "새 탭에서 " : ""}열립니다.</span><span class="pill">${icon("i-cal", "i s14")}마지막 측정 <b>${LAST_MEASURED}</b></span></div></div></header>
   <section class="card">
     <div class="tb">
       <label class="finwrap">${icon("i-search", "i s14")}<input class="finput" id="q" value="${esc(S.q)}" placeholder="ID · 프롬프트 원문 · 국가" aria-label="프로젝트 찾기"></label>
@@ -846,14 +863,26 @@ function renderProject() {
 // ── 목업 바 · 바꾸기 창 ──
 function renderCap() {
   const c = CAPS[S.opt];
-  cap.innerHTML = `<div>${c.what}</div><div><b>좋은 점</b><ul>${c.pro.map((x) => `<li>${x}</li>`).join("")}</ul><b>아쉬운 점</b><ul>${c.con.map((x) => `<li>${x}</li>`).join("")}</ul></div>`;
+  document.querySelectorAll("[data-main-only]").forEach((g) => (g.hidden = TAB));
+  const sub = SUBS[S.sub].path.split(" › ").pop();
+  document.title = S.view === "project" && S.opt === "D" ? `${S.pid} · ${sub} — HMG GEO` : "Project 메뉴 목업 — HMG GEO 리뉴얼";
+  if (TAB) history.replaceState(null, "", `#tab=project&pid=${S.pid}&sub=${S.sub}`);
+  const what = TAB ? `<b>안 D의 프로젝트 탭</b> — Project list에서 열린 새 탭입니다. 원래 탭(메인 사이드바)은 그대로 남아 있습니다. 탭 제목에 프로젝트가 붙고, 카드의 ⇅는 이 탭 안에서 프로젝트를 바꿉니다. 사이드바 맨 아래 ‘Project list’는 원래 탭에서 엽니다.` : c.what;
+  cap.innerHTML = `<div>${what}</div><div><b>좋은 점</b><ul>${c.pro.map((x) => `<li>${x}</li>`).join("")}</ul><b>아쉬운 점</b><ul>${c.con.map((x) => `<li>${x}</li>`).join("")}</ul></div>`;
   document.querySelectorAll("[data-opt]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.opt === S.opt));
   document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === S.view));
   document.querySelectorAll("[data-acct]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.acct === S.acct));
   document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px");
 }
 function render() { closePop(); renderCap(); renderSide(); (S.view === "list" ? renderList : renderProject)(); }
+// 안 D: 메인 탭에서는 프로젝트 탭(이름 있는 탭 하나)을 열고, 프로젝트 탭 안에서는 그 자리에서 바꾼다
+function openProjectTab(id) { window.open(`${location.pathname}#tab=project&pid=${id}&sub=dashboard`, "hgh-project"); }
+function openMain() {
+  let w = null;
+  try { w = window.open("", "hgh-main"); if (w && w.location.href === "about:blank") w.location.href = location.pathname; } catch (e) { window.open(location.pathname, "hgh-main"); }
+}
 function enter(id) {
+  if (S.opt === "D" && !TAB && S.view === "list") { openProjectTab(id); return; }
   S.pid = id; S.view = "project";
   S.recent = [id, ...S.recent.filter((x) => x !== id)].slice(0, 3);
   main.scrollTop = 0; render();
@@ -895,6 +924,7 @@ side.addEventListener("click", (e) => {
   e.preventDefault();
   const [k, v] = a.dataset.act.split(/:(.*)/s);
   if (k === "list") { S.view = "list"; render(); }
+  else if (k === "main") { if (TAB) openMain(); else { S.view = "list"; render(); } }
   else if (k === "sub") { S.sub = v; S.view = "project"; render(); }
   else if (k === "enter") { if (S.view === "project" && S.pid === v && S.opt === "C") { S.view = "list"; render(); } else enter(v); }
   else if (k === "out") {
@@ -914,9 +944,15 @@ page.addEventListener("keydown", (e) => { const tr = e.target.closest("tr.go"); 
 popQ.addEventListener("input", popRows);
 popL.addEventListener("click", (e) => { const b = e.target.closest("[data-pid]"); if (b) enter(b.dataset.pid); });
 document.getElementById("pop-x").addEventListener("click", closePop);
-document.getElementById("pop-all").addEventListener("click", () => { S.view = "list"; render(); });
+document.getElementById("pop-all").addEventListener("click", () => { if (TAB) { closePop(); openMain(); } else { S.view = "list"; render(); } });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePop(); });
 document.addEventListener("mousedown", (e) => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest("#pj-sw")) closePop(); });
+// 프로젝트 탭을 다시 쓸 때(같은 파일 · 다른 #)는 다시 읽히지 않고 hashchange만 온다
+window.addEventListener("hashchange", () => {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!TAB || !byId[h.get("pid")]) return;
+  S.pid = h.get("pid"); S.sub = SUBS[h.get("sub")] ? h.get("sub") : "dashboard"; main.scrollTop = 0; render();
+});
 window.addEventListener("resize", () => document.documentElement.style.setProperty("--mk-h", document.getElementById("mk").offsetHeight + "px"));
 render();
 </script>
