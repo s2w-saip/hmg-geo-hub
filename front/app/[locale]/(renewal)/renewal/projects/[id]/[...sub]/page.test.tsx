@@ -27,8 +27,8 @@ const params = (sub: string) => Promise.resolve({ locale: "ko", id: ID, sub: sub
 const render = async (sub: string) => renderToStaticMarkup(await Page({ params: params(sub) }));
 
 describe("project tab page", () => {
-  // the pages with a renewal page are more specific routes (Dashboard · Prompt · Analysis · AI Conversion · Setting ·
-  // Member, 2026-11-03); Intent stays here until D-6 is decided
+  // every page of the menu has its renewal page as a more specific route since 2026-11-03 (Intent on its sample under the
+  // account veil), which Next.js serves before this one; the notice stays for a page asked of this route
   it.each([
     ["intent/google-keyword", "nav.projectDetail:intentGoogleKeyword"],
     ["intent/social-scraping", "nav.projectDetail:intentSocialScraping"],

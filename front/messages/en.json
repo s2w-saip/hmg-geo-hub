@@ -6480,6 +6480,10 @@
         "invite": "Invite",
         "audit": "Recent member activity",
         "note": "Members, roles, invites and their history live only in the original operations DB, not in Gold or the HUB. The renewal Project opens to administrators only. Whether the HUB keeps project members awaits a decision (D-7)."
+      },
+      "intent": {
+        "googleKeyword": "Prompt candidates from the tracked keywords' interest trend, related searches and search results.",
+        "socialScraping": "Prompt candidates from the purchase contexts, conditions and combinations in community posts."
       }
     }
   },

@@ -33,6 +33,8 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
 // rn-sidebar.render.test.tsx keeps this list in step with the page files under renewal/projects/[id]/.
 export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>([
   "",
+  "intent/google-keyword",
+  "intent/social-scraping",
   "prompt",
   "analysis/mention",
   "analysis/citation",
@@ -55,7 +57,9 @@ export const ACCOUNT_PAGES: Readonly<Record<string, RnAccount>> = {
 };
 
 // A project's pages (as RENEWAL_PROJECT_PAGES) whose data needs an outside account the HUB does not hold yet: the project
-// tab's sidebar marks them with the key, and the page shows its sample under the veil (2026-11-03, P5).
+// tab's sidebar marks them with the key, and the page shows its sample under the veil (2026-11-03, P5 and Intent).
 export const ACCOUNT_PROJECT_PAGES: Readonly<Record<string, RnAccount>> = {
+  "intent/google-keyword": "dataforseo",
+  "intent/social-scraping": "dataforseo",
   "ai-funnel/conversion": "ga4",
 };

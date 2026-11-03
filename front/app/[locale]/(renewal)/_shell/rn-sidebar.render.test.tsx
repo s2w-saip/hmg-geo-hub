@@ -223,7 +223,7 @@ describe("project tab", () => {
   };
   const P = `/renewal/projects/${ID}`;
 
-  it("shows the project's card and the original project menu, every page not implemented yet, and nothing else", () => {
+  it("shows the project's card and the original project menu, and nothing else", () => {
     PATH = `${P}/analysis/mention`;
     const m = menu("admin");
     PATH = "/renewal/dashboard";
@@ -233,8 +233,8 @@ describe("project tab", () => {
         links: [
           `Dashboard → ${P}`,
           "Intent (group)",
-          `Google Keyword · 미구현 → ${P}/intent/google-keyword`,
-          `Social Scraping · 미구현 → ${P}/intent/social-scraping`,
+          `Google Keyword · 계정 dataforseo → ${P}/intent/google-keyword`,
+          `Social Scraping · 계정 dataforseo → ${P}/intent/social-scraping`,
           `Prompt → ${P}/prompt`,
           "Analysis (group)",
           `Mention → ${P}/analysis/mention`,

@@ -19,6 +19,8 @@ const { RnOverviewFilters } = await import("./overview-filters");
 const { RnAccountGate, RnSampleVeil } = await import("./account-gate");
 const { RnConvSample } = await import("../standard/ai-funnel/conversion/_components/conv-sample");
 const { KeywordSample } = await import("../admin/keyword-tools/_components/keyword-sample");
+const { ProjectKeywordSample } = await import("../projects/_components/project-keyword-sample");
+const { ProjectSocialSample } = await import("../projects/_components/project-social-sample");
 
 function render(node: ReactNode): string {
   return renderToStaticMarkup(
@@ -75,5 +77,26 @@ describe("samples", () => {
     const tiles = [...inert.matchAll(/<dt[^>]*>([^<]+)<\/dt><dd[^>]*>([^<]+)<\/dd>/g)].map(([, k, v]) => `${k} ${v}`);
     expect(tiles).toEqual(["키워드 수 8", "평균 검색량 75,775", "총 검색량 606,200", "고볼륨 2", "중볼륨 5", "저볼륨 1"]);
     expect(inert).toContain("🇰🇷 한국 · ko");
+  });
+
+  // 2026-11-03 (user): Project › Intent waits on the same accounts (U3)
+  it("project Google Keyword: tracked keywords, related searches, the trend's average and the search-result prompts", () => {
+    const { inert, veil } = split(render(<RnAccountGate account="dataforseo"><ProjectKeywordSample /></RnAccountGate>));
+    expect(veil).toContain('data-rn-account-gate="dataforseo"');
+    for (const part of ["keywords", "related", "trend", "average", "serp"]) expect(inert).toContain(`data-rn-keyword-sample="${part}"`);
+    // the average of the 12 monthly index values (911 / 12)
+    expect(inert).toMatch(/text-rn-28[^>]*>76<span[^>]*>\/ 100<\/span>/);
+    expect(inert).toContain("적용 4개");
+    expect(inert).toContain("선택한 키워드 추가 · 2개 선택");
+  });
+
+  it("project Social Scraping: the context map's tables, the composer and the recommended prompts", () => {
+    const { inert, veil } = split(render(<RnAccountGate account="dataforseo"><ProjectSocialSample /></RnAccountGate>));
+    expect(veil).toContain('data-rn-account-gate="dataforseo"');
+    for (const part of ["summary", "composer", "contexts", "conditions", "combinations", "catalog"]) expect(inert).toContain(`data-rn-social-sample="${part}"`);
+    // the picks of the three tables are the composer's chips
+    expect([...inert.matchAll(/aria-label="([^"]+) 빼기"/g)].map(([, name]) => name)).toEqual(["첫 차 구매", "자녀 출산 · 육아", "실구매가 · 보조금", "1회 충전 주행거리 × 충전 인프라 접근성"]);
+    expect(inert).toContain("1–6 / 전체 48");
+    expect(inert).toContain("3개 선택됨");
   });
 });
