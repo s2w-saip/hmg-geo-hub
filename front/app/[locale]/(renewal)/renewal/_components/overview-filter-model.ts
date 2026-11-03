@@ -2,7 +2,8 @@
 // rule for the Overview (overview-filters.tsx → DimensionFilterPanel stage "overview"),
 // built from the panel's own exported functions so the two cannot drift:
 //   axes        = overviewOnlyGroups (stage "acr": acrOnlyGroups, "mention" / "citation": composeGroups) + admin brand slot − locked axes − empty catalog axes
-//                 (surface "website": WEBSITE_ONLY_GROUPS, + 출처 카테고리 on Citation)
+//                 (surface "website": WEBSITE_ONLY_GROUPS, + 출처 카테고리 on Citation;
+//                  surface "project": PROJECT_ONLY_GROUPS + the project's custom tags, 국가 locked when it is one)
 //   sections    = FILTER_SECTIONS rows (디멘션 / 프롬프트 필터), empty rows dropped
 //   권역 axis   = single active brand, >1 measured region, not a region-pinned account
 //   국가/언어   = option matrix narrowed by the picked brand(s) and countries
@@ -29,6 +30,7 @@ import {
   type CatalogTaxonomyRow,
   type DimensionGroup,
   type Draft,
+  type DynamicAxis,
   type MeasuredScopeCombo,
 } from "@/components/dash/dimension-filter-panel";
 import { overviewOnlyGroups } from "@/app/[locale]/(dash)/dashboard/_components/overview-filters";
@@ -54,8 +56,13 @@ export interface OverviewPanelInput {
    * WEBSITE_ONLY_GROUPS (+ 출처 카테고리 on Citation), and the account scope as the Website surface sees it
    * (scopeForGeoSurface). Other stages keep their own axes. Default "standard" (Global).
    */
-  surface?: "standard" | "website";
+  surface?: "standard" | "website" | "project";
   scope?: AllowedScope;
+  /**
+   * The project's custom tags (surface "project", 2026-11-03): one axis each under the 태그 section, carried in the URL
+   * as cf_<fieldId> (the original project panels' dynamic axes, Gold dim_custom_field · prompt_custom_value).
+   */
+  dynamicAxes?: DynamicAxis[];
   catalogRows?: CatalogTaxonomyRow[];
   geographyOptions?: string[];
   languageOptions?: string[];
@@ -121,6 +128,21 @@ const websiteOnlyGroups = (stage: OverviewPanelInput["stage"], languageOptions?:
         ? [...WEBSITE_ONLY_GROUPS]
         : null;
 
+/**
+ * Project (2026-11-03, renewal Project tab): the original project panels' axes — 기간 · 측정 국가 · AI 엔진 (no language
+ * options were passed there, project prompts carry no catalog tagging) — plus the project's custom tags. A project
+ * measured in one country has its 국가 locked (the original locked the project's own country).
+ */
+export const PROJECT_ONLY_GROUPS: readonly DimensionGroup[] = ["geography", "engine", "time"];
+
+/** A custom tag axis: its URL key cf_<fieldId>, carried in the Draft like an axis (buildCommitParams writes it as is). */
+export type CustomAxisKey = `cf_${string}`;
+export const customAxisKey = (id: string) => `cf_${id}` as CustomAxisKey & DimensionGroup;
+export const isCustomAxis = (axis: string): axis is CustomAxisKey => axis.startsWith("cf_");
+/** The custom tag behind an axis key, if the input has it. */
+export const customAxisOf = (input: OverviewPanelInput, axis: string): DynamicAxis | undefined =>
+  isCustomAxis(axis) ? input.dynamicAxes?.find((a) => customAxisKey(a.id) === axis) : undefined;
+
 const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
   if (base.includes("brand")) return base;
   const i = base.indexOf("promptContext");
@@ -130,11 +152,13 @@ const insertBrand = (base: DimensionGroup[]): DimensionGroup[] => {
 export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): OverviewPanelModel {
   const { stage, scope, catalogRows, geographyOptions, languageOptions, optionMatrix } = input;
   const isAdmin = scope?.all === true;
-  const website = input.surface === "website" ? websiteOnlyGroups(stage, languageOptions) : null;
-  const viewScope = scope ? scopeForGeoSurface(scope, website ? "website" : "standard") : scope;
+  const project = input.surface === "project";
+  const website = input.surface === "website" ? websiteOnlyGroups(stage, languageOptions) : project ? [...PROJECT_ONLY_GROUPS] : null;
+  const viewScope = scope ? scopeForGeoSurface(scope, input.surface === "website" ? "website" : "standard") : scope;
   const lock = new Set<DimensionGroup>();
   if (!isAdmin) lock.add("brand");
   if (!isAdmin && viewScope?.countries?.length === 1) lock.add("geography");
+  if (project && geographyOptions?.length === 1) lock.add("geography");
   const only =
     website ??
     (stage === "acr"
@@ -148,12 +172,17 @@ export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): Ove
             : stage === "conversion"
               ? [...CONVERSION_ONLY_GROUPS]
               : overviewOnlyGroups(languageOptions));
-  const base = isAdmin ? insertBrand(only) : only;
-  const visibleGroups = base.filter((g) => {
-    if (lock.has(g)) return false;
-    if (catalogRows && CATALOG_AXES.has(g)) return catalogAxisHasValues(g, catalogRows);
-    return true;
-  });
+  // a project has no brand (Gold's perspective is HMG there, as on the original project pages)
+  const base = isAdmin && !project ? insertBrand(only) : only;
+  const tags = project ? (input.dynamicAxes ?? []).filter((a) => a.options.length > 0).map((a) => customAxisKey(a.id)) : [];
+  const visibleGroups = [
+    ...base.filter((g) => {
+      if (lock.has(g)) return false;
+      if (catalogRows && CATALOG_AXES.has(g)) return catalogAxisHasValues(g, catalogRows);
+      return true;
+    }),
+    ...tags,
+  ];
 
   const activeBrand =
     (scope && !scope.all && scope.brands?.length === 1 ? scope.brands[0] : null) ??
@@ -181,7 +210,9 @@ export function overviewPanelModel(input: OverviewPanelInput, draft: Draft): Ove
     axes: s.groups
       .filter((g) => visibleGroups.includes(g))
       .flatMap((g): PanelAxis[] => (g === "geography" && rhqAxis ? ["rhqRegion", "geography"] : [g])),
-  })).filter((s) => s.axes.length > 0);
+  }))
+    .concat(tags.length ? [{ id: "tag", axes: tags }] : [])
+    .filter((s) => s.axes.length > 0);
 
   return { isAdmin, visibleGroups, sections, activeBrand, geographyOptions: geo, languageOptions: languages, regions, countryToRhq };
 }
@@ -194,6 +225,8 @@ export function axisOptions(
   group: DimensionGroup,
   nav: readonly string[],
 ): readonly string[] {
+  const custom = customAxisOf(input, group);
+  if (custom) return custom.options;
   if (input.catalogRows && CASCADE_FIELDS.has(group)) {
     const catalogDraft = model.activeBrand ? { ...draft, brand: [model.activeBrand] } : draft;
     return catalogOptionsFor(group, input.catalogRows, catalogDraft);

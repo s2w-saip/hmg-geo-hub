@@ -29,8 +29,9 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
 ]);
 
 // A project's pages (paths under /projects/{id}, "" = Dashboard) that have a renewal page; the others open the
-// project tab's "not implemented" page (renewal/projects/[id]/[[...sub]], menu option D, 2026-11-03).
-export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>([]);
+// project tab's "not implemented" page (renewal/projects/[id]/[...sub], menu option D, 2026-11-03).
+// rn-sidebar.render.test.tsx keeps this list in step with the page files under renewal/projects/[id]/.
+export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>([""]);
 
 export type RnAccount = "ga4" | "dataforseo";
 

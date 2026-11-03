@@ -23,7 +23,8 @@ export function sliceFills(sources: CompositionView["sources"]): string[] {
   return sources.map((s) => (s.domain === "" ? REST_FILL : s.isOurs ? OWN_FILL[Math.min(own++, OWN_FILL.length - 1)] : OTHER_FILL[Math.min(other++, OTHER_FILL.length - 1)]));
 }
 
-export function RnWebsiteSources({ composition, citationHref }: { composition: Promise<CompositionView>; citationHref: string }) {
+/** `newTab` false: the link stays in this tab (the renewal Project tab, one per project). */
+export function RnWebsiteSources({ composition, citationHref, newTab = true }: { composition: Promise<CompositionView>; citationHref: string; newTab?: boolean }) {
   const t = useTranslations("renewal.website.overview");
   const tC = useTranslations("dashboard.composition");
   const tR = useTranslations("renewal.overview");
@@ -38,7 +39,7 @@ export function RnWebsiteSources({ composition, citationHref }: { composition: P
         title={t("sourcesTitle")}
         hint={t("sourcesHint")}
         actions={
-          <Link prefetch={false} href={citationHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-rn-12 font-semibold text-rn-navy hover:underline">
+          <Link prefetch={false} href={citationHref} target={newTab ? "_blank" : undefined} rel={newTab ? "noopener noreferrer" : undefined} className="inline-flex items-center gap-0.5 text-rn-12 font-semibold text-rn-navy hover:underline">
             {t("sourcesDetail")}
             <ArrowUpRight className="size-3.5" aria-hidden />
           </Link>

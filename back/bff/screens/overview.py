@@ -295,7 +295,8 @@ async def load_live_kpis(common: dict, surface: str) -> tuple[str, list[dict] | 
         if is_transient(exc):
             return "degraded", None
         raise
-    kpis = to_dashboard_kpis(summary, brands["data"] if brands else None, surface == "website")
+    # the URL-rate cards on the website and project surfaces (Gold reads them there, to_url_rate_kpis)
+    kpis = to_dashboard_kpis(summary, brands["data"] if brands else None, surface != "global")
     return ("ok", kpis) if kpis is not None else ("empty", None)
 
 
@@ -1004,16 +1005,17 @@ async def website_tiles(ctx: dict, sp: dict, deferred: bool) -> dict:
     return {"state": "ok", "tiles": tiles_view(kpis, compare, days, label_ctx)}
 
 
-async def deferred_kpis(items: list[dict], common: dict) -> list[dict]:
+async def deferred_kpis(items: list[dict], common: dict, surface: str = "website") -> list[dict]:
     """website/page.tsx: the engine badge (a transient engines failure = no badge, a 4xx is raised)
-    and the trend Δ (any trend failure = no Δ), merged onto the cards."""
+    and the trend Δ (any trend failure = no Δ), merged onto the cards. `surface` project: the renewal Project
+    Dashboard (screens/project_dashboard.py)."""
     async def engines():
-        res = await or_none_on_transient(fetch_engine_rows(common, "website"))
+        res = await or_none_on_transient(fetch_engine_rows(common, surface))
         return [engine_row(r) for r in res["data"]["rows"]] if res else []
 
     async def trend():
         try:
-            return await load_live_trend(common, "website", WEBSITE_OVERVIEW_TREND_METRICS, "week")
+            return await load_live_trend(common, surface, WEBSITE_OVERVIEW_TREND_METRICS, "week")
         except Exception as exc:  # noqa: BLE001
             if isinstance(exc, HTTPException) or is_transient(exc):
                 return None

@@ -12,13 +12,14 @@
 // 기간' for a calendar month too); when the tiles compare different rounds each tile names its own (the renewal
 // Overview's rule, audit 3-4).
 
-import { Suspense, use, type ReactNode } from "react";
+import { Suspense, createContext, use, useContext, type ReactNode } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowUpRight } from "lucide-react";
 import { RnCard, RnCardHeader, RnInfoTip, RnInfoTipItem, RnSkeleton, RnToneChip, type RnTone } from "@/components/renewal-ui";
 import type { TilesView, TileView } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { periodChipText } from "@/lib/period-chip-text";
+import type { KpiKey } from "@/app/[locale]/(dash)/dashboard/_data/model";
 import { isFlat, useFormat, websiteDetailHref } from "./website-format";
 
 const TONE: Record<TileView["tone"], RnTone> = { good: "up", bad: "down", flat: "flat" };
@@ -26,6 +27,18 @@ const TONE: Record<TileView["tone"], RnTone> = { good: "up", bad: "down", flat: 
 const ROW = "flex items-baseline justify-between gap-2";
 
 // ─── KPI ────────────────────────────────────────────────────────────────────
+
+/**
+ * Another page's use of the card (the renewal Project Dashboard, 2026-11-03): where a tile opens (its own tab there, the
+ * project tab being one) and its own copy of a KPI's meaning (null = the website's).
+ */
+export interface KpiCardVariant {
+  href: (key: KpiKey) => string;
+  newTab: boolean;
+  copy: (key: string) => string | null;
+}
+const VariantContext = createContext<KpiCardVariant | null>(null);
+export const RnKpiCardVariant = VariantContext.Provider;
 
 /** The tiles at card speed, then the same tiles with Δ and the engine badge (no layout jump: same card). */
 export function RnWebsiteKpis({ tiles, deferred, qs, findings }: { tiles: TilesView; deferred: Promise<TilesView>; qs: string; findings?: ReactNode }) {
@@ -91,7 +104,9 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
   // the original's copy variant: an "api" tile reads its label and tip from dashboard.kpi.api.* when it has them
   const copyKey = (k: string) => (tile.copyVariant === "api" && tKpi.has(`api.${k}`) ? `api.${k}` : k);
   // a website meaning that differs from Global's (⑤ counts the site's own URLs, Gold cit_m05 = cit_owned): its own copy
-  const copy = (k: string) => (t.has(`copy.${k}`) ? t(`copy.${k}` as "title") : tKpi(copyKey(k) as "definition.visibility"));
+  const variant = useContext(VariantContext);
+  const copy = (k: string) => variant?.copy(k) ?? (t.has(`copy.${k}`) ? t(`copy.${k}` as "title") : tKpi(copyKey(k) as "definition.visibility"));
+  const newTab = variant?.newTab ?? true;
   return (
     <div data-rn-kpi={tile.key} className="group/kpi relative flex min-w-0 flex-col gap-1 border-l border-white/14 px-4 py-0.5 first:border-l-0 @max-[760px]/rnwkpi:nth-[2n+1]:border-l-0">
       <span className="flex items-center gap-1 text-rn-13 font-bold text-white/86">
@@ -170,9 +185,9 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
           covers the tile, last so it lies above the tile's parts; hover lightens it and shows ↗. */}
       <Link
         prefetch={false}
-        href={websiteDetailHref(tile.key, locale, qs)}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={variant ? variant.href(tile.key) : websiteDetailHref(tile.key, locale, qs)}
+        target={newTab ? "_blank" : undefined}
+        rel={newTab ? "noopener noreferrer" : undefined}
         aria-label={tR("detailLabel", { name })}
         className="absolute inset-0 rounded-[10px] transition-colors hover:bg-white/6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-sky"
       />

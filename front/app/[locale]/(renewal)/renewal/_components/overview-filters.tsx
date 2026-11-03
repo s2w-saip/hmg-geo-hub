@@ -41,6 +41,7 @@ import {
 import {
   axisOptions,
   clearGroup,
+  customAxisOf,
   geographyGroupOf,
   normalizeDraft,
   overviewPanelModel,
@@ -75,6 +76,8 @@ interface Ctx {
   nav: string[];
   filterQuery: string;
   valueLabel: (g: DimensionGroup, v: string) => string;
+  /** An axis's name: the panel's word, or a project custom tag's own label (Gold dim_custom_field.label). */
+  groupLabel: (g: PanelAxis) => string;
   regionLabel: (id: string) => string;
   /** `end` (the service week's last day, ServiceWeekShownEnd's): the period as the screens read it, its end at the latest that day; without, as picked */
   timeLabel: (encoded: string, end?: string | null) => string;
@@ -241,6 +244,8 @@ export function RnOverviewFilters({
   const langFmt = useMemo(() => new Intl.DisplayNames([locale], { type: "language" }), [locale]);
   const valueLabel = useCallback(
     (g: DimensionGroup, v: string): string => {
+      // a custom tag's values are the project's own words
+      if (customAxisOf(props, g)) return v;
       if (g === "geography") return geoCodeLabel(v, locale, (c) => tf(`value.${c}` as "value.worldwide"));
       if (g === "language") {
         try {
@@ -258,7 +263,11 @@ export function RnOverviewFilters({
       if (g === "competitor") return v;
       return LABELED_VALUES.has(v) ? tf(`value.${v}` as "value.branded") : v;
     },
-    [langFmt, locale, tCat, tf],
+    [langFmt, locale, props, tCat, tf],
+  );
+  const groupLabel = useCallback(
+    (g: PanelAxis): string => customAxisOf(props, g)?.label ?? tf(`group.${g}` as "group.geography"),
+    [props, tf],
   );
   const regionLabel = useCallback((id: string) => rhqLabel(id, locale === "en" ? "en" : "ko") ?? id, [locale]);
   // the service week's end as this tab knows it (null until the shell's first read): the presets a saved filter names
@@ -295,6 +304,7 @@ export function RnOverviewFilters({
     nav,
     filterQuery,
     valueLabel,
+    groupLabel,
     regionLabel,
     timeLabel,
     timeTitle,
@@ -333,8 +343,7 @@ function timeViewOf(props: OverviewFilterProps, value: string | null, maxDay: st
 
 /** Applied-condition summary of a filter query (saved filters, tokens). */
 function useSummaries() {
-  const { model, valueLabel, regionLabel, timeLabel, timeTitle } = useFilters();
-  const tf = useTranslations("dashboard.filters");
+  const { model, valueLabel, groupLabel, regionLabel, timeLabel, timeTitle } = useFilters();
   const tr = useTranslations("renewal.filters");
   const tokensOf = useCallback(
     /** `end` (ServiceWeekShownEnd's): the period as the screens read it, the pick in `title` (the applied chips); without, as saved */
@@ -358,12 +367,12 @@ function useSummaries() {
               text = labels.length > 3 ? tr("moreValues", { first: labels.slice(0, 2).join(", "), count: labels.length - 2 }) : labels.join(", ");
             }
           }
-          out.push({ group: axis, label: tf(`group.${axis}` as "group.geography"), text, title });
+          out.push({ group: axis, label: groupLabel(axis), text, title });
         }
       }
       return out;
     },
-    [model, regionLabel, tf, timeLabel, timeTitle, tr, valueLabel],
+    [groupLabel, model, regionLabel, timeLabel, timeTitle, tr, valueLabel],
   );
   const summarize = useCallback(
     (query: string) => {
@@ -542,10 +551,10 @@ function CompetitorSection({ options: pending, open, onToggle }: { options: Prom
 
 function AxisSection({ axis, open, onToggle, options, disabled, help, end = null }: { axis: PanelAxis; open: boolean; onToggle: () => void; options?: readonly string[]; disabled?: boolean; help?: ReactNode; /** the time axis: the service week's last day (ServiceWeekShownEnd) */ end?: string | null }) {
   const ctx = useFilters();
-  const { model, draft, change, regionLabel } = ctx;
+  const { model, draft, change, regionLabel, groupLabel } = ctx;
   const tf = useTranslations("dashboard.filters");
   const tr = useTranslations("renewal.filters");
-  const title = axis === "rhqRegion" ? tf("group.rhqRegion") : tf(`group.${axis}` as "group.geography");
+  const title = groupLabel(axis);
   const selectedRegions = axis === "rhqRegion" ? model.regions.filter((id) => isRegionSelected(id, draft.geography ?? [], model.countryToRhq)) : [];
   const picked = axis === "rhqRegion" ? selectedRegions.length : (draft[axis]?.length ?? 0);
   const timeSummary = axis === "time" && draft.time?.[0] ? ctx.timeLabel(draft.time[0], end) : undefined;
@@ -592,7 +601,7 @@ function AxisSection({ axis, open, onToggle, options, disabled, help, end = null
 
 function ValueList({ group, options: given, disabled = false }: { group: DimensionGroup; options?: readonly string[]; disabled?: boolean }) {
   const ctx = useFilters();
-  const { model, draft, nav, change, valueLabel, regionLabel, props } = ctx;
+  const { model, draft, nav, change, valueLabel, groupLabel, regionLabel, props } = ctx;
   const tf = useTranslations("dashboard.filters");
   const tr = useTranslations("renewal.filters");
   const [q, setQ] = useState("");
@@ -648,7 +657,7 @@ function ValueList({ group, options: given, disabled = false }: { group: Dimensi
       {options.length >= SEARCH_MIN ? (
         <RnSearchField className="mx-0.5 mb-1.5" value={q} onChange={setQ} placeholder={tf("searchPlaceholder")} label={tf("searchPlaceholder")} />
       ) : null}
-      <div role="group" aria-label={tf(`group.${group}` as "group.geography")}>
+      <div role="group" aria-label={groupLabel(group)}>
         {list}
       </div>
     </>

@@ -200,6 +200,24 @@ def read_project_custom_field_filters(sp: dict, fields: Sequence[dict]) -> dict 
     return out or None
 
 
+#: The renewal project pages' axes (2026-11-03, the original project panels): 기간 · 측정 국가 · AI 엔진, plus the
+#: project's custom tags (cf_<fieldId>). A project has no brand, language or catalog axis.
+PROJECT_GROUPS = ("time", "geography", "engine")
+
+
+def project_page_filters(sp: dict, project_id: str | None, groups: Sequence[str] = PROJECT_GROUPS) -> tuple[dict, dict]:
+    """The renewal project pages' filters + api ctx (surface project, no account scope: the pages are the
+    administrator's): the axes `groups` and every cf_<uuid> param. 422 without a project id."""
+    if not is_uuid(project_id):
+        raise HTTPException(422, "ctx.project_id must be a project id")
+    filters = read_standard_filters(sp, None, groups)
+    custom = read_project_custom_field_filters_raw(sp)
+    if custom is not None:
+        filters["customFieldFilters"] = custom
+    ctx = {"surface": "project", "projectId": project_id, "scope": None, **({"customFields": custom} if custom is not None else {})}
+    return filters, ctx
+
+
 def read_project_custom_field_filters_raw(sp: dict) -> dict | None:
     """Every cf_<uuid> URL param -> {fieldId: values} (no field list needed); None when none."""
     out = {}

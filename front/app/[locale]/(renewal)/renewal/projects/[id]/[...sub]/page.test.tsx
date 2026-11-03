@@ -23,12 +23,11 @@ vi.mock("@/lib/auth/session", () => ({ getSession: async () => ({ user: { role: 
 
 const { default: Page, generateMetadata } = await import("./page");
 const ID = "843ecb1b-39ff-4a7c-9b3a-0c3f7f8a9e10";
-const params = (sub: string) => Promise.resolve({ locale: "ko", id: ID, sub: sub ? sub.split("/") : undefined });
+const params = (sub: string) => Promise.resolve({ locale: "ko", id: ID, sub: sub.split("/") });
 const render = async (sub: string) => renderToStaticMarkup(await Page({ params: params(sub) }));
 
 describe("project tab page", () => {
   it.each([
-    ["", "nav.projectDetail:dashboard"],
     ["analysis/mention", "nav.projectDetail:analysisMention"],
     ["ai-funnel/conversion", "nav.projectDetail:aiFunnelConversion"],
     ["setting", "nav.projectDetail:general"],
@@ -60,6 +59,5 @@ describe("project tab page", () => {
 
   it("names the project in the browser tab's title", async () => {
     expect((await generateMetadata({ params: params("analysis/citation") })).title).toBe("nav.projectDetail:analysisCitation · 843ecb1b · app:name");
-    expect((await generateMetadata({ params: params("") })).title).toBe("nav.projectDetail:dashboard · 843ecb1b · app:name");
   });
 });

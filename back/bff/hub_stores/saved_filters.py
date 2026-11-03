@@ -27,7 +27,8 @@ from bff.hub_stores.hub_auth import Principal
 # (2026-11-02, last review F7).
 PAGES = ("overview", "mention", "citation", "acr", "visibility", "conversion", "prompts", "hub-prompts", "accounts", "ga4",
          "website-overview", "website-mention", "website-citation", "website-prompts", "website-conversion", "website-acr",
-         "source-overrides", "source-seeds", "interest-keywords", "interest-sources", "entity-roles")
+         "source-overrides", "source-seeds", "interest-keywords", "interest-sources", "entity-roles",
+         "project-dashboard", "project-mention", "project-citation", "project-prompt", "project-conversion")
 NAME_MAX = 40
 QUERY_MAX = 4000
 PER_PAGE_MAX = 50

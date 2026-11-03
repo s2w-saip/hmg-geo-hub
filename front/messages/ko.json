@@ -6231,6 +6231,41 @@
         "list": "Project list",
         "listHint": "원래 탭에서 엽니다",
         "close": "닫기"
+      },
+      "dashboard": {
+        "description": "이 프로젝트의 KPI · 엔진 · 출처 · 추이입니다. 당사 = HMG(현대 · 기아 · 제네시스 합)입니다.",
+        "copy": {
+          "definition": {
+            "citationShare": "전체 인용 횟수 중 이 프로젝트의 자사 URL(등록한 대표 주소와 그 하위 페이지)이 차지하는 비중 (한 답변 내 여러 번 인용된 경우 포함)"
+          },
+          "formula": {
+            "citationShare": "자사 URL 인용 횟수 ÷ 전체 출처 인용 횟수 × 100 (단위: %)"
+          },
+          "ratio": {
+            "citationShare": {
+              "num": "자사 URL 인용"
+            }
+          }
+        },
+        "statusTitle": "프로젝트 현황",
+        "statusHint": "필터와 무관한 이 프로젝트 전체의 값",
+        "statusFailed": "프로젝트 현황을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+        "noData": "데이터 없음",
+        "facts": {
+          "prompts": "프롬프트",
+          "measured": "측정 {count}개",
+          "answers": "답변",
+          "rounds": "{count}회차",
+          "last": "마지막 측정",
+          "candidates": "프롬프트 후보",
+          "members": "멤버",
+          "status": "프롬프트 상태"
+        },
+        "recentTitle": "최근 측정 프롬프트",
+        "recentAll": "Prompt 전체",
+        "recentEmpty": "측정한 프롬프트가 없습니다.",
+        "recentAnswers": "답변 {count}",
+        "statusFoot": "프롬프트 후보 · 멤버 · 프롬프트 상태(초안 · 대기 · 실행 중 · 완료 · 실패 · 일시정지)는 원본 운영 DB에만 있어 Gold로는 보이지 않습니다."
       }
     }
   },

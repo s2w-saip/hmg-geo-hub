@@ -28,7 +28,7 @@ vi.mock("@/lib/auth/actions", () => ({ logout: async () => {} }));
 
 const { RnSidebar } = await import("./rn-sidebar");
 const { ADMIN_SUB_ITEMS, STANDARD_SUB_ITEMS, WEBSITE_SUB_ITEMS } = await import("@/components/dash/sidebar");
-const { ACCOUNT_PAGES, RENEWAL_PAGES } = await import("./renewal-pages");
+const { ACCOUNT_PAGES, RENEWAL_PAGES, RENEWAL_PROJECT_PAGES } = await import("./renewal-pages");
 
 /** Section → its open state and its items in order: links as "label → href" ("· 미구현" marks an item without a
  * renewal page, 2026-10-29; "· 계정 <account>" one waiting on an outside account, 2026-11-02), a menu
@@ -135,6 +135,14 @@ describe("renewal sidebar", () => {
     expect([...RENEWAL_PAGES].sort()).toEqual(pages.sort());
   });
 
+  it("knows exactly the project pages there are", () => {
+    const root = fileURLToPath(new URL("../renewal/projects/[id]/", import.meta.url));
+    const pages = readdirSync(root, { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith("page.tsx") && !f.includes("[...sub]"))
+      .map((f) => f.replace(/\\/g, "/").replace(/\/?page\.tsx$/, ""));
+    expect([...RENEWAL_PROJECT_PAGES].sort()).toEqual(pages.sort());
+  });
+
   // 2026-10-28 (user): Project · Admin follow Global · Website at the top; only the account sits at the bottom
   it("keeps Project · Admin right under Global · Website: only the account is pushed to the bottom", () => {
     const out = html("admin");
@@ -223,7 +231,7 @@ describe("project tab", () => {
       project: {
         open: true,
         links: [
-          `Dashboard · 미구현 → ${P}`,
+          `Dashboard → ${P}`,
           "Intent (group)",
           `Google Keyword · 미구현 → ${P}/intent/google-keyword`,
           `Social Scraping · 미구현 → ${P}/intent/social-scraping`,

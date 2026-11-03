@@ -8,11 +8,12 @@ import { RnUnimplementedPage } from "../../../_components/unimplemented";
 import { projectHref, projectPageOf, shortId } from "../../_components/project-model";
 
 // The pages of a project tab (menu option D, 2026-11-03): the original project menu's paths under
-// /renewal/projects/{id} (project-model PROJECT_PAGES; a menu parent opens its first child, any other path is a 404).
-// None has its renewal page yet (renewal-pages RENEWAL_PROJECT_PAGES): each says it is not implemented. A page that
-// gets built is a more specific route next to this one. The browser tab's title names the project.
+// /renewal/projects/{id}/… (project-model PROJECT_PAGES; a menu parent opens its first child, any other path is a 404).
+// A page without its renewal page yet (renewal-pages RENEWAL_PROJECT_PAGES) says it is not implemented; a page that
+// gets built is a more specific route next to this one (the Dashboard is ../page.tsx). The browser tab's title names the
+// project.
 
-type Params = Promise<{ locale: string; id: string; sub?: string[] }>;
+type Params = Promise<{ locale: string; id: string; sub: string[] }>;
 
 const titleRef = (id: string, page: string) => resolvePageTitleRef(`/projects/${id}${page ? `/${page}` : ""}`)!;
 

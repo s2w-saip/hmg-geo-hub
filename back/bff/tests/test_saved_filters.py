@@ -194,6 +194,13 @@ class Routes(unittest.TestCase):
             self.assertEqual(self.names(page), [("A", True)], page)
         self.assertEqual(self.listed("ga4"), [])
 
+    def test_project_pages_keep_their_own_lists(self):
+        """Renewal Project tab (2026-11-03): its pages' filters are the project axes and custom tags, not the Global ones."""
+        for page in ("project-dashboard", "project-mention", "project-citation", "project-prompt", "project-conversion"):
+            self.save("P", page=page, isDefault=True)
+            self.assertEqual(self.names(page), [("P", True)], page)
+        self.assertEqual(self.listed("overview"), [])
+
     def test_a_new_default_takes_over(self):
         self.save("A", isDefault=True)
         self.save("B", isDefault=True)

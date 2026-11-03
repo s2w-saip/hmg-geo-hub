@@ -6231,6 +6231,41 @@
         "list": "Project list",
         "listHint": "Opens in the original tab",
         "close": "Close"
+      },
+      "dashboard": {
+        "description": "This project's KPIs, engines, sources and trend. Ours = HMG (Hyundai, Kia and Genesis together).",
+        "copy": {
+          "definition": {
+            "citationShare": "Share of all citations that point to this project's own URLs (the registered base addresses and their pages; repeated citations in one answer count)"
+          },
+          "formula": {
+            "citationShare": "Own-URL citations ÷ all source citations × 100 (%)"
+          },
+          "ratio": {
+            "citationShare": {
+              "num": "Own-URL citations"
+            }
+          }
+        },
+        "statusTitle": "Project status",
+        "statusHint": "This project's values as a whole, regardless of the filters",
+        "statusFailed": "Could not load the project status. Please reopen the page in a moment.",
+        "noData": "No data",
+        "facts": {
+          "prompts": "Prompts",
+          "measured": "{count} measured",
+          "answers": "Answers",
+          "rounds": "{count} rounds",
+          "last": "Last measured",
+          "candidates": "Prompt candidates",
+          "members": "Members",
+          "status": "Prompt status"
+        },
+        "recentTitle": "Latest measured prompts",
+        "recentAll": "All prompts",
+        "recentEmpty": "No prompt has been measured.",
+        "recentAnswers": "{count} answers",
+        "statusFoot": "Prompt candidates, members and prompt status (draft, queued, running, done, failed, paused) live only in the original operations DB, so Gold does not show them."
       }
     }
   },
