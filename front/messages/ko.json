@@ -6297,6 +6297,65 @@
         "countries": "측정 국가",
         "rounds": "측정 회차 수",
         "firstMeasured": "첫 측정"
+      },
+      "setting": {
+        "description": "Gold에 있는 이 프로젝트의 식별 정보 · 측정 값 · 커스텀 태그입니다(열람 전용).",
+        "noData": "데이터 없음",
+        "none": "없음",
+        "general": {
+          "title": "일반",
+          "hint": "원본 운영 DB에만 있는 값",
+          "name": "프로젝트 이름",
+          "description": "설명",
+          "brand": "브랜드",
+          "country": "국가",
+          "created": "생성일",
+          "owner": "담당"
+        },
+        "scope": {
+          "title": "Scope 연결",
+          "hint": "Gold의 프로젝트 행과 측정된 값",
+          "projectId": "프로젝트 ID",
+          "scopeProjectId": "Scope 프로젝트 ID",
+          "regions": "Scope 시장 설정",
+          "regionsNone": "설정 없음",
+          "countries": "측정 국가",
+          "languages": "측정 언어",
+          "measured": "측정",
+          "measuredValue": "프롬프트 {prompts}개 · 답변 {answers}개 · {rounds}회차 · 마지막 {last}"
+        },
+        "engines": {
+          "title": "AI 엔진",
+          "hint": "측정된 엔진은 Gold 답변의 값",
+          "measured": "측정된 엔진",
+          "setting": "측정 엔진 설정"
+        },
+        "tracked": {
+          "title": "추적 대상",
+          "hint": "자사 URL · 타겟 URL · 경쟁사 · 차종",
+          "owned": "자사 URL (소유 URL)",
+          "targets": "타겟 URL",
+          "targetsValue": "타겟 URL을 지정한 프롬프트 {count}개",
+          "entities": "경쟁사 · 차종"
+        },
+        "tags": {
+          "title": "커스텀 태그",
+          "hint": "Gold 필드 정의와 프롬프트에 붙은 값",
+          "count": "값 {values}개 · 프롬프트 {prompts}개",
+          "none": "이 프로젝트에는 커스텀 태그가 없습니다."
+        },
+        "note": "이름 · 설명 · 브랜드 · 국가 · 담당, 측정 엔진 설정, 자사 URL, 경쟁사 · 차종, 삭제와 모든 편집은 원본 운영 DB에만 있습니다. 어디서 고칠지(정본 · 쓰기 경로)는 결정 대기(D-7)입니다."
+      },
+      "member": {
+        "description": "이 프로젝트를 함께 보는 사용자와 권한입니다.",
+        "title": "멤버",
+        "hint": "Gold · HUB 어디에도 없는 값",
+        "noData": "데이터 없음",
+        "list": "멤버 목록",
+        "roles": "역할",
+        "invite": "초대",
+        "audit": "최근 멤버 활동",
+        "note": "멤버 · 역할 · 초대 · 활동 이력은 원본 운영 DB에만 있고 Gold와 HUB에는 없습니다. 리뉴얼 Project는 관리자만 엽니다. 프로젝트 멤버를 HUB에 둘지는 결정 대기(D-7)입니다."
       }
     }
   },

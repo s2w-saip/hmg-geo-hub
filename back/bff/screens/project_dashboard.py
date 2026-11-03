@@ -11,6 +11,7 @@ project's filters (screens._filters.project_page_filters: 기간 · 측정 국�
   projects/dash-trend          the KPI trend (None under two rounds)
   projects/dash-status         the project's Gold facts and its latest measured prompts
   projects/prompts             Project › Prompt (P4): the project's prompts with their custom tag values and the lens
+  projects/settings            Project › Setting › General (read part): Gold's identity, measured values and tag fields
 Project reads are live only: no service week and no period compare (the original project page had neither). Every
 value is Gold's; nothing is judged or added (a value Gold does not have is left to the page's '데이터 없음').
 Scoped accounts never get here: access.clamp refuses every surface=project read (F20)."""
@@ -18,11 +19,14 @@ from __future__ import annotations
 
 import asyncio
 
+from fastapi import HTTPException
+
 from bff import api
 from bff.screens import screen, split_context
 from bff.screens._convert import as_of_date
 from bff.screens._filters import load_filter_dates, load_panel_options, project_page_filters
-from bff.screens._query import analysis_query, to_api_params
+from bff.screens._query import analysis_query, is_uuid, to_api_params
+from bff.screens._sort import locale_compare, sort_by
 from bff.screens.overview import (
     SOURCE_TOP_N,
     WEBSITE_OVERVIEW_TREND_METRICS,
@@ -186,3 +190,34 @@ async def project_prompts(q) -> dict:
                      "custom": p["custom"]})
     return {"rows": rows, "listed": len(data["items"]), "fields": [{"id": f["field_id"], "label": f["label"]} for f in data["fields"]],
             "rounds": [day_of(d) for d in data["rounds"]]}
+
+
+# ── Project › Setting › General (read part, 2026-11-03) ───────────────────────
+
+@screen("projects/settings")
+async def project_settings(q) -> dict:
+    """What Gold holds of a project's settings: its ids and Scope market setting (dim_project), what it was measured in
+    (the projects/list row), its custom tag fields with the values its prompts carry and how many prompts carry one
+    (dim_custom_field · prompt_custom_value), and how many prompts name a target URL (dim_prompt.targets). The name,
+    brand, country, owner, own and tracked URLs, competitors and members live in the original operations DB only."""
+    ctx, _ = split_context(q)
+    pid = ctx.get("project_id")
+    if not is_uuid(pid):
+        raise HTTPException(422, "ctx.project_id must be a project id")
+    listing, gate, listed = await asyncio.gather(api.get("gold/projects"), api.get(f"gold/projects/{pid}", {"view": "gate"}),
+                                                 api.get(f"gold/projects/{pid}", {"view": "prompts"}))
+    project = gate["data"]["project"]
+    row = next((r for r in listing["data"]["items"] if r["id"] == pid), None)
+    items = listed["data"]["items"]
+    fields = []
+    for f in listed["data"]["fields"]:
+        carried = [p["custom"][f["field_id"]] for p in items if p["custom"].get(f["field_id"]) is not None]
+        fields.append({"id": f["field_id"], "label": f["label"], "values": sort_by(list(dict.fromkeys(carried)), locale_compare),
+                       "prompts": len(carried)})
+    measured = None
+    if row:
+        measured = {"countries": row["countries"], "engines": row["engines"], "languages": row["languages"], "rounds": row["rounds"],
+                    "prompts": row["prompts"], "answers": row["answers"], "lastMeasuredDay": day_of(row.get("last_measured"))}
+    return {"identity": {"projectId": project.get("project_id"), "scopeProjectId": project.get("scope_project_id"),
+                         "regions": project.get("regions")},
+            "measured": measured, "fields": fields, "targets": sum(1 for p in items if p["targets"])}

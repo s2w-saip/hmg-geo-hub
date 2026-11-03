@@ -6297,6 +6297,65 @@
         "countries": "Measured countries",
         "rounds": "Rounds measured",
         "firstMeasured": "First measured"
+      },
+      "setting": {
+        "description": "Gold's identity, measured values and custom tags of this project (read only).",
+        "noData": "No data",
+        "none": "None",
+        "general": {
+          "title": "General",
+          "hint": "Values only the original operations DB holds",
+          "name": "Project name",
+          "description": "Description",
+          "brand": "Brand",
+          "country": "Country",
+          "created": "Created",
+          "owner": "Owner"
+        },
+        "scope": {
+          "title": "Scope link",
+          "hint": "Gold's project row and measured values",
+          "projectId": "Project ID",
+          "scopeProjectId": "Scope project ID",
+          "regions": "Scope market setting",
+          "regionsNone": "Not set",
+          "countries": "Measured countries",
+          "languages": "Measured languages",
+          "measured": "Measured",
+          "measuredValue": "{prompts} prompts · {answers} answers · {rounds} rounds · last {last}"
+        },
+        "engines": {
+          "title": "AI engines",
+          "hint": "The measured engines are Gold's answers'",
+          "measured": "Measured engines",
+          "setting": "Engine setting"
+        },
+        "tracked": {
+          "title": "Tracked",
+          "hint": "Own URLs · target URLs · competitors · models",
+          "owned": "Own URLs",
+          "targets": "Target URLs",
+          "targetsValue": "{count} prompts name a target URL",
+          "entities": "Competitors · models"
+        },
+        "tags": {
+          "title": "Custom tags",
+          "hint": "Gold's field definitions and the values on prompts",
+          "count": "{values} values · {prompts} prompts",
+          "none": "This project has no custom tag."
+        },
+        "note": "The name, description, brand, country, owner, engine setting, own URLs, competitors and models, deletion and every edit live only in the original operations DB. Where they are edited (the source of truth and the write path) awaits a decision (D-7)."
+      },
+      "member": {
+        "description": "The users who see this project and their roles.",
+        "title": "Members",
+        "hint": "Values neither Gold nor the HUB holds",
+        "noData": "No data",
+        "list": "Members",
+        "roles": "Roles",
+        "invite": "Invite",
+        "audit": "Recent member activity",
+        "note": "Members, roles, invites and their history live only in the original operations DB, not in Gold or the HUB. The renewal Project opens to administrators only. Whether the HUB keeps project members awaits a decision (D-7)."
       }
     }
   },

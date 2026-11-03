@@ -27,11 +27,11 @@ const params = (sub: string) => Promise.resolve({ locale: "ko", id: ID, sub: sub
 const render = async (sub: string) => renderToStaticMarkup(await Page({ params: params(sub) }));
 
 describe("project tab page", () => {
+  // the pages with a renewal page are more specific routes (Dashboard · Prompt · Analysis · AI Conversion · Setting ·
+  // Member, 2026-11-03); Intent stays here until D-6 is decided
   it.each([
-    ["analysis/mention", "nav.projectDetail:analysisMention"],
-    ["ai-funnel/conversion", "nav.projectDetail:aiFunnelConversion"],
-    ["setting", "nav.projectDetail:general"],
-    ["member", "nav.projectDetail:member"],
+    ["intent/google-keyword", "nav.projectDetail:intentGoogleKeyword"],
+    ["intent/social-scraping", "nav.projectDetail:intentSocialScraping"],
   ])("shows the notice for '%s' under its menu label", async (sub, title) => {
     const html = await render(sub);
     expect(html).toContain("data-rn-unimplemented");
@@ -51,13 +51,13 @@ describe("project tab page", () => {
   it("is the administrator's", async () => {
     ROLE = "hq";
     try {
-      await expect(render("analysis/mention")).rejects.toThrow("REDIRECT:/ko/no-access");
+      await expect(render("intent/google-keyword")).rejects.toThrow("REDIRECT:/ko/no-access");
     } finally {
       ROLE = "admin";
     }
   });
 
   it("names the project in the browser tab's title", async () => {
-    expect((await generateMetadata({ params: params("analysis/citation") })).title).toBe("nav.projectDetail:analysisCitation · 843ecb1b · app:name");
+    expect((await generateMetadata({ params: params("intent/social-scraping") })).title).toBe("nav.projectDetail:intentSocialScraping · 843ecb1b · app:name");
   });
 });

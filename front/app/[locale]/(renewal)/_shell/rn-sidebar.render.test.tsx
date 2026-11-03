@@ -242,8 +242,8 @@ describe("project tab", () => {
           "AI Agent Funnel (group)",
           `AI Conversion · 계정 ga4 → ${P}/ai-funnel/conversion`,
           "Setting (group)",
-          `General · 미구현 → ${P}/setting`,
-          `Member · 미구현 → ${P}/member`,
+          `General → ${P}/setting`,
+          `Member → ${P}/member`,
         ],
       },
     });

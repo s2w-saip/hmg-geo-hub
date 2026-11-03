@@ -176,6 +176,33 @@ class Conversion(unittest.TestCase):
         self.assertEqual(cm.exception.status_code, 422)
 
 
+class Settings(unittest.TestCase):
+    """Setting › General (read part): Gold's ids, measured values, tag fields with their carried values, target count."""
+
+    def test_settings_are_golds_values(self):
+        items = [{"prompt_id": "a", "targets": [], "custom": {FIELD: "Hybrid"}}, {"prompt_id": "b", "targets": ["kia.ca/x"], "custom": {FIELD: "AI"}},
+                 {"prompt_id": "c", "targets": [], "custom": {FIELD: "AI"}}, {"prompt_id": "d", "targets": [], "custom": {}}]
+        bodies = {"gold/projects": {"data": {"items": [{"id": PID, "countries": ["CA"], "engines": ["chatgpt"], "languages": [], "rounds": 2,
+                                                         "prompts": 4, "answers": 8, "last_measured": "2026-10-09T05:00:00+00:00"}]}, "meta": PROJECT_META}}
+
+        class Gate(Router):
+            async def get(self, path, params=None):
+                if path == f"gold/projects/{PID}":
+                    self.calls.append((path, [("view", (params or {}).get("view"))]))
+                    if (params or {}).get("view") == "gate":
+                        return {"data": {"project": {"project_id": PID, "scope_project_id": "s-1", "regions": None}, "prompts": []}}
+                    return {"data": {"items": items, "fields": [{"field_id": FIELD, "label": "Topic"}], "rounds": []}}
+                return await super().get(path, params)
+
+        out = screen("projects/settings", f"ctx.project_id={PID}", Gate(bodies))
+        self.assertEqual(out["identity"], {"projectId": PID, "scopeProjectId": "s-1", "regions": None})
+        self.assertEqual(out["measured"]["lastMeasuredDay"], "2026-10-09")
+        self.assertEqual(out["fields"], [{"id": FIELD, "label": "Topic", "values": ["AI", "Hybrid"], "prompts": 3}])
+        self.assertEqual(out["targets"], 1)
+        with self.assertRaises(HTTPException):
+            screen("projects/settings", "ctx.project_id=nope", Gate(bodies))
+
+
 class Analysis(unittest.TestCase):
     """P3: the renewal Mention and Citation screens read the project with ctx.surface=project."""
 

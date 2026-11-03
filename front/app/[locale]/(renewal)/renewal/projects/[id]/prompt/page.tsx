@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CalendarDays } from "lucide-react";
 import { screenGet } from "@/lib/screen";
 import { throwForPage } from "@/lib/hgh/errors";
-import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
+import { aiEngineLabel } from "@/lib/scope/engines";
 import { parseTimeRange, splitFilterValues } from "@/components/dash/filter-encoding";
 import { countryName } from "@/lib/geo-catalog/country-name";
 import { RnCard, RnPageHeader, RnPill, RnSkeleton } from "@/components/renewal-ui";
@@ -55,7 +55,7 @@ export default async function RenewalProjectPromptPage({ params, searchParams }:
   const range = parseTimeRange(sp.time);
   const lens = [
     ...splitFilterValues(sp.geography).map((c) => countryName(c, locale)),
-    ...splitFilterValues(sp.engine).map((e) => ENGINE_LABEL[e.toLowerCase()] ?? e),
+    ...splitFilterValues(sp.engine).map((e) => aiEngineLabel(e.toLowerCase())),
     ...(range?.from || range?.to ? [`${range.from ?? "…"} ~ ${range.to ?? "…"}`] : []),
   ];
   return (

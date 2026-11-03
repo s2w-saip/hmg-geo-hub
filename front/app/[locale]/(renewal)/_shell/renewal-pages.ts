@@ -39,6 +39,8 @@ export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>([
   "analysis/citation/prompts",
   "analysis/citation/tone-urls",
   "ai-funnel/conversion",
+  "setting",
+  "member",
 ]);
 
 export type RnAccount = "ga4" | "dataforseo";
