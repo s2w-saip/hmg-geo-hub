@@ -18,7 +18,8 @@ sites (lib/geo-catalog/pseudo-country.ts scopeParent: SA -> SA-Dammam · SA-Jedd
 website reads did; site hubs (worldwide · EU · MIDDLEEAST · CPO · CN-BJ) are no country of a region, so only an
 account without countries (hq) reads them. The dedicated-site rules of the original (an account holding worldwide ·
 CPO · HYUNDAI-N) have no account here: the Admin screen gives countries of the account's RHQ regions only
-(hub_stores/accounts.py scope_of). The project surface stays refused."""
+(hub_stores/accounts.py scope_of). The project surface stays refused, and so do the project identities and prompts
+(gold/projects, read without a surface param; F20, 2026-11-03)."""
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -77,12 +78,12 @@ def forbidden(message: str) -> HTTPException:
     return HTTPException(403, {"code": "out_of_scope", "message": message})
 
 
-def clamp(q: QueryParams, scope: dict | None = None) -> QueryParams:
+def clamp(q: QueryParams, scope: dict | None = None, path: str = "") -> QueryParams:
     """One read's query inside the account's scope (unchanged for every scope)."""
     scope = reader_scope() if scope is None else scope
     if scope.get("all"):
         return q
-    surface = q.get("surface", "global")
+    surface = "project" if path == "gold/projects" or path.startswith("gold/projects/") else q.get("surface", "global")
     if surface not in SURFACES:
         raise forbidden("This account reads the global and website surfaces only")
     allowed = {b.lower(): b for b in scope.get("brands") or () if b in BRANDS}

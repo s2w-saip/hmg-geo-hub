@@ -148,6 +148,16 @@ describe("route-policy — Project group access", () => {
       expect(canAccessRoute(role, "/projects/sample/members")).toBe(true);
     }
   });
+
+  // 2026-11-03 (menu option D): the renewal Project list and every project tab are the administrator's — the BFF
+  // refuses the project surface and the project identities to a scoped account (⛔J, F20). The menu row stays /projects.
+  it("the renewal Project list and every project tab are the administrator's", () => {
+    for (const path of ["/renewal/projects", "/ko/renewal/projects", "/renewal/projects/sample", "/en/renewal/projects/sample/analysis/mention"]) {
+      for (const role of [...roles, "local_reader"] as Role[]) expect(canAccessRoute(role, path), `${role} ${path}`).toBe(role === "admin");
+    }
+    expect(visibleRoutes("admin").map((r) => r.path)).not.toContain("/renewal/projects");
+    expect(isMenuPath("/renewal/projects")).toBe(false);
+  });
 });
 
 describe("route-policy — Admin group access", () => {
@@ -307,8 +317,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 46 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts, global prompts, GA4 registry and source corrections, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가)", () => {
-    expect(ROUTES).toHaveLength(46);
+  it("exposes 47 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts, global prompts, GA4 registry and source corrections, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가, renewal Project 2026-11-03)", () => {
+    expect(ROUTES).toHaveLength(47);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
@@ -344,7 +354,7 @@ describe("route-policy — ROUTES table integrity", () => {
   // 2026-10-28: the renewal sidebar opens /renewal<path> for every menu item; one without a renewal page
   // is the "not implemented" page, which has no row — it is permitted exactly as its original.
   it("a renewal path without a row of its own is permitted exactly as its original", () => {
-    for (const original of ["/website", "/website/prompts", "/website/answer-analysis/mention", "/website/ai-funnel/conversion", "/projects", "/admin", "/admin/keyword-tools", "/admin/credits", "/customer-interest"]) {
+    for (const original of ["/website", "/website/prompts", "/website/answer-analysis/mention", "/website/ai-funnel/conversion", "/admin", "/admin/keyword-tools", "/admin/credits", "/customer-interest"]) {
       for (const role of [...roles, "local_reader"] as Role[]) {
         expect(canAccessRoute(role, `/ko/renewal${original}`)).toBe(canAccessRoute(role, original));
       }

@@ -25,7 +25,7 @@ describe("renewal not-implemented page", () => {
   it.each([
     ["/website/prompts", "nav:websitePrompts"],
     ["/standard/ai-funnel/conversion", "nav:aiFunnelConversion"],
-    ["/projects", "nav:projects"],
+    ["/admin/reports", "nav:adminReports"],
     ["/admin/credits", "nav:adminCredits"],
   ])("shows the notice for %s under its menu label", async (path, title) => {
     const html = await render(path);

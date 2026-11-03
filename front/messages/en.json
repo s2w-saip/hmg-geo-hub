@@ -112,7 +112,8 @@
     "renewalAdminGa4": "GA4 connection",
     "renewalAdminCitationSources": "Citation Sources",
     "renewalAdminCustomerInterest": "Customer interest config",
-    "renewalAdminEntities": "Entity catalog"
+    "renewalAdminEntities": "Entity catalog",
+    "renewalProjects": "Project list"
   },
   "locale": {
     "label": "Language",
@@ -6188,6 +6189,48 @@
         "positiveSub": "URLs that answers leaning positive on us rested on.",
         "negativeTitle": "URLs cited in negative answers",
         "negativeSub": "URLs that answers leaning negative on us rested on."
+      }
+    },
+    "projects": {
+      "title": "Project list",
+      "description": "The prompts and answers measured for each project. A row opens that project in a new tab.",
+      "lastMeasured": "Last measured {date}",
+      "searchLabel": "Find a project",
+      "searchPlaceholder": "ID · prompt text · country",
+      "answersFilter": "Answers",
+      "answersAll": "All {count}",
+      "answersMeasured": "With answers {count}",
+      "answersUnmeasured": "No answers {count}",
+      "column": {
+        "project": "Project",
+        "countries": "Measured countries",
+        "languages": "Languages",
+        "engines": "Engines",
+        "prompts": "Prompts",
+        "answers": "Answers",
+        "rounds": "Rounds",
+        "last": "Last measured",
+        "customFields": "Custom tags"
+      },
+      "noPrompt": "No prompts",
+      "newTab": "Opens in a new tab",
+      "empty": "Gold has no project.",
+      "emptyFiltered": "No project matches.",
+      "count": "{count}",
+      "noteTitle": "Why there is no name, brand or country",
+      "note": "Gold holds project IDs only; name, brand, country and owner are in the original operating DB. A project is told apart by its first prompt. Measured countries, languages and engines are those of its measured answers; a project without answers shows ‘—’.",
+      "tab": {
+        "meta": "{countries} · {prompts} prompts · measured {date}",
+        "metaUnmeasured": "{countries} · {prompts} prompts · not measured",
+        "noCountry": "No measured country",
+        "loading": "Reading the project",
+        "switch": "Open another project",
+        "switchTitle": "Switch project",
+        "switchHint": "Opens the same menu ({menu})",
+        "switchCount": "{count}",
+        "list": "Project list",
+        "listHint": "Opens in the original tab",
+        "close": "Close"
       }
     }
   },

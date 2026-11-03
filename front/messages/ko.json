@@ -112,7 +112,8 @@
     "renewalAdminGa4": "GA4 연동",
     "renewalAdminCitationSources": "인용 출처 분류",
     "renewalAdminCustomerInterest": "고객 관심 데이터 관리",
-    "renewalAdminEntities": "엔티티 카탈로그"
+    "renewalAdminEntities": "엔티티 카탈로그",
+    "renewalProjects": "Project list"
   },
   "locale": {
     "label": "언어",
@@ -6188,6 +6189,48 @@
         "positiveSub": "당사 언급이 긍정으로 기운 답변이 근거로 쓴 URL입니다.",
         "negativeTitle": "부정 답변에 인용된 URL",
         "negativeSub": "당사 언급이 부정으로 기운 답변이 근거로 쓴 URL입니다."
+      }
+    },
+    "projects": {
+      "title": "Project list",
+      "description": "프로젝트마다 측정한 프롬프트와 답변입니다. 행을 누르면 그 프로젝트가 새 탭에서 열립니다.",
+      "lastMeasured": "마지막 측정 {date}",
+      "searchLabel": "프로젝트 찾기",
+      "searchPlaceholder": "ID · 프롬프트 원문 · 국가",
+      "answersFilter": "답변",
+      "answersAll": "전체 {count}",
+      "answersMeasured": "답변 있음 {count}",
+      "answersUnmeasured": "답변 없음 {count}",
+      "column": {
+        "project": "프로젝트",
+        "countries": "측정 국가",
+        "languages": "언어",
+        "engines": "엔진",
+        "prompts": "프롬프트",
+        "answers": "답변",
+        "rounds": "회차",
+        "last": "마지막 측정",
+        "customFields": "커스텀 태그"
+      },
+      "noPrompt": "프롬프트 없음",
+      "newTab": "새 탭에서 열립니다",
+      "empty": "Gold에 프로젝트가 없습니다.",
+      "emptyFiltered": "맞는 프로젝트가 없습니다.",
+      "count": "{count}개",
+      "noteTitle": "이름 · 브랜드 · 국가가 없는 이유",
+      "note": "Gold에는 프로젝트 ID만 있고, 이름 · 브랜드 · 국가 · 담당은 원본 운영 DB에만 있습니다. 그래서 첫 프롬프트 원문으로 구별합니다. 측정 국가 · 언어 · 엔진은 측정된 답변의 값이고, 답변이 없는 프로젝트는 ‘—’입니다.",
+      "tab": {
+        "meta": "{countries} · 프롬프트 {prompts} · {date} 측정",
+        "metaUnmeasured": "{countries} · 프롬프트 {prompts} · 측정 없음",
+        "noCountry": "측정 국가 없음",
+        "loading": "프로젝트를 읽는 중",
+        "switch": "다른 프로젝트 열기",
+        "switchTitle": "프로젝트 바꾸기",
+        "switchHint": "같은 메뉴({menu})로 엽니다",
+        "switchCount": "{count}개",
+        "list": "Project list",
+        "listHint": "원래 탭에서 엽니다",
+        "close": "닫기"
       }
     }
   },

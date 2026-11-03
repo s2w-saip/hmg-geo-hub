@@ -3,19 +3,21 @@
 import { useEffect, useId, useState, type ComponentType, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Briefcase, ChevronDown, Construction, KeyRound, Loader2, LogOut, Menu, X } from "lucide-react";
+import { Briefcase, ChevronDown, Construction, ExternalLink, KeyRound, Loader2, LogOut, Menu, X } from "lucide-react";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { carryFilterParams } from "@/components/dash/filter-carry";
-import { ADMIN_SUB_ITEMS, STANDARD_SUB_ITEMS, WEBSITE_SUB_ITEMS, type StandardSubItem } from "@/components/dash/sidebar";
+import { ADMIN_SUB_ITEMS, PROJECT_SUB_ITEMS, STANDARD_SUB_ITEMS, WEBSITE_SUB_ITEMS, type StandardSubItem } from "@/components/dash/sidebar";
 import { useHubLogout } from "@/components/hub-session";
 import { logout } from "@/lib/auth/actions";
 import { passwordChangeHref } from "@/lib/hub/next-path";
-import type { RouteDef } from "@/lib/auth/route-policy";
+import { canAccessRoute, type RouteDef } from "@/lib/auth/route-policy";
 import type { Role } from "@/lib/auth/types";
 import { cx } from "@/components/renewal-ui";
+import { MAIN_TAB, projectAt, projectHref } from "../renewal/projects/_components/project-model";
 import { useRnNavPending } from "./nav-pending";
-import { ACCOUNT_PAGES, RENEWAL_PAGES, type RnAccount } from "./renewal-pages";
+import { RnProjectCard } from "./rn-project-tab";
+import { ACCOUNT_PAGES, RENEWAL_PAGES, RENEWAL_PROJECT_PAGES, type RnAccount } from "./renewal-pages";
 
 // Sidebar of the renewal shell (S급 테마, 2026-10-23; rules: docs/design/ui/design-rules.html '틀'):
 // brand · Global | Website sections (each folds) · Project · Admin · account. One sidebar, no
@@ -31,6 +33,10 @@ import { ACCOUNT_PAGES, RENEWAL_PAGES, type RnAccount } from "./renewal-pages";
 // the current one.
 // 2026-10-29 (user): an item without a renewal page carries a "not implemented" icon; the β badge is gone.
 // 2026-11-02 (user): an item waiting on an outside account (GA4, DataForSEO) carries a key instead, named for the account.
+// 2026-11-03 (user, menu option D): a project opens in its own browser tab (the "hgh-project" tab), whose sidebar holds
+// that project's menu only — its card (ID and Gold values, the switch to another project) and the original project
+// menu (PROJECT_SUB_ITEMS) — and "Project list", which opens in the main tab ("hgh-main"). Project shows only to the
+// accounts its renewal page lets in (route-policy /renewal/projects: the administrator, ⛔J).
 // Every link keeps prefetch={false} (the original sidebar's 2026-08-27 production rule).
 
 const RENEWAL = "/renewal";
@@ -67,6 +73,12 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
   const [drawer, setDrawer] = useState(false);
   // a pending click (nav-pending.tsx) already counts as "here": the item turns active at once
   const here = target ?? pathname;
+  const project = projectAt(here);
+  const inProject = project != null;
+  // the main tab is the one "Project list" (project tab) opens again
+  useEffect(() => {
+    if (!inProject) window.name = MAIN_TAB;
+  }, [inProject]);
 
   // the off-canvas menu (below lg) closes on a menu click, on navigation and on Escape
   useEffect(() => setDrawer(false), [pathname, target]);
@@ -90,7 +102,7 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
     {
       id: "project",
       items: routes
-        .filter((r) => r.group === "project")
+        .filter((r) => r.group === "project" && canAccessRoute(user.role, RENEWAL + r.path))
         .map((r) => ({ path: RENEWAL + r.path, label: tNav(r.key), unimplemented: !RENEWAL_PAGES.has(r.path), icon: Briefcase, children: [] })),
     },
     { id: "admin", items: menuItems(ADMIN_SUB_ITEMS, allowed, label) },
@@ -136,16 +148,23 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
             <X className="size-4" aria-hidden />
           </button>
         </div>
-        <nav aria-label={t("menuLabel")} className="flex flex-col gap-px">
-          {sections.map((s) => (s.items.length ? <Section key={s.id} id={s.id} title={tNav(`groups.${s.id}`)} items={s.items} current={current} /> : null))}
-        </nav>
-        {/* Project · Admin follow right after (2026-10-28: not pushed to the bottom); only the account is */}
-        {more.some((s) => s.items.length) ? (
-          <nav aria-label={t("moreLabel")} className="flex flex-col gap-px border-t border-rn-line pt-3">
-            {more.map((s) => (s.items.length ? <Section key={s.id} id={s.id} title={tNav(`groups.${s.id}`)} items={s.items} current={current} /> : null))}
-          </nav>
-        ) : null}
-        <div className="mt-auto">
+        {project ? (
+          <ProjectTabNav id={project.id} here={here} label={t("menuLabel")} />
+        ) : (
+          <>
+            <nav aria-label={t("menuLabel")} className="flex flex-col gap-px">
+              {sections.map((s) => (s.items.length ? <Section key={s.id} id={s.id} title={tNav(`groups.${s.id}`)} items={s.items} current={current} /> : null))}
+            </nav>
+            {/* Project · Admin follow right after (2026-10-28: not pushed to the bottom); only the account is */}
+            {more.some((s) => s.items.length) ? (
+              <nav aria-label={t("moreLabel")} className="flex flex-col gap-px border-t border-rn-line pt-3">
+                {more.map((s) => (s.items.length ? <Section key={s.id} id={s.id} title={tNav(`groups.${s.id}`)} items={s.items} current={current} /> : null))}
+              </nav>
+            ) : null}
+          </>
+        )}
+        <div className="mt-auto flex flex-col gap-2">
+          {project ? <ProjectListLink /> : null}
           <Account user={user} locale={locale} />
         </div>
       </aside>
@@ -192,7 +211,50 @@ function menuItems(tree: StandardSubItem[], allowed: Set<string>, label: (key: s
 
 const isAt = (pathname: string, path: string) => pathname === path || pathname.startsWith(path + "/");
 
-function Section({ id, title, items, current }: { id: SectionId; title: string; items: NavItem[]; current: string | null }) {
+/** A project tab's menu (menu option D): the project's card, then the original project menu in the renewal look. */
+function ProjectTabNav({ id, here, label }: { id: string; here: string; label: string }) {
+  const tNav = useTranslations("nav");
+  const leaf = (path: string, key: string): NavLeaf => ({
+    path: projectHref(id, path),
+    label: tNav(`projectDetail.${key}`),
+    unimplemented: !RENEWAL_PROJECT_PAGES.has(path),
+  });
+  const items: NavItem[] = PROJECT_SUB_ITEMS.map((item) => {
+    if (!item.children?.length) return { ...leaf(item.path, item.i18nKey), icon: item.icon, children: [] };
+    const children = item.children.map((c) => leaf(c.path, c.i18nKey));
+    return { ...leaf(item.path, item.i18nKey), path: children[0].path, icon: item.icon, children };
+  });
+  const leaves = items.flatMap((i) => (i.children.length ? i.children : [i]));
+  // Dashboard (/renewal/projects/{id}) holds every page of the project: the longest match is current
+  const current = leaves.reduce<NavLeaf | null>((best, l) => (isAt(here, l.path) && l.path.length > (best?.path.length ?? 0) ? l : best), null);
+  const page = current ? current.path.slice(projectHref(id).length + 1) : "";
+  return (
+    <nav aria-label={label} className="flex flex-col gap-px">
+      <Section id="project" title={tNav("groups.project")} items={items} current={current?.path ?? null} lead={<RnProjectCard id={id} page={page} menu={current?.label ?? ""} />} />
+    </nav>
+  );
+}
+
+/** The project tab's way back: the list opens in the main tab, which keeps the whole menu. */
+function ProjectListLink() {
+  const t = useTranslations("renewal.projects.tab");
+  return (
+    <Link
+      prefetch={false}
+      href="/renewal/projects"
+      target={MAIN_TAB}
+      title={t("listHint")}
+      data-rn-project-list-link=""
+      className="group/link flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-rn-13 font-medium text-rn-ink-2 no-underline hover:bg-rn-navy/6 hover:text-rn-navy focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy"
+    >
+      <Briefcase aria-hidden className="size-4 shrink-0 text-rn-faint group-hover/link:text-rn-navy" />
+      <span className="min-w-0 truncate">{t("list")}</span>
+      <ExternalLink aria-label={t("listHint")} className="ml-auto size-3.5 shrink-0 text-rn-faint" />
+    </Link>
+  );
+}
+
+function Section({ id, title, items, current, lead }: { id: SectionId; title: string; items: NavItem[]; current: string | null; lead?: ReactNode }) {
   // every section opens at first (the whole menu shows); then the viewer's choice
   const [open, setOpen] = useState(true);
   const here = items.some((i) => (i.children.length ? i.children : [i]).some((l) => l.path === current));
@@ -208,6 +270,7 @@ function Section({ id, title, items, current }: { id: SectionId; title: string; 
         {title}
         <ChevronDown aria-hidden className="ml-auto size-3 -rotate-90 transition-transform group-open/sec:rotate-0" />
       </summary>
+      {lead}
       {items.map((item) =>
         item.children.length ? (
           <NavGroup key={item.path + item.label} item={item} current={current} />

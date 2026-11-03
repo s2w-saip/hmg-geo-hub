@@ -18,6 +18,7 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
   "/website/answer-analysis/citation/prompts",
   "/website/answer-analysis/citation/tone-urls",
   "/website/ai-funnel/conversion",
+  "/projects",
   "/admin",
   "/admin/standards/prompts",
   "/admin/standards/customer-interest",
@@ -26,6 +27,10 @@ export const RENEWAL_PAGES: ReadonlySet<string> = new Set([
   "/admin/keyword-tools",
   "/admin/ga4",
 ]);
+
+// A project's pages (paths under /projects/{id}, "" = Dashboard) that have a renewal page; the others open the
+// project tab's "not implemented" page (renewal/projects/[id]/[[...sub]], menu option D, 2026-11-03).
+export const RENEWAL_PROJECT_PAGES: ReadonlySet<string> = new Set<string>([]);
 
 export type RnAccount = "ga4" | "dataforseo";
 

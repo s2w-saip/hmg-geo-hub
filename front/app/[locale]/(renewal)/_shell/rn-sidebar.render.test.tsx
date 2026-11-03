@@ -81,7 +81,7 @@ describe("renewal sidebar", () => {
     expect(menu("admin")).toEqual({
       standard: { open: true, links: GLOBAL },
       website: { open: true, links: WEBSITE },
-      project: { open: true, links: ["Project list · 미구현 → /renewal/projects"] },
+      project: { open: true, links: ["Project list → /renewal/projects"] },
       admin: {
         open: true,
         links: [
@@ -107,7 +107,7 @@ describe("renewal sidebar", () => {
   it("marks the items without a renewal page and shows no beta badge", () => {
     const out = html("admin");
     const marks = [...out.matchAll(/<span data-rn-nav-unimplemented="" title="([^"]+)"[^>]*><svg[^>]*>.*?<\/svg><span class="sr-only">([^<]+)<\/span><\/span>/g)];
-    expect(marks.length).toBe(4); // Project 1 · Admin 3
+    expect(marks.length).toBe(3); // Admin 3 (Project list has its page since 2026-11-03)
     for (const [, title, sr] of marks) expect([title, sr]).toEqual([ko.unimplemented.label, ko.unimplemented.label]);
     expect(out).not.toContain("β");
   });
@@ -129,7 +129,8 @@ describe("renewal sidebar", () => {
   it("knows exactly the renewal pages there are", () => {
     const root = fileURLToPath(new URL("../renewal/", import.meta.url));
     const pages = readdirSync(root, { recursive: true, encoding: "utf8" })
-      .filter((f) => f.endsWith("page.tsx") && !f.includes("[...slug]"))
+      // a project tab's pages (projects/[id]/…) are no menu item: renewal-pages RENEWAL_PROJECT_PAGES lists them
+      .filter((f) => f.endsWith("page.tsx") && !f.includes("[...slug]") && !f.includes("[id]"))
       .map((f) => "/" + f.replace(/\\/g, "/").replace(/\/?page\.tsx$/, ""));
     expect([...RENEWAL_PAGES].sort()).toEqual(pages.sort());
   });
@@ -142,9 +143,10 @@ describe("renewal sidebar", () => {
     for (const id of ["standard", "website", "project", "admin"]) expect(bottom, id).not.toContain(`data-rn-sec="${id}"`);
   });
 
-  it.each(["country", "local_reader"] as Role[])("shows %s the same Global · Website · Project menus and no Admin", (role) => {
+  // 2026-11-03 (menu option D): Project is the administrator's (route-policy /renewal/projects, ⛔J)
+  it.each(["country", "local_reader"] as Role[])("shows %s the same Global · Website menus, and no Project or Admin", (role) => {
     const m = menu(role);
-    expect(Object.keys(m)).toEqual(["standard", "website", "project"]);
+    expect(Object.keys(m)).toEqual(["standard", "website"]);
     expect(m.standard.links).toEqual(GLOBAL);
     expect(m.website.links).toEqual(WEBSITE);
   });
@@ -197,6 +199,68 @@ describe("renewal sidebar", () => {
     const current = [...html("admin").matchAll(/<a href="([^"]+)" aria-current="page"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?<span[^>]*>([^<]*)</g)].map(([, href, l]) => `${l} → ${href}`);
     PATH = "/renewal/dashboard";
     expect(current).toEqual([`${label} → ${path === "/renewal/standard/answer-analysis/citation/prompts" ? "/renewal/standard/answer-analysis/citation" : path}`]);
+  });
+});
+
+// 2026-11-03 (user, menu option D): a project opens in its own browser tab; that tab's sidebar is the project's menu only
+describe("project tab", () => {
+  const ID = "843ecb1b-0000-4000-8000-000000000001";
+  const at = (path: string) => {
+    PATH = path;
+    try {
+      return html("admin");
+    } finally {
+      PATH = "/renewal/dashboard";
+    }
+  };
+  const P = `/renewal/projects/${ID}`;
+
+  it("shows the project's card and the original project menu, every page not implemented yet, and nothing else", () => {
+    PATH = `${P}/analysis/mention`;
+    const m = menu("admin");
+    PATH = "/renewal/dashboard";
+    expect(m).toEqual({
+      project: {
+        open: true,
+        links: [
+          `Dashboard · 미구현 → ${P}`,
+          "Intent (group)",
+          `Google Keyword · 미구현 → ${P}/intent/google-keyword`,
+          `Social Scraping · 미구현 → ${P}/intent/social-scraping`,
+          `Prompt · 미구현 → ${P}/prompt`,
+          "Analysis (group)",
+          `Mention · 미구현 → ${P}/analysis/mention`,
+          `Citation · 미구현 → ${P}/analysis/citation`,
+          "AI Agent Funnel (group)",
+          `AI Conversion · 미구현 → ${P}/ai-funnel/conversion`,
+          "Setting (group)",
+          `General · 미구현 → ${P}/setting`,
+          `Member · 미구현 → ${P}/member`,
+        ],
+      },
+    });
+    const out = at(`${P}/analysis/mention`);
+    // the card waits for the project's layout (its rows come in after hydration): a skeleton on the server
+    expect(out).toContain(`data-rn-project-card="${ID}"`);
+    expect(out).toContain(`aria-label="${ko.renewal.projects.tab.switch}"`);
+  });
+
+  it.each([
+    [P, "Dashboard", P],
+    [`${P}/analysis/mention`, "Mention", `${P}/analysis/mention`],
+    [`${P}/setting`, "General", `${P}/setting`],
+    [`${P}/member`, "Member", `${P}/member`],
+  ])("marks one current item on %s", (path, label, href) => {
+    const current = [...at(path).matchAll(/<a href="([^"]+)" aria-current="page"[^>]*>(?:<svg[^>]*>.*?<\/svg>)?<span[^>]*>([^<]*)</g)].map(([, h, l]) => `${l} → ${h}`);
+    expect(current).toEqual([`${label} → ${href}`]);
+  });
+
+  it("opens Project list in the main tab", () => {
+    const out = at(P);
+    const link = /<a href="([^"]+)"([^>]*data-rn-project-list-link=""[^>]*)>/.exec(out);
+    expect(link?.[1]).toBe("/renewal/projects");
+    expect(link?.[2]).toContain('target="hgh-main"');
+    expect(link?.[2]).toContain(`title="${ko.renewal.projects.tab.listHint}"`);
   });
 });
 

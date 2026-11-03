@@ -461,6 +461,24 @@ class Routes(unittest.TestCase):
             self.assertEqual((status, out["q"]), (200, "surface=website&brand=hmg"))
         self.assertEqual(access.reader_scope(), access.ALL)   # the request's scope does not outlive it
 
+    def test_project_identities_stay_refused_to_a_scoped_account(self):
+        # F20 (2026-11-03): the project list and a project's prompts (gold/projects) are the project surface read
+        # without a surface param; a scoped account was clamped as a global read and listed every project.
+        self.t.add("country", "country", ["Kia"], ["kia-north-america"], ["US"])
+
+        async def read(path, q):
+            return {"data": {"items": [], "project": {}, "prompts": []}}
+
+        with mock.patch.object(api, "read", read):
+            token = self.token("country")
+            for path in ("/v1/gold/projects", "/v1/gold/projects/x", "/v1/screens/projects/list",
+                         "/v1/screens/projects/detail?ctx.project_id=x"):
+                status, out = run(call("GET", path, token=token))
+                self.assertEqual((status, (out.get("error") or {}).get("code")), (403, "out_of_scope"), path)
+            admin = self.token()
+            for path in ("/v1/gold/projects", "/v1/screens/projects/list"):
+                self.assertEqual(run(call("GET", path, token=admin))[0], 200, path)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -57,7 +57,7 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     The read runs inside the request account's scope (access.clamp), before it is keyed: accounts of
     different scopes never share a read. The shared read holds the answer's JSON text and every caller
     parses its own copy (a screen may change what it reads)."""
-    q = access.clamp(query(params))
+    q = access.clamp(query(params), path=path)
     key = f"{path}?{q}"
     pending = _inflight.get(key)
     if pending is None:

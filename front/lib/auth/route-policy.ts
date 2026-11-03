@@ -282,6 +282,16 @@ export const ROUTES = [
     group: "project" as const,
     hidden: true,
   },
+  // Renewal Project (2026-11-03, menu option D): the list and every project tab (/renewal/projects/{id}/…) are the
+  // administrator's — the BFF refuses the project surface and the project identities to a scoped account (⛔J, F20),
+  // so the renewal sidebar shows Project only to whom this row lets in. Hidden: the menu row stays /projects.
+  {
+    path: "/renewal/projects",
+    key: "renewalProjects",
+    roles: ADMIN_ONLY,
+    group: "project" as const,
+    hidden: true,
+  },
   // ─── Admin — 시스템 운영 관리 ────────────────────────────────────────
   {
     path: "/admin",

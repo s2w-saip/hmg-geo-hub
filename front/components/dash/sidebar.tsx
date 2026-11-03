@@ -98,6 +98,7 @@ const ROUTE_ICON: Record<RouteKey, ComponentType<{ className?: string }>> = {
   // as "프로젝트 목록" without an "add" affordance creeping in visually.
   projects: FolderOpen,
   projectNew: FolderPlus, // hidden=true; the actual Add CTA lives on the list page header
+  renewalProjects: FolderOpen, // hidden=true; the renewal Project list and project tabs (route-policy)
   // Admin
   admin: Shield,
   adminStandards: FileText,
@@ -361,7 +362,7 @@ type ProjectSubItem = ProjectSubLeaf & {
   children?: ProjectSubLeaf[];
 };
 
-const PROJECT_SUB_ITEMS: ProjectSubItem[] = [
+export const PROJECT_SUB_ITEMS: ProjectSubItem[] = [
   { path: "", i18nKey: "dashboard", icon: LayoutPanelLeft },
   {
     path: "intent",
