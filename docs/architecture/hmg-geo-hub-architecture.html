@@ -178,7 +178,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: BFF 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+  <p class="asof">마지막 갱신 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · BFF <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: BFF 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/data-002~011.sql</code>, <code>operations-001~004.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
@@ -444,6 +444,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">고객 관심 입력</td><td><code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_interest_editor</span></td><td>시드 키워드(<code>catalog.interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>) INSERT와 값·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_interest_*()</code> 실행만. 지우기·키·원문 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
         <tr><td class="k">엔티티 역할</td><td><code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_entity_role_editor</span></td><td>역할(<code>catalog.entity_role</code>) INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_entity_roles()</code> 실행만. 지우기·엔티티·이름 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
+        <tr><td class="k">프로젝트 프롬프트</td><td><code>HGH_PROJECT_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_project_editor</span></td><td>프로젝트 표면(3) 카탈로그만: <code>catalog.prompt</code> INSERT, <code>prompt_version</code>·<code>project_version</code>은 <code>change_seq</code> 뺀 열 INSERT(기록자 필수, 트리거 <code>project_editor_guard</code>), catalog 프로젝트 · 프롬프트 표 SELECT. UPDATE·DELETE·프로젝트 생성·공개 승인 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
       </tbody>
     </table>
   </div>
@@ -453,7 +454,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-writes">누가 어디에 쓰는가</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 여섯 개다. BFF 글로벌 프롬프트 편집이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, BFF 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, BFF 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, BFF 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하고, Gold의 회차 · 발행 상태를 읽어 서비스 기준 주를 catalog.service_week에 기록하며(바뀔 때만 한 행, 아니면 확인 시각만), 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="HUB DB에 쓰는 경로는 여섯 개다. BFF 글로벌 프롬프트 편집과 Project › Prompt 편집(프로젝트 표면 카탈로그만, 계정 hmg_project_editor)이 catalog에 INSERT하고, BFF 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, BFF 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, BFF GA4 연동이 최상위 관리자의 요청으로 데이터 DB의 GA4 속성 등록부(analytics.ga4_registry)와 그 이력을 쓰고, BFF 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, BFF 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, BFF 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하고, Gold의 회차 · 발행 상태를 읽어 서비스 기준 주를 catalog.service_week에 기록하며(바뀔 때만 한 행, 아니면 확인 시각만), 운영 DB에 관리자와 UUID 참조를 등록한다. Gold에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
         <defs>
           <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -585,6 +586,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         이 계정이 직접 쓰지 못하고 종류마다 있는 발행 함수 <code>catalog.publish_source_*()</code>가 catalog lock 안에서 기록한다.
         2026-11-02부터 고객 관심 데이터 관리 화면이 같은 선을 쓴다: <code>hmg_interest_editor</code>로 시드 키워드(<code>interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>, <code>data-009.sql</code>)와 그 이력만 쓰고, 발행 함수 <code>catalog.publish_interest_*()</code>가 같은 방식으로 기록한다.
         엔티티 카탈로그 화면도 같은 선을 쓴다: <code>hmg_entity_role_editor</code>로 역할(<code>entity_role</code>, <code>data-010.sql</code>)과 그 이력만 쓰고, 발행 함수 <code>catalog.publish_entity_roles()</code>가 기록한다. 초안·미리보기·승인은 두지 않는다(적용은 파이프라인의 Gold 재가공이다).
+        2026-11-03부터 Project › Prompt 화면은 글로벌 프롬프트 편집과 같은 catalog INSERT 선을 쓴다: <code>hmg_project_editor</code>로 프로젝트 표면 카탈로그의 프롬프트 · 프롬프트 버전 · 프로젝트 버전(커스텀 태그 열)만 더한다(<code>data-012.sql</code>). 버전 행이 곧 발행이다(<code>change_seq</code>, 외부 API <code>ext.prompts</code>).
+        한 번 HUB가 고친 프롬프트 · 프로젝트는 Gold 가져오기가 HUB 키(원문 · 종류 · 언어 · 시장 · 분류축 · 태그 값 · 상태, 프로젝트는 태그 열 · 이름)를 덮어쓰지 않고 Gold 키만 갱신하며, HUB 프롬프트를 제거하지 않는다.
         점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 통째로 바꿔 쓰고,
         결과(수집됨 · 권한 대기 · 실패 · 중지됨)를 <code>ga4_collect_status</code>에 남긴다. 화면은 그 값을 그대로 보인다.
         GA4 자격 증명(<code>.env.ga4.local</code>)은 이 프로세스만 읽고, BFF와 브라우저는 GA4를 부르지 않는다. 자격 증명을 인계받으면 돌린다.
@@ -707,7 +710,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <thead><tr><th>나가는 것</th><th>저장 위치</th><th>들어오는 길</th></tr></thead>
       <tbody>
         <tr><td>프로젝트: 표면, 사이트 브랜드·국가, 측정 국가, 커스텀 필드 정의, website 측정 단위(단위 번호·언어·선언된 기준 URL)</td><td><code>catalog.project_version.definition</code></td><td rowspan="2">Gold 가져오기<br><span class="muted">manage.py sync-gold-catalog</span></td></tr>
-        <tr><td>프롬프트: 본문, 종류, 언어, 측정 국가, 분류축, 카탈로그 소속(global은 브랜드별), 커스텀 값, website는 단위 번호와 등록 원문 추적 URL</td><td><code>catalog.prompt_version.definition</code></td></tr>
+        <tr><td>프롬프트: 본문, 종류, 언어, 측정 국가, 분류축, 카탈로그 소속(global은 브랜드별), 커스텀 값, website는 단위 번호와 등록 원문 추적 URL. 상태는 active · draft(HUB 초안, 측정 요청 아님) · paused(측정 중지 요청) · archived(삭제) · removed이고, active가 아니면 id와 상태만 나간다. 프로젝트 프롬프트 · 커스텀 태그는 2026-11-03부터 HUB가 정본이다(Project › Prompt 편집이 버전 행을 더한다)</td><td><code>catalog.prompt_version.definition</code></td></tr>
         <tr><td>기준값 17종: 엔진·권역·국가·언어, 분류 체계(경로 키), 자사 브랜드, 레지스트리 엔티티(역할 지정분), 출처 카테고리, Gold가 적용 중인 사람이 정한 도메인 분류(override·social·seed), 자사 판정 기준, 크롤 봇, 시드 키워드와 수집 조건, 집계 관점·모집단</td><td><code>catalog.reference_set</code>·<code>reference_item</code></td><td>Gold 가져오기</td></tr>
         <tr><td>HUB 코드표: surface 번호, 브랜드 비트(hyundai·kia·genesis·hyundai-n), 언급 유형</td><td>같은 표 (<code>source=hub</code>)</td><td>가져오기가 상수로 기록</td></tr>
         <tr><td>HUB가 정한 출처 카테고리 교정(종류 <code>source_override</code>): 키(소문자·앞 <code>www.</code> 뺀 skey)와 카테고리 slug. 원복한 교정은 빠진다</td><td>같은 표 (<code>source=hub_edit</code>)<br><span class="muted">원본은 <code>catalog.source_override</code></span></td><td>Admin › 인용 출처 분류 저장마다 발행 함수가 기록<br><span class="muted">처음 값은 manage.py import-source-overrides</span></td></tr>
@@ -1041,13 +1044,13 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <!-- erd:cat -->
 <svg viewBox="0 0 1200 552" role="img" aria-label="HUB 데이터 DB의 catalog·publication 스키마 ERD와 published 뷰. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, publication.project_access 승인을 통과한 것만 published 뷰에 보인다.">
 <defs><marker id="cat-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="cat-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
-<rect class="tbox" x="16" y="40" width="260" height="194" rx="6"/>
+<rect class="tbox" x="16" y="40" width="260" height="212" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H270q6,0 6,6V70z"/>
 <line class="rule" x1="16" y1="70" x2="276" y2="70"/>
 <line class="hair" x1="28" y1="112" x2="264" y2="112"/>
 <text class="m b" x="28" y="60"><tspan class="tsch">catalog.</tspan>project_version</text>
-<text class="desc" x="28" y="87">프로젝트 정의(JSON)가 바뀔 때마다 버전</text>
-<text class="desc" x="28" y="103">한 행을 쌓는다.</text>
+<text class="desc" x="28" y="87">프로젝트 정의(JSON) 버전을 쌓고, HUB</text>
+<text class="desc" x="28" y="103">편집이면 기록자를 남긴다.</text>
 <text class="kb pk" x="26" y="131">PK FK</text>
 <text class="m" x="64" y="131">project_id</text>
 <text class="m sm ty" x="266" y="131" text-anchor="end">uuid</text>
@@ -1060,8 +1063,10 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="266" y="185" text-anchor="end">text</text>
 <text class="m" x="64" y="203">recorded_at</text>
 <text class="m sm ty" x="266" y="203" text-anchor="end">timestamptz</text>
-<text class="m" x="64" y="221">change_seq</text>
-<text class="m sm ty" x="266" y="221" text-anchor="end">bigint</text>
+<text class="m" x="64" y="221">recorded_by</text>
+<text class="m sm lref" x="266" y="221" text-anchor="end">⇢ user_account</text>
+<text class="m" x="64" y="239">change_seq</text>
+<text class="m sm ty" x="266" y="239" text-anchor="end">bigint</text>
 <rect class="tbox" x="316" y="40" width="260" height="158" rx="6"/>
 <path class="th" d="M316,70V46q0,-6 6,-6H570q6,0 6,6V70z"/>
 <line class="rule" x1="316" y1="70" x2="576" y2="70"/>
@@ -2340,6 +2345,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k mono">hmg_entity_role_editor</td><td>API 엔티티 카탈로그 · <code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>catalog.entity_role</code> INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, <code>entity_role_event</code> INSERT, 이 둘 SELECT, <code>publish_entity_roles()</code> 실행(<code>data-010.sql</code>). 엔티티·이름·출처 변경과 DELETE 없음. <code>reference_set</code>에 직접 쓰지 못하고, 다른 catalog 표는 읽지도 못하며 운영 DB에는 접속하지 못한다</td></tr>
         <tr><td class="k mono">hmg_catalog_writer</td><td><code>manage.py sync-gold-catalog</code></td><td><code>catalog</code> 정체성·버전 표와 <code>reference_set</code>·<code>reference_item</code> INSERT(버전 표·set은 <code>change_seq</code> 뺀 열만), <code>sync_run</code> INSERT·결과 열 UPDATE, <code>catalog</code> SELECT</td></tr>
         <tr><td class="k mono">hmg_catalog_editor</td><td>API 글로벌 프롬프트 편집 · <code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>catalog.prompt</code> INSERT, <code>prompt_version</code>은 <code>change_seq</code> 뺀 열만 INSERT, <code>catalog</code> SELECT(분류 체계는 <code>current_reference</code>)</td></tr>
+        <tr><td class="k mono">hmg_project_editor</td><td>API Project › Prompt 편집 · <code>HGH_PROJECT_EDITOR_DB_URL</code></td><td><code>catalog.prompt</code> INSERT, <code>prompt_version</code>·<code>project_version</code>은 <code>change_seq</code> 뺀 열만 INSERT, catalog 프로젝트 · 프롬프트 표와 <code>current_reference</code> SELECT(<code>data-012.sql</code>). 트리거 <code>catalog.project_editor_guard()</code>가 프로젝트 표면(3) 밖 쓰기와 기록자 없는 버전을 거부한다. UPDATE · DELETE · 프로젝트 생성 · 공개 승인 · 키 읽기 없음, 운영 DB 접속 불가</td></tr>
         <tr><td class="k mono">hmg_data_external</td><td>DB 직접 공개 (미개방)</td><td><code>published</code> SELECT만. <code>ext</code>는 못 읽는다</td></tr>
         <tr><td class="k mono">hmg_ext_api</td><td>외부 API · <code>HGH_EXT_DB_URL</code></td><td><code>ext</code> 뷰 SELECT만, 읽기 전용, 연결 8개·10초. 운영 DB 접속 불가</td></tr>
       </tbody>
@@ -2360,7 +2366,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>소셜 맥락·요구·근거 발화</td><td>Gold 활성 <code>ctx_snapshot</code>과 연관 데이터</td><td><span class="pill on">들어옴</span></td></tr>
         <tr><td>GA4 세션·기간 사용자·전환·이벤트</td><td>데이터 DB <code>analytics.ga4_*</code> ← GA4 수집기 (<code>back/analytics/ga4_collect.py</code>, 속성 목록은 Admin › GA4 연동의 <code>ga4_registry</code>)</td><td><span class="pill off">수집 전</span> <span class="muted">수집기 있음 · GA4 자격 증명 인계 전</span></td></tr>
         <tr><td>SEO 노출·크롤러·기기·페이지 우선순위</td><td>데이터 DB <code>analytics.current_page_*</code> 뷰</td><td><span class="pill off">수집 전</span></td></tr>
-        <tr><td>프로젝트·프롬프트 버전 카탈로그</td><td>데이터 DB <code>catalog.*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 정의 + HUB 글로벌 프롬프트</span></td></tr>
+        <tr><td>프로젝트·프롬프트 버전 카탈로그</td><td>데이터 DB <code>catalog.*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 정의 + HUB 글로벌 프롬프트 + HUB 프로젝트 프롬프트 · 태그 편집(2026-11-03, 파이프라인이 읽는 합의는 대기)</span></td></tr>
         <tr><td>수집·가공 기준값 17종 (외부 API)</td><td>데이터 DB <code>catalog.reference_*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 가져오기 · 브랜드 별칭·자사 도메인·도메인 분류 규칙·비경쟁 명단은 Gold에 없어 아직 없음</span></td></tr>
         <tr><td>출처 카테고리 교정 (HUB 정본)</td><td>데이터 DB <code>catalog.source_override</code> → 기준값 종류 <code>source_override</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 · 처음 값은 Gold 교정 2건 · 파이프라인이 읽는 합의는 대기</span></td></tr>
         <tr><td>출처 시드 · 공식 소셜 계정 · 코드표 (HUB 정본)</td><td>데이터 DB <code>catalog.source_seed</code>·<code>source_social</code>·<code>source_code</code> → 기준값 종류 <code>source_seed</code>·<code>source_social</code>·<code>source_code</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 탭 · 처음 값은 원본 앱 파일(시드 795 · 소셜 9)과 코드 19개 · 파이프라인이 읽는 합의는 대기</span></td></tr>

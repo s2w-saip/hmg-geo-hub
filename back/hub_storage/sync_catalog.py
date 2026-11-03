@@ -11,7 +11,11 @@ What it records (external API, 2026-10-28; docs/architecture/hmg-geo-hub-archite
 Gold reloads its tables one by one, each in its own transaction, so a read during a reload can mix
 generations. Every run therefore checks the read before writing anything, and refuses (records nothing)
 when a check fails: see guards(). A Gold-origin item missing from Gold becomes `removed` only when two runs
-at least CONFIRM_MINUTES apart both miss it. HUB-origin items are never touched."""
+at least CONFIRM_MINUTES apart both miss it. HUB-origin items are never touched.
+
+HUB-owned items (2026-11-03, data-012): a prompt or project the HUB created, or one with a revision the HUB recorded
+(recorded_by), keeps its HUB keys (PROMPT_HUB_KEYS / PROJECT_HUB_KEYS, and a prompt's text) as the HUB recorded them; the
+import still records Gold's own keys of it (owned()). A HUB-owned prompt is never removed: its status is the HUB's."""
 import asyncio  # noqa: F401  (manage.py appends asyncio.run(main(...)) to this script)
 import hashlib
 import json
@@ -34,6 +38,12 @@ SOURCE_INPUTS = {1: 'override', 2: 'social', 4: 'seed'}
 # of a project with at least PROJECT_REMOVAL_MIN prompts, or new revisions above CHANGE_SHARE refuse the run.
 REMOVAL_MIN, REMOVAL_SHARE, PROJECT_REMOVAL_MIN, PROJECT_REMOVAL_SHARE, CHANGE_SHARE = 20, 0.01, 5, 0.10, 0.05
 CONFIRM_MINUTES = 30
+# What people decide (the HUB's once the HUB edited the item): a prompt's text, measurement kind, language, markets, taxonomy, tag
+# values and status; a project's tag columns and the names Gold does not hold. The rest is Gold's (surface, catalogs, website units,
+# in_project_catalog ...). Project status stays Gold's: a project that left Gold is still removed.
+PROMPT_HUB_KEYS = ('kind', 'language', 'regions', 'funnel', 'brand_presence', 'list_type', 'depth1', 'depth2', 'depth3', 'depth4',
+                   'custom_values', 'status')
+PROJECT_HUB_KEYS = ('custom_fields', 'name', 'brands', 'domain')
 
 
 def encoded(value):
@@ -302,11 +312,21 @@ def family_digest(items):
 
 # ═══ planning (pure: what to record, or why to refuse) ══════════════════════════════════════════════════
 
-def removals(current, present, earlier, earlier_at, now):
+def owned(gold_definition, hub_definition, keys):
+    """A HUB-owned item's definition after a Gold read: Gold's keys from Gold, the HUB keys as the HUB recorded them (a HUB key
+    the HUB definition lacks stays absent)."""
+    merged = {k: v for k, v in gold_definition.items() if k not in keys}
+    merged.update({k: hub_definition[k] for k in keys if k in hub_definition})
+    return merged
+
+
+def removals(current, present, earlier, earlier_at, now, hub_status=False):
     """Gold-origin, not yet removed, missing from Gold: (this run's candidates, those to remove now).
-    Only ids that the previous successful run, at least CONFIRM_MINUTES ago, also missed are removed."""
+    Only ids that the previous successful run, at least CONFIRM_MINUTES ago, also missed are removed.
+    hub_status: the HUB owns the status of HUB-owned items (prompts), so they are never candidates."""
     candidates = sorted(str(i) for i, row in current.items()
-                        if row['origin'] == 'gold' and row['status'] != 'removed' and i not in present)
+                        if row['origin'] == 'gold' and row['status'] != 'removed' and i not in present
+                        and not (hub_status and row.get('hub_owned')))
     if earlier_at is None or earlier_at > now - timedelta(minutes=CONFIRM_MINUTES):
         return candidates, []
     earlier = set(earlier or [])
@@ -333,10 +353,12 @@ def guard(counts, prompt_candidates, prompt_project, totals, allow_removals, exp
 
 # ═══ the run ═════════════════════════════════════════════════════════════════════════════════════════════
 
-CURRENT_PROJECTS_SQL = '''SELECT p.project_id AS id,p.origin,p.source_id,v.version,v.sha256,v.definition
+CURRENT_PROJECTS_SQL = '''SELECT p.project_id AS id,p.origin,p.source_id,v.version,v.sha256,v.definition,
+    p.origin='hub' OR EXISTS(SELECT 1 FROM catalog.project_version h WHERE h.project_id=p.project_id AND h.recorded_by IS NOT NULL) AS hub_owned
     FROM catalog.project p LEFT JOIN LATERAL (SELECT version,sha256,definition FROM catalog.project_version
     WHERE project_id=p.project_id ORDER BY version DESC LIMIT 1) v ON true'''
-CURRENT_PROMPTS_SQL = '''SELECT p.prompt_id AS id,p.project_id,p.origin,p.source_id,v.version,v.sha256,v.text,v.definition
+CURRENT_PROMPTS_SQL = '''SELECT p.prompt_id AS id,p.project_id,p.origin,p.source_id,v.version,v.sha256,v.text,v.definition,
+    p.origin='hub' OR EXISTS(SELECT 1 FROM catalog.prompt_version h WHERE h.prompt_id=p.prompt_id AND h.recorded_by IS NOT NULL) AS hub_owned
     FROM catalog.prompt p LEFT JOIN LATERAL (SELECT version,sha256,text,definition FROM catalog.prompt_version
     WHERE prompt_id=p.prompt_id ORDER BY version DESC LIMIT 1) v ON true'''
 CURRENT_SETS_SQL = 'SELECT family,version,sha256 FROM catalog.current_reference_set'
@@ -370,7 +392,9 @@ async def record(data, g, previous, options, now):
     new_projects, project_versions, new_prompts, prompt_versions = [], [], [], []
     for identity, definition in projects.items():
         old = old_projects.get(identity)
-        if old and (old['origin'] != 'gold' or old['source_id'] != identity):
+        if old and old['hub_owned']:
+            definition = owned(definition, old['definition'], PROJECT_HUB_KEYS)
+        elif old and (old['origin'] != 'gold' or old['source_id'] != identity):
             raise Refused('Catalog identity collision; HUB-owned definitions were not overwritten')
         if old is None:
             new_projects.append((identity,))
@@ -379,7 +403,11 @@ async def record(data, g, previous, options, now):
             project_versions.append((identity, (old['version'] or 0) + 1 if old else 1, encoded(definition), sha))
     for identity, (text, definition) in prompts.items():
         old = old_prompts.get(identity)
-        if old and (old['origin'] != 'gold' or old['source_id'] != identity or old['project_id'] != prompt_project[identity]):
+        if old and old['project_id'] != prompt_project[identity]:
+            raise Refused('Prompt identity/ownership changed; import cancelled')
+        if old and old['hub_owned']:
+            text, definition = old['text'], owned(definition, old['definition'], PROMPT_HUB_KEYS)
+        elif old and (old['origin'] != 'gold' or old['source_id'] != identity):
             raise Refused('Prompt identity/ownership changed; import cancelled')
         if old is None:
             new_prompts.append((identity, prompt_project[identity]))
@@ -389,7 +417,7 @@ async def record(data, g, previous, options, now):
     earlier = loaded(previous['removal_candidates']) if previous else {}
     earlier_at = previous['finished_at'] if previous else None
     project_candidates, project_removed = removals(old_projects, set(projects), earlier.get('projects'), earlier_at, now)
-    prompt_candidates, prompt_removed = removals(old_prompts, set(prompts), earlier.get('prompts'), earlier_at, now)
+    prompt_candidates, prompt_removed = removals(old_prompts, set(prompts), earlier.get('prompts'), earlier_at, now, hub_status=True)
     counts = {'projects': len(projects), 'prompts': len(prompts), 'new_project_versions': len(project_versions),
               'new_prompt_versions': len(prompt_versions), 'project_candidates': len(project_candidates),
               'prompt_candidates': len(prompt_candidates), 'removed_projects': len(project_removed),

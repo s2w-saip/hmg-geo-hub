@@ -1,8 +1,10 @@
 """Renewal Project tab screens (bff.screens.project_dashboard, 2026-11-03): the project filters and the Dashboard."""
 import unittest
+from unittest import mock
 
 try:
     from fastapi import HTTPException
+    from bff.screens import project_dashboard
     from bff.tests.test_screens_overview import META, Router, screen, summary
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_screens_project)") from exc
@@ -116,7 +118,16 @@ class Dashboard(unittest.TestCase):
 
 
 class Prompts(unittest.TestCase):
-    """P4: the project's prompts with their tag values; country, engine and period are the lens, tags narrow the rows."""
+    """P4: the project's prompts with their tag values; country, engine and period are the lens, tags narrow the rows. Without
+    the HUB catalog the rows are Gold's, read only."""
+
+    def setUp(self):
+        async def no_catalog(project_id):
+            return None
+
+        patch = mock.patch.object(project_dashboard.hub_prompts, "catalog", no_catalog)
+        patch.start()
+        self.addCleanup(patch.stop)
 
     ITEMS = [
         {"prompt_id": "a", "text": "A", "kind": "single", "lang": None, "funnel": None, "regions": None, "targets": [], "answers": 4,
@@ -141,9 +152,11 @@ class Prompts(unittest.TestCase):
                                           ("view", "prompts")])
         self.assertEqual([r["id"] for r in out["rows"]], ["a", "b", "c"])
         self.assertEqual(out["listed"], 3)
-        self.assertEqual(out["fields"], [{"id": FIELD, "label": "Topic"}])
+        self.assertEqual(out["fields"], [{"id": FIELD, "label": "Topic", "archived": False, "state": "applied"}])
         self.assertEqual(out["rows"][0]["custom"], {FIELD: "AI", "f2": "NX5"})
         self.assertEqual(out["rows"][0]["lastMeasured"], "2026-10-09")
+        self.assertEqual((out["rows"][0]["status"], out["rows"][0]["state"], out["rows"][0]["version"], out["editable"]),
+                         ("active", "applied", None, False))
 
     def test_tags_narrow_the_rows_or_inside_a_field_and_across_fields(self):
         out = screen("projects/prompts", f"ctx.project_id={PID}&cf_{FIELD}=AI~Design", self.router())
@@ -152,6 +165,70 @@ class Prompts(unittest.TestCase):
         other = "11111111-2222-4333-8444-555555555555"
         out = screen("projects/prompts", f"ctx.project_id={PID}&cf_{FIELD}=AI~Design&cf_{other}=x", self.router())
         self.assertEqual(out["rows"], [])
+
+
+class HubPrompts(unittest.TestCase):
+    """P4 with the HUB catalog (decision '프로젝트 프롬프트 적재'): the HUB's rows and values, Gold's measurement next to them,
+    and each compared with Gold."""
+
+    GOLD = [*Prompts.ITEMS, {"prompt_id": "e", "text": "E", "kind": "single", "lang": None, "funnel": None, "regions": None, "targets": [],
+                             "answers": 1, "first_measured": "2026-10-09", "last_measured": "2026-10-09", "rounds": ["2026-10-09"],
+                             "countries": ["CA"], "engine_answers": {"gemini": 1}, "custom": {}}]
+
+    @staticmethod
+    def hub(pid, text, status="active", custom=None, kind="single", lang=None, origin="gold"):
+        return {"id": pid, "origin": origin, "version": 2, "text": text, "kind": kind, "lang": lang, "status": status,
+                "custom": custom or {}, "hubEdited": origin == "hub", "recordedAt": None, "registeredAt": None}
+
+    def setUp(self):
+        hub = {"version": 3, "editable": True, "languages": ["en", "ko"],
+               "fields": [{"id": FIELD, "label": "Topic", "archived": False}, {"id": "new", "label": "Model", "archived": False},
+                          {"id": "gone", "label": "Old", "archived": True}],
+               "prompts": [self.hub("a", "A", custom={FIELD: "AI", "f2": "NX5"}), self.hub("b", "B", custom={FIELD: "Hybrid"}, lang="fr"),
+                           self.hub("c", "C", status="archived"), self.hub("d", "D", status="draft", origin="hub", custom={FIELD: "AI"}),
+                           self.hub("p", "P", status="paused")]}
+
+        async def catalog(project_id):
+            self.asked = str(project_id)
+            return hub
+
+        patch = mock.patch.object(project_dashboard.hub_prompts, "catalog", catalog)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def router(self):
+        return Router({f"gold/projects/{PID}": {"data": {"items": self.GOLD, "fields": [{"field_id": FIELD, "label": "Topic"},
+                                                                                        {"field_id": "g2", "label": "Region"}],
+                                                          "rounds": ["2026-10-06", "2026-10-09"]}, "meta": PROJECT_META}})
+
+    def test_rows_are_the_hubs_compared_with_gold(self):
+        out = screen("projects/prompts", f"ctx.project_id={PID}", self.router())
+        self.assertEqual(self.asked, PID)
+        rows = {r["id"]: r for r in out["rows"]}
+        self.assertEqual([r["id"] for r in out["rows"]], ["a", "b", "c", "d", "p", "e"])
+        self.assertEqual({k: (r["status"], r["state"]) for k, r in rows.items()},
+                         {"a": ("active", "applied"), "b": ("active", "pending"), "c": ("archived", "pending"), "d": ("draft", "draft"),
+                          "p": ("paused", None), "e": ("active", "upstream")})
+        self.assertEqual((rows["b"]["custom"], rows["b"]["answers"]), ({FIELD: "Hybrid"}, 0))   # the HUB's value, Gold's measurement
+        self.assertEqual((rows["a"]["answers"], rows["a"]["engineAnswers"]), (4, {"chatgpt": 2, "gemini": 2}))
+        self.assertEqual((rows["d"]["answers"], rows["d"]["lastMeasured"], rows["d"]["version"]), (0, None, 2))
+        self.assertEqual((rows["e"]["version"], out["editable"], out["listed"]), (None, True, 6))
+        self.assertEqual([(f["id"], f["archived"], f["state"]) for f in out["fields"]],
+                         [(FIELD, False, "applied"), ("new", False, "pending"), ("gone", True, "applied"), ("g2", False, "upstream")])
+
+    def test_tags_narrow_by_the_hubs_values(self):
+        out = screen("projects/prompts", f"ctx.project_id={PID}&cf_{FIELD}=AI", self.router())
+        self.assertEqual([r["id"] for r in out["rows"]], ["a", "d"])
+
+    def test_states_compare_values_only(self):
+        state, gold = project_dashboard.prompt_state, {"text": "A", "kind": "single", "lang": None, "custom": {}}
+        row = {"status": "active", "text": "A", "kind": "single", "lang": None, "custom": {}}
+        self.assertEqual(state(row, gold), "applied")
+        self.assertEqual(state({**row, "kind": "acr"}, gold), "pending")
+        self.assertEqual(state({**row, "lang": "ko"}, gold), "pending")
+        self.assertEqual(state(row, None), "pending")
+        self.assertEqual(state({**row, "status": "archived"}, None), "applied")
+        self.assertIsNone(state({**row, "status": "removed"}, None))
 
 
 class Conversion(unittest.TestCase):

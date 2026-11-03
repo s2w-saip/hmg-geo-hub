@@ -29,6 +29,7 @@ GA4_REGISTRY_SECRET = ROOT / '.env.ga4-registry-db.local'  # GA4 registry editor
 SOURCE_OVERRIDE_SECRET = ROOT / '.env.source-override-db.local'  # source correction editor role password (data DB)
 INTEREST_SECRET = ROOT / '.env.interest-db.local'  # customer-interest editor role password (data DB)
 ENTITY_ROLE_SECRET = ROOT / '.env.entity-role-db.local'  # entity role editor role password (data DB)
+PROJECT_EDITOR_SECRET = ROOT / '.env.project-editor-db.local'  # project prompt editor role password (data DB)
 SERVICE_WEEK_SECRET = ROOT / '.env.service-week-db.local'  # service week job role password (data DB; manage.py only, never the API)
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
@@ -341,6 +342,21 @@ ALTER ROLE hmg_service_week_writer CONNECTION LIMIT 2;
 GRANT CONNECT ON DATABASE hmg_analytics TO hmg_service_week_writer;
 COMMIT;""")
     migrate('data-011.sql', '011_service_week')
+    # Project prompts (2026-11-03): the API's role for the project catalogs (Project › Prompt: prompts, their tags and the
+    # project's tag columns) and nothing else.
+    if not PROJECT_EDITOR_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_project_editor');").stdout.strip() == 't':
+        raise RuntimeError('The project editor already exists; restore .env.project-editor-db.local rather than replacing credentials')
+    project_editor = create_secret(PROJECT_EDITOR_SECRET, {'PROJECT_EDITOR_PASSWORD': None})
+    sql(f"""BEGIN;
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_project_editor') THEN CREATE ROLE hmg_project_editor LOGIN; END IF;
+END $$;
+ALTER ROLE hmg_project_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(project_editor['PROJECT_EDITOR_PASSWORD'])};
+ALTER ROLE hmg_project_editor SET statement_timeout='15s';
+ALTER ROLE hmg_project_editor CONNECTION LIMIT 4;
+GRANT CONNECT ON DATABASE hmg_analytics TO hmg_project_editor;
+COMMIT;""")
+    migrate('data-012.sql', '012_project_prompts')
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
@@ -348,7 +364,8 @@ COMMIT;""")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
         'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables), '
         'source category corrections (their two tables and publishing function), the customer-interest inputs (their lists and '
-        'publishing functions), the entity roles (their two tables and publishing function) and the login token secret.\n'
+        'publishing functions), the entity roles (their two tables and publishing function), the project prompts (project catalog '
+        'revisions only) and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
         f"HGH_ACCOUNT_EDITOR_DB_URL=postgresql://hmg_account_editor:{account['ACCOUNT_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
@@ -356,6 +373,7 @@ COMMIT;""")
         f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL=postgresql://hmg_source_override_editor:{override['SOURCE_OVERRIDE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_INTEREST_EDITOR_DB_URL=postgresql://hmg_interest_editor:{interest['INTEREST_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_ENTITY_ROLE_EDITOR_DB_URL=postgresql://hmg_entity_role_editor:{entity_role['ENTITY_ROLE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
+        f"HGH_PROJECT_EDITOR_DB_URL=postgresql://hmg_project_editor:{project_editor['PROJECT_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
@@ -412,6 +430,7 @@ def verify():
     interest = f"postgresql://hmg_interest_editor:{analytics.env_file(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']}"
     entity_role = f"postgresql://hmg_entity_role_editor:{analytics.env_file(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD']}"
     week_writer = f"postgresql://hmg_service_week_writer:{analytics.env_file(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD']}"
+    project_editor = f"postgresql://hmg_project_editor:{analytics.env_file(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD']}"
     config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
               'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
               'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
@@ -429,6 +448,8 @@ def verify():
               'interest_operations':interest+f"@{service_host('operations')}/{OPS_DB}",
               'entity_role':entity_role+f"@{service_host('analytics')}/hmg_analytics",
               'entity_role_operations':entity_role+f"@{service_host('operations')}/{OPS_DB}",
+              'project_editor':project_editor+f"@{service_host('analytics')}/hmg_analytics",
+              'project_editor_operations':project_editor+f"@{service_host('operations')}/{OPS_DB}",
               'service_week':week_writer+f"@{service_host('analytics')}/hmg_analytics",
               'service_week_operations':week_writer+f"@{service_host('operations')}/{OPS_DB}"}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'

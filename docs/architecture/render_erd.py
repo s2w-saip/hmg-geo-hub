@@ -213,12 +213,13 @@ def operations() -> Figure:
 
 
 def catalog() -> Figure:
-    """hmg_analytics catalog / publication / published: back/hub_storage/data-002.sql, -003, -004, -005."""
+    """hmg_analytics catalog / publication / published: back/hub_storage/data-002.sql, -003, -004, -005, -012."""
     f = Figure("cat", 552, "HUB 데이터 DB의 catalog·publication 스키마 ERD와 published 뷰. 프로젝트와 프롬프트는 "
                "정체성 행과 버전 행으로 나뉘고, publication.project_access 승인을 통과한 것만 published 뷰에 보인다.")
-    f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON)가 바뀔 때마다 버전 한 행을 쌓는다.", [
+    f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "definition", "jsonb"),
-        ("", "sha256", "text"), ("", "recorded_at", "timestamptz"), ("", "change_seq", "bigint")])
+        ("", "sha256", "text"), ("", "recorded_at", "timestamptz"), ("", "recorded_by", "⇢ user_account"),
+        ("", "change_seq", "bigint")])
     f.table("catalog.project", 316, 40, 260, "프로젝트의 영구 UUID와 출처(Gold 가져옴·HUB 생성)를 담는 정체성 표다.", [
         ("PK", "project_id", "uuid"), ("", "origin", "=gold|hub"), ("UK", "source_id", "uuid"),
         ("", "registered_at", "timestamptz")])

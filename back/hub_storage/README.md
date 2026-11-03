@@ -37,7 +37,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 - `catalog.project` / `catalog.prompt`: 삭제되지 않는 UUID, 원천(`gold` 또는 `hub`), 원천 UUID.
 - `catalog.*_version`: 정의가 달라질 때 추가되는 버전. 서비스 계정은 수정·삭제할 수 없다. `current_*` 뷰는 최신 버전을 읽는다.
 - Gold 가져오기는 현재 원천 정의의 버전 기록이다. Gold 측정 사실 전체를 복제하지 않는다. 원천에 없는 프로젝트 이름은 `null`이다. `registered_at`, `recorded_at`은 HUB 등록/관측 시각이며 원천 생성 시각이 아니다.
-- `origin=gold`는 Gold 동기화가 관리한다. `origin=hub` 정의는 가져오기가 덮어쓰지 않는다. 글로벌 프롬프트는 최상위 관리자가 HUB에서 만들고 고칠 수 있다(아래 절). 프로젝트 프롬프트 편집과 Gold 측정 파이프라인으로의 전달은 아직 구현하지 않았다.
+- `origin=gold`는 Gold 동기화가 관리한다. `origin=hub` 정의는 가져오기가 덮어쓰지 않는다. 글로벌 프롬프트는 최상위 관리자가 HUB에서 만들고 고칠 수 있다(아래 절). 프로젝트 프롬프트 · 커스텀 태그는 2026-11-03부터 HUB가 정본이고, HUB가 고친 항목은 가져오기가 HUB 키를 지킨다(아래 '프로젝트 프롬프트' 절). Gold 측정 파이프라인으로의 전달(측정 실행)은 아직 구현하지 않았다.
 - 운영 DB는 `system.project_reference`에 **같은 UUID만** 보관한다. 관리 명령이 데이터 DB 존재를 확인한 뒤 등록한다. 데이터 커밋 후 운영 등록이 실패해도 재실행으로 복구된다. 두 DB 사이 FK나 원자적 트랜잭션은 없다.
 - 향후 프로젝트 생성/설정 변경 서비스도 이 검증·등록 경로를 사용해야 한다. 프로젝트 제거는 새 정의의 보관 상태로 처리하고 정체성 행을 지우지 않는다. 설정·측정 실행은 프롬프트 버전과 설정 버전을 고정해서 기록해야 한다. 기존 Gold 측정에는 과거 HUB 버전 대응을 임의로 붙이지 않는다.
 - `system.integration.credential_ref`에는 비밀 저장소 참조만 보관한다. 실제 키·토큰은 설정 JSON에 저장하지 않는다. 사용자/설정/권한에는 가상 초기 행을 넣지 않았다. 로컬 모드는 조회와 쓰기(글로벌 프롬프트 편집) 모두 HUB 로그인을 요구한다(2026-10-28부터 조회도).
@@ -187,6 +187,16 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py sync-service-week    
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py sync-service-week --dry-run   # 판정만
 HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh             # API 재시작 (기준 주 확인 포함)
 ```
+
+## 프로젝트 프롬프트 (2026-11-03)
+
+리뉴얼 Project › Prompt(`/renewal/projects/<id>/prompt`)에서 **최상위 관리자만** 프로젝트 프롬프트와 커스텀 태그를 고친다(결정 기록 '프로젝트 프롬프트 적재', `docs/handoff/admin-todo.md`). 새 표는 없다: Gold 가져오기가 처음 기록한 `catalog.prompt` · `prompt_version`(프로젝트 표면 3,072개 · 98개 프로젝트, 2026-11-03)과 프로젝트 정의의 `custom_fields`, 프롬프트 정의의 `custom_values`가 그대로 정본이 된다.
+
+- **기록 방식(`012_project_prompts`):** 바꿀 때마다 `prompt_version`(태그 값 · 상태 · 원문 · 종류 · 언어) 또는 `project_version`(태그 열)에 `recorded_by`가 있는 새 버전을 더한다. 행은 지우지 않는다. 상태는 `draft`(HUB 초안, 측정 요청 아님) · `active` · `paused`(측정 중지 요청) · `archived`(삭제, 복원 가능) · `removed`(Gold에서 빠짐, 읽기 전용)다. 원문 · 언어는 초안일 때만 바꾼다(원본 규칙). 버전 행이 곧 발행이다: `change_seq`를 받고 외부 API `ext.prompts`가 내보내며, `active`가 아니면 id와 상태만 나간다.
+- **Gold 가져오기와의 관계:** HUB가 버전을 하나라도 남긴 프롬프트 · 프로젝트(또는 `origin=hub`)는 HUB 소유다. 가져오기는 HUB 키(`sync_catalog.py` `PROMPT_HUB_KEYS` · `PROJECT_HUB_KEYS`, 프롬프트 원문 포함)를 HUB가 기록한 대로 두고 Gold 키(표면 · 카탈로그 소속 · `in_project_catalog` · 웹 단위 등)만 새 버전으로 갱신한다. HUB 소유 프롬프트는 Gold에서 사라져도 `removed`로 바꾸지 않는다(상태는 HUB 것). HUB가 만든 프롬프트를 Gold가 같은 id로 측정하면 거부하지 않고 HUB 소유로 이어 붙인다(다른 프로젝트면 거부).
+- **화면 상태:** BFF 화면 `projects/prompts`가 HUB 행과 Gold 값(원문 · 종류 · 언어 · 태그 값, 삭제는 Gold 목록에서 빠짐)을 견줘 반영됨 · 반영 대기 · Gold에만을 보인다. 같은지만 비교한다.
+- **계정과 권한:** API는 `HGH_PROJECT_EDITOR_DB_URL`(`hmg_project_editor`)로 쓴다. `catalog.prompt` INSERT, `prompt_version` · `project_version`은 `change_seq` 뺀 열 INSERT, catalog 프로젝트 · 프롬프트 표 SELECT만 있다. 트리거 `catalog.project_editor_guard()`가 프로젝트 표면(3) 밖 쓰기와 `recorded_by` 없는 버전을 거부한다. 비밀번호는 `.env.project-editor-db.local`. 쓰기는 catalog lock(617427413) 안에서 하고 5초 기다린 뒤 503이다.
+- **아직 없는 것:** 측정 실행(Scope로 초안 보내기)은 Scope 경로가 정해진 뒤다. 원본의 후보 풀 · 엑셀 가져오기 · 태그 완전 삭제는 옮기지 않았다.
 
 ## 외부 API (2026-10-28)
 

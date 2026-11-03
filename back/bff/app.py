@@ -4,7 +4,8 @@ login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and da
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
 manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
 registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides), the customer-interest
-inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources) and the entity roles (/v1/hub/entity-roles)."""
+inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources), the entity roles (/v1/hub/entity-roles) and the project
+prompts with their tags (/v1/hub/projects/{id}/prompts, /v1/hub/projects/{id}/prompt-tags, /v1/hub/projects/{id}/prompt-fields)."""
 from __future__ import annotations
 
 import json
@@ -20,7 +21,7 @@ from fastapi.responses import JSONResponse
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
 from bff.hub_stores import (accounts, analytics_db, catalog_editor, entity_roles, ga4_registry, hub_auth, hub_catalog, interest,
-                             operations_db, saved_filters, source_lists, source_overrides)
+                             operations_db, project_prompts, saved_filters, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
 
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
     await source_overrides.open_pool()
     await interest.open_pool()
     await entity_roles.open_pool()
+    await project_prompts.open_pool()
     try:
         yield
     finally:
@@ -50,6 +52,7 @@ async def lifespan(app: FastAPI):
         await source_overrides.close_pool()
         await interest.close_pool()
         await entity_roles.close_pool()
+        await project_prompts.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB BFF / read-only API", lifespan=lifespan)
@@ -435,6 +438,58 @@ async def entity_role_clear(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(entity_roles.RoleClear, await json_body(request), "entity role")
     return hub_json(await entity_roles.clear(body, actor))
+
+
+# Project › Prompt (hub_stores/project_prompts.py): the top-level administrator only (project pages are, decision J).
+@app.post("/v1/hub/projects/{project_id}/prompts")
+async def project_prompt_add(project_id: UUID, request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(project_prompts.PromptAdd, await json_body(request))
+    return hub_json(await project_prompts.add(project_id, body, actor), 201)
+
+
+@app.get("/v1/hub/projects/{project_id}/prompts/{prompt_id}/history")
+async def project_prompt_history(project_id: UUID, prompt_id: UUID, request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await project_prompts.prompt_history(project_id, prompt_id))
+
+
+@app.post("/v1/hub/projects/{project_id}/prompts/{prompt_id}")
+async def project_prompt_edit(project_id: UUID, prompt_id: UUID, request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(project_prompts.PromptEdit, await json_body(request))
+    return hub_json(await project_prompts.update(project_id, prompt_id, body, actor))
+
+
+@app.post("/v1/hub/projects/{project_id}/prompts/{prompt_id}/{action}")
+async def project_prompt_lifecycle(project_id: UUID, prompt_id: UUID, action: str, request: Request):
+    if action not in project_prompts.LIFECYCLE:
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(project_prompts.VersionRef, await json_body(request))
+    return hub_json(await project_prompts.lifecycle(project_id, prompt_id, action, body, actor))
+
+
+@app.post("/v1/hub/projects/{project_id}/prompt-tags")
+async def project_prompt_tags(project_id: UUID, request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(project_prompts.TagSet, await json_body(request), "tag")
+    return hub_json(await project_prompts.set_tags(project_id, body, actor))
+
+
+@app.post("/v1/hub/projects/{project_id}/prompt-fields")
+async def project_prompt_field_add(project_id: UUID, request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(project_prompts.FieldAdd, await json_body(request), "tag")
+    return hub_json(await project_prompts.add_field(project_id, body, actor), 201)
+
+
+@app.post("/v1/hub/projects/{project_id}/prompt-fields/{field_id}/{action}")
+async def project_prompt_field_status(project_id: UUID, field_id: str, action: str, request: Request):
+    if action not in ("archive", "restore"):
+        raise HTTPException(404, "Unknown action")
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    return hub_json(await project_prompts.set_field_archived(project_id, field_id, action == "archive", actor))
 
 
 @app.get("/v1/hub/global-prompts")

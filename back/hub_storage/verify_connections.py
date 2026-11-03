@@ -179,6 +179,25 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('Entity role credentials can connect to the operations DB')
+    # Project editor (Project › Prompt): the project catalog on the data server only.
+    project_editor = await asyncpg.connect(config['project_editor'], timeout=5)
+    try:
+        await project_editor.fetchval('SELECT count(*) FROM catalog.current_prompt')
+        try:
+            await project_editor.execute('SELECT 1 FROM catalog.entity_role LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Project editor reads beyond the project catalog')
+    finally:
+        await project_editor.close()
+    try:
+        forbidden = await asyncpg.connect(config['project_editor_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Project editor credentials can connect to the operations DB')
     # Service week job role (manage.py sync-service-week): its table on the data server only.
     week_writer = await asyncpg.connect(config['service_week'], timeout=5)
     try:
@@ -205,4 +224,5 @@ async def main(config):
                       'source_override':'correction_tables','source_override_operations_access':'denied',
                       'interest':'interest_lists','interest_operations_access':'denied',
                       'entity_role':'role_tables','entity_role_operations_access':'denied',
+                      'project_editor':'project_catalog','project_editor_operations_access':'denied',
                       'service_week':'service_week_table','service_week_operations_access':'denied'}))

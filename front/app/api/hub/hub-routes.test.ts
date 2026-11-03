@@ -22,6 +22,7 @@ const codes = await import("./source-codes/[[...rest]]/route");
 const interestKeywords = await import("./interest-keywords/[[...rest]]/route");
 const interestSources = await import("./interest-sources/[[...rest]]/route");
 const entityRoles = await import("./entity-roles/[[...rest]]/route");
+const projects = await import("./projects/[id]/[...rest]/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -269,6 +270,38 @@ describe("/api/hub/entity-roles", () => {
       [entityRoles.GET(req("GET", "/api/hub/entity-roles", { origin: null }), ctx()), 401],
       [entityRoles.POST(req("POST", "/api/hub/entity-roles", { body: {}, cookie: "tok", origin: "http://evil.test" }), ctx()), 403],
       [entityRoles.POST(req("POST", "/api/hub/entity-roles", { cookie: "tok" }), ctx()), 422],
+    ] as const) {
+      expect((await p).status).toBe(status);
+    }
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("/api/hub/projects/<pid>/…", () => {
+  const PID = "35ae7ec0-a80a-4c88-a431-9698470aa94b";
+  const pctx = (rest: string[], id = PID) => ({ params: Promise.resolve({ id, rest }) });
+
+  it("passes the prompt and tag calls to the BFF with the token", async () => {
+    bff.fetch.mockResolvedValue({ data: {} });
+    expect((await projects.POST(req("POST", `/api/hub/projects/${PID}/prompts`, { body: { text: "A" }, cookie: "tok" }), pctx(["prompts"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", `/v1/hub/projects/${PID}/prompts`, { token: "tok", body: { text: "A" } });
+    expect((await projects.GET(req("GET", `/api/hub/projects/${PID}/prompts/${ID}/history`, { cookie: "tok", origin: null }), pctx(["prompts", ID, "history"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", `/v1/hub/projects/${PID}/prompts/${ID}/history`, { token: "tok", body: undefined });
+    for (const rest of [["prompts", ID], ["prompts", ID, "pause"], ["prompts", ID, "restore"], ["prompt-tags"], ["prompt-fields"], ["prompt-fields", ID, "archive"]]) {
+      expect((await projects.POST(req("POST", `/api/hub/projects/${PID}/${rest.join("/")}`, { body: {}, cookie: "tok" }), pctx(rest))).status).toBe(200);
+      expect(bff.fetch).toHaveBeenLastCalledWith("POST", `/v1/hub/projects/${PID}/${rest.join("/")}`, { token: "tok", body: {} });
+    }
+  });
+
+  it("refuses other paths, a bad project id, no session, cross-site writes and a malformed body", async () => {
+    for (const [p, status] of [
+      [projects.GET(req("GET", `/api/hub/projects/${PID}/prompts`, { cookie: "tok" }), pctx(["prompts"])), 404],
+      [projects.POST(req("POST", `/api/hub/projects/${PID}/prompts/${ID}/run`, { body: {}, cookie: "tok" }), pctx(["prompts", ID, "run"])), 404],
+      [projects.POST(req("POST", `/api/hub/projects/${PID}/prompt-fields/${ID}/delete`, { body: {}, cookie: "tok" }), pctx(["prompt-fields", ID, "delete"])), 404],
+      [projects.POST(req("POST", "/api/hub/projects/x/prompts", { body: {}, cookie: "tok" }), pctx(["prompts"], "x")), 404],
+      [projects.GET(req("GET", `/api/hub/projects/${PID}/prompts/${ID}/history`, { origin: null }), pctx(["prompts", ID, "history"])), 401],
+      [projects.POST(req("POST", `/api/hub/projects/${PID}/prompts`, { body: {}, cookie: "tok", origin: "http://evil.test" }), pctx(["prompts"])), 403],
+      [projects.POST(req("POST", `/api/hub/projects/${PID}/prompts`, { cookie: "tok" }), pctx(["prompts"])), 422],
     ] as const) {
       expect((await p).status).toBe(status);
     }

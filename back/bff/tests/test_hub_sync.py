@@ -1,7 +1,9 @@
 """The Gold import (back/hub_storage/sync_catalog.py): which values it records, the checks that refuse a
 mixed or undecodable read, the guards against mass removal or rewrite, and the HUB code tables matching the
 BFF's own constants. Pure functions only; the run itself is exercised by manage.py sync-gold-catalog."""
+import asyncio
 import importlib.util
+import json
 import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -189,6 +191,80 @@ class Guards(unittest.TestCase):
         with self.assertRaises(sync.Refused):
             sync.guard({**base, "new_prompt_versions": 501}, [], {}, totals, 0, False)
         sync.guard({**base, "new_prompt_versions": 501}, [], {}, totals, 0, True)
+
+
+class Recorded:
+    """The data connection record() talks to: the current catalog rows it reads, the inserts it would make."""
+
+    def __init__(self, projects, prompts):
+        self.rows = {sync.CURRENT_PROJECTS_SQL: projects, sync.CURRENT_PROMPTS_SQL: prompts, sync.CURRENT_SETS_SQL: []}
+        self.inserts = {}
+
+    async def execute(self, *args):
+        return None
+
+    async def fetch(self, query, *args):
+        return self.rows[query]
+
+    async def executemany(self, query, rows):
+        self.inserts[query.split("(")[0].split()[-1]] = list(rows)
+
+
+class HubOwned(unittest.TestCase):
+    """2026-11-03 (data-012): a HUB-edited or HUB-made item keeps its HUB keys; Gold's own keys still follow Gold."""
+
+    def test_owned_keeps_the_hub_keys_and_takes_golds_others(self):
+        gold_def = {"surface": 3, "kind": "single", "status": "active", "in_project_catalog": False, "custom_values": {"f": "AI"}}
+        hub_def = {"surface": 3, "kind": "acr", "status": "paused", "in_project_catalog": True}
+        merged = sync.owned(gold_def, hub_def, sync.PROMPT_HUB_KEYS)
+        self.assertEqual(merged, {"surface": 3, "kind": "acr", "status": "paused", "in_project_catalog": False})  # cleared tags stay cleared
+
+    def test_hub_owned_prompts_are_never_removal_candidates(self):
+        current = {uuid4(): {"origin": "gold", "status": "active", "hub_owned": True}, uuid4(): {"origin": "gold", "status": "active"}}
+        plain = sorted(str(i) for i, r in current.items() if not r.get("hub_owned"))
+        self.assertEqual(sync.removals(current, set(), None, None, NOW, hub_status=True)[0], plain)
+        self.assertEqual(len(sync.removals(current, set(), None, None, NOW)[0]), 2)   # projects: Gold's status
+
+    def test_the_import_records_golds_keys_under_the_hubs(self):
+        project, prompt = uuid4(), uuid4()
+        g = gold()
+        g["projects"].append({"id": project, "scope_project_id": uuid4(), "source_project_id": project, "site_id": None, "surface": 3,
+                              "is_root": False, "site_brand_bit": 0, "site_geo_key": None, "country": None, "regions": None})
+        g["prompts"].append({"id": prompt, "project_id": project, "text": "Gold text", "surface": 3, "kind": "single", "lang_key": None,
+                             "language": "", "regions": None, "targets": None, "in_root_catalog": False, "in_project_catalog": False,
+                             "web_reg": False, "unit_file_seq": None, "unit_key": None, **TAXA})
+        projects = sync.project_definitions(g)
+        prompts = sync.prompt_definitions(g)
+        hub_fields = [{"field_id": "h", "label": "HUB tag", "archived": False, "created_at": "2026-11-03"}]
+        project_row = {"id": project, "origin": "gold", "source_id": project, "version": 2, "sha256": "x", "hub_owned": True,
+                       "definition": {**projects[project], "custom_fields": hub_fields, "regions": ["stale"]}}
+        prompt_row = {"id": prompt, "project_id": project, "origin": "gold", "source_id": prompt, "version": 4, "sha256": "x",
+                      "hub_owned": True, "text": "HUB text",
+                      "definition": {**prompts[prompt][1], "status": "paused", "in_project_catalog": True, "custom_values": {"h": "AI"}}}
+        others = [{"id": p["id"], "origin": "gold", "source_id": p["id"], "version": 1, "hub_owned": False,
+                   "sha256": sync.digest(projects[p["id"]]), "definition": projects[p["id"]]} for p in g["projects"] if p["id"] != project]
+        conn = Recorded([*others, project_row], [prompt_row])
+        counts, _ = asyncio.run(sync.record(conn, g, None, {}, NOW))
+        (pid, version, definition, _), = [r for r in conn.inserts["catalog.project_version"] if r[0] == project]
+        definition = json.loads(definition)
+        self.assertEqual((version, definition["custom_fields"], definition["regions"]), (3, hub_fields, None))
+        (qid, version, text, definition, _), = [r for r in conn.inserts["catalog.prompt_version"] if r[0] == prompt]
+        definition = json.loads(definition)
+        self.assertEqual((version, text, definition["status"], definition["in_project_catalog"], definition["custom_values"]),
+                         (5, "HUB text", "paused", False, {"h": "AI"}))
+        self.assertEqual(counts["prompt_candidates"], 0)
+
+    def test_a_hub_prompt_gold_measured_is_kept_and_another_projects_refuses(self):
+        g = gold()
+        hub_id = g["prompts"][1]["id"]
+        row = {"id": hub_id, "project_id": g["prompts"][1]["project_id"], "origin": "hub", "source_id": None, "version": 1,
+               "sha256": "x", "hub_owned": True, "text": "HUB", "definition": {"status": "active", "kind": "acr"}}
+        conn = Recorded([], [row])
+        asyncio.run(sync.record(conn, g, None, {}, NOW))
+        (_, _, text, definition, _), = [r for r in conn.inserts["catalog.prompt_version"] if r[0] == hub_id]
+        self.assertEqual((text, json.loads(definition)["kind"], json.loads(definition)["web_reg"]), ("HUB", "acr", True))
+        with self.assertRaises(sync.Refused):
+            asyncio.run(sync.record(Recorded([], [{**row, "project_id": uuid4()}]), g, None, {}, NOW))
 
 
 if __name__ == "__main__":

@@ -10,7 +10,8 @@ project's filters (screens._filters.project_page_filters: 기간 · 측정 국�
   projects/dash-composition    the source composition (citations/domains, top 7 + 기타)
   projects/dash-trend          the KPI trend (None under two rounds)
   projects/dash-status         the project's Gold facts and its latest measured prompts
-  projects/prompts             Project › Prompt (P4): the project's prompts with their custom tag values and the lens
+  projects/prompts             Project › Prompt (P4): the project's prompts as the HUB holds them (editable) with their
+                               custom tag values, next to Gold's (반영됨 / 반영 대기) and what Gold measured in the lens
   projects/settings            Project › Setting › General (read part): Gold's identity, measured values and tag fields
 Project reads are live only: no service week and no period compare (the original project page had neither). Every
 value is Gold's; nothing is judged or added (a value Gold does not have is left to the page's '데이터 없음').
@@ -18,10 +19,12 @@ Scoped accounts never get here: access.clamp refuses every surface=project read 
 from __future__ import annotations
 
 import asyncio
+from uuid import UUID
 
 from fastapi import HTTPException
 
 from bff import api
+from bff.hub_stores import project_prompts as hub_prompts
 from bff.screens import screen, split_context
 from bff.screens._convert import as_of_date
 from bff.screens._filters import load_filter_dates, load_panel_options, project_page_filters
@@ -166,30 +169,83 @@ def tag_match(custom: dict, picks: dict | None) -> bool:
     return all(custom.get(field) in set(vals) for field, vals in (picks or {}).items())
 
 
+def prompt_state(row: dict, gold: dict | None) -> str | None:
+    """The HUB prompt compared with Gold's (the same-value check of '기준값 편집 공통 구조', no judgment): draft (not sent for
+    measurement) · applied (Gold holds the HUB's text, kind, language and tag values; for a deleted one, Gold no longer lists
+    it) · pending (not yet) · None (nothing Gold could show: a paused prompt, or one Gold removed)."""
+    status = row["status"]
+    if status == "draft":
+        return "draft"
+    if status in ("paused", "removed"):
+        return None
+    if status == "archived":
+        return "applied" if gold is None else "pending"
+    if gold is None:
+        return "pending"
+    same = (row["text"] == gold["text"] and (row["kind"] or None) == (gold["kind"] or None)
+            and (row["lang"] or None) == (gold["lang"] or None) and row["custom"] == gold["custom"])
+    return "applied" if same else "pending"
+
+
+def field_state(field: dict, gold_labels: dict) -> str:
+    """A HUB tag column against Gold's unarchived ones: applied when Gold lists it under the same name (archived: no longer
+    lists it), else pending."""
+    if field["archived"]:
+        return "applied" if field["id"] not in gold_labels else "pending"
+    return "applied" if gold_labels.get(field["id"]) == field["label"] else "pending"
+
+
+def measured(gold: dict | None) -> dict:
+    """What Gold measured of a prompt in the lens (nothing for one Gold does not hold)."""
+    if gold is None:
+        return {"answers": 0, "firstMeasured": None, "lastMeasured": None, "rounds": [], "countries": [], "engineAnswers": {},
+                "funnel": None, "regions": None, "targets": []}
+    return {"answers": gold["answers"], "firstMeasured": day_of(gold["first_measured"]), "lastMeasured": day_of(gold["last_measured"]),
+            "rounds": [day_of(d) for d in gold["rounds"]], "countries": gold["countries"], "engineAnswers": gold["engine_answers"],
+            "funnel": gold["funnel"], "regions": gold["regions"], "targets": gold["targets"]}
+
+
 @screen("projects/prompts")
 async def project_prompts(q) -> dict:
-    """The project's prompt list: every prompt Gold holds for it with its custom tag values, narrowed by the picked
-    tags (the rows' own values); 측정 국가 · AI 엔진 · 기간 are the lens (the answers a row counts, never the rows).
-    The page searches, sorts and pages these rows itself (as the Project list does: a project holds ≤ 237 prompts).
-    `listed` = rows before the tag picks; `rounds` = the lens's rounds, oldest first."""
+    """The project's prompt list. The rows are the HUB's (the 정본, decision '프로젝트 프롬프트 적재': drafts, paused and deleted
+    ones included, each with `state` against Gold), plus any prompt Gold holds that the HUB catalog does not have yet (state
+    upstream, read only). When the HUB catalog cannot say (no store, or the project not imported yet) the rows are Gold's, read
+    only. 측정 국가 · AI 엔진 · 기간 are the lens (the answers a row counts, never the rows); the picked tags narrow the rows by
+    their own values. The page searches, sorts and pages the rows itself (a project holds ≤ 237 prompts). `listed` = rows before
+    the tag picks; `rounds` = the lens's rounds, oldest first; `fields` = the tag columns (archived ones flagged)."""
     ctx, sp = split_context(q)
     filters, actx = project_page_filters(sp, ctx.get("project_id"))
     pid = ctx["project_id"]
     lens = {k: v for k, v in analysis_query({k: v for k, v in filters.items() if k != "customFieldFilters"}, {**actx, "customFields": None})["query"].items()
             if k in ("country", "engine", "from", "to")}
-    data = (await api.get(f"gold/projects/{pid}", {"view": "prompts", **lens}))["data"]
+    reply, hub = await asyncio.gather(api.get(f"gold/projects/{pid}", {"view": "prompts", **lens}), hub_prompts.catalog(UUID(pid)))
+    data = reply["data"]
+    gold = {str(p["prompt_id"]): p for p in data["items"]}
+    gold_labels = {f["field_id"]: f["label"] for f in data["fields"]}
     picks = filters.get("customFieldFilters")
     rows = []
-    for p in data["items"]:
-        if not tag_match(p["custom"], picks):
-            continue
-        rows.append({"id": p["prompt_id"], "text": p["text"], "kind": p["kind"], "lang": p["lang"], "funnel": p["funnel"],
-                     "regions": p["regions"], "targets": p["targets"], "answers": p["answers"],
-                     "firstMeasured": day_of(p["first_measured"]), "lastMeasured": day_of(p["last_measured"]),
-                     "rounds": [day_of(d) for d in p["rounds"]], "countries": p["countries"], "engineAnswers": p["engine_answers"],
-                     "custom": p["custom"]})
-    return {"rows": rows, "listed": len(data["items"]), "fields": [{"id": f["field_id"], "label": f["label"]} for f in data["fields"]],
-            "rounds": [day_of(d) for d in data["rounds"]]}
+    if hub is None:
+        fields = [{"id": f["field_id"], "label": f["label"], "archived": False, "state": "applied"} for f in data["fields"]]
+        for key, p in gold.items():
+            rows.append({"id": key, "text": p["text"], "kind": p["kind"], "lang": p["lang"], "custom": p["custom"], "status": "active",
+                         "state": "applied", "version": None, "origin": "gold", **measured(p)})
+    else:
+        fields = [{"id": f["id"], "label": f["label"], "archived": f["archived"], "state": field_state(f, gold_labels)} for f in hub["fields"]]
+        known = {f["id"] for f in fields}
+        fields += [{"id": fid, "label": label, "archived": False, "state": "upstream"} for fid, label in gold_labels.items() if fid not in known]
+        for h in hub["prompts"]:
+            g = gold.get(h["id"])
+            rows.append({"id": h["id"], "text": h["text"], "kind": h["kind"], "lang": h["lang"], "custom": h["custom"], "status": h["status"],
+                         "state": prompt_state(h, g), "version": h["version"], "origin": h["origin"], **measured(g)})
+        held = {h["id"] for h in hub["prompts"]}
+        for key, p in gold.items():
+            if key not in held:
+                rows.append({"id": key, "text": p["text"], "kind": p["kind"], "lang": p["lang"], "custom": p["custom"], "status": "active",
+                             "state": "upstream", "version": None, "origin": "gold", **measured(p)})
+    listed = len(rows)
+    rows = [r for r in rows if tag_match(r["custom"], picks)]
+    return {"rows": rows, "listed": listed, "fields": fields, "editable": bool(hub and hub["editable"]),
+            "languages": hub["languages"] if hub else [], "rounds": [day_of(d) for d in data["rounds"]]}
 
 
 # ── Project › Setting › General (read part, 2026-11-03) ───────────────────────

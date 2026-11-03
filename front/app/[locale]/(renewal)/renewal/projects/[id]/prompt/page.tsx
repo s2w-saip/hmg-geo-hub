@@ -22,11 +22,11 @@ import { RnProjectPrompts, type ProjectPromptsView } from "../../_components/pro
 import { projectFilterProps, projectPageSession, projectQuery } from "../../_components/project-filters-server";
 import { shortId } from "../../_components/project-model";
 
-// Renewal Project › Prompt (2026-11-03, P4): the project's prompts and their custom tag values as Gold holds them
-// (screen projects/prompts → gold/projects/{id}?view=prompts), read only. The original page's writes (candidates,
-// manual input, tag editing, run, delete, import) and its status (draft · queued · running …) live in the original
-// operations DB only: the page says so (D-7 decides the write path). The panel: the project axes, where 측정 국가 ·
-// AI 엔진 · 기간 are a lens (the answers a row counts) and the tags narrow the rows.
+// Renewal Project › Prompt (2026-11-03): the project's prompts and their custom tags as the HUB holds them (decision
+// '프로젝트 프롬프트 적재': the HUB catalog is the 정본) next to what Gold measured of each (screen projects/prompts). The
+// original page's writes are in the body (add drafts, tags, edit, pause · resume · delete · restore; hub_stores/
+// project_prompts.py through /api/hub/projects/<id>/…); its run (to Scope) waits for the Scope path. The panel: the
+// project axes, where 측정 국가 · AI 엔진 · 기간 are a lens (the answers a row counts) and the tags narrow the rows.
 
 type SP = Record<string, string | string[] | undefined>;
 type Params = Promise<{ locale: string; id: string }>;

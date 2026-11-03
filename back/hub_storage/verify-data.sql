@@ -527,4 +527,50 @@ DO $$ BEGIN
        EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
+-- Project prompts (012): the project editor adds prompts and revisions of project-surface (3) catalogs only, each naming its
+-- account; it never rewrites history, creates projects, touches other surfaces, approves exports or sets change_seq.
+INSERT INTO catalog.project(project_id,origin) VALUES('00000000-0000-4000-8000-0000000000f3','hub'),('00000000-0000-4000-8000-0000000000f1','hub');
+INSERT INTO catalog.project_version(project_id,version,definition,sha256) VALUES
+ ('00000000-0000-4000-8000-0000000000f3',1,'{"surface":3,"custom_fields":[]}',repeat('a',64)),
+ ('00000000-0000-4000-8000-0000000000f1',1,'{"surface":1}',repeat('a',64));
+INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES('00000000-0000-4000-8000-0000000000f4','00000000-0000-4000-8000-0000000000f1','hub');
+INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256) VALUES('00000000-0000-4000-8000-0000000000f4',1,'global','{}',repeat('a',64));
+SET LOCAL ROLE hmg_project_editor;
+INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES('00000000-0000-4000-8000-0000000000f5','00000000-0000-4000-8000-0000000000f3','hub');
+INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by)
+VALUES('00000000-0000-4000-8000-0000000000f5',1,'rollback-only draft','{"status":"draft"}',repeat('b',64),gen_random_uuid());
+INSERT INTO catalog.project_version(project_id,version,definition,sha256,recorded_by)
+VALUES('00000000-0000-4000-8000-0000000000f3',2,'{"surface":3,"custom_fields":[{"field_id":"x","label":"x","archived":false}]}',repeat('b',64),gen_random_uuid());
+DO $$ BEGIN
+ BEGIN INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256)
+   VALUES('00000000-0000-4000-8000-0000000000f5',2,'x','{}',repeat('c',64)); RAISE EXCEPTION 'Project editor records an anonymous revision';
+   EXCEPTION WHEN not_null_violation THEN NULL; END;
+ BEGIN INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES(gen_random_uuid(),'00000000-0000-4000-8000-0000000000f1','hub');
+   RAISE EXCEPTION 'Project editor adds a Global prompt'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by)
+   VALUES('00000000-0000-4000-8000-0000000000f4',2,'x','{}',repeat('c',64),gen_random_uuid()); RAISE EXCEPTION 'Project editor revises a Global prompt';
+   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.project_version(project_id,version,definition,sha256,recorded_by)
+   VALUES('00000000-0000-4000-8000-0000000000f1',2,'{}',repeat('c',64),gen_random_uuid()); RAISE EXCEPTION 'Project editor revises the Global project';
+   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.project(project_id,origin) VALUES(gen_random_uuid(),'hub'); RAISE EXCEPTION 'Project editor creates projects';
+   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE catalog.prompt_version SET text='changed'; RAISE EXCEPTION 'Project editor rewrites history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM catalog.prompt; RAISE EXCEPTION 'Project editor deletes stable IDs'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by,change_seq)
+   VALUES('00000000-0000-4000-8000-0000000000f5',3,'x','{}',repeat('e',64),gen_random_uuid(),1); RAISE EXCEPTION 'Project editor sets change_seq';
+   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE publication.project_access SET prompts=true; RAISE EXCEPTION 'Project editor approves exports'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM count(*) FROM publication.api_key; RAISE EXCEPTION 'Project editor reads keys'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM count(*) FROM catalog.entity_role; RAISE EXCEPTION 'Project editor reads other HUB inputs'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM count(*) FROM analytics.ga4_row; RAISE EXCEPTION 'Project editor reads metrics'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
+DO $$ BEGIN
+ IF has_table_privilege('hmg_project_editor','catalog.prompt_version','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.prompt_version','DELETE')
+    OR has_table_privilege('hmg_project_editor','catalog.project_version','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.project_version','DELETE')
+    OR has_table_privilege('hmg_project_editor','catalog.prompt','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.prompt','DELETE')
+    OR has_table_privilege('hmg_project_editor','catalog.project','INSERT') OR has_table_privilege('hmg_project_editor','catalog.reference_set','INSERT')
+ THEN RAISE EXCEPTION 'The project editor has more than INSERT on project catalogs'; END IF;
+END $$;
 ROLLBACK;

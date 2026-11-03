@@ -16,7 +16,7 @@
 |---|---:|---|
 | A. 측정 · 판정 (수집, ACR 판정, 감정 · 유형, 순위) | 5 | 회차별 측정 · 판정 방식 변경 기록(metric_version) |
 | B. Gold 모델 · 귀속 (dim_entity · dim_source · 카테고리 · 카탈로그) | 8 | 당사 소유 출처(owned base) 귀속 빈칸 |
-| C. 기준값 연동 (HUB → 파이프라인) | 3 (세부 15) | 인용 출처 교정값 전달 방식 |
+| C. 기준값 연동 (HUB → 파이프라인) | 4 (세부 19) | 인용 출처 교정값 전달 방식 |
 | D. 2026-10-31 점검 (B팀 6 · A팀 2, 팀별 추가분) | 8 | ACR 명부와 dim_brand의 당사 비트 차이(D1) |
 
 ---
@@ -348,6 +348,17 @@
   1. 목록을 읽겠다는 답이 오면 `manage.py publish-reference entity_role`로 공개한다.
   2. 병합 · 표면을 입력으로 받겠다는 답이 오면 그때 HUB 표와 화면을 만든다. 답이 없으면 만들지 않는다.
 
+### C4. 프로젝트 프롬프트 · 커스텀 태그의 정본이 HUB로 옮겨짐 (2026-11-03 추가)
+
+- **화면 영향:** Project › Prompt. 합의 전까지 HUB에서 고친 태그 값 · 태그 열 · 삭제는 '반영 대기'로 남고, Project 화면의 태그 필터 · 프롬프트 목록 숫자는 Gold 값 그대로다. HUB에서 추가한 초안은 측정되지 않는다(측정 실행 경로는 사용자 확인 대기).
+- **근거:**
+  - Gold `dim_custom_field` · `prompt_custom_value` 표 설명이 '출처 제안: GEO HUB 프로젝트 커스텀 필드 설정 · 프롬프트 태그 값의 투영'이다. 원본 HUB 앱(운영 DB `app.prompt` · `project_custom_field` · `prompt_custom_field_value`)이 그 원본이었다.
+  - HUB 카탈로그는 Gold 가져오기로 프로젝트 프롬프트 3,072개(98개 프로젝트) · 태그 열 160개를 갖고 있고, 2026-11-03 기준 Gold 값과 모두 같다. Gold에는 태그 열이 161개이고 1개는 프로젝트가 없다.
+  - 외부 API `GET /ext/v1/projects/{id}` · `/prompts`가 프로젝트 정의(`custom_fields`)와 프롬프트(본문 · 종류 · 언어 · `custom_values` · `status`)를 `change_seq` 순서로 낸다. status는 active · draft(HUB 초안, 측정 요청 아님) · paused(측정 중지 요청) · archived(삭제) · removed이고, active가 아니면 id와 상태만 나간다.
+- **답에 따라 HUB가 할 일:**
+  1. 읽겠다는 답이 오면 프로젝트마다 `manage.py publish-project`로 공개 승인을 하고 호출자에게 프로젝트를 허용한다.
+  2. 투영 원본을 계속 원본 앱으로 두겠다는 답이면, HUB 편집을 멈추고 화면을 열람 전용으로 되돌릴지 사용자에게 묻는다.
+
 ### C팀에 보낼 메시지
 
 ```text
@@ -395,6 +406,21 @@ HUB가 시드 키워드와 커뮤니티 수집 소스의 정본을 갖게 되었
 2. 목록에서 빠진 엔티티는 경쟁사로 돌아가나요?
 3. 반영 확인은 dim_entity.registry_role과 표시 브랜드의 자사 여부로 하려고 합니다. 맞나요?
 4. 원본 화면의 병합 · 모 브랜드 · 표면 추가/차단을 파이프라인 입력으로 받으실 계획이 있나요? 없으면 HUB는 만들지 않습니다.
+```
+
+```text
+[문의 추가] HMG GEO HUB — 프로젝트 프롬프트 · 커스텀 태그 전달 방식 (2026-11-03)
+
+프로젝트 프롬프트와 커스텀 태그(태그 열 · 태그 값)를 HUB가 정본으로 관리하게 되었습니다. 처음 값은 Gold 값(프로젝트 프롬프트 3,072개 · 98개 프로젝트, 태그 열 160개)이고 지금은 모두 같습니다. 같은 외부 API로 드립니다.
+- GET /ext/v1/projects/{id}: 정의의 custom_fields(field_id · label · archived · created_at)
+- GET /ext/v1/projects/{id}/prompts: prompt_id · 본문 · kind · language · custom_values({field_id: 값}) · status, change_seq 순서
+- status: active · draft(HUB 초안, 측정 요청 아님) · paused(측정 중지 요청) · archived(삭제) · removed. active가 아니면 id와 상태만 나갑니다.
+
+확인 부탁드립니다.
+1. dim_custom_field · prompt_custom_value 설명이 'GEO HUB 설정의 투영'입니다. 지금은 어디(원본 HUB 앱 운영 DB 또는 Scope)에서 가져가시나요? 이 외부 API 목록으로 바꿔 주실 수 있나요? 주기는 얼마인가요?
+2. archived(삭제)는 dim_prompt.in_project_catalog=false로, 보관한 태그 열은 dim_custom_field.archived로 반영해 주시나요?
+3. paused(측정 중지 요청)와 draft를 측정 대상에서 빼는 일은 파이프라인이 하나요, Scope 쪽 설정이 따로 필요한가요?
+4. HUB가 새로 만든 프롬프트(origin hub)의 prompt_id를 Scope · Gold에서도 그대로 쓰실 수 있나요? 다른 id를 쓰면 HUB가 반영 여부를 맞춰 볼 연결 키가 필요합니다.
 ```
 
 ---
