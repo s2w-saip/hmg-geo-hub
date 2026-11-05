@@ -6,6 +6,7 @@
 //   시장별 현황    기존 GeoJSON 지도, KPI 전환, 국가 선택과 수치 표
 // 2026-11-05 Global 지표 정리: the card's '비교 브랜드 N개 중 M위' (the table's column head says it), 당사's Δ in the
 // table (the card's) and the header's '추이 = 최근 N회차' (the spark's dates) are gone — each said a number twice.
+// 2026-11-05: the table shows 당사's brands under 당사 (HMG 3사 against single competitor brands hid each brand's place).
 // Every number comes from the overview screens (back/bff/screens/overview.py), the same as /dashboard:
 //   value / pending / period chip + caption   overview/cards (compareTitle = the compare the cards share; when
 //                                             the cards compare different rounds each names its own, audit 3-4)
@@ -391,9 +392,15 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={`${r.own ? "own:" : ""}${r.name}`} data-rn-brand-row={r.own ? "own" : r.name} className={r.own ? "bg-rn-navy-25" : undefined}>
-                <td className="h-10 border-b border-rn-line pr-3 pl-6">
-                  <span className="flex min-w-0 items-center gap-1.5 font-semibold text-rn-ink">
+              <tr
+                key={`${r.own ? "own:" : r.ownBrand ? "own-brand:" : ""}${r.name}`}
+                data-rn-brand-row={r.own ? "own" : r.name}
+                data-rn-own-brand={r.ownBrand ? "" : undefined}
+                className={r.own ? "bg-rn-navy-25" : undefined}
+              >
+                {/* 당사's brands sit under 당사, indented, in the lighter own colour (design-rules: Chart - Own steps) */}
+                <td className={cx("h-10 border-b border-rn-line pr-3", r.ownBrand ? "pl-10" : "pl-6")}>
+                  <span className={cx("flex min-w-0 items-center gap-1.5", r.ownBrand ? "font-medium text-rn-ink-2" : "font-semibold text-rn-ink")}>
                     <span className="truncate">{r.name}</span>
                     {r.own ? <RnTag>{t("ownTag")}</RnTag> : null}
                   </span>
@@ -402,7 +409,11 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
                   const cell = r.cells[c.key];
                   if (!cell)
                     return (
-                      <td key={c.key} className="h-10 border-b border-rn-line px-3 text-rn-muted" title={t("notCompared", { kpi: tKpi(c.key) })}>
+                      <td
+                        key={c.key}
+                        className="h-10 border-b border-rn-line px-3 text-rn-muted"
+                        title={r.ownBrand ? t("ownBrandNoValue", { kpi: tKpi(c.key) }) : t("notCompared", { kpi: tKpi(c.key) })}
+                      >
                         —
                       </td>
                     );
@@ -413,9 +424,13 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <b className={cx("w-[52px] shrink-0 tabular-nums text-rn-ink", cell.best ? "font-extrabold" : "font-semibold")}>{f.value(c.key, cell.value, "—")}</b>
                         <span className={cx("h-[5px] w-14 shrink-0 overflow-hidden rounded-[2px]", r.own ? "bg-rn-surface" : "bg-rn-page")}>
-                          <i className={cx("block h-full rounded-[2px]", r.own ? "bg-rn-navy" : "bg-rn-faint")} style={{ width: `${cell.bar.toFixed(1)}%` }} />
+                          <i
+                            className={cx("block h-full rounded-[2px]", r.own ? "bg-rn-navy" : r.ownBrand ? "bg-rn-navy-300" : "bg-rn-faint")}
+                            style={{ width: `${cell.bar.toFixed(1)}%` }}
+                          />
                         </span>
-                        {r.own ? null : deltaText(c.key, cell.deltaMark ?? null)}
+                        {/* 당사's Δ is the KPI cards'; its brands have none (the brand trend counts 당사 as one) */}
+                        {r.own || r.ownBrand ? null : deltaText(c.key, cell.deltaMark ?? null)}
                       </div>
                     </td>
                   );
@@ -427,10 +442,13 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
       </div>
       {m.degraded?.length ? (
         <RnEmpty className="mx-6 mt-3">{t("brandsPartial")}</RnEmpty>
-      ) : rows.length === 1 ? (
+      ) : !rows.some((r) => !r.own && !r.ownBrand) ? (
         <RnEmpty className="mx-6 mt-3">{tO("noCompetitorData")}</RnEmpty>
       ) : null}
-      <p className="m-0 px-6 pt-2.5 pb-4 text-rn-11 leading-[1.55] break-keep text-rn-muted">{t("brandsFoot")}</p>
+      <p className="m-0 px-6 pt-2.5 pb-4 text-rn-11 leading-[1.55] break-keep text-rn-muted">
+        {rows.some((r) => r.ownBrand) ? `${t("brandsFootOwnBrands")} · ` : null}
+        {t("brandsFoot")}
+      </p>
     </RnCard>
   );
 }

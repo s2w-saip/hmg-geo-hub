@@ -134,6 +134,32 @@ describe("renewal Overview brand table", () => {
     expect(row).not.toMatch(/text-rn-(up|danger)-ink/);
     expect(row).not.toContain(ko.renewal.overview.deltaUp);
   });
+
+  // 2026-11-05: HMG 3사 against single competitor brands hid each brand's place; 당사's brands come under 당사
+  it("당사's brands under 당사: indented, the lighter own bar, no Δ, a dash with its own reason for the citation share", () => {
+    const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
+    const brandCells = Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, k === "citationShare" ? null : own(53.1)])) as BrandMatrixView["rows"][0]["cells"];
+    const kia = { name: "Kia", own: false, ownBrand: true, cells: brandCells };
+    const out = html({ ...matrix, rows: [matrix.rows[0], kia, matrix.rows[1]] });
+    expect(out.indexOf('data-rn-brand-row="own"')).toBeLessThan(out.indexOf('data-rn-brand-row="Kia"'));
+    expect(out.indexOf('data-rn-brand-row="Kia"')).toBeLessThan(out.indexOf('data-rn-brand-row="BMW"'));
+    const from = out.indexOf('data-rn-brand-row="Kia"');
+    const row = out.slice(from, out.indexOf("</tr>", from));
+    expect(row).toContain('data-rn-own-brand=""');
+    expect(row).toContain("pl-10");
+    expect(row).not.toContain(ko.renewal.overview.ownTag);
+    expect((row.match(/bg-rn-navy-300/g) ?? []).length).toBe(4);
+    expect(row).not.toMatch(/[▲▼]|data-rn-no-delta/);
+    expect(decode(row)).toContain(ko.renewal.overview.ownBrandNoValue.replace("{kpi}", ko.dashboard.kpi.name.citationShare));
+    expect(decode(row)).not.toContain(ko.renewal.overview.notCompared.replace("{kpi}", ko.dashboard.kpi.name.citationShare));
+    // competitors are still there: no "no competitor" note
+    expect(decode(out)).not.toContain(ko.dashboard.overview.noCompetitorData);
+    const alone = html({ ...matrix, rows: [matrix.rows[0], kia] });
+    expect(decode(alone)).toContain(ko.dashboard.overview.noCompetitorData);
+    // the foot says what the brand rows count, only when there are some
+    expect(decode(out)).toContain(ko.renewal.overview.brandsFootOwnBrands);
+    expect(decode(html(matrix))).not.toContain(ko.renewal.overview.brandsFootOwnBrands);
+  });
 });
 
 // Gold metric review ⚠️ (2026-10-29, Overview #20 #28 #30 #31 #32): the page says what its numbers count

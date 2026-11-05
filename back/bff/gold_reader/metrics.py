@@ -176,40 +176,58 @@ async def brand_rows(ctx: Context, *, by_date: bool = False, by_country: bool = 
     return [dict(r) for r in rows]
 
 
-def brand_items(ctx: Context, c: dict, rows: list[dict], own_multi_prompts: int | None, include: frozenset[str]) -> list[dict]:
-    """당사 (the perspective's counts `c`) + every rival row, ranked by mentions (당사 counted in the rank). The row
-    fields the contract leaves to ?include= (is_hmg_own, prompts, multi, types) are sent only when asked for."""
-    own_detail = [r for r in rows if r["own_bit"] & ctx.bits]
-    own = {"brand_key": own_detail[0]["brand_key"] if len(ctx.own_names) == 1 and own_detail else None,
-           "name": ctx.label, "is_own": True, "rank": 0, "mentions": c["own_mentions"],
-           "exposure": ratio(c["tracked"], c["answers"]), "share": ratio(c["own_mentions"], c["total_mentions"]),
-           "avg_rank": rank_avg(c["rank_sum"], c["ranked"]),
-           "sentiment": {k: sum(r[k] for r in own_detail) for k in ("positive", "neutral", "mixed", "negative")}}
+def brand_row_item(c: dict, r: dict, include: frozenset[str]) -> dict:
+    """One brand cell row as a brand item, on the perspective's answers and mentions `c` (a rival row; with
+    split_own also one own brand's row)."""
+    item = {"brand_key": r["brand_key"], "name": r["name"], "is_own": False, "rank": 0,
+            "mentions": r["mentions"], "exposure": ratio(r["answers"], c["answers"]),
+            "share": ratio(r["mentions"], c["total_mentions"]), "avg_rank": rank_avg(r["rank_sum"], r["ranked"]),
+            "sentiment": {k: r[k] for k in ("positive", "neutral", "mixed", "negative")}}
     if "hmg" in include:
-        own["is_hmg_own"] = True
+        item["is_hmg_own"] = bool(r["own_bit"])
     if "prompts" in include:
-        own["prompts"] = c["mentioned_prompts"]
+        item["prompts"] = r["prompts"]
     if "multi" in include:
-        own["multi"] = {"answers": c["multi_answers"], "mentions": c["multi_mentions"], "prompts": own_multi_prompts}
+        item["multi"] = {"answers": r["multi_answers"], "mentions": r["multi_mentions"], "prompts": r["multi_prompts"]}
     if "types" in include:
-        own["types"] = {t: sum(r[f"t_{t}"] for r in own_detail) for t in TYPES}
-    items = [own]
-    for r in rows:
-        if r["own_bit"] & ctx.bits:
-            continue
-        item = {"brand_key": r["brand_key"], "name": r["name"], "is_own": False, "rank": 0,
-                "mentions": r["mentions"], "exposure": ratio(r["answers"], c["answers"]),
-                "share": ratio(r["mentions"], c["total_mentions"]), "avg_rank": rank_avg(r["rank_sum"], r["ranked"]),
-                "sentiment": {k: r[k] for k in ("positive", "neutral", "mixed", "negative")}}
+        item["types"] = {t: r[f"t_{t}"] for t in TYPES}
+    return item
+
+
+def brand_items(ctx: Context, c: dict, rows: list[dict], own_multi_prompts: int | None, include: frozenset[str],
+                split_own: bool = False) -> list[dict]:
+    """당사 (the perspective's counts `c`) + every rival row, ranked by mentions (당사 counted in the rank). The row
+    fields the contract leaves to ?include= (is_hmg_own, prompts, multi, types) are sent only when asked for.
+    `split_own` (contract D13, a perspective of two or more brands): 당사 is one row per perspective brand instead,
+    keyed own_brand_code in bit order, each its brand cell counted as a rival row is (Gold has one brand per own bit,
+    gold.dim_brand 2026-11-05: Hyundai 1 · Kia 2 · Genesis 4)."""
+    own_detail = [r for r in rows if r["own_bit"] & ctx.bits]
+    if split_own and len(ctx.own_names) > 1:
+        items = []
+        for bit, code in BRAND_NAMES.items():
+            if bit & ctx.bits:
+                cell = next((r for r in own_detail if r["own_bit"] == bit), None)
+                cell = cell or {"brand_key": None, "name": code, "own_bit": bit, "prompts": 0, "multi_answers": 0,
+                                "multi_mentions": 0, "multi_prompts": 0,
+                                **dict.fromkeys(("mentions", "answers", "rank_sum", "ranked", "positive", "neutral",
+                                                 "mixed", "negative", *(f"t_{t}" for t in TYPES)), 0)}
+                items.append({**brand_row_item(c, cell, include), "is_own": True, "own_brand_code": code})
+    else:
+        own = {"brand_key": own_detail[0]["brand_key"] if len(ctx.own_names) == 1 and own_detail else None,
+               "name": ctx.label, "is_own": True, "rank": 0, "mentions": c["own_mentions"],
+               "exposure": ratio(c["tracked"], c["answers"]), "share": ratio(c["own_mentions"], c["total_mentions"]),
+               "avg_rank": rank_avg(c["rank_sum"], c["ranked"]),
+               "sentiment": {k: sum(r[k] for r in own_detail) for k in ("positive", "neutral", "mixed", "negative")}}
         if "hmg" in include:
-            item["is_hmg_own"] = bool(r["own_bit"])
+            own["is_hmg_own"] = True
         if "prompts" in include:
-            item["prompts"] = r["prompts"]
+            own["prompts"] = c["mentioned_prompts"]
         if "multi" in include:
-            item["multi"] = {"answers": r["multi_answers"], "mentions": r["multi_mentions"], "prompts": r["multi_prompts"]}
+            own["multi"] = {"answers": c["multi_answers"], "mentions": c["multi_mentions"], "prompts": own_multi_prompts}
         if "types" in include:
-            item["types"] = {t: r[f"t_{t}"] for t in TYPES}
-        items.append(item)
+            own["types"] = {t: sum(r[f"t_{t}"] for r in own_detail) for t in TYPES}
+        items = [own]
+    items += [brand_row_item(c, r, include) for r in rows if not r["own_bit"] & ctx.bits]
     items.sort(key=lambda r: (-r["mentions"], r["name"]))
     for i, row in enumerate(items, 1):
         row["rank"] = i
@@ -248,7 +266,8 @@ async def brands(ctx: Context) -> dict:
         for key, ec in sorted(per_engine.items(), key=lambda kv: codes[kv[0]]):
             if not ec["answers"]:
                 continue
-            items = brand_items(ctx, ec, [r for r in engine_rows if r["engine_key"] == key], engine_multi.get(key, 0), include)
+            items = brand_items(ctx, ec, [r for r in engine_rows if r["engine_key"] == key], engine_multi.get(key, 0), include,
+                                split_own=flag(ctx.q, "split_own"))
             by_engine.append({"engine": codes[key], "totals": {"answers": ec["answers"], "mentions_total": ec["total_mentions"],
                                                                "brand_count": len(items)},
                               "brands": chosen_of(items), "truncated": False})
@@ -260,8 +279,10 @@ async def brands(ctx: Context) -> dict:
         c = (await counts(ctx, prompts="prompts" in include))[0]
         rows = await brand_rows(ctx, extras=extras)
         multi = await multi_prompts(ctx) if "multi" in include else None
-    items = brand_items(ctx, c, rows, multi, include)
-    own = items[[r["is_own"] for r in items].index(True)]
+    merged = brand_items(ctx, c, rows, multi, include)
+    # the own block is the perspective's 당사 (its rank among the merged rows) whether or not the rows are split
+    own = merged[[r["is_own"] for r in merged].index(True)]
+    items = brand_items(ctx, c, rows, multi, include, split_own=True) if flag(ctx.q, "split_own") else merged
     data = {"totals": {"answers": c["answers"], "mentions_total": c["total_mentions"], "brand_count": len(items)},
             "own": {"vp_label": ctx.label, "brands": ctx.own_names, **{k: own[k] for k in ("rank", "mentions", "exposure", "share", "avg_rank")}},
             "brands": chosen_of(items)}

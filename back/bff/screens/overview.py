@@ -54,7 +54,8 @@ from bff.access import reader_scope
 from bff.screens import screen, split_context
 from bff.screens._compare import fetch_period_compare_api, has_closed_period, period_shape
 from bff.screens._competitors import (
-    brand_key, candidate_brand_keys, competitor_row, to_competitor_brand_values, to_competitor_citation_domains,
+    brand_key, candidate_brand_keys, competitor_row, competitor_value_of, to_competitor_brand_values,
+    to_competitor_citation_domains,
 )
 from bff.screens._convert import as_of_date, pct1_or_null, pct1_or_zero, rank_avg
 from bff.screens._filters import (
@@ -229,11 +230,32 @@ async def fetch_dashboard_summary(common: dict, surface: str) -> dict:
     return await fetch_kpi_summary(common, {"surface": surface, "card": True, "parts": DASHBOARD_SUMMARY_PARTS})
 
 
-async def fetch_card_brands(common: dict, surface: str) -> dict:
+async def fetch_card_brands(common: dict, surface: str, split_own: bool = False) -> dict:
     extra: dict = {"top_n": CARD_BRANDS_TOP_N, "sort": "mentions", "include": ["hmg"], "card": True}
     if surface != "global":
         extra["include_sentiment"] = False
+    if split_own:
+        extra["split_own"] = True
     return await api.get("mentions/brands", {**common, **extra})
+
+
+SENTIMENT_KEYS = ("positive", "neutral", "mixed", "negative")
+
+
+def fold_own_brands(data: dict) -> tuple[list[dict], list[dict]]:
+    """split_own's brand items -> (the items with 당사 folded back into one row, 당사's per-brand rows). The competitor
+    picks read the folded list, so they stay those of the merged read (the top-10 mention pool counts 당사 once). The
+    folded row is the reader's own block, as the merged row is; its sentiment the brand rows' sum, as the merged
+    row's is (gold_reader.metrics.brand_items)."""
+    items = data["brands"]
+    split = [b for b in items if b.get("own_brand_code")]
+    if not split:
+        return items, []
+    own = data["own"]
+    merged = {"brand_key": None, "name": own["vp_label"], "is_own": True, "rank": own["rank"], "mentions": own["mentions"],
+              "exposure": own["exposure"], "share": own["share"], "avg_rank": own["avg_rank"], "is_hmg_own": True,
+              "sentiment": {k: sum(b["sentiment"][k] for b in split) for k in SENTIMENT_KEYS}}
+    return [merged, *(b for b in items if not b.get("own_brand_code"))], split
 
 
 async def fetch_dashboard_domains(common: dict, surface: str, limit: int, competitor_sources: bool = False) -> dict:
@@ -300,9 +322,10 @@ async def load_live_kpis(common: dict, surface: str) -> tuple[str, list[dict] | 
     return ("ok", kpis) if kpis is not None else ("empty", None)
 
 
-async def load_competitor_sources(common: dict, surface: str) -> tuple[dict, list[str]]:
+async def load_competitor_sources(common: dict, surface: str, split_own: bool = False) -> tuple[dict, list[str]]:
     """loadCompetitorSources: brand rows, the candidates' brand trend and the official competitor domains.
-    A transient failure empties that part and names its old degrade label."""
+    A transient failure empties that part and names its old degrade label. `split_own`: also 당사's per-brand rows
+    (`ownBrands`, a perspective of two or more brands), the competitor parts as without it."""
     degraded: list[str] = []
 
     async def guard(labels: list[str], aw):
@@ -314,8 +337,9 @@ async def load_competitor_sources(common: dict, surface: str) -> tuple[dict, lis
             degraded.extend(labels)
             return None
 
-    brands_res = await guard(["standardMentions"], fetch_card_brands(common, surface))
-    brands = to_competitor_brand_values(brands_res["data"]["brands"]) if brands_res else []
+    brands_res = await guard(["standardMentions"], fetch_card_brands(common, surface, split_own))
+    folded, own_split = fold_own_brands(brands_res["data"]) if brands_res else ([], [])
+    brands = to_competitor_brand_values(folded)
     keys = candidate_brand_keys(brands)
     trend, domains = await asyncio.gather(
         guard(["brandTrend", "firstPosition"], fetch_trend(common, {
@@ -332,6 +356,8 @@ async def load_competitor_sources(common: dict, surface: str) -> tuple[dict, lis
         "citationTotal": (domains["data"]["summary"]["own_share"]["den"]
                           if domains and domains["data"].get("competitor_sources") is not None else None),
     }
+    if split_own:
+        src["ownBrands"] = to_competitor_brand_values(own_split)
     # the old labels in COMPETITOR_LABELS order, once each
     return src, [label for label in COMPETITOR_LABELS if label in degraded]
 
@@ -746,10 +772,13 @@ def delta_mark(d: float | None) -> dict | None:
     return {"r": 0, "tone": "flat"} if r == 0 else {"r": r, "tone": "neutral"}
 
 
-def brand_matrix(own: dict, rivals: dict) -> dict:
-    """brandMatrix: 당사 then every KPI's compared competitors (first appearance, brandKey match); per
-    column the best value, the bar scale (max) and 당사's standing; per cell the bar width, best flag and a rival's Δ
-    (당사's row has no Δ: the KPI cards show it, 2026-11-05)."""
+def brand_matrix(own: dict, rivals: dict, own_brands: list[dict] | None = None) -> dict:
+    """brandMatrix: 당사, its brands (`own_brands`, the brand items of a split perspective, 2026-11-05: HMG 3사 against
+    single competitor brands hid each brand's place), then every KPI's compared competitors (first appearance,
+    brandKey match); per column the best value, the bar scale (max) and 당사's standing (against the competitors, as
+    the cards); per cell the bar width, best flag and a rival's Δ (당사's row has no Δ: the KPI cards show it,
+    2026-11-05; its brands' none: the brand trend counts 당사 as the perspective). A brand row's values are counted as
+    a rival's (competitor_value_of); its citation share is None (공식(HMG) is the three brands' one category)."""
     order: list[str] = []
     names: dict[str, str] = {}
     for k in OVERVIEW_KPI_KEYS:
@@ -760,6 +789,10 @@ def brand_matrix(own: dict, rivals: dict) -> dict:
             names[bk] = m["brand"]
             order.append(bk)
     rows = [{"name": own["label"], "own": True, "cells": {k: {"value": own["values"][k]} for k in OVERVIEW_KPI_KEYS}}]
+    for b in own_brands or []:
+        rows.append({"name": b["brand"], "own": False, "ownBrand": True,
+                     "cells": {k: None if k == "citationShare" else {"value": competitor_value_of(b, k)}
+                               for k in OVERVIEW_KPI_KEYS}})
     for bk in order:
         cells = {}
         for k in OVERVIEW_KPI_KEYS:
@@ -780,7 +813,7 @@ def brand_matrix(own: dict, rivals: dict) -> dict:
             v = cell["value"]
             cell["bar"] = bar_width(c["key"], v, c["max"])
             cell["best"] = v is not None and v == c["best"]
-            if not r["own"]:
+            if not r["own"] and not r.get("ownBrand"):
                 cell["deltaMark"] = delta_mark(cell["delta"])
     return {"rows": rows, "cols": cols}
 
@@ -921,7 +954,7 @@ async def brand_matrix_screen(q) -> dict | None:
     filters = global_filters(sp)
     common = common_params(filters, "global")
     summary, (src, degraded) = await asyncio.gather(fetch_dashboard_summary(common, "global"),
-                                                    load_competitor_sources(common, "global"))
+                                                    load_competitor_sources(common, "global", split_own=True))
     if summary_is_empty(summary["data"], summary["meta"]):
         return None
     by_key = {k["key"]: k for k in to_mirror_kpis(summary["data"], summary["meta"])}
@@ -930,7 +963,7 @@ async def brand_matrix_screen(q) -> dict | None:
     rivals = {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS}
     if has_closed_period(filters):
         rivals = {k: [{**m, "delta": None} for m in row] for k, row in rivals.items()}
-    out = brand_matrix(own, rivals)
+    out = brand_matrix(own, rivals, src.get("ownBrands"))
     if degraded:
         out["degraded"] = list(degraded)
     return out

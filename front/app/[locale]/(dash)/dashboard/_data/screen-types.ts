@@ -149,7 +149,9 @@ export interface BrandCellView {
 
 /** overview/brand-matrix (renewal) — null when the cards are empty. */
 export interface BrandMatrixView {
-  rows: { name: string; own: boolean; cells: Record<OverviewKpiKey, BrandCellView | null> }[];
+  /** `ownBrand`: one of 당사's brands under 당사 (a perspective of two or more brands, 2026-11-05), counted as a rival's
+   * row, with no Δ and no citation share (null: 공식(HMG) is the brands' one category). */
+  rows: { name: string; own: boolean; ownBrand?: boolean; cells: Record<OverviewKpiKey, BrandCellView | null> }[];
   cols: { key: OverviewKpiKey; best: number | null; max: number | null; standing: StandingView | null }[];
 }
 

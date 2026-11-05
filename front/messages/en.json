@@ -5492,6 +5492,8 @@
       },
       "notCompared": "Not among the compared competitors (top 4) of {kpi}",
       "brandsFoot": "‘—’ = not among that KPI's compared competitors (top 4) · Citation Share has its own citation-based competitors (with a period picked, their values count every answer) · Sentiment and Citation Share have no competitor Δ",
+      "ownBrandNoValue": "{kpi}: no value for this brand · Citation Share exists only for the three HMG brands together",
+      "brandsFootOwnBrands": "Brand rows under Ours are counted on the same answers brand by brand, as a competitor row is · they have no change and no citation share",
       "marketsTitle": "Markets"
     },
     "prompts": {

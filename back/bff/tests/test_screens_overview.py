@@ -467,6 +467,57 @@ class BrandMatrixOwnRow(unittest.TestCase):
                     self.assertIsNone(c["deltaMark"])
 
 
+class BrandMatrixOwnBrands(unittest.TestCase):
+    """2026-11-05 (the user's '모두 제안대로 진행' on the Global metric review): the table set HMG 3사 against single
+    competitor brands, so each brand's place never showed (unbranded, Hyundai alone: share 8.3 vs Toyota 12.6,
+    position 5th). The table asks the reader for split_own and shows 당사's brands under 당사, counted as a rival's row,
+    with no Δ and no citation share; the competitor picks read 당사 folded back into one row."""
+
+    OWN = {"vp_label": "HMG", "brands": ["Hyundai", "Kia", "Genesis"], "rank": 1, "mentions": 90,
+           "exposure": {"num": 60, "den": 100}, "share": {"num": 90, "den": 200}, "avg_rank": {"sum": 120, "count": 60}}
+
+    @staticmethod
+    def item(name, mentions, answers, code=None, positive=1):
+        return {"name": name, "brand_key": {"Kia": 2, "Hyundai": 1, "BMW": 370}[name], "mentions": mentions,
+                "share": {"num": mentions, "den": 200}, "exposure": {"num": answers, "den": 100},
+                "avg_rank": {"sum": 2 * answers + answers // 2, "count": answers}, "is_own": code is not None,
+                "is_hmg_own": code is not None, "sentiment": {"positive": positive, "neutral": 1, "negative": 0, "mixed": 0},
+                **({"own_brand_code": code} if code else {})}
+
+    def matrix(self, items):
+        body = {"data": {"own": self.OWN, "brands": items, "totals": {"answers": 100, "mentions_total": 200}}, "meta": META}
+        router = Router({**BrandMatrixFailures.BODIES, "mentions/brands": body})
+        return screen("overview/brand-matrix", "", router), router
+
+    def test_own_brands_under_own_with_values_no_delta_no_citation(self):
+        out, router = self.matrix([self.item("Kia", 50, 40, "Kia", 3), self.item("Hyundai", 40, 30, "Hyundai"),
+                                   self.item("BMW", 30, 20)])
+        self.assertEqual([(r["name"], r["own"], r.get("ownBrand", False)) for r in out["rows"]],
+                         [("HMG", True, False), ("Kia", False, True), ("Hyundai", False, True), ("BMW", False, False)])
+        kia = out["rows"][1]["cells"]
+        self.assertEqual({k: (c or {}).get("value") for k, c in kia.items()},
+                         {"visibility": 40.0, "shareOfVoice": 25.0, "sentiment": 75.0, "position": 2.5, "citationShare": None})
+        for c in (c for c in kia.values() if c is not None):
+            self.assertNotIn("deltaMark", c)
+            self.assertIn("bar", c)
+        self.assertIn("deltaMark", out["rows"][3]["cells"]["visibility"])
+        # asked of the reader; the standing is 당사 against the competitors only, as without the split
+        brands_q = dict(next(q for p, q in router.calls if p == "mentions/brands"))
+        self.assertEqual(brands_q.get("split_own"), "true")
+        self.assertEqual(out["cols"][0]["standing"], {"rank": 1, "count": 2})
+
+    def test_the_competitor_picks_read_own_folded(self):
+        # the merged read's rows (one 당사 row) and the split read's give the same competitor rows
+        folded, split = ov.fold_own_brands({"own": self.OWN, "brands": [self.item("Kia", 50, 40, "Kia"),
+                                                                         self.item("Hyundai", 40, 30, "Hyundai"),
+                                                                         self.item("BMW", 30, 20)]})
+        self.assertEqual([b["name"] for b in split], ["Kia", "Hyundai"])
+        self.assertEqual([(b["name"], b["is_own"], b["mentions"]) for b in folded], [("HMG", True, 90), ("BMW", False, 30)])
+        self.assertEqual(folded[0]["sentiment"], {"positive": 2, "neutral": 2, "mixed": 0, "negative": 0})
+        unsplit = {"own": self.OWN, "brands": [self.item("BMW", 30, 20)]}
+        self.assertEqual(ov.fold_own_brands(unsplit), (unsplit["brands"], []))
+
+
 class GeoRivalCitation(unittest.TestCase):
     """Global score sheet (2026-11-02): the market table's 인용 점유율 tab showed '—' for the rival on all 58 rows."""
 

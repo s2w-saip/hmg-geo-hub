@@ -345,6 +345,46 @@ class Summary(unittest.TestCase):
                 self.assertEqual(conn.reads("catalog_entry"), 1)
 
 
+class BrandsSplitOwn(unittest.TestCase):
+    """mentions/brands ?split_own (contract D13): with two or more perspective brands, 당사 becomes one row per brand,
+    counted from its brand cell as a rival row is (Gold has one brand per own bit); the own block stays the
+    perspective's. The reader ignored the parameter (2026-11-05), so no screen could show Hyundai · Kia · Genesis."""
+
+    def conn(self) -> Conn:
+        return Conn(kpi=[counts_row(answers=20, tracked=16, own_mentions=50, total_mentions=100, rank_sum=24, ranked=16)],
+                    brands=[{**brand_row(D2, 2, "Kia", 2, 25, 12), "rank_sum": 30, "ranked": 12, "positive": 6, "negative": 2},
+                            {**brand_row(D2, 1, "Hyundai", 1, 20, 10), "rank_sum": 25, "ranked": 10, "positive": 5},
+                            brand_row(D2, 370, "Toyota", 0, 10, 8),
+                            brand_row(D2, 3, "Genesis", 4, 5, 3)])
+
+    def brands(self, qs: str) -> dict:
+        return asyncio.run(metrics.brands(context(self.conn(), qs)))["data"]
+
+    def test_split_own_gives_each_perspective_brand_its_row(self):
+        data = self.brands("surface=global&card=true&top_n=10&split_own=true&include=hmg")
+        rows = [(r["name"], r.get("own_brand_code"), r["is_own"], r["rank"], r["mentions"]) for r in data["brands"]]
+        self.assertEqual(rows, [("Kia", "Kia", True, 1, 25), ("Hyundai", "Hyundai", True, 2, 20),
+                                ("Toyota", None, False, 3, 10), ("Genesis", "Genesis", True, 4, 5)])
+        kia = data["brands"][0]
+        self.assertEqual((kia["brand_key"], kia["exposure"], kia["share"], kia["avg_rank"]),
+                         (2, {"num": 12, "den": 20}, {"num": 25, "den": 100}, {"sum": 30, "count": 12}))
+        self.assertEqual(kia["sentiment"], {"positive": 6, "neutral": 0, "mixed": 0, "negative": 2})
+        self.assertTrue(kia["is_hmg_own"])
+        # the own block is still the perspective's (the cards' 당사)
+        own = data["own"]
+        self.assertEqual((own["vp_label"], own["rank"], own["mentions"], own["exposure"]), ("HMG", 1, 50, {"num": 16, "den": 20}))
+
+    def test_without_split_own_or_with_one_brand_the_own_row_is_merged(self):
+        for qs, label in (("surface=global&card=true&top_n=10", "HMG"),
+                          ("surface=global&card=true&top_n=10&split_own=true&brand=kia", "Kia")):
+            with self.subTest(qs=qs):
+                rows = self.brands(qs)["brands"]
+                own = [r for r in rows if r["is_own"]]
+                self.assertEqual(len(own), 1)
+                self.assertEqual(own[0]["name"], label)
+                self.assertNotIn("own_brand_code", own[0])
+
+
 def geo_row(country, lang, **flags) -> dict:
     return {"bgrp": 1, "country": country, "kind": "market", "area": "EU", "lang": lang, "engine": "chatgpt",
             "is_default": True, "kept": True, "orphan": False, **flags}

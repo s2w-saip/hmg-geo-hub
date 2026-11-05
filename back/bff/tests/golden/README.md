@@ -29,6 +29,12 @@ Changes since recording (additive, each derived only from functions pinned by ot
   last day at the latest, decision '발행 시점 판정'). The pages printed the URL's own range, past the week. None of the
   3 URLs carries a period, so each output gains `"period": null` and nothing else; the replay has no HUB data DB, so
   no service week caps it (bff.tests.test_screens_service_week pins the capped echoes).
+- 2026-11-05 renewal brand table `split_own` (the user's '모두 제안대로 진행' on the Global metric review: HMG 3사 against
+  single competitor brands hid each brand's place). `overview/brand-matrix` asks the reader for 당사's per-brand rows
+  (contract D13, which the BFF reader now answers) and shows them under 당사; the competitor picks read 당사 folded back
+  into one row. The 22 `overview/*-rn-matrix-*` tapes got `split_own=true` on their one `mentions/brands` entry (the key
+  only); the bodies are the recorded answers, which hold no split rows, so no output changes (each checked to be its
+  HEAD content less that key).
 
 Deliberate changes (what the screen shows changed by decision):
 - 2026-11-02 catalog options, one value per spelling (score sheet defect: Gold spells 47 depth3 and 3 depth2 values in two cases, `to_catalog_rows` listed both). The capitalised spelling stays. `shared/fn-to-catalog-rows` is re-pinned, and 31 cases change only in `catalogRows`.
