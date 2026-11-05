@@ -100,7 +100,8 @@ export function GeoOverview({
   initialMetric?: OverviewKpiKey;
   initialCountries?: string[];
   title?: string;
-  /** 리뉴얼 Overview(2026-10-28): 리뉴얼 카드 틀·카드 제목 크기(rn 토큰), 위아래 여백을 줄인다. */
+  /** 리뉴얼 Overview(2026-10-28): 리뉴얼 카드 틀·카드 제목 크기(rn 토큰), 위아래 여백을 줄인다.
+   *  2026-11-05: 지도 툴팁 순위 배지는 점유율 지표에서만(GeoMap rankOnShare). */
   renewal?: boolean;
 }) {
   const t = useTranslations("dashboard.overview");
@@ -275,7 +276,7 @@ export function GeoOverview({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <GeoMapLazy geo={filteredGeo} metric={metric} metricLabel={metricLabel} bare level="country" domain={mapDomain ?? undefined} activeCountry={activeCountry} onCountryHover={hoverCountryFromMap} />
+        <GeoMapLazy geo={filteredGeo} metric={metric} metricLabel={metricLabel} bare level="country" domain={mapDomain ?? undefined} activeCountry={activeCountry} onCountryHover={hoverCountryFromMap} rankOnShare={renewal} />
         <div className="min-h-0 lg:relative" data-geo-list-frame>
         <div ref={countryListRef} role="region" aria-label={t("geo.countryList")} tabIndex={0} className="max-h-[360px] overflow-auto overscroll-contain [scrollbar-gutter:stable] lg:absolute lg:inset-0 lg:max-h-none" data-geo-country-list>
           <table className="w-full text-xs" data-geo-table>

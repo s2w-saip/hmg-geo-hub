@@ -17,14 +17,12 @@ const byKey = <T,>(v: () => T) => Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) =
 export const DEGRADED_CARD_TREND: CardTrendView = {
   degraded: true,
   cards: byKey(() => ({ delta: null, spark: { points: [], domain: [0, 100], hasValue: false } })),
-  count: 0,
 };
 
 /** The competitor screen failed transiently: empty rows and the competitor notice. */
 export const DEGRADED_CARD_COMPETITORS: CardCompetitorsView = {
   degraded: ["standardMentions", "brandTrend", "firstPosition", "standardCitationDomains"],
   rows: byKey(() => []),
-  standing: byKey(() => null),
 };
 
 /** `p`, with a transient failure replaced by `fallback` (other failures stay rejections). */

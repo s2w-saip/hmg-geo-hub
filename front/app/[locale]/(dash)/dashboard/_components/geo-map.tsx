@@ -147,6 +147,7 @@ export function GeoMap({
   domain,
   activeCountry,
   onCountryHover,
+  rankOnShare = false,
 }: {
   geo: GeoView;
   /** Overview KPI 칩(2026-09-02) — 색 강도·툴팁 값이 이 지표를 따른다. 기본 = 점유율(종전). */
@@ -160,6 +161,9 @@ export function GeoMap({
   domain?: readonly [number, number];
   activeCountry?: string | null;
   onCountryHover?: (code: string | null) => void;
+  /** 리뉴얼 Overview(2026-11-05): 툴팁 순위 배지 #N 은 언급 수 기준 순위(rank.our)라 점유율 지표에서만 보인다 —
+   *  다른 지표에서는 그 지표의 순위로 읽혔다. 미지정 = 모든 지표에서(원본 화면 그대로). */
+  rankOnShare?: boolean;
 }) {
   const t = useTranslations("dashboard.geo");
   const tOv = useTranslations("dashboard.overview");
@@ -263,6 +267,7 @@ export function GeoMap({
             ourLabel={geo.ourLabel}
             metric={metric}
             metricLabel={metricLabel}
+            rankOnShare={rankOnShare}
             x={hover.x}
             y={hover.y}
           />
@@ -312,11 +317,12 @@ function formatMetric(
   return metric === "position" ? positionUnit(v.toFixed(1)) : `${v.toFixed(1)}%`;
 }
 
-function GeoTooltip({
+export function GeoTooltip({
   datum,
   ourLabel,
   metric,
   metricLabel,
+  rankOnShare = false,
   x,
   y,
 }: {
@@ -324,6 +330,8 @@ function GeoTooltip({
   ourLabel: string;
   metric: OverviewKpiKey;
   metricLabel?: string;
+  /** 순위 배지를 점유율 지표에서만(GeoMap 의 같은 prop). */
+  rankOnShare?: boolean;
   x: number;
   y: number;
 }) {
@@ -346,7 +354,7 @@ function GeoTooltip({
       style={{ left: x + (flipX ? -10 : 10), top: y - 10 }}
     >
       <div className="flex items-center gap-2">
-        <RankBadge rank={market.hmgRank} />
+        {rankOnShare && metric !== "shareOfVoice" ? null : <RankBadge rank={market.hmgRank} />}
         <span className="text-xs font-semibold text-foreground">{label}</span>
       </div>
       <dl className="mt-1.5 flex flex-col gap-0.5 text-[11px]">

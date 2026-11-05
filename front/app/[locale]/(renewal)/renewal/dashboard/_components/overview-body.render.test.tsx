@@ -19,7 +19,6 @@ const spark: CardTrendView["cards"]["visibility"]["spark"] = {
 };
 const trend: CardTrendView = {
   degraded: false,
-  count: DAYS.length,
   cards: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, { delta: 0.5, spark }])) as CardTrendView["cards"],
 };
 const cards: OverviewCardView[] = OVERVIEW_KPI_KEYS.map((key) => ({ key, value: 50, pending: false, period: null }));
@@ -32,7 +31,7 @@ function html(matrix: BrandMatrixView | null = null): string {
         compareTitle={null}
         geo={null}
         qs=""
-        deferred={{ trend: settled(trend), competitors: settled({ degraded: [], rows: {} as never }), matrix: settled(matrix) }}
+        deferred={{ trend: settled(trend), matrix: settled(matrix) }}
       />
     </NextIntlClientProvider>,
   );
@@ -62,12 +61,11 @@ describe("renewal Overview KPI spark values", () => {
   const rank = { points: [point(0, 2.31, null), point(1, 2.1, -0.2), point(2, 2.4, 0.3), point(3, 2.4, 0), point(4, 2.5, 0.1)], domain: [1, 5] as [number, number], hasValue: true };
   const valued: CardTrendView = {
     degraded: false,
-    count: DAYS.length,
     cards: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, { delta: 0.5, spark: k === "position" ? rank : rate }])) as CardTrendView["cards"],
   };
   const out = renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-      <RnOverviewBody cards={cards} compareTitle={null} geo={null} qs="" deferred={{ trend: settled(valued), competitors: settled({ degraded: [], rows: {} as never }), matrix: settled(null) }} />
+      <RnOverviewBody cards={cards} compareTitle={null} geo={null} qs="" deferred={{ trend: settled(valued), matrix: settled(null) }} />
     </NextIntlClientProvider>,
   );
   const tips = (k: string) => [...card(out, k).matchAll(/data-rn-tip="([^"]*)"/g)].map(([, s]) => s.replace(/&#x27;/g, "'"));
@@ -93,24 +91,31 @@ describe("renewal Overview KPI spark values", () => {
   });
 });
 
-// 브랜드 비교 (2026-10-28, 1920×1050): one 40px line per brand — each cell value · bar · Δ side by side
+// 브랜드 비교 (2026-10-28, 1920×1050): one 40px line per brand — each cell value · bar · Δ side by side.
+// 2026-11-05 Global 지표 정리: 당사's row has no Δ — the KPI cards above show the same Δ (17 of 17 the same).
 describe("renewal Overview brand table", () => {
-  const cell = (value: number, r: number | null) => ({ value, delta: r, bar: value, best: false, deltaMark: r == null ? null : { r, tone: r > 0 ? ("good" as const) : ("bad" as const) } });
+  const own = (value: number) => ({ value, bar: value, best: false });
+  const cell = (value: number, r: number | null) => ({ value, delta: r, bar: value, best: false, deltaMark: r == null ? null : { r, tone: "neutral" as const } });
   const matrix: BrandMatrixView = {
     cols: OVERVIEW_KPI_KEYS.map((key) => ({ key, best: null, max: null, standing: null })),
     rows: [
-      { name: "HMG", own: true, cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, cell(76.6, -0.2)])) as BrandMatrixView["rows"][0]["cells"] },
+      { name: "HMG", own: true, cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, own(76.6)])) as BrandMatrixView["rows"][0]["cells"] },
       { name: "BMW", own: false, cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k, i) => [k, i ? null : cell(31.2, null)])) as BrandMatrixView["rows"][0]["cells"] },
     ],
   };
 
-  it("puts a cell's value, bar and Δ on one line", () => {
+  it("puts a cell's value and bar on one line, 당사 without Δ", () => {
     const out = html(matrix);
     const own = out.slice(out.indexOf('data-rn-brand-row="own"'), out.indexOf("</tr>", out.indexOf('data-rn-brand-row="own"')));
     const cells = [...own.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].slice(1).map(([, c]) => c);
     expect(cells).toHaveLength(5);
-    // (the rank KPI's unit word stands where the rates read % / pp)
-    for (const c of cells) expect(c).toMatch(/^<div class="flex items-center[^"]*"><b[^>]*>76\.6[^<]+<\/b><span[^>]*><i[^>]*><\/i><\/span><span[^>]*>▼(<!-- -->)?0\.2[^<]+<\/span><\/div>$/);
+    // (the rank KPI's unit word stands where the rates read % / pp); no Δ, no no-Δ mark
+    for (const c of cells) expect(c).toMatch(/^<div class="flex items-center[^"]*"><b[^>]*>76\.6[^<]+<\/b><span[^>]*><i[^>]*><\/i><\/span><\/div>$/);
+    // a Δ on 당사's cell (as the screen sent before 2026-11-05) is not drawn
+    const withDelta = { ...matrix, rows: [{ ...matrix.rows[0], cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, cell(76.6, -0.2)])) as BrandMatrixView["rows"][0]["cells"] }, matrix.rows[1]] };
+    const out2 = html(withDelta);
+    const own2 = out2.slice(out2.indexOf('data-rn-brand-row="own"'), out2.indexOf("</tr>", out2.indexOf('data-rn-brand-row="own"')));
+    expect(own2).not.toMatch(/[▲▼]|data-rn-no-delta/);
     // an uncompared KPI stays a dash; a compared one without Δ says so with the no-Δ mark after its bar (renewal
     // audit 3-6: the place was left empty)
     const bmw = out.slice(out.indexOf('data-rn-brand-row="BMW"'), out.indexOf("</tr>", out.indexOf('data-rn-brand-row="BMW"')));
@@ -139,14 +144,13 @@ describe("renewal Overview basis and failure wording", () => {
   const decode = (s: string) => s.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
   const text = (s: string) => decode(s.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
   const fill = (s: string, params: Record<string, string>) => Object.entries(params).reduce((acc, [k, v]) => acc.replace(`{${k}}`, v), s);
-  const NONE = Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, null])) as never;
-  const one = { value: 50, delta: 0.5, bar: 50, best: true, deltaMark: { r: 0.5, tone: "good" as const } };
+  const one = { value: 50, bar: 50, best: true };
   const ownOnly = (degraded?: string[]): BrandMatrixView & { degraded?: string[] } => ({
     cols: OVERVIEW_KPI_KEYS.map((key) => ({ key, best: 50, max: 50, standing: null })),
     rows: [{ name: "HMG", own: true, cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, one])) as BrandMatrixView["rows"][0]["cells"] }],
     ...(degraded ? { degraded } : {}),
   });
-  function render(opts: { matrix?: unknown; compareTitle?: { key: string; params: Record<string, unknown> } | null; competitors?: unknown }) {
+  function render(opts: { matrix?: unknown; compareTitle?: { key: string; params: Record<string, unknown> } | null }) {
     return renderToStaticMarkup(
       <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
         <RnOverviewBody
@@ -156,7 +160,6 @@ describe("renewal Overview basis and failure wording", () => {
           qs=""
           deferred={{
             trend: settled(trend),
-            competitors: settled((opts.competitors ?? { degraded: [], rows: {}, standing: NONE }) as never),
             matrix: settled((opts.matrix ?? null) as never),
           }}
         />
@@ -164,7 +167,6 @@ describe("renewal Overview basis and failure wording", () => {
     );
   }
   const brandCard = (out: string) => out.slice(out.indexOf(`aria-label="${O.brandsTitle}"`));
-  const standing = (out: string, k: string) => text(out.match(new RegExp(`data-rn-standing="${k}"[^>]*>([\\s\\S]*?)</span>`))?.[1] ?? "");
 
   it("names the 대표 답변 basis in the KPI header and in every KPI's tip, with the page that counts every answer", () => {
     const out = render({});
@@ -176,17 +178,16 @@ describe("renewal Overview basis and failure wording", () => {
     }
   });
 
-  it("says in a period compare that 당사's Δ is the cards' compare and the rivals have none", () => {
-    // last review (2026-11-02): 97da2a0 made 당사's Δ the cards' period compare, the hint and titles still said 'the
-    // period's last two rounds on every row'
+  it("says 당사's Δ is on the KPI cards, the rivals' is their last two rounds and a period has none", () => {
+    // last review (2026-11-02): the hint said 'the period's last two rounds on every row'; 2026-11-05: 당사's row has no Δ
     const out = render({ matrix: ownOnly(), compareTitle: { key: "label.weekly", params: {} } });
     const hint = text(brandCard(out).slice(0, brandCard(out).indexOf("<table")));
-    expect(hint).toContain(fill(O.brandsHintPeriod, { compare: ko.periodCompare.label.weekly }));
+    expect(hint).toContain(O.brandsHintPeriod);
+    expect(O.brandsHintPeriod).toContain("당사 증감은 위 KPI");
     expect(hint).not.toContain("마지막 두 회차");
-    expect(brandCard(out)).toContain(`title="${O.deltaUp} · ${ko.periodCompare.label.weekly}"`);
-    // without a period the table and the cards compare the same rounds
     const plain = brandCard(render({ matrix: ownOnly() }));
     expect(text(plain.slice(0, plain.indexOf("<table")))).toContain(fill(O.brandsHint, { compare: ko.dashboard.overview.compare }));
+    expect(O.brandsHint).toContain("당사 증감은 위 KPI");
   });
 
   it("says a period's competitor citation shares count every answer", () => {
@@ -201,14 +202,39 @@ describe("renewal Overview basis and failure wording", () => {
   });
 
   it("says a competitor read failed instead of 'no competitor value'", () => {
-    const failed = render({ matrix: ownOnly(["standardMentions"]), competitors: { degraded: ["standardMentions"], rows: {}, standing: NONE } });
-    for (const k of OVERVIEW_KPI_KEYS) expect(standing(failed, k), k).toBe(O.rivalsFailed);
+    const failed = render({ matrix: ownOnly(["standardMentions"]) });
     expect(text(brandCard(failed))).toContain(O.brandsPartial);
     expect(text(brandCard(failed))).not.toContain(ko.dashboard.overview.noCompetitorData);
     // nothing failed and nobody compared: the old wording stays
     const none = render({ matrix: ownOnly() });
-    expect(standing(none, "visibility")).toBe(ko.dashboard.overview.noCompetitorData);
     expect(text(brandCard(none))).toContain(ko.dashboard.overview.noCompetitorData);
+  });
+});
+
+// 2026-11-05 Global 지표 정리: two KPI card parts said a number the page shows elsewhere — '비교 브랜드 N개 중 M위' (the
+// brand table's column head '당사 M위/N', the same in 17 of 17 reads) and the header's '추이 = 최근 N회차' (the spark's
+// dated rounds). Both are gone; the header keeps 집계 and 증감, the table its column standing.
+describe("renewal Overview KPI card without repeats", () => {
+  const decode = (s: string) => s.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const matrix: BrandMatrixView = {
+    cols: OVERVIEW_KPI_KEYS.map((key) => ({ key, best: 50, max: 50, standing: { rank: 1, count: 5 } })),
+    rows: [{ name: "HMG", own: true, cells: Object.fromEntries(OVERVIEW_KPI_KEYS.map((k) => [k, { value: 50, bar: 50, best: true }])) as BrandMatrixView["rows"][0]["cells"] }],
+  };
+  const out = html(matrix);
+  const head = decode(out.slice(0, out.indexOf("data-rn-kpi=")));
+
+  it("no standing line on the cards", () => {
+    expect(out).not.toContain("data-rn-standing");
+    const kpis = out.slice(0, out.indexOf(`aria-label="${ko.renewal.overview.brandsTitle}"`));
+    for (const k of OVERVIEW_KPI_KEYS) expect(decode(card(kpis, k)), k).not.toMatch(/비교 브랜드|\d+위/);
+  });
+  it("the header names the basis and the compare, not the trend's rounds", () => {
+    expect(head).toContain(ko.renewal.overview.kpiHintBasis);
+    expect(head).toContain(ko.renewal.overview.kpiHintDelta.replace("{compare}", ko.dashboard.overview.compare));
+    expect(head).not.toContain("추이");
+  });
+  it("the table keeps 당사's column standing", () => {
+    expect(decode(out.slice(out.indexOf("data-rn-brand-matrix")))).toContain(ko.renewal.overview.colStanding.replace("{rank}", "1").replace("{count}", "5"));
   });
 });
 
@@ -226,7 +252,7 @@ describe("renewal Overview period compare labels", () => {
   const render = (cs: OverviewCardView[], compareTitle: { key: string; params: Record<string, number> } | null) =>
     renderToStaticMarkup(
       <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-        <RnOverviewBody cards={cs} compareTitle={compareTitle} geo={null} qs="" deferred={{ trend: settled(trend), competitors: settled({ degraded: [], rows: {} as never }), matrix: settled(null) }} />
+        <RnOverviewBody cards={cs} compareTitle={compareTitle} geo={null} qs="" deferred={{ trend: settled(trend), matrix: settled(null) }} />
       </NextIntlClientProvider>,
     );
   const head = (out: string) => text(out.slice(0, out.indexOf("data-rn-kpi=")));
@@ -244,6 +270,47 @@ describe("renewal Overview period compare labels", () => {
     const out = render(withPeriods(labels), { key: "label.weekly", params: {} });
     expect(head(out)).toContain(fill(O.kpiHintDelta, { compare: P.label.weekly }));
     for (const k of OVERVIEW_KPI_KEYS) expect(text(card(out, k)), k).not.toContain(P.label.weekly);
+  });
+});
+
+// 2026-11-05 Global 지표 정리: with 2026-09 picked the AI 우선 노출도 chip read ↑0.1 in green while the brand table read
+// ▼0.1 — 2.2번째 was 0.1 ahead of the month before. The period chip's direction is better / worse; its arrow drew that
+// direction, so a rank that fell (better) pointed up. The arrow is the value's and the colour better / worse (design
+// rules: 위아래 화살표는 숫자 방향, 색은 좋아짐 · 나빠짐), as the round Δ chip (RnDeltaChip) already draws it.
+describe("renewal Overview period chip arrow", () => {
+  const chip = (key: string, unit: "pp" | "rank", direction: "up" | "down") => ({ key, unit, suppressed: false, value: 0.1, direction });
+  const render = (direction: "up" | "down") =>
+    renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <RnOverviewBody
+          cards={OVERVIEW_KPI_KEYS.map((key) => ({
+            key,
+            value: 50,
+            pending: false,
+            period: { chip: key === "position" ? chip("position", "rank", direction) : chip(key, "pp", direction), label: { key: "label.weekly", params: {} }, caption: { key: "window", params: {} } },
+          }) as OverviewCardView)}
+          compareTitle={{ key: "label.weekly", params: {} }}
+          geo={null}
+          qs=""
+          deferred={{ trend: settled(trend), matrix: settled(null) }}
+        />
+      </NextIntlClientProvider>,
+    );
+  const arrow = (out: string, k: string) => {
+    const html = card(out, k);
+    const svg = html.match(/<svg[^>]*class="([^"]*lucide-arrow-(?:up|down)[^"]*)"/)?.[1] ?? "";
+    return { tone: html.match(/data-tone="(\w+)"/)?.[1], dir: svg.match(/lucide-arrow-(up|down)\b/)?.[1], ink: svg.match(/text-rn-(up|danger)-ink/)?.[1] };
+  };
+
+  it("a rank that fell (better) points down in green", () => {
+    expect(arrow(render("up"), "position")).toEqual({ tone: "up", dir: "down", ink: "up" });
+  });
+  it("a rank that rose (worse) points up in red", () => {
+    expect(arrow(render("down"), "position")).toEqual({ tone: "down", dir: "up", ink: "danger" });
+  });
+  it("a rate's arrow is its better / worse direction, which is its value's", () => {
+    expect(arrow(render("up"), "visibility")).toEqual({ tone: "up", dir: "up", ink: "up" });
+    expect(arrow(render("down"), "citationShare")).toEqual({ tone: "down", dir: "down", ink: "danger" });
   });
 });
 
@@ -266,7 +333,7 @@ describe("renewal Overview detail links", () => {
   it("opens each KPI's renewal analysis page", () => {
     const out = renderToStaticMarkup(
       <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
-        <RnOverviewBody cards={cards} compareTitle={null} geo={null} qs="brand=Kia" deferred={{ trend: settled(trend), competitors: settled({ degraded: [], rows: {} as never }), matrix: settled(null) }} />
+        <RnOverviewBody cards={cards} compareTitle={null} geo={null} qs="brand=Kia" deferred={{ trend: settled(trend), matrix: settled(null) }} />
       </NextIntlClientProvider>,
     );
     // one link per card, the card itself (no 상세 text): named "{KPI} 상세 보기" for a screen reader

@@ -13,14 +13,14 @@ Ports the API branch of the three pages and everything their components computed
   dashboard/_components/live-trend-chart.tsx   chart rows (label day, gap per family), available series
   website/page.tsx + website/_data/live.ts     website sections (no single active brand -> empty GEO)
   renewal/dashboard/page.tsx + _components/overview-body.tsx, overview-model.ts
-                                      own label, compare title, standing, brand matrix, bar widths
+                                      own label, compare title, brand matrix (standing, bar widths)
 
 Screens (one per Suspense section; `ctx.surface` = global | website where both pages share one):
   overview/as-of             header pill / as-of chip          {asOf}
   overview/filters           filter bar props                  OverviewFilters / WebsiteFilters props
   overview/cards             KPI cards (global, renewal)       {state, cards, compareTitle}
-  overview/card-trend        card Δ + sparklines (deferred)    {degraded, cards, count}
-  overview/card-competitors  card competitor rows (deferred)   {degraded, rows, standing?}
+  overview/card-trend        card Δ + sparklines (deferred)    {degraded, cards}
+  overview/card-competitors  card competitor rows (deferred)   {degraded, rows}
   overview/geo               GEO section (global, renewal)     {geo, degraded}
   overview/brand-matrix      renewal brand x KPI table         {rows, cols, degraded?} | null
   website/summary            website tiles                     {state, tiles}
@@ -34,8 +34,8 @@ Screens (one per Suspense section; `ctx.surface` = global | website where both p
 Failure rules (the old degrade registry is gone; the payload says what the page used to read from it):
 a transient failure (5xx, timeout, database error) of a read that used to degrade empties that part
 and is reported in the payload (`degraded`, `state`); a 4xx is raised so the page keeps its error path.
-Context keys: ctx.surface, ctx.locale (country order), ctx.admin (website brand axis), ctx.view
-(renewal), ctx.today (test seam: the KST day used by the period labels; default today in KST).
+Context keys: ctx.surface, ctx.locale (country order), ctx.admin (website brand axis), ctx.today (test seam: the
+KST day used by the period labels; default today in KST).
 """
 from __future__ import annotations
 
@@ -345,12 +345,6 @@ def select_period_result(compare: list[dict] | None, metric: str | None) -> dict
     return next((r for r in compare if r.get("metric") == metric), None)
 
 
-def period_delta(compare: list[dict] | None, kpi_key: str) -> float | None:
-    """The card chip's Δ of one KPI: none when the compare is suppressed or missing."""
-    r = select_period_result(compare, KPI_KEY_TO_COMPARE_METRIC.get(kpi_key))
-    return js_round(r["delta"] * 10) / 10 if r and not r.get("suppressed") and is_num(r.get("delta")) else None
-
-
 def caption_ctx(days: int | None, label_ctx: dict) -> dict:
     """`{ days: days ?? 0, ...labelCtx }`."""
     return {"days": days if days is not None else 0, **label_ctx}
@@ -460,11 +454,12 @@ def spark_view(trend: dict | None, key: str) -> dict:
 
 def card_trend_view(trend: dict | None, degraded: bool) -> dict:
     """overview/card-trend: per card the Δ of the last two valued rounds (applyTrendDeltas; shown on a
-    card that is not pending) and the sparkline (sparklineTrend: the last 5 points)."""
+    card that is not pending) and the sparkline (sparklineTrend: the last 5 points). (The renewal header's
+    '추이 = 최근 N회차' count is gone, 2026-11-05: the spark dates every round it draws.)"""
     applied = apply_trend_deltas([{"key": k, "delta": None, "direction": "flat"} for k in OVERVIEW_KPI_KEYS], trend)
     spark = sparkline_trend(trend)
     cards = {k["key"]: {"delta": k["delta"], "spark": spark_view(spark, k["key"])} for k in applied}
-    return {"degraded": degraded, "cards": cards, "count": len(spark_points(spark, "visibility"))}
+    return {"degraded": degraded, "cards": cards}
 
 
 # ── GEO (toLiveGeo + the map / table derivations) ──────────────────────────
@@ -742,23 +737,19 @@ def bar_width(key: str, v: float | None, mx: float | None) -> float:
     return max(2, (v / mx) * 100)
 
 
-def delta_mark(key: str, d: float | None, own: bool = True) -> dict | None:
-    """The table Δ: rounded to one decimal, 0 = flat, else good / bad by the KPI's direction; a rival's is neutral (its
-    move is not good or bad in itself, 2026-11-02 premise review)."""
+def delta_mark(d: float | None) -> dict | None:
+    """A rival's table Δ: rounded to one decimal, 0 = flat, else neutral (its move is not good or bad in itself,
+    2026-11-02 premise review). 당사's row has none: the KPI cards show it (2026-11-05)."""
     if d is None:
         return None
     r = js_round(d * 10) / 10
-    if r == 0:
-        return {"r": 0, "tone": "flat"}
-    if not own:
-        return {"r": r, "tone": "neutral"}
-    good = r < 0 if key == "position" else r > 0
-    return {"r": r, "tone": "good" if good else "bad"}
+    return {"r": 0, "tone": "flat"} if r == 0 else {"r": r, "tone": "neutral"}
 
 
 def brand_matrix(own: dict, rivals: dict) -> dict:
     """brandMatrix: 당사 then every KPI's compared competitors (first appearance, brandKey match); per
-    column the best value, the bar scale (max) and 당사's standing; per cell the bar width, best flag and Δ."""
+    column the best value, the bar scale (max) and 당사's standing; per cell the bar width, best flag and a rival's Δ
+    (당사's row has no Δ: the KPI cards show it, 2026-11-05)."""
     order: list[str] = []
     names: dict[str, str] = {}
     for k in OVERVIEW_KPI_KEYS:
@@ -768,8 +759,7 @@ def brand_matrix(own: dict, rivals: dict) -> dict:
                 continue
             names[bk] = m["brand"]
             order.append(bk)
-    rows = [{"name": own["label"], "own": True,
-             "cells": {k: {"value": own["values"][k], "delta": own["deltas"][k]} for k in OVERVIEW_KPI_KEYS}}]
+    rows = [{"name": own["label"], "own": True, "cells": {k: {"value": own["values"][k]} for k in OVERVIEW_KPI_KEYS}}]
     for bk in order:
         cells = {}
         for k in OVERVIEW_KPI_KEYS:
@@ -790,7 +780,8 @@ def brand_matrix(own: dict, rivals: dict) -> dict:
             v = cell["value"]
             cell["bar"] = bar_width(c["key"], v, c["max"])
             cell["best"] = v is not None and v == c["best"]
-            cell["deltaMark"] = delta_mark(c["key"], cell["delta"], r["own"])
+            if not r["own"]:
+                cell["deltaMark"] = delta_mark(cell["delta"])
     return {"rows": rows, "cols": cols}
 
 
@@ -882,32 +873,16 @@ async def card_trend(q) -> dict:
     return card_trend_view(trend, False)
 
 
-async def own_card_values(common: dict, surface: str) -> dict | None:
-    summary = await or_none_on_transient(fetch_dashboard_summary(common, surface))
-    if not summary or summary_is_empty(summary["data"], summary["meta"]):
-        return None
-    by_key = {k["key"]: k for k in to_mirror_kpis(summary["data"], summary["meta"])}
-    return {k: overview_card_state(by_key.get(k))["value"] for k in OVERVIEW_KPI_KEYS}
-
-
 @screen("overview/card-competitors")
 async def card_competitors(q) -> dict:
     """The deferred competitor row of every card (value-ordered minis with their Δ; citation share =
     the domains Gold files as official competitor, folded to the brand Gold gives them). `degraded` = the old labels of the parts that failed
-    transiently. ctx.view=renewal adds 당사's standing among each card's competitors."""
-    ctx, sp = split_context(q)
+    transiently. (The renewal Overview read it, ctx.view=renewal, for 당사's standing on its cards; that line said what
+    the brand table's column head says and is gone, 2026-11-05.)"""
+    _ctx, sp = split_context(q)
     common = common_params(global_filters(sp), "global")
-    if ctx.get("view") == "renewal":
-        (src, degraded), own = await asyncio.gather(load_competitor_sources(common, "global"),
-                                                    own_card_values(common, "global"))
-    else:
-        src, degraded = await load_competitor_sources(common, "global")
-        own = None
-    rows = {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS}
-    out: dict = {"degraded": degraded, "rows": rows}
-    if ctx.get("view") == "renewal":
-        out["standing"] = {k: standing(k, own[k] if own else None, rows[k]) for k in OVERVIEW_KPI_KEYS}
-    return out
+    src, degraded = await load_competitor_sources(common, "global")
+    return {"degraded": degraded, "rows": {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS}}
 
 
 @screen("overview/geo")
@@ -934,57 +909,30 @@ async def geo(q) -> dict:
     return {"geo": geo_view(to_live_geo(markets["data"]), ctx.get("locale", "ko")), "degraded": False}
 
 
-TREND_DEGRADE_LABEL = "standardTrend:day"  # the old degrade label of the round trend (card Δ)
-
-
 @screen("overview/brand-matrix")
 async def brand_matrix_screen(q) -> dict | None:
-    """Renewal brand x KPI table: 당사 (card values, trend Δ) and every card's compared competitors. With a closed
-    period 당사's Δ is the card chip's (the period before); the rivals have no such Δ, so their last-round Δ is left out.
-    None when the summary is empty (the card shows the empty state); a failed summary is raised (the page
-    shows the table's failure). `degraded` = the old labels of the parts that failed transiently — the
-    competitor reads (COMPETITOR_LABELS order), then the trend — present only when one did (2026-10-29 metric
-    review ⚠️ Overview #32: a failed competitor read read as "no competitor value")."""
+    """Renewal brand x KPI table: 당사 (card values) and every card's compared competitors. 당사's row has no Δ: the KPI
+    cards above show it (2026-11-05 Global 지표 정리: the same Δ in 17 of 17 reads), so the table reads no trend. With a
+    closed period the rivals' last-round Δ is left out (they have no period Δ). None when the summary is empty (the card
+    shows the empty state); a failed summary is raised (the page shows the table's failure). `degraded` = the old labels
+    of the competitor reads that failed transiently (COMPETITOR_LABELS order), present only when one did (2026-10-29
+    metric review ⚠️ Overview #32: a failed competitor read read as "no competitor value")."""
     _ctx, sp = split_context(q)
     filters = global_filters(sp)
     common = common_params(filters, "global")
-    trend_failed = False
-    period = has_closed_period(filters)
-
-    async def trend_or_none():
-        nonlocal trend_failed
-        try:
-            if period:
-                shape, _, _ = period_context(filters, today_of(_ctx), await period_week(filters))
-                return await fetch_period_compare_api(filters, common, {"surface": "global", "kind": shape["kind"],
-                                                                        "metrics": OVERVIEW_COMPARE_METRICS})
-            return await load_live_trend(common, "global", OVERVIEW_TREND_METRICS, "day")
-        except Exception as exc:  # noqa: BLE001
-            if not is_transient(exc):
-                raise
-            trend_failed = True
-            return None
-
-    summary, trend, (src, degraded) = await asyncio.gather(
-        fetch_dashboard_summary(common, "global"), trend_or_none(), load_competitor_sources(common, "global"))
+    summary, (src, degraded) = await asyncio.gather(fetch_dashboard_summary(common, "global"),
+                                                    load_competitor_sources(common, "global"))
     if summary_is_empty(summary["data"], summary["meta"]):
         return None
-    kpis = to_mirror_kpis(summary["data"], summary["meta"])
-    by_key = {k["key"]: k for k in kpis}
-    if period:
-        deltas = {k: period_delta(trend, k) for k in OVERVIEW_KPI_KEYS}
-    else:
-        applied = {k["key"]: k for k in apply_trend_deltas(kpis, trend)}
-        deltas = {k: overview_card_state(applied.get(k))["delta"] for k in OVERVIEW_KPI_KEYS}
+    by_key = {k["key"]: k for k in to_mirror_kpis(summary["data"], summary["meta"])}
     own = {"label": own_label_of(filters),
-           "values": {k: overview_card_state(by_key.get(k))["value"] for k in OVERVIEW_KPI_KEYS}, "deltas": deltas}
+           "values": {k: overview_card_state(by_key.get(k))["value"] for k in OVERVIEW_KPI_KEYS}}
     rivals = {k: competitor_row(src, k) for k in OVERVIEW_KPI_KEYS}
-    if period:
+    if has_closed_period(filters):
         rivals = {k: [{**m, "delta": None} for m in row] for k, row in rivals.items()}
     out = brand_matrix(own, rivals)
-    failed = [*degraded, *([TREND_DEGRADE_LABEL] if trend_failed else [])]
-    if failed:
-        out["degraded"] = failed
+    if degraded:
+        out["degraded"] = list(degraded)
     return out
 
 

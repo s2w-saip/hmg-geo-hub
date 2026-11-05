@@ -1,15 +1,16 @@
 "use client";
 
 // Renewal Overview body — "at a glance" (2026-10-22). Three cards, no KPI selection:
-//   KPI 5종        read-only: value, Δ, spark, standing among the card's competitors; the card opens its analysis page
+//   KPI 5종        read-only: value, Δ, spark; the card opens its analysis page
 //   브랜드 비교    brands × 5 KPIs (당사 + every KPI's compared competitors)
 //   시장별 현황    기존 GeoJSON 지도, KPI 전환, 국가 선택과 수치 표
+// 2026-11-05 Global 지표 정리: the card's '비교 브랜드 N개 중 M위' (the table's column head says it), 당사's Δ in the
+// table (the card's) and the header's '추이 = 최근 N회차' (the spark's dates) are gone — each said a number twice.
 // Every number comes from the overview screens (back/bff/screens/overview.py), the same as /dashboard:
 //   value / pending / period chip + caption   overview/cards (compareTitle = the compare the cards share; when
 //                                             the cards compare different rounds each names its own, audit 3-4)
 //   Δ, sparkline, its domain and labels        overview/card-trend
-//   standing                                   overview/card-competitors (ctx.view=renewal)
-//   brand table (cells, best, bar, Δ marks)    overview/brand-matrix (+ the parts that failed)
+//   brand table (cells, best, bar, rivals' Δ)  overview/brand-matrix (+ the parts that failed)
 //   markets                                    overview/geo (GeoOverview)
 // This file formats and lays them out. What the numbers count is said on the page (Gold metric review ⚠️,
 // 2026-10-29): the cards and the table count 대표 답변 (Mention / Citation count every answer), and a read
@@ -39,7 +40,6 @@ import { OVERVIEW_KPI_KEYS, type OverviewKpiKey } from "@/app/[locale]/(dash)/da
 import type {
   BrandCellView,
   BrandMatrixView,
-  CardCompetitorsView,
   CardTrendView,
   OverviewCardView,
   OverviewGeoView,
@@ -55,7 +55,6 @@ export type RnBrandMatrixRead = RnBrandMatrixView | null | "failed";
 
 export interface OverviewDeferredData {
   trend: Promise<CardTrendView>;
-  competitors: Promise<CardCompetitorsView>;
   matrix: Promise<RnBrandMatrixRead>;
 }
 
@@ -159,17 +158,7 @@ function KpiRow({
   const byKey = new Map(cards.map((c) => [c.key, c]));
   return (
     <RnCard tone="hero" className="@container/rnkpi" aria-label={t("kpiTitle")}>
-      <RnCardHeader
-        title={t("kpiTitle")}
-        hint={
-          <>
-            {t("kpiHintBasis")} · {t("kpiHintDelta", { compare: compare.text })}
-            <Suspense fallback={null}>
-              <TrendCount trend={deferred.trend} />
-            </Suspense>
-          </>
-        }
-      />
+      <RnCardHeader title={t("kpiTitle")} hint={`${t("kpiHintBasis")} · ${t("kpiHintDelta", { compare: compare.text })}`} />
       <div className="grid grid-cols-5 px-2.5 pt-0.5 pb-5 @max-[600px]/rnkpi:grid-cols-3 @max-[600px]/rnkpi:gap-y-3.5">
         {OVERVIEW_KPI_KEYS.map((key, i) => {
           const card = byKey.get(key);
@@ -204,13 +193,6 @@ function KpiRow({
                   </Suspense>
                 )}
               </div>
-              <span data-rn-standing={key} className="min-h-[18px] text-rn-12 text-rn-on-dark/72">
-                {pending ? null : (
-                  <Suspense fallback={<RnSkeleton className="h-4 w-24" />}>
-                    <StandingLine k={key} competitors={deferred.competitors} />
-                  </Suspense>
-                )}
-              </span>
               {/* The whole card opens its analysis page (2026-10-28, in place of a 상세 link) in a new tab,
                   so the Overview being read stays as it is: the link covers the card, last so it lies
                   above the card's parts; hover lightens it and shows ↗. */}
@@ -232,12 +214,6 @@ function KpiRow({
       </div>
     </RnCard>
   );
-}
-
-function TrendCount({ trend }: { trend: Promise<CardTrendView> }) {
-  const t = useTranslations("renewal.overview");
-  const n = use(trend).count;
-  return n > 1 ? <> · {t("kpiHintTrend", { count: n })}</> : null;
 }
 
 function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
@@ -292,10 +268,12 @@ function DeltaCell({
   if (pending) return null;
   const period = card?.period;
   if (period) {
+    // the chip's direction is better / worse; the arrow is the value's (2026-11-05: a rank that fell read ↑ in green)
     const tone: RnTone = period.chip.suppressed ? "none" : period.chip.direction;
+    const icon = isRank(k) && (tone === "up" || tone === "down") ? (tone === "up" ? "down" : "up") : undefined;
     return (
       <>
-        <RnToneChip tone={tone} onDark title={period.caption.key === "window" ? undefined : tP(period.caption.key, period.caption.params)}>
+        <RnToneChip tone={tone} icon={icon} onDark title={period.caption.key === "window" ? undefined : tP(period.caption.key, period.caption.params)}>
           {periodChipText(period.chip)}
         </RnToneChip>
         {perCard ? (
@@ -347,16 +325,6 @@ function SparkCell({ k, trend }: { k: OverviewKpiKey; trend: Promise<CardTrendVi
   );
 }
 
-function StandingLine({ k, competitors }: { k: OverviewKpiKey; competitors: Promise<CardCompetitorsView> }) {
-  const t = useTranslations("renewal.overview");
-  const tO = useTranslations("dashboard.overview");
-  const view = use(competitors);
-  const st = view.standing?.[k] ?? null;
-  // no standing: a competitor read that failed says so (not "no competitor value", 2026-10-29 review ⚠️ #32)
-  if (!st) return <>{view.degraded.length ? t("rivalsFailed") : tO("noCompetitorData")}</>;
-  return <>{t.rich("standing", { b: (c) => <b className="font-semibold text-rn-on-dark">{c}</b>, rank: st.rank, count: st.count })}</>;
-}
-
 // ─── 브랜드 비교 (brands × KPIs) ────────────────────────────────────────────
 
 function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrixRead>; compare: CompareBasis }) {
@@ -375,10 +343,10 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
     );
   if (!m) return null;
   const { rows, cols } = m;
-  // A period compare: 당사's Δ is the cards' compare of the period with the one before, the rivals have none (97da2a0);
-  // the hint and the Δ titles say so (review ⚠️ #28).
-  const compare = basis.period ? basis.text : tO("compare");
-  const hint = basis.period ? t("brandsHintPeriod", { compare: basis.text }) : t("brandsHint", { compare });
+  // 당사's row has no Δ: the KPI cards above show it (2026-11-05 Global 지표 정리). The rivals' Δ is their last two rounds
+  // and a period has none (97da2a0); the hint says so (review ⚠️ #28).
+  const compare = tO("compare");
+  const hint = basis.period ? t("brandsHintPeriod") : t("brandsHint", { compare });
   const deltaText = (k: OverviewKpiKey, mark: BrandCellView["deltaMark"]) => {
     // a compared value without Δ says so (renewal audit 3-6: the place was left empty) with the cards' no-Δ mark,
     // as the website brand table does — '—' alone is the cell of a brand not compared on the KPI
@@ -389,10 +357,9 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
         </span>
       );
     if (mark.tone === "flat") return <span className="text-rn-11 font-semibold text-rn-muted">{t("deltaFlat")}</span>;
-    const neutral = mark.tone === "neutral";
-    const good = mark.tone === "good";
+    // a rival's move keeps its arrow without the better / worse colour (2026-11-02 premise review)
     return (
-      <span className={cx("text-rn-11 font-semibold tabular-nums", neutral ? "text-rn-muted" : good ? "text-rn-up-ink" : "text-rn-danger-ink")} title={neutral ? compare : t("deltaTitle", { dir: good ? t("deltaUp") : t("deltaDown"), compare })}>
+      <span className="text-rn-11 font-semibold tabular-nums text-rn-muted" title={compare}>
         {mark.r > 0 ? "▲" : "▼"}
         {f.delta(k, mark.r)}
       </span>
@@ -439,8 +406,8 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
                         —
                       </td>
                     );
-                  // one line per cell (2026-10-28, 1920×1050): value · bar · Δ; the value and the bar
-                  // keep fixed widths so the bars of a column start and scale alike down the brands
+                  // one line per cell (2026-10-28, 1920×1050): value · bar · Δ (당사: value · bar); the value and
+                  // the bar keep fixed widths so the bars of a column start and scale alike down the brands
                   return (
                     <td key={c.key} className="h-10 border-b border-rn-line px-3">
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -448,7 +415,7 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
                         <span className={cx("h-[5px] w-14 shrink-0 overflow-hidden rounded-[2px]", r.own ? "bg-rn-surface" : "bg-rn-page")}>
                           <i className={cx("block h-full rounded-[2px]", r.own ? "bg-rn-navy" : "bg-rn-faint")} style={{ width: `${cell.bar.toFixed(1)}%` }} />
                         </span>
-                        {deltaText(c.key, cell.deltaMark)}
+                        {r.own ? null : deltaText(c.key, cell.deltaMark ?? null)}
                       </div>
                     </td>
                   );

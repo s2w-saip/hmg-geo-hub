@@ -10,14 +10,12 @@ import { screenGet, type ScreenQuery } from "@/lib/screen";
 import { throwForPage } from "@/lib/hgh/errors";
 import type {
   AsOfView,
-  CardCompetitorsView,
   CardsView,
   CardTrendView,
   FilterBarView,
   OverviewGeoView,
 } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import {
-  DEGRADED_CARD_COMPETITORS,
   DEGRADED_CARD_TREND,
   handled,
   isTransientScreenError,
@@ -40,8 +38,10 @@ import { RnOverviewBody, type RnBrandMatrixRead } from "./_components/overview-b
 
 // Renewal Overview (2026-10-20) — the redesigned /dashboard, served side by side with the original.
 // Data: the SAME overview screens as /dashboard/page.tsx (back/bff/screens/overview.py), plus the
-// renewal-only parts (ctx.view=renewal competitor standing, overview/brand-matrix); only the
-// presentation and the filter panel (instant apply + saved filters) differ.
+// renewal-only brand table (overview/brand-matrix); only the presentation and the filter panel (instant
+// apply + saved filters) differ. The cards' competitor rows (overview/card-competitors) are not read: the
+// brand table shows the competitors (2026-11-05: the card's '비교 브랜드 N개 중 M위', the last part that
+// read them, said what the table's column head says).
 export const maxDuration = 120;
 
 type SP = Record<string, string | string[] | undefined>;
@@ -165,9 +165,6 @@ function bodyReads(sp: SP, locale: string, showGeo: boolean) {
   return {
     cards: handled(screenGet<CardsView>("overview/cards", q)),
     trend: handled(onTransient(screenGet<CardTrendView>("overview/card-trend", q), DEGRADED_CARD_TREND)),
-    competitors: handled(
-      onTransient(screenGet<CardCompetitorsView>("overview/card-competitors", { ...q, "ctx.view": "renewal" }), DEGRADED_CARD_COMPETITORS),
-    ),
     // a transient failure is "failed", not null (= no answers): the card says it failed (review ⚠️ #31)
     matrix: handled(onTransient(screenGet<RnBrandMatrixRead>("overview/brand-matrix", q), "failed")),
     geo: showGeo
@@ -184,7 +181,7 @@ type BodyReads = ReturnType<typeof bodyReads>;
 async function OverviewSection({ reads, locale, qs }: { reads: BodyReads; locale: string; qs: string }) {
   const t = await getTranslations("dashboard");
   const tKpi = await getTranslations("answerAnalysis.mentions.kpi");
-  const { trend, competitors, matrix, geo } = reads;
+  const { trend, matrix, geo } = reads;
   let view: CardsView;
   try {
     view = await reads.cards;
@@ -205,15 +202,12 @@ async function OverviewSection({ reads, locale, qs }: { reads: BodyReads; locale
       <RnOverviewBody
         cards={view.cards}
         compareTitle={view.compareTitle}
-        deferred={{ trend, competitors, matrix }}
+        deferred={{ trend, matrix }}
         geo={geo}
         qs={qs}
       />
       <Suspense fallback={null}>
         <DegradeNote wait={trend.then((v) => v.degraded)} title={t("trend.title")} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <DegradeNote wait={competitors.then((v) => v.degraded.length > 0)} title={t("summary.label")} />
       </Suspense>
       {geo ? (
         <Suspense fallback={null}>

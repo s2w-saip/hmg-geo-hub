@@ -79,8 +79,6 @@ export interface SparkView {
 export interface CardTrendView {
   degraded: boolean;
   cards: Record<OverviewKpiKey, { delta: number | null; spark: SparkView }>;
-  /** Rounds drawn by the sparklines (renewal "최근 N회차"). */
-  count: number;
 }
 
 export interface CompetitorMiniView {
@@ -99,8 +97,6 @@ export interface CardCompetitorsView {
   /** Old degrade labels of the parts that failed transiently (empty = none). */
   degraded: string[];
   rows: Record<OverviewKpiKey, CompetitorMiniView[]>;
-  /** Renewal only: 당사's place among the card's competitors. */
-  standing?: Record<OverviewKpiKey, StandingView | null>;
 }
 
 interface GeoRowView extends MarketCompetition {
@@ -143,10 +139,12 @@ export interface OverviewGeoView {
 
 export interface BrandCellView {
   value: number | null;
-  delta: number | null;
   bar: number;
   best: boolean;
-  deltaMark: { r: number; tone: "flat" | "good" | "bad" | "neutral" } | null;
+  /** A rival's Δ (null in a period); absent on 당사's row — the KPI cards show its Δ (2026-11-05). */
+  delta?: number | null;
+  /** The rival's Δ mark: rounded, 0 = flat, else neutral (a rival's move is not good or bad in itself). */
+  deltaMark?: { r: number; tone: "flat" | "neutral" } | null;
 }
 
 /** overview/brand-matrix (renewal) — null when the cards are empty. */

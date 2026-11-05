@@ -209,16 +209,14 @@ class Helpers(unittest.TestCase):
         self.assertEqual(ov.own_label_of({}), "HMG")
 
     def test_delta_mark(self):
-        self.assertIsNone(ov.delta_mark("visibility", None))
-        self.assertEqual(ov.delta_mark("visibility", 0.04), {"r": 0, "tone": "flat"})
-        self.assertEqual(ov.delta_mark("visibility", -0.05), {"r": 0, "tone": "flat"})  # Math.round(-0.5) = -0
-        self.assertEqual(ov.delta_mark("visibility", 0.05), {"r": 0.1, "tone": "good"})
-        self.assertEqual(ov.delta_mark("position", 0.25), {"r": 0.3, "tone": "bad"})
-        self.assertEqual(ov.delta_mark("position", -1.25), {"r": -1.2, "tone": "good"})
-        # 2026-11-02 premise review: a rival's move is not good or bad in itself, the arrow alone tells it
-        self.assertEqual(ov.delta_mark("visibility", 0.5, own=False), {"r": 0.5, "tone": "neutral"})
-        self.assertEqual(ov.delta_mark("position", 0.25, own=False), {"r": 0.3, "tone": "neutral"})
-        self.assertEqual(ov.delta_mark("visibility", 0.04, own=False), {"r": 0, "tone": "flat"})
+        # a rival's Δ (2026-11-02 premise review: its move is not good or bad in itself, the arrow alone tells it);
+        # 당사's row has none since 2026-11-05 (the KPI cards show it)
+        self.assertIsNone(ov.delta_mark(None))
+        self.assertEqual(ov.delta_mark(0.04), {"r": 0, "tone": "flat"})
+        self.assertEqual(ov.delta_mark(-0.05), {"r": 0, "tone": "flat"})  # Math.round(-0.5) = -0
+        self.assertEqual(ov.delta_mark(0.5), {"r": 0.5, "tone": "neutral"})
+        self.assertEqual(ov.delta_mark(0.25), {"r": 0.3, "tone": "neutral"})
+        self.assertEqual(ov.delta_mark(-1.25), {"r": -1.2, "tone": "neutral"})
 
     def test_tile_goodness(self):
         self.assertEqual([ov.goodness(d, b) for d in ("up", "down", "flat") for b in ("higher", "lower")],
@@ -281,9 +279,9 @@ class CompetitorCitations(unittest.TestCase):
 
 class BrandMatrixFailures(unittest.TestCase):
     """Gold metric review ⚠️ Overview #31 #32 (2026-10-29): the brand table dropped what failed — a competitor read
-    that failed left 당사 alone under "경쟁사 값을 제공하지 않는 지표입니다", a failed trend left the Δ out without a
-    word. The table names the parts that failed (the old degrade labels); a failed summary is raised, so the page
-    shows the table's failure instead of no table."""
+    that failed left 당사 alone under "경쟁사 값을 제공하지 않는 지표입니다". The table names the parts that failed
+    (the old degrade labels); a failed summary is raised, so the page shows the table's failure instead of no table.
+    (A failed trend was named too while 당사's row had a Δ; it reads no trend since 2026-11-05.)"""
 
     BODIES = {"kpi/summary": summary(), "mentions/brands": {"data": {"brands": []}, "meta": META},
               "trend": {"data": {"bucket": "cycle", "dimension": "none", "own_label": "HMG", "buckets": [], "series": []},
@@ -304,8 +302,7 @@ class BrandMatrixFailures(unittest.TestCase):
         cases = [({"mentions/brands": 503}, ["standardMentions"]),
                  ({"brand-trend": 503}, ["brandTrend", "firstPosition"]),
                  ({"citations/domains": 503}, ["standardCitationDomains"]),
-                 ({"trend": 503}, ["standardTrend:day"]),
-                 ({"mentions/brands": 503, "trend": 503}, ["standardMentions", "standardTrend:day"])]
+                 ({"mentions/brands": 503, "citations/domains": 503}, ["standardMentions", "standardCitationDomains"])]
         for fail, labels in cases:
             with self.subTest(fail=fail):
                 out = self.matrix(fail)
@@ -427,22 +424,47 @@ def compare_body(cycles: dict) -> dict:
     return {"data": [compare_item(m, u, cycles.get(m, (3, 3))) for m, u in units.items()], "meta": META}
 
 
-class BrandMatrixPeriodDelta(unittest.TestCase):
-    """Global score sheet (2026-11-02): with 2026-09 picked, 인용 점유율 read +2.6 on the card chip (the month before) and
-    −2.7 in the brand table (the last two rounds). A Δ next to a period total compares it with the period before."""
+class BrandMatrixOwnRow(unittest.TestCase):
+    """2026-11-05 Global 지표 정리: 당사's Δ in the brand table was the KPI card's (17 of 17 reads the same; the period Δ
+    since the 2026-11-02 score sheet). The row keeps its values and drops the Δ, so the table reads no trend and no
+    compare; a rival keeps its last-round Δ, and in a period it has none (no period Δ for rivals)."""
 
-    def test_the_own_row_takes_the_compare_the_chip_shows(self):
-        bodies = {**BrandMatrixFailures.BODIES, "kpi/compare": compare_body({})}
-        out = screen("overview/brand-matrix", "time=2026-09-01..2026-09-30", Router(bodies))
-        own = out["rows"][0]["cells"]
-        self.assertEqual(own["citationShare"]["delta"], 10.0)
-        self.assertEqual(own["visibility"]["delta"], 10.0)
+    RIVALS = {"data": {"brands": [{"name": "BMW", "mentions": 40, "share": {"num": 40, "den": 200},
+                                   "exposure": {"num": 30, "den": 100}, "avg_rank": None, "is_own": False,
+                                   "is_hmg_own": False,
+                                   "sentiment": {"positive": 1, "neutral": 1, "negative": 0, "mixed": 0}}]}, "meta": META}
 
-    def test_a_suppressed_compare_leaves_no_delta(self):
-        body = compare_body({})
-        body = {**body, "data": [{**i, "suppressed": True, "reason": "no_prev"} for i in body["data"]]}
-        out = screen("overview/brand-matrix", "time=2026-09-01..2026-09-30", Router({**BrandMatrixFailures.BODIES, "kpi/compare": body}))
-        self.assertIsNone(out["rows"][0]["cells"]["citationShare"]["delta"])
+    def matrix(self, qs: str):
+        router = Router({**BrandMatrixFailures.BODIES, "mentions/brands": self.RIVALS})
+        out = screen("overview/brand-matrix", qs, router)
+        # the reads by path; the competitor reads' brand trend (dimension=brand) is "brand-trend"
+        return out, ["brand-trend" if p == "trend" and dict(q).get("dimension") == "brand" else p for p, q in router.calls]
+
+    def test_the_own_row_has_values_and_no_delta(self):
+        for qs in ("", "time=2026-09-01..2026-09-30"):
+            with self.subTest(qs=qs):
+                out, paths = self.matrix(qs)
+                own = out["rows"][0]
+                self.assertTrue(own["own"])
+                for k, cell in own["cells"].items():
+                    self.assertEqual(sorted(cell), ["bar", "best", "value"], k)
+                self.assertEqual(own["cells"]["visibility"]["value"], ov.overview_card_state(
+                    {k["key"]: k for k in ov.to_mirror_kpis(summary()["data"], META)}["visibility"])["value"])
+                self.assertNotIn("trend", paths)
+                self.assertNotIn("kpi/compare", paths)
+
+    def test_a_rival_keeps_its_delta_mark_and_a_period_has_none(self):
+        out, _ = self.matrix("")
+        rival = [r for r in out["rows"] if not r["own"]]
+        self.assertTrue(rival)
+        cell = next(c for c in rival[0]["cells"].values() if c is not None)
+        self.assertIn("deltaMark", cell)
+        out, _ = self.matrix("time=2026-09-01..2026-09-30")
+        for r in out["rows"][1:]:
+            for c in r["cells"].values():
+                if c is not None:
+                    self.assertIsNone(c["delta"])
+                    self.assertIsNone(c["deltaMark"])
 
 
 class GeoRivalCitation(unittest.TestCase):

@@ -37,6 +37,7 @@ export function GeoMapLazy({
   domain,
   activeCountry,
   onCountryHover,
+  rankOnShare,
 }: {
   geo: GeoView;
   metric?: OverviewKpiKey;
@@ -46,6 +47,7 @@ export function GeoMapLazy({
   domain?: readonly [number, number];
   activeCountry?: string | null;
   onCountryHover?: (code: string | null) => void;
+  rankOnShare?: boolean;
 }) {
-  return <GeoMap geo={geo} metric={metric} metricLabel={metricLabel} bare={bare} level={level} domain={domain} activeCountry={activeCountry} onCountryHover={onCountryHover} />;
+  return <GeoMap geo={geo} metric={metric} metricLabel={metricLabel} bare={bare} level={level} domain={domain} activeCountry={activeCountry} onCountryHover={onCountryHover} rankOnShare={rankOnShare} />;
 }

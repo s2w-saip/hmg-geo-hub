@@ -45,9 +45,7 @@ vi.mock("@/lib/screen", () => ({
       case "overview/cards":
         return Promise.resolve(st.cards ?? { state: "ok", cards: [{ key: "visibility" }], compareTitle: null });
       case "overview/card-trend":
-        return Promise.resolve({ degraded: false, cards: {}, count: 1 });
-      case "overview/card-competitors":
-        return Promise.resolve({ degraded: [], rows: {}, standing: {} });
+        return Promise.resolve({ degraded: false, cards: {} });
       case "overview/geo":
         return Promise.resolve({ geo: null, degraded: false });
       case "overview/brand-matrix":
@@ -62,7 +60,9 @@ vi.mock("@/lib/screen", () => ({
 const Page = (await import("./page")).default;
 
 const SERVER_SECTIONS = new Set(["RenewalOverview", "OverviewSection"]);
-const BODY_SCREENS = ["overview/cards", "overview/card-trend", "overview/card-competitors", "overview/brand-matrix", "overview/geo"];
+// 2026-11-05: overview/card-competitors is not read — the brand table shows the competitors (the card's standing line,
+// the last part that read them, is gone)
+const BODY_SCREENS = ["overview/cards", "overview/card-trend", "overview/brand-matrix", "overview/geo"];
 
 /** Walk the tree, resolving the page's own server sections; collect client component props by name. */
 async function collect(node: unknown): Promise<Map<string, Record<string, unknown>>> {
@@ -112,12 +112,11 @@ describe("renewal overview page", () => {
     for (const c of st.calls) counts[c.name] = (counts[c.name] ?? 0) + 1;
     expect(counts).toEqual({ "overview/as-of": 1, "overview/filters": 1, ...Object.fromEntries(BODY_SCREENS.map((n) => [n, 1])) });
     const query = (name: string) => st.calls.find((c) => c.name === name)!.query;
-    expect(query("overview/card-competitors")).toEqual({ geography: "US", "ctx.view": "renewal" });
     expect(query("overview/geo")).toEqual({ geography: "US", "ctx.locale": "ko" });
     const body = got.get("RnOverviewBody")!;
     expect(body.cards).toEqual([{ key: "visibility" }]);
     const deferred = body.deferred as Record<string, Promise<unknown>>;
-    expect(await deferred.trend).toEqual({ degraded: false, cards: {}, count: 1 });
+    expect(await deferred.trend).toEqual({ degraded: false, cards: {} });
     expect(await deferred.matrix).toEqual({ screen: "overview/brand-matrix" });
     expect(await (body.geo as Promise<unknown>)).toEqual({ geo: null, degraded: false });
     expect(st.savedPages).toEqual(["overview"]);

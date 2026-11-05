@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,8 @@ import type { CompetitorBrandValue } from "@/lib/scope/result-adapter";
 const Cards = ({ kpis, trend, brands, locale, qs }: { kpis: KpiSummary[]; trend: LiveTrend | null; brands: CompetitorBrandValue[]; locale: string; qs?: string }) => (
   <OverviewKpiCards cards={cardsOf(kpis)} locale={locale} qs={qs} deferred={{ trend: done(trendOf(kpis, trend)), competitors: done(competitorsOf(brands)) }} />
 );
+import { GeoTooltip } from "./geo-map";
+import type { OverviewKpiKey } from "../_data/overview-metrics";
 import {
   GeoOverview,
   countryMenuAllChecked,
@@ -26,7 +28,11 @@ import {
   toggleSingleCountry,
 } from "./geo-overview";
 
-// 지도는 dynamic(ssr:false) — 정적 렌더에서는 로딩 자리표시자만 나온다.
+// 지도는 dynamic(ssr:false) — 정적 렌더에서는 로딩 자리표시자만 나온다. 여기서는 지도 대신 받은 prop 만 적는 표지를
+// 그린다(GeoOverview 가 지도에 넘기는 것을 보려고; 툴팁 자체는 GeoTooltip 으로 직접 렌더).
+vi.mock("./geo-map-lazy", () => ({
+  GeoMapLazy: (p: { metric?: string; rankOnShare?: boolean }) => <i data-geo-map-lazy={p.metric} data-rank-on-share={String(Boolean(p.rankOnShare))} />,
+}));
 
 const kpi = (key: KpiSummary["key"], value: number | null, delta: number | null): KpiSummary => ({
   key, value, delta, direction: delta == null || delta === 0 ? "flat" : delta > 0 ? "up" : "down",
@@ -143,6 +149,28 @@ describe("GeoOverview", () => {
   it("explains the brand requirement when there are no markets", () => {
     const html = render(<GeoOverview geo={geoViewOf({ ourLabel: "HMG", pending: [], markets: [] })} />);
     expect(html).toContain(ko.dashboard.overview.geo.brandRequired);
+  });
+});
+
+// 2026-11-05 Global 지표 정리: the tooltip's #N is 당사's rank by mentions (rank.our); on the 노출률 · 우호도 · 우선 노출도 ·
+// 인용 점유율 tabs it read as that KPI's rank. The renewal Overview shows it on the share tab only (with its 선두 and
+// 최대 경쟁 lines); the original screen keeps it on every tab.
+describe("map tooltip rank badge", () => {
+  const geo = geoViewOf(GEO);
+  const datum = { market: geo.markets[0].countries[0], label: "Germany", code: "DE" };
+  const KEYS: OverviewKpiKey[] = ["visibility", "shareOfVoice", "sentiment", "position", "citationShare"];
+  const badge = (metric: OverviewKpiKey, rankOnShare?: boolean) =>
+    /<span[^>]*>#(<!-- -->)?1<\/span>/.test(render(<GeoTooltip datum={datum} ourLabel="HMG" metric={metric} rankOnShare={rankOnShare} x={0} y={0} />));
+
+  it("the original map shows it on every KPI", () => {
+    expect(KEYS.map((k) => badge(k))).toEqual([true, true, true, true, true]);
+  });
+  it("with rankOnShare only the share KPI shows it", () => {
+    expect(KEYS.map((k) => badge(k, true))).toEqual([false, true, false, false, false]);
+  });
+  it("GeoOverview asks for it on the renewal screen only", () => {
+    expect(render(<GeoOverview geo={geo} renewal />)).toContain('data-rank-on-share="true"');
+    expect(render(<GeoOverview geo={geo} />)).toContain('data-rank-on-share="false"');
   });
 });
 
