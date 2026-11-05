@@ -146,6 +146,17 @@ class Rules(unittest.TestCase):
         self.assertEqual(self.refused_fields(role="country", regions=["genesis-asia-pacific"]), ["countries"])
         self.assertEqual(self.refused_fields(role="country", regions=["genesis-asia-pacific"], countries=["DE"]), ["countries"])
 
+    def test_a_region_or_country_account_has_one_brand(self):
+        # 결정 기록 '범위 교차' (2026-11-02): the scope is stored flat, so two brands would cross ('Hyundai 유럽 + Kia 북미'
+        # would read Hyundai US and Kia DE). HQ keeps several brands.
+        self.assertEqual(self.scope(brands=["Hyundai", "Kia"]), ("hq", ["Hyundai", "Kia"], [], []))
+        self.assertEqual(self.refused_fields(role="region", brands=["Hyundai", "Kia"], regions=["hyundai-europe", "kia-north-america"]),
+                         ["brands"])
+        self.assertEqual(self.refused_fields(role="country", brands=["Hyundai", "Kia"], regions=["hyundai-europe", "kia-north-america"],
+                                             countries=["DE", "US"]), ["brands"])
+        self.assertEqual(self.scope(role="region", brands=["kia", "Kia"], regions=["kia-north-america"]),
+                         ("region", ["Kia"], ["kia-north-america"], []))
+
     def test_an_account_manages_only_the_roles_below_its_own(self):
         below = lambda role: [r for r in (*acc.ROLES, None) if acc.below(r, role)]   # noqa: E731
         self.assertEqual(below("admin"), ["hq", "region", "country", None])

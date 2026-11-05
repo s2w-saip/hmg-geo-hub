@@ -60,6 +60,8 @@ DO $$ BEGIN
        RAISE EXCEPTION 'Region account without a region'; EXCEPTION WHEN check_violation THEN NULL; END;
  BEGIN UPDATE system.global_role SET role='admin' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
        RAISE EXCEPTION 'Administrator with a narrowed scope'; EXCEPTION WHEN check_violation THEN NULL; END;
+ BEGIN UPDATE system.global_role SET brands='{Genesis,Kia}',regions='{genesis-asia-pacific,kia-africa}' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+       RAISE EXCEPTION 'Region account with two brands'; EXCEPTION WHEN check_violation THEN NULL; END;
  BEGIN INSERT INTO system.global_role(user_id,role) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','viewer');
        RAISE EXCEPTION 'Unknown role allowed'; EXCEPTION WHEN unique_violation OR check_violation THEN NULL; END;
  BEGIN INSERT INTO system.user_account(user_id,subject) VALUES(gen_random_uuid(),'ROLLBACK-ONLY ACCOUNT FIXTURE');

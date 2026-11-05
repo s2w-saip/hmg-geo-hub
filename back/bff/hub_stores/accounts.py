@@ -130,7 +130,9 @@ def region_brand(region: str) -> str:
 def scope_of(body: AccountFields) -> tuple[str, list[str], list[str], list[str]]:
     """role, brands, regions, countries as stored: a role keeps the axes it uses (admin none, hq brands, region
     brands and regions, country all three) and needs each of them; regions belong to the chosen brands and
-    countries to the chosen regions (the screen's brand > region > country cascade)."""
+    countries to the chosen regions (the screen's brand > region > country cascade). A region or country account
+    has one brand: the scope is stored and applied flat (brands × countries), so 'Hyundai Europe + Kia North
+    America' would also read Hyundai US and Kia DE (결정 기록 '범위 교차', 2026-11-02); HQ keeps several."""
     role = body.role
     if role not in ROLES:
         raise invalid("Unknown role", "role")
@@ -142,6 +144,8 @@ def scope_of(body: AccountFields) -> tuple[str, list[str], list[str], list[str]]
         raise invalid("Choose the account's brands", "brands")
     if role == "hq":
         return role, brands, [], []
+    if len(brands) != 1:
+        raise invalid("A region or country account has one brand", "brands")
     regions = list(dict.fromkeys(body.regions))
     if not regions or any(r not in RHQ_REGION_COUNTRIES or region_brand(r) not in brands for r in regions):
         raise invalid("Choose regions of the account's brands", "regions")

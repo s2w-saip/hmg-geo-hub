@@ -179,8 +179,8 @@ def operations() -> Figure:
     f.table("system.global_role", 16, 236, 250, "계정의 역할과 열람 범위다. 행이 없으면 로그인할 수 없다.", [
         ("PK FK", "user_id", "uuid"), ("", "role", "=admin|hq|region|country"), ("", "brands", "text[]"),
         ("", "regions", "text[] RHQ id"), ("", "countries", "text[] ISO"), ("", "granted_at", "timestamptz"),
-        ("", "updated_at", "timestamptz")], notes=["admin 빈 값 · hq 브랜드만", "region +권역 · country +국가"])
-    f.table("system.schema_migration", 16, 510, 250, "이 DB에 적용한 마이그레이션 파일과 체크섬을 기록한다.", [
+        ("", "updated_at", "timestamptz")], notes=["admin 빈 값 · hq 브랜드만", "region +권역 · country +국가", "region · country 브랜드는 하나"])
+    f.table("system.schema_migration", 16, 530, 250, "이 DB에 적용한 마이그레이션 파일과 체크섬을 기록한다.", [
         ("PK", "version", "text"), ("", "sha256", "text"), ("", "applied_at", "timestamptz")])
     f.table("system.project_setting_version", 616, 236, 270, "프로젝트 SW 설정을 바꿀 때마다 새 버전 행을 쌓는다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "settings", "jsonb"),

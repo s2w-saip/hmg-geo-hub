@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactElement } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
-import { draftOf, missingFields, toBody, type HubAccount, type HubRole } from "./hub-accounts-api";
+import { draftOf, missingFields, toBody, withRole, type HubAccount, type HubRole } from "./hub-accounts-api";
 import { DEFAULT_FILTER, filterToQuery, matches, queryToFilter, sortAccounts, stateOf } from "./hub-account-filter-model";
 
 // Admin › 사용자 관리 (2026-10-29): the list as first rendered, its filter model, and the form's role-driven scope.
@@ -135,5 +135,26 @@ describe("account form", () => {
     expect(missingFields({ ...draftOf(null), login: "a b" }, true)).toEqual(["login", "brands", "regions", "countries"]);
     expect(missingFields({ ...draftOf(null), login: "kim", role: "admin" }, true)).toEqual([]);
     expect(missingFields({ ...draftOf(COUNTRY), email: "x" }, false)).toEqual(["email"]);
+  });
+
+  // 결정 기록 '범위 교차' (2026-11-02): the scope is stored flat, so a region or country account has one brand; HQ several.
+  it("gives a region or country account one brand, an HQ account several", () => {
+    const country = html(<HubAccountForm item={COUNTRY} roles={ROLES} onSaved={() => {}} onCancel={() => {}} />);
+    const brands = (markup: string) => markup.slice(markup.indexOf("data-hub-account-brands"), markup.indexOf("data-hub-account-brands") + 1500);
+    expect(country).toMatch(/role="radiogroup"[^>]*data-hub-account-brands/);
+    expect(brands(country)).toContain('role="radio"');
+    expect(brands(country)).not.toContain('role="checkbox"');
+    const hq = html(<HubAccountForm item={{ ...HQ, status: "active" }} roles={ROLES} onSaved={() => {}} onCancel={() => {}} />);
+    expect(hq).toMatch(/role="group"[^>]*data-hub-account-brands/);
+    expect(brands(hq)).toContain('role="checkbox"');
+    const two = { ...draftOf(COUNTRY), brands: ["Hyundai", "Kia"], regions: ["hyundai-europe", "kia-north-america"], countries: ["DE", "US"] };
+    expect(missingFields(two, false)).toEqual(["brands"]);
+    expect(missingFields({ ...two, role: "region" }, false)).toEqual(["brands"]);
+    expect(missingFields({ ...two, role: "hq" }, false)).toEqual([]);
+    // turning an HQ account of several brands into a region one leaves the brand to choose; one brand stays
+    const hqTwo = { ...draftOf(HQ), brands: ["Hyundai", "Kia"] };
+    expect(withRole(hqTwo, "region").brands).toEqual([]);
+    expect(withRole(draftOf(HQ), "country").brands).toEqual(["Genesis"]);
+    expect(withRole(hqTwo, "hq").brands).toEqual(["Hyundai", "Kia"]);
   });
 });

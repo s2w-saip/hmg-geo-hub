@@ -178,8 +178,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · BFF <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: BFF 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
-    <code>back/hub_storage/data-002~011.sql</code>, <code>operations-001~004.sql</code></p>
+  <p class="asof">마지막 갱신 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · BFF <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: BFF 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+    <code>back/hub_storage/data-002~011.sql</code>, <code>operations-001~005.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
     <div><dt>DB</dt><dd>Gold(외부) · 데이터 DB · 운영 DB</dd></div>
@@ -773,7 +773,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <section id="erd-ops" aria-labelledby="h-erd-ops">
   <h2 id="h-erd-ops">HUB 운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_operations</span></h2>
   <p class="sub prose">스키마는 <code>system</code> 하나다. 사용자·권한·설정·감사와 계정별 저장한 필터를 갖고, 프로젝트는 데이터 DB의 UUID를 참조만 한다.
-    근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>, <code>operations-003.sql</code>, <code>operations-004.sql</code>.</p>
+    근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>, <code>operations-003.sql</code>, <code>operations-004.sql</code>, <code>operations-005.sql</code>.</p>
   <figure>
     <div class="scroll">
       <!-- erd:ops -->
@@ -836,7 +836,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="256" y="167" text-anchor="end">timestamptz</text>
 <text class="m" x="64" y="185">must_change</text>
 <text class="m sm ty" x="256" y="185" text-anchor="end">boolean</text>
-<rect class="tbox" x="16" y="236" width="250" height="248" rx="6"/>
+<rect class="tbox" x="16" y="236" width="250" height="266" rx="6"/>
 <path class="th" d="M16,266V242q0,-6 6,-6H260q6,0 6,6V266z"/>
 <line class="rule" x1="16" y1="266" x2="266" y2="266"/>
 <line class="hair" x1="28" y1="308" x2="254" y2="308"/>
@@ -860,20 +860,21 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="256" y="435" text-anchor="end">timestamptz</text>
 <text class="mu sm" x="28" y="453">admin 빈 값 · hq 브랜드만</text>
 <text class="mu sm" x="28" y="471">region +권역 · country +국가</text>
-<rect class="tbox" x="16" y="510" width="250" height="140" rx="6"/>
-<path class="th" d="M16,540V516q0,-6 6,-6H260q6,0 6,6V540z"/>
-<line class="rule" x1="16" y1="540" x2="266" y2="540"/>
-<line class="hair" x1="28" y1="582" x2="254" y2="582"/>
-<text class="m b" x="28" y="530"><tspan class="tsch">system.</tspan>schema_migration</text>
-<text class="desc" x="28" y="557">이 DB에 적용한 마이그레이션 파일과</text>
-<text class="desc" x="28" y="573">체크섬을 기록한다.</text>
-<text class="kb pk" x="26" y="601">PK</text>
-<text class="m" x="64" y="601">version</text>
-<text class="m sm ty" x="256" y="601" text-anchor="end">text</text>
-<text class="m" x="64" y="619">sha256</text>
-<text class="m sm ty" x="256" y="619" text-anchor="end">text</text>
-<text class="m" x="64" y="637">applied_at</text>
-<text class="m sm ty" x="256" y="637" text-anchor="end">timestamptz</text>
+<text class="mu sm" x="28" y="489">region · country 브랜드는 하나</text>
+<rect class="tbox" x="16" y="530" width="250" height="140" rx="6"/>
+<path class="th" d="M16,560V536q0,-6 6,-6H260q6,0 6,6V560z"/>
+<line class="rule" x1="16" y1="560" x2="266" y2="560"/>
+<line class="hair" x1="28" y1="602" x2="254" y2="602"/>
+<text class="m b" x="28" y="550"><tspan class="tsch">system.</tspan>schema_migration</text>
+<text class="desc" x="28" y="577">이 DB에 적용한 마이그레이션 파일과</text>
+<text class="desc" x="28" y="593">체크섬을 기록한다.</text>
+<text class="kb pk" x="26" y="621">PK</text>
+<text class="m" x="64" y="621">version</text>
+<text class="m sm ty" x="256" y="621" text-anchor="end">text</text>
+<text class="m" x="64" y="639">sha256</text>
+<text class="m sm ty" x="256" y="639" text-anchor="end">text</text>
+<text class="m" x="64" y="657">applied_at</text>
+<text class="m sm ty" x="256" y="657" text-anchor="end">timestamptz</text>
 <rect class="tbox" x="616" y="236" width="270" height="176" rx="6"/>
 <path class="th" d="M616,266V242q0,-6 6,-6H880q6,0 6,6V266z"/>
 <line class="rule" x1="616" y1="266" x2="886" y2="266"/>
@@ -1007,7 +1008,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         반대로 데이터 DB <code>catalog.prompt_version.recorded_by</code>가 <code>user_account.user_id</code>를 가리킨다(FK 없음).
         뷰 <code>system.current_project_setting</code>은 프로젝트별 최신 설정 버전이다.
         <code>saved_filter</code>는 계정·화면(<code>page</code>)마다의 저장한 필터이고, <code>query</code>는 화면의 필터 쿼리 문자열을 그대로 담는다.
-        <code>global_role</code>은 계정의 역할과 열람 범위(브랜드·RHQ 권역·ISO 국가)이고, 역할이 쓰는 축에만 값을 둔다는 것을 CHECK가 지킨다.</p>
+        <code>global_role</code>은 계정의 역할과 열람 범위(브랜드·RHQ 권역·ISO 국가)이고, 역할이 쓰는 축에만 값을 둔다는 것과 권역 · 국가 계정의 브랜드가 하나라는 것을 CHECK가 지킨다(범위를 평면으로 두고 적용하므로 두 브랜드면 브랜드 × 국가로 교차해 풀린다, operations-005).</p>
     </figcaption>
   </figure>
   <div class="table-wrap">

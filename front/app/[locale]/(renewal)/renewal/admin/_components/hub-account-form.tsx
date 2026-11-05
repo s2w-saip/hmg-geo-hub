@@ -3,7 +3,8 @@
 // Admin › 사용자 관리 (2026-10-29): the create / edit form of one account, in the sheet. The scope follows the role
 // (admin none, hq brands, region + RHQ regions, country + countries) as a brand > region > country cascade: the
 // regions offered are the chosen brands', the countries the chosen regions'; narrowing an upper axis drops the
-// lower picks it no longer covers. The login ID is set once. The roles offered are those below the signed-in
+// lower picks it no longer covers. A region or country account picks one brand (radios), HQ several (oneBrand). The
+// login ID is set once. The roles offered are those below the signed-in
 // account's own (the BFF's list; it refuses the others too), so no administrator is made here.
 
 import { useMemo, useState, type FormEvent } from "react";
@@ -20,6 +21,8 @@ import {
   axesOf,
   draftOf,
   missingFields,
+  oneBrand,
+  withRole,
   type AccountDraft,
   type HubAccount,
   type HubRole,
@@ -72,6 +75,7 @@ export function HubAccountForm({
   const [q, setQ] = useState("");
   const creating = item == null;
   const axes = axesOf(draft.role);
+  const single = oneBrand(draft.role);
   const missing = missingFields(draft, creating);
   const shown = (field: string) => tried && missing.includes(field);
   const set = (patch: Partial<AccountDraft>) => setDraft((d) => cascade({ ...d, ...patch }));
@@ -150,7 +154,7 @@ export function HubAccountForm({
       </Row>
       <Row label={t("field.role")} top>
         <div className="flex flex-col gap-1.5">
-          <RnSegmented<HubRole> label={t("field.role")} value={draft.role} onChange={(role) => set({ role })} items={roles.map((r) => ({ value: r, label: tRoles(r) }))} />
+          <RnSegmented<HubRole> label={t("field.role")} value={draft.role} onChange={(role) => setDraft((d) => cascade(withRole(d, role)))} items={roles.map((r) => ({ value: r, label: tRoles(r) }))} />
           <p className="m-0 text-rn-12 text-rn-muted" data-hub-role-hint={draft.role}>
             {t(`roleHint.${draft.role}`)}
           </p>
@@ -158,9 +162,15 @@ export function HubAccountForm({
       </Row>
       {axes.brands ? (
         <Row label={t("field.brands")} top invalid={shown("brands")}>
-          <div role="group" aria-label={t("field.brands")} className="-mx-2 flex flex-wrap gap-x-2" data-hub-account-brands="">
+          <div role={single ? "radiogroup" : "group"} aria-label={t("field.brands")} className="-mx-2 flex flex-wrap gap-x-2" data-hub-account-brands="">
             {HUB_BRANDS.map((b) => (
-              <RnCheckRow key={b} checked={draft.brands.includes(b)} label={b} onToggle={() => set({ brands: toggle(draft.brands, b) })} />
+              <RnCheckRow
+                key={b}
+                radio={single}
+                checked={draft.brands.includes(b)}
+                label={b}
+                onToggle={() => set({ brands: single ? [b] : toggle(draft.brands, b) })}
+              />
             ))}
           </div>
         </Row>

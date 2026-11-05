@@ -6571,8 +6571,8 @@
     "roleHint": {
       "admin": "Every brand, region and country, and the Admin menu (accounts · Global prompts).",
       "hq": "Every region and country of the chosen brands.",
-      "region": "The chosen regions (all their countries) of the chosen brands.",
-      "country": "The chosen countries of the chosen brands only."
+      "region": "One brand: the chosen regions (all their countries) of that brand.",
+      "country": "One brand: the chosen countries of that brand only."
     },
     "form": {
       "loginPlaceholder": "e.g. kim.hq@hmg",

@@ -78,6 +78,15 @@ export function axesOf(role: HubRole): { brands: boolean; regions: boolean; coun
   return { brands: role !== "admin", regions: role === "region" || role === "country", countries: role === "country" };
 }
 
+/** A region or country account has one brand: the scope is stored and applied flat (brands × countries), so two
+ *  brands would cross (결정 기록 '범위 교차', 2026-11-02; the BFF and the table refuse it too). HQ keeps several. */
+export const oneBrand = (role: HubRole) => role === "region" || role === "country";
+
+/** The draft under another role: several brands under a one-brand role leave the brand to choose. */
+export function withRole(d: AccountDraft, role: HubRole): AccountDraft {
+  return { ...d, role, brands: oneBrand(role) && d.brands.length > 1 ? [] : d.brands };
+}
+
 export function toBody(d: AccountDraft) {
   const axes = axesOf(d.role);
   return {
@@ -98,7 +107,7 @@ export function missingFields(d: AccountDraft, creating: boolean): string[] {
   const out: string[] = [];
   if (creating && !LOGIN_PATTERN.test(d.login.trim())) out.push("login");
   if (d.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email.trim())) out.push("email");
-  if (axes.brands && !d.brands.length) out.push("brands");
+  if (axes.brands && (!d.brands.length || (oneBrand(d.role) && d.brands.length > 1))) out.push("brands");
   if (axes.regions && !d.regions.length) out.push("regions");
   if (axes.countries && !d.countries.length) out.push("countries");
   return out;
