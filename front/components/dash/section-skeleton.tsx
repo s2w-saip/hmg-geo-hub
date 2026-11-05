@@ -8,13 +8,13 @@
 // Pure markup: no text (so no i18n) and token-only classes (no hex). Mirrors the
 // look of app/[locale]/(dash)/loading.tsx.
 
-// Placeholder blocks are filled `bg-ink-100` and sweep a lighter band across
-// themselves. They used to be `bg-card` + animate-pulse — but bg-card is white
-// and the page surface is bg-soft (#f8f8f9), so a loading route rendered as a
-// grid of empty bordered boxes with an almost imperceptible opacity throb. It
-// read as "the page is blank", not "the page is loading". The fill has to be
-// darker than the surface, and the motion has to travel.
-const BLOCK = "overflow-hidden rounded-lg border border-border bg-ink-100 animate-shimmer";
+// Placeholder blocks are filled `bg-ink-100` and pulse. They used to be `bg-card`
+// + animate-pulse — but bg-card is white and the page surface is bg-soft
+// (#f8f8f9), so a loading route rendered as a grid of empty bordered boxes with
+// an almost imperceptible opacity throb. It read as "the page is blank", not
+// "the page is loading": the fill has to be darker than the surface. The
+// gradient sweep that followed went with every gradient on 2026-11-05.
+const BLOCK = "overflow-hidden rounded-lg border border-border bg-ink-100 animate-pulse";
 
 export function KpiTilesSkeleton({ count = 5 }: { count?: number }) {
   return (

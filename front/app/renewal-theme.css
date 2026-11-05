@@ -16,7 +16,7 @@
 @theme {
   /* Point 1 = Chart - Own base: 당사 · 선택 · 링크 · primary button */
   --color-rn-navy: #1e38fa;
-  /* Chart - Own 2 · 1 · 3: pressed and dark text on a blue tint; the hero (accent card) gradient's deep end; its light start */
+  /* Chart - Own 2 · 1 · 3: pressed, dark text on a blue tint and the hero (accent card) fill; the darkest step; sibling text and bar hover */
   --color-rn-navy-900: #111f8a;
   --color-rn-navy-ink: #0b1458;
   --color-rn-navy-500: #172abc;
@@ -106,12 +106,11 @@
  * The one accent card per page (S급 테마, 2026-10-23): Overview = KPI 5종,
  * Mention · Citation · ACR = 이번 회차 요약. RnCard tone="hero" sets it;
  * parts inside read `[.rn-hero_&]` variants for their on-dark tone.
- * Chart - Own 3 → 2 → 1, not the point blue: the white/72 text on it would
- * fall to 4.3:1 (2026-11-05).
+ * Flat Chart - Own 2, not the point blue: the white/72 text on it would fall
+ * to 4.3:1. No gradient and no glass anywhere (2026-11-05).
  * ------------------------------------------------------------------------- */
 .rn-hero {
   background-color: var(--color-rn-navy-900);
-  background-image: radial-gradient(120% 140% at 0% 0%, var(--color-rn-navy-500) 0%, var(--color-rn-navy-900) 46%, var(--color-rn-navy-ink) 100%);
   box-shadow: var(--shadow-rn-hero);
   color: #fff;
 }

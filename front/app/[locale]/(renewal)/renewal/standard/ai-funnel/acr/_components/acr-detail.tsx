@@ -260,7 +260,7 @@ export function AcrModels() {
                 className={cx(
                   "grid min-h-10 items-center gap-2.5 border-b border-rn-line px-6 text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
                   MODEL_COLS,
-                  own && "bg-[linear-gradient(90deg,rgba(30,56,250,.06),rgba(30,56,250,0)_70%)]",
+                  own && st !== "on" && "bg-rn-navy-25/50",
                   st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
                 )}
               >

@@ -80,7 +80,8 @@ export function divBg(gap: number, cap: number): string {
   const pole = gap >= 0 ? DIV_MORE : DIV_LESS;
   return `rgb(${DIV_MID.map((m, i) => Math.round(m + (pole[i] - m) * t)).join(",")})`;
 }
-export const DIV_LEGEND = `linear-gradient(90deg, ${divBg(-1, 1)}, rgb(${DIV_MID.join(",")}) 50%, ${divBg(1, 1)})`;
+/** The legend bar in five flat steps (no gradient, 2026-11-05): less ← 0 → more. */
+export const DIV_LEGEND = `linear-gradient(90deg, ${divBg(-1, 1)} 0 20%, ${divBg(-0.5, 1)} 20% 40%, rgb(${DIV_MID.join(",")}) 40% 60%, ${divBg(0.5, 1)} 60% 80%, ${divBg(1, 1)} 80%)`;
 
 /** Card actions: table twin toggle (when `tableId`) + ⋯ with CSV export and a link to the section. */
 export function CitationCardActions({ tableId, section, csv }: { tableId?: string; section: string; csv: () => { name: string; rows: CsvCell[][] } }) {

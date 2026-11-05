@@ -281,23 +281,6 @@ h1, h2, h3 {
       0 1px 3px 0 rgba(16, 16, 18, 0.08),
       0 1px 2px 0 rgba(16, 16, 18, 0.04);
   }
-  /* HMG-toned gradient. Only for hero / login / occasional callouts.
-     Brand-derived, not generic blue. */
-  .gradient-brand {
-    background: linear-gradient(
-      135deg,
-      var(--color-brand-700) 0%,
-      var(--color-brand-500) 100%
-    );
-  }
-  .gradient-sand {
-    background: linear-gradient(
-      135deg,
-      var(--color-bg) 0%,
-      var(--color-bg-soft) 100%
-    );
-  }
-
   /* Page / element entry animations. Use sparingly — these are for first
      paint, not constant motion. */
   .animate-fade-in {
@@ -330,27 +313,6 @@ h1, h2, h3 {
     to   { transform: translateX(250%); }
   }
 
-  /* Shimmer for skeleton blocks. animate-pulse alone was invisible on the
-     placeholders: they were filled bg-card (white) on the near-white page
-     surface, so a route mid-load looked like a page of empty boxes rather than
-     a page loading. The sweep is what reads as "working". */
-  .animate-shimmer {
-    background-image: linear-gradient(
-      90deg,
-      transparent 0%,
-      var(--color-card) 50%,
-      transparent 100%
-    );
-    background-repeat: no-repeat;
-    background-size: 60% 100%;
-    animation: hmg-shimmer 1.6s ease-in-out infinite;
-  }
-
-  @keyframes hmg-shimmer {
-    from { background-position: -80% 0; }
-    to   { background-position: 180% 0; }
-  }
-
   /* Reduced motion: keep the signal, drop the travel. Both cues stay visible —
      they are the only indication the page is loading rather than empty. */
   @media (prefers-reduced-motion: reduce) {
@@ -359,10 +321,6 @@ h1, h2, h3 {
       transform: none;
       width: 100%;
       opacity: 0.7;
-    }
-    .animate-shimmer {
-      animation: none;
-      background-image: none;
     }
   }
 

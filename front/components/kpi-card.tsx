@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
 import { Card } from "@/components/ui/card";
@@ -44,11 +44,8 @@ export type KpiCardProps = {
   className?: string;
 };
 
-// Decorative sparkline. useId() makes the gradient id unique per instance —
-// otherwise multiple KpiCards on the same page collide on a static id and
-// only the first chart's gradient renders.
+// Decorative sparkline: a flat tint under the line (no gradients, 2026-11-05).
 function Sparkline({ data }: { data: { value: number }[] }) {
-  const gradientId = useId();
   return (
     <div className="h-10 min-w-0" aria-hidden>
       <ResponsiveContainer
@@ -57,26 +54,13 @@ function Sparkline({ data }: { data: { value: number }[] }) {
         initialDimension={{ width: 160, height: 40 }}
       >
         <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor="var(--color-brand-700)"
-                stopOpacity={0.18}
-              />
-              <stop
-                offset="100%"
-                stopColor="var(--color-brand-700)"
-                stopOpacity={0}
-              />
-            </linearGradient>
-          </defs>
           <Area
             type="monotone"
             dataKey="value"
             stroke="var(--color-brand-700)"
             strokeWidth={1.5}
-            fill={`url(#${gradientId})`}
+            fill="var(--color-brand-700)"
+            fillOpacity={0.08}
             dot={false}
             isAnimationActive={false}
           />

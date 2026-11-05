@@ -255,7 +255,7 @@ export function RnSavedFiltersSection({
     }
   };
   return (
-    <section className="border-b border-rn-line bg-[linear-gradient(var(--color-rn-navy-25),var(--color-rn-surface)_70%)] pb-2.5">
+    <section className="border-b border-rn-line bg-rn-navy-25 pb-2.5">
       <div className="flex items-center gap-2 pt-3 pr-3.5 pb-2 pl-4.5 text-rn-13 font-bold text-rn-ink">
         <Bookmark className="size-3.5" aria-hidden />
         {t("title")}

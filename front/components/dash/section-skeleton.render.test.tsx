@@ -32,7 +32,7 @@ describe("PageSkeleton", () => {
     // reading as a loading page.
     expect(html).not.toContain("bg-card");
     expect(html).toContain("bg-ink-100");
-    expect(html).toContain("animate-shimmer");
+    expect(html).toContain("animate-pulse");
   });
 
   it("defaults to the table variant when no variant is given", () => {

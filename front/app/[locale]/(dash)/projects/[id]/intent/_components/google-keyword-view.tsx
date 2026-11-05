@@ -1127,7 +1127,7 @@ function RelatedSearchPanel({
         <div className="max-h-80 overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="border-b border-border bg-muted/40 text-left text-[10px] font-semibold tracking-wide text-muted-foreground uppercase backdrop-blur">
+              <tr className="border-b border-border bg-bg-soft text-left text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
                 <th className="w-10 px-3 py-2 text-center">
                   <Checkbox checked={allChecked} onCheckedChange={onToggleAll} aria-label={t("related.selectAll")} />
                 </th>

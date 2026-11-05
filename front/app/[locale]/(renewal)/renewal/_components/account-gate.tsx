@@ -19,7 +19,7 @@ export function RnSampleVeil({ notice, className, children }: { notice?: ReactNo
       </div>
       {/* the veil is the shell's background, so the gaps between cards do not show it; it sits over the sample's sticky
           heads and bars (z ≤ 20) and under the drawers and toasts of the page */}
-      <div className="absolute inset-0 z-[25] rounded-rn-card bg-rn-canvas/55 backdrop-blur-[1px]">
+      <div className="absolute inset-0 z-[25] rounded-rn-card bg-rn-canvas/55">
         {notice ? <div className="sticky top-[16dvh] flex justify-center px-6">{notice}</div> : null}
       </div>
     </div>

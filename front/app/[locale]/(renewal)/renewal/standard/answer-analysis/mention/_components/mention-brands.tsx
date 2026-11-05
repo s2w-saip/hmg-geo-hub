@@ -646,7 +646,7 @@ function RankTable({
                     className={cx(
                       "grid min-h-10 w-full cursor-pointer items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5",
                       COLS,
-                      r.own && "bg-[linear-gradient(90deg,rgba(30,56,250,.06),rgba(30,56,250,0)_70%)]",
+                      r.own && st !== "on" && "bg-rn-navy-25/50",
                       st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
                     )}
                   >

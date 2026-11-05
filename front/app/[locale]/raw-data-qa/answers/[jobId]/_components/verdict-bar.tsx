@@ -39,7 +39,7 @@ export function VerdictBar({
   const hasIssue = Object.values(flags).includes("issue");
 
   return (
-    <div className="sticky bottom-0 z-20 border-t border-border bg-card/95 px-4 py-2 backdrop-blur">
+    <div className="sticky bottom-0 z-20 border-t border-border bg-card px-4 py-2">
       <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center gap-3">
         <Button
           onClick={onSave}

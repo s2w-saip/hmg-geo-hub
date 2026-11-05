@@ -26,7 +26,7 @@ export function QaHeader({ locale, reviewerName }: { locale: string; reviewerNam
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-border bg-card">
       <div className="mx-auto flex w-full max-w-[1600px] items-center gap-6 px-4 py-2.5">
         <span className="font-head text-sm font-semibold tracking-tight text-foreground">
           {t("title")}
