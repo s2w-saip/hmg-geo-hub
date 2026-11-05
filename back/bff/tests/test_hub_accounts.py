@@ -1,13 +1,18 @@
 """HUB accounts (Admin › 사용자 관리) and the account scope on reads: the role and scope rules, the read clamp,
-and the routes end to end through the ASGI app against in-memory account tables (no database)."""
+and the routes end to end through the ASGI app against in-memory account tables (no database). With
+HGH_ACCOUNTS_TEST_DB_URL, a HUB operations DB with 006 applied, as a role that can SET ROLE hmg_account_editor and
+hmg_operations_reader, every write runs as the editor against the real tables inside one transaction that is rolled
+back."""
+import asyncio
 import os
 import unittest
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from unittest import mock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 try:
+    import asyncpg
     from fastapi import HTTPException
     from starlette.datastructures import QueryParams
 
@@ -489,6 +494,84 @@ class Routes(unittest.TestCase):
             admin = self.token()
             for path in ("/v1/gold/projects", "/v1/screens/projects/list"):
                 self.assertEqual(run(call("GET", path, token=admin))[0], 200, path)
+
+
+DB_URL = os.environ.get("HGH_ACCOUNTS_TEST_DB_URL")
+
+
+@unittest.skipUnless(DB_URL, "HGH_ACCOUNTS_TEST_DB_URL (a HUB operations DB with 006, as a role that can SET ROLE hmg_account_editor) not set")
+class Store(unittest.TestCase):
+    """Every write as the account editor, in one transaction that is rolled back (F14: the role holds only the
+    columns the store uses and never reads a password hash)."""
+
+    def test_writes_run_as_the_editor_without_reading_a_hash(self):
+        asyncio.run(self.scenario())
+
+    async def scenario(self):
+        conn = await asyncpg.connect(DB_URL)
+        tx = conn.transaction()
+        await tx.start()
+        actor = hub_auth.Principal(user_id=None, login="manage.py", email=None, display_name=None, role="admin")
+
+        @asynccontextmanager
+        async def as_role(role):
+            await conn.execute(f"SET LOCAL ROLE {role}")
+            try:
+                yield conn
+            finally:
+                await conn.execute("RESET ROLE")
+
+        @asynccontextmanager
+        async def writing():
+            async with as_role("hmg_account_editor"):
+                await conn.execute(acc.LOCK_SQL, acc.ACCOUNT_LOCK)
+                yield conn
+
+        patches = [mock.patch.object(acc, "writing", writing),
+                   mock.patch.object(acc, "reading", lambda: as_role("hmg_operations_reader")),
+                   mock.patch.object(acc, "_pool", mock.Mock(acquire=lambda: as_role("hmg_account_editor")))]
+        for p in patches:
+            p.start()
+        try:
+            await self.accounts(conn, actor)
+        finally:
+            for p in patches:
+                p.stop()
+            await tx.rollback()
+            await conn.close()
+
+    async def hash_of(self, conn, user_id):
+        return await conn.fetchval("SELECT password_hash FROM system.user_credential WHERE user_id=$1", user_id)
+
+    async def accounts(self, conn, actor):
+        created = await acc.create(acc.AccountCreate(login="rollback-only-f14", role="hq", brands=["Kia"]), actor)
+        item, user_id = created["item"], UUID(created["item"]["id"])
+        self.assertEqual((item["role"], item["hasPassword"], item["mustChangePassword"]), ("hq", True, True))
+        self.assertTrue(passwords.verify_password(created["temporaryPassword"], await self.hash_of(conn, user_id)))
+        with self.assertRaises(HTTPException) as taken:
+            await acc.create(acc.AccountCreate(login="ROLLBACK-ONLY-F14", role="hq", brands=["Kia"]), actor)
+        self.assertEqual(taken.exception.status_code, 409)
+
+        body = acc.AccountUpdate(displayName="이름", email="f14@example.com", role="region", brands=["Kia"],
+                                 regions=["kia-africa"], expectedVersion=item["version"])
+        item = (await acc.update(user_id, body, actor))["item"]
+        self.assertEqual((item["displayName"], item["role"], item["regions"]), ("이름", "region", ["kia-africa"]))
+        self.assertEqual((await acc.set_status(user_id, "disabled", actor))["item"]["status"], "disabled")
+        self.assertEqual((await acc.set_status(user_id, "active", actor))["item"]["status"], "active")
+
+        reset = await acc.reset_password(user_id, actor)
+        self.assertTrue(passwords.verify_password(reset["temporaryPassword"], await self.hash_of(conn, user_id)))
+        await acc.signed_in(user_id)   # best effort: it logs rather than raises, so read the column back
+        self.assertIsNotNone((await acc.detail(user_id, actor))["item"]["lastSignInAt"])
+        history = [e["action"] for e in (await acc.detail(user_id, actor))["history"]]
+        self.assertEqual(history, ["account.reset_password", "account.enable", "account.disable", "account.update", "account.create"])
+
+        savepoint = conn.transaction()   # rolled back to: the refused read leaves the outer transaction usable
+        await savepoint.start()
+        await conn.execute("SET LOCAL ROLE hmg_account_editor")
+        with self.assertRaises(asyncpg.InsufficientPrivilegeError):
+            await conn.fetchval("SELECT password_hash FROM system.user_credential LIMIT 1")
+        await savepoint.rollback()
 
 
 if __name__ == "__main__":

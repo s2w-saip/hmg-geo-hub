@@ -46,16 +46,31 @@ DO $$ BEGIN
  BEGIN CREATE TABLE system.forbidden(id int); RAISE EXCEPTION 'Saved filter role can create schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 DELETE FROM system.saved_filter WHERE filter_id='ffffffff-ffff-4fff-8fff-fffffffffff3';
--- Accounts: the API's role writes the account tables and nothing else; a role's scope keeps its shape.
+-- Accounts: the API's role writes the account tables and nothing else, in the shapes bff/hub_stores/accounts.py
+-- uses; it never reads a password hash. A role's scope keeps its shape.
 SET LOCAL ROLE hmg_account_editor;
 INSERT INTO system.user_account(user_id,subject) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','rollback-only account fixture');
 INSERT INTO system.user_credential(user_id,password_hash,must_change) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','scrypt$rollback-only',true);
 INSERT INTO system.global_role(user_id,role,brands) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','hq','{Genesis}');
-UPDATE system.global_role SET role='region',regions='{genesis-asia-pacific}',updated_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
-UPDATE system.user_credential SET password_hash='scrypt$rollback-only-2',must_change=false,changed_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+INSERT INTO system.global_role(user_id,role,brands,regions,countries) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','region','{Genesis}','{genesis-asia-pacific}','{}')
+    ON CONFLICT(user_id) DO UPDATE SET role=EXCLUDED.role,brands=EXCLUDED.brands,regions=EXCLUDED.regions,countries=EXCLUDED.countries,updated_at=now();
+INSERT INTO system.user_credential(user_id,password_hash,must_change) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','scrypt$rollback-only-2',false)
+    ON CONFLICT(user_id) DO UPDATE SET password_hash='scrypt$rollback-only-2',must_change=false,changed_at=now();
 UPDATE system.user_account SET status='disabled',display_name='rollback-only',last_sign_in_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
 INSERT INTO system.audit_event(action,details) VALUES('account.rollback-only','{"user_id":"ffffffff-ffff-4fff-8fff-fffffffffff4"}');
 DO $$ BEGIN
+ PERFORM a.subject,c.user_id IS NOT NULL,c.must_change,c.changed_at,g.role,g.brands,g.regions,g.countries,g.updated_at
+    FROM system.user_account a LEFT JOIN system.user_credential c USING(user_id) LEFT JOIN system.global_role g USING(user_id);
+ BEGIN PERFORM password_hash FROM system.user_credential; RAISE EXCEPTION 'Account role reads password hashes'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN PERFORM 1 FROM system.audit_event; RAISE EXCEPTION 'Account role reads audit'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE system.global_role SET granted_at=now() WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
+       RAISE EXCEPTION 'Account role rewrites when a role was granted'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE system.global_role SET user_id=user_id; RAISE EXCEPTION 'Account role moves roles'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN UPDATE system.user_credential SET user_id=user_id; RAISE EXCEPTION 'Account role moves passwords'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO system.user_account(user_id,subject,created_at) VALUES(gen_random_uuid(),'rollback-only backdated','2000-01-01');
+       RAISE EXCEPTION 'Account role backdates accounts'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO system.audit_event(action,occurred_at) VALUES('account.rollback-only','2000-01-01');
+       RAISE EXCEPTION 'Account role backdates audit'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN UPDATE system.global_role SET regions='{}' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';
        RAISE EXCEPTION 'Region account without a region'; EXCEPTION WHEN check_violation THEN NULL; END;
  BEGIN UPDATE system.global_role SET role='admin' WHERE user_id='ffffffff-ffff-4fff-8fff-fffffffffff4';

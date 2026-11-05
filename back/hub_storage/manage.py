@@ -213,6 +213,7 @@ GRANT CONNECT ON DATABASE hmg_operations TO hmg_account_editor;
 COMMIT;""", True)
     migrate('operations-004.sql', '004_hub_accounts', True)
     migrate('operations-005.sql', '005_account_one_brand', True)
+    migrate('operations-006.sql', '006_account_editor_columns', True)
     if not DATA_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname IN ('hmg_catalog_writer','hmg_data_external'));").stdout.strip() == 't':
         raise RuntimeError('Data access roles already exist; restore .env.data-access.local rather than replacing credentials')
     data = create_secret(DATA_SECRET, {'CATALOG_WRITER_PASSWORD': None, 'DATA_EXTERNAL_PASSWORD': None})

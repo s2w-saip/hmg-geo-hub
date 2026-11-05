@@ -4,7 +4,8 @@ The top-level administrator lists, creates and changes the HUB's accounts: login
 hq · region · country) and data scope (brands, RHQ regions, countries; front lib/auth/scope-policy), disables and
 enables them, and issues a temporary password (a new account, a reset) that the account replaces at its next
 sign-in (must_change; hub_auth.change_password). Reads use the read-only operations role; writes use
-hmg_account_editor (HGH_ACCOUNT_EDITOR_DB_URL), which can touch the account tables only. Every change is an
+hmg_account_editor (HGH_ACCOUNT_EDITOR_DB_URL), which holds only the account columns used here and never reads a
+password hash (hub_storage/operations-006.sql). Every change is an
 audit_event row (account.*, details.user_id = the account), shown as the account's history.
 
 An account is never deleted: disabling it ends its sessions and keeps its history and saved filters. An account
@@ -67,8 +68,9 @@ SIGNED_IN_SQL = "UPDATE system.user_account SET last_sign_in_at=now() WHERE user
 ROLE_SQL = """INSERT INTO system.global_role(user_id,role,brands,regions,countries) VALUES($1,$2,$3,$4,$5)
     ON CONFLICT(user_id) DO UPDATE SET role=EXCLUDED.role,brands=EXCLUDED.brands,regions=EXCLUDED.regions,
     countries=EXCLUDED.countries,updated_at=now()"""
+# $2 · $3 rather than EXCLUDED: reading EXCLUDED.password_hash needs SELECT on the hash, which the editor role lacks.
 PASSWORD_SQL = """INSERT INTO system.user_credential(user_id,password_hash,must_change) VALUES($1,$2,$3)
-    ON CONFLICT(user_id) DO UPDATE SET password_hash=EXCLUDED.password_hash,must_change=EXCLUDED.must_change,changed_at=now()"""
+    ON CONFLICT(user_id) DO UPDATE SET password_hash=$2,must_change=$3,changed_at=now()"""
 AUDIT_SQL = "INSERT INTO system.audit_event(actor_id,action,details) VALUES($1,$2,$3::jsonb)"
 
 
