@@ -107,7 +107,12 @@ interface GeoRowView extends MarketCompetition {
   /** The renewal table's 브랜드 포함 column (D-12): the % of the market's answers from branded prompts; absent when the
    * screen was not asked for it or the filters pick branded / unbranded prompts. */
   brandedShare?: number | null;
+  /** The renewal rows (D-12 step 3): each KPI's counts the value is made of — the 근거 drawer's sample line. */
+  counts?: Record<OverviewKpiKey, GeoKpiCount | null>;
 }
+
+/** A KPI's counts: num / den (a rate), sum / count (the average rank). */
+export type GeoKpiCount = { num: number; den: number } | { sum: number; count: number };
 
 export interface GeoCountryView extends GeoRowView {
   code: string;

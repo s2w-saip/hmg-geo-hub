@@ -8,6 +8,7 @@ import { RnIconButton } from "./button";
  * Right-side sheet (modal dialog). Escape and the backdrop close it; focus moves into
  * it on open and back to the opener on close. Without `onClose` none of them does, nor
  * is there a close button: the sheet leaves by its own buttons (a password shown once).
+ * `wide` = the 720px sheet of the 근거 lists (design-rules: 숫자를 누르면).
  */
 export function RnDrawer({
   open,
@@ -15,6 +16,7 @@ export function RnDrawer({
   title,
   subtitle,
   closeLabel,
+  wide = false,
   children,
 }: {
   open: boolean;
@@ -22,6 +24,7 @@ export function RnDrawer({
   title: ReactNode;
   subtitle?: ReactNode;
   closeLabel: string;
+  wide?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -54,7 +57,7 @@ export function RnDrawer({
         role="dialog"
         aria-modal="true"
         tabIndex={-1}
-        className="absolute inset-y-0 right-0 flex w-[min(560px,100vw)] flex-col bg-rn-surface shadow-rn-3 outline-none"
+        className={`absolute inset-y-0 right-0 flex ${wide ? "w-[min(720px,100vw)]" : "w-[min(560px,100vw)]"} flex-col bg-rn-surface shadow-rn-3 outline-none`}
       >
         <div className="flex items-start gap-3 border-b border-rn-line px-6 pt-5 pb-4">
           <div className="min-w-0 flex-1">

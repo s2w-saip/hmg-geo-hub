@@ -1,12 +1,13 @@
 "use client";
 
 // The renewal Overview's 시장별 현황 table (2026-11-05, D-12, the user's '본 프로젝트에 개발 시작' on the fixed mockup
-// docs/design/ui/market-heatmap-mockup.html). One row per region › country with all five KPIs, the answers and the
+// the D-12 mockup, removed once built: `git show f9c0fcd:docs/design/ui/market-heatmap-mockup.html`). One row per region › country with all five KPIs, the answers and the
 // market's top rival on the picked KPI. The column heads pick the KPI (the map's and the sort's; the legacy KPI chips
 // merged into them), the same head again flips the sort. Only the picked column is drawn: its bar starts at zero (a
 // rate's own value, a rank 1번째 = full), so a small gap stays small. 권역별 keeps the region tree (regions start
 // closed); 국가 전체 lists every country in the sort order. The view lives in the URL (?mkt · mktDir · mktView).
 // 브랜드 포함 (step 2): each market's share of answers from branded prompts, so two markets are read with their prompt mix.
+// 근거 (step 3): a KPI value is a button that opens the answers behind it (geo-market-evidence.tsx).
 // The original /dashboard keeps its own table (geo-overview.tsx).
 
 import { Fragment, type ReactNode } from "react";
@@ -92,6 +93,7 @@ export function GeoMarketTable({
   countryLabel,
   activeCountry,
   onCountryHover,
+  onEvidence,
 }: {
   markets: GeoRegionView[];
   view: MarketView;
@@ -102,6 +104,8 @@ export function GeoMarketTable({
   countryLabel: (code: string) => string;
   activeCountry: string | null;
   onCountryHover: (code: string | null) => void;
+  /** a KPI value pressed: the row (a region row or a country row), the KPI and the pressed number (focus returns to it) */
+  onEvidence?: (row: GeoRegionView | GeoCountryView, kpi: OverviewKpiKey, opener: HTMLElement) => void;
 }) {
   const t = useTranslations("renewal.overview.markets");
   const tKpi = useTranslations("dashboard.kpi.name");
@@ -123,17 +127,33 @@ export function GeoMarketTable({
         {OVERVIEW_KPI_KEYS.map((k) => {
           const v = u.values[k];
           const picked = k === view.metric;
+          // the number opens its 근거 (the number stays as it is: a dotted underline and the pointer on hover)
+          const value =
+            onEvidence && v != null ? (
+              <button
+                type="button"
+                data-rn-mkt-evidence={k}
+                title={t("cellTip", { name: tKpi(k) })}
+                aria-label={`${tKpi(k)} ${fmt(k, v)} — ${t("cellTip", { name: tKpi(k) })}`}
+                onClick={(e) => onEvidence(u, k, e.currentTarget)}
+                className="cursor-pointer rounded-[3px] decoration-dotted underline-offset-[3px] hover:underline focus-visible:outline-2 focus-visible:outline-rn-navy"
+              >
+                {fmt(k, v)}
+              </button>
+            ) : (
+              fmt(k, v)
+            );
           return (
             <td key={k} data-rn-mkt-cell={k} className={cx("border-b border-rn-line px-2 text-right tabular-nums", picked ? "font-bold text-rn-ink" : region ? "font-semibold text-rn-ink-2" : "text-rn-ink-2")}>
               {picked ? (
                 <span className="inline-flex items-center justify-end gap-1.5">
-                  {fmt(k, v)}
+                  {value}
                   <span className="inline-block h-[5px] w-11 shrink-0 overflow-hidden rounded-[2px] bg-rn-page">
                     <i className="block h-full rounded-[2px] bg-rn-navy" style={{ width: `${marketBarPct(k, v).toFixed(1)}%` }} />
                   </span>
                 </span>
               ) : (
-                fmt(k, v)
+                value
               )}
             </td>
           );

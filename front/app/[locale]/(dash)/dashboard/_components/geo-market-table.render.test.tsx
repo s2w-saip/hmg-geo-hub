@@ -17,13 +17,19 @@ import {
   sortMarketRows,
   type MarketView,
 } from "./geo-market-table";
+import { GeoMarketEvidence, marketEvidenceQuery, type MarketEvidenceTarget } from "./geo-market-evidence";
 
-// 2026-11-05 D-12 (the user's '본 프로젝트에 개발 시작' on docs/design/ui/market-heatmap-mockup.html): the renewal
+// 2026-11-05 D-12 (the user's '본 프로젝트에 개발 시작' on the D-12 mockup, f9c0fcd): the renewal
 // 시장별 현황 table shows the five KPIs, the answers and the rival of the picked KPI; the column heads pick the KPI and
 // the sort (the chips merged into them); 권역별 (closed) / 국가 전체; the picked column's bar starts at zero.
 
 vi.mock("./geo-map-lazy", () => ({
   GeoMapLazy: (p: { metric?: string }) => <i data-geo-map-lazy={p.metric} />,
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: () => {}, push: () => {} }),
+  usePathname: () => "/ko/renewal/dashboard",
+  useSearchParams: () => new URLSearchParams("brand=Kia&mkt=position"),
 }));
 
 type Values = Record<OverviewKpiKey, number | null>;
@@ -130,5 +136,43 @@ describe("market view helpers", () => {
     expect(marketBarPct("position", null)).toBe(0);
     expect(marketAriaSort({ ...DEFAULT_MARKET_VIEW, metric: "position" })).toBe("ascending");
     expect(marketAriaSort(DEFAULT_MARKET_VIEW)).toBe("descending");
+  });
+});
+
+describe("renewal market table — 근거 (step 3)", () => {
+  it("each KPI value is a button that opens its answers; a missing value is not, the original table has none", () => {
+    const html = render(<GeoOverview geo={GEO} renewal initialMarketView={{ ...DEFAULT_MARKET_VIEW, layout: "flat" }} />);
+    const de = html.slice(html.indexOf('data-geo-country="DE"'), html.indexOf("</tr>", html.indexOf('data-geo-country="DE"')));
+    // DE has no rank: four buttons, the rank cell plain
+    expect([...de.matchAll(/data-rn-mkt-evidence="(\w+)"/g)].map((m) => m[1])).toEqual(["visibility", "shareOfVoice", "sentiment", "citationShare"]);
+    expect(de).toContain(`title="${M.cellTip.replace("{name}", ko.dashboard.kpi.name.visibility)}"`);
+    // the picked column keeps its bar beside the button
+    expect(de).toMatch(/data-rn-mkt-evidence="visibility"[^>]*>72\.1%<\/button><span[^>]*><i/);
+    expect(render(<GeoOverview geo={GEO} />)).not.toContain("data-rn-mkt-evidence");
+  });
+
+  it("the route query keeps the page's filters, drops the table's view and names the market's countries", () => {
+    const q = new URLSearchParams(marketEvidenceQuery("brand=Kia&mkt=position&mktView=flat&time=2026-10-05", { kpi: "sentiment", codes: ["JP", "KR"] }, "rest", "50"));
+    expect([...q.entries()]).toEqual([["brand", "Kia"], ["time", "2026-10-05"], ["market", "JP"], ["market", "KR"], ["kpi", "sentiment"], ["side", "rest"], ["cursor", "50"]]);
+    expect(marketEvidenceQuery("", { kpi: "visibility", codes: ["DE"] }, "num")).toBe("market=DE&kpi=visibility&side=num");
+  });
+
+  it("the drawer's sample line is the row's own counts and the tabs are the KPI's split", () => {
+    const E = M.evidence;
+    const open = (target: MarketEvidenceTarget) => render(<GeoMarketEvidence target={target} ownLabel="HMG" onClose={() => {}} />);
+    const vis = open({ kpi: "visibility", codes: ["JP"], market: "일본", value: 61.0, counts: { num: 347, den: 569 } });
+    expect(vis).toContain(E.sample.visibility.replace("{den}", "569").replace("{num}", "347").replace("{value}", "61.0%"));
+    expect(vis).toContain(E.subtitle.replace("{kpi}", ko.dashboard.kpi.name.visibility).replace("{own}", "HMG").replace("{market}", "일본"));
+    expect(vis).toContain(E.tab.visibility.num);
+    expect(vis).toContain(E.tab.visibility.rest);
+    expect(vis).toContain(E.loading);
+    expect(vis).not.toContain(E.unitNote);
+    const pos = open({ kpi: "position", codes: ["JP"], market: "일본", value: 1.6, counts: { sum: 561, count: 347 } });
+    expect(pos).toContain(E.sample.position.replace("{count}", "347").replace("{value}", ko.metricUnit.position.replace("{n}", "1.6")));
+    const cit = open({ kpi: "citationShare", codes: ["JP", "KR"], market: "아시아 (2개국)", value: 24.5, counts: { num: 2849, den: 11642 } });
+    expect(cit).toContain(E.sample.citationShare.replace("{den}", "11,642").replace("{own}", "HMG").replace("{num}", "2,849").replace("{value}", "24.5%"));
+    expect(cit).toContain(E.tab.citationShare.num.replace("{own}", "HMG"));
+    expect(cit).toContain(E.unitNote);
+    expect(render(<GeoMarketEvidence target={null} ownLabel="HMG" onClose={() => {}} />)).not.toContain("data-rn-market-evidence");
   });
 });

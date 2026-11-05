@@ -28,6 +28,7 @@ import { OVERVIEW_KPI_KEYS, type OverviewKpiKey } from "../_data/overview-metric
 import { GeoMapLazy } from "./geo-map-lazy";
 import { RnSegmented } from "@/components/renewal-ui";
 import { DEFAULT_MARKET_VIEW, GeoMarketTable, marketViewQuery, type MarketView } from "./geo-market-table";
+import { GeoMarketEvidence, type MarketEvidenceTarget } from "./geo-market-evidence";
 
 // "빈 집합 = 전체" 는 내부 의미(및 있다면 URL 파라미터)의 정본이라 바꾸지 않는다
 // (QA #9). 다만 사용자가 **명시적으로 전부 해제**했다는 상태는 빈 집합으로 표현할
@@ -141,6 +142,14 @@ export function GeoOverview({
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Set<string>>(() => new Set(renewal ? [] : geo.markets.map((m) => m.region)));
   const [activeCountry, setActiveCountry] = useState<string | null>(null);
+  // the renewal table's 근거 drawer (D-12 step 3)
+  const [evidence, setEvidence] = useState<MarketEvidenceTarget | null>(null);
+  // the pressed number: the drawer's close puts the focus back on it, also after the answer view came and went
+  const evidenceOpener = useRef<HTMLElement | null>(null);
+  const closeEvidence = useCallback(() => {
+    setEvidence(null);
+    requestAnimationFrame(() => evidenceOpener.current?.focus());
+  }, []);
   const countryListRef = useRef<HTMLDivElement>(null);
   const hoverSource = useRef<"map" | "list">("list");
 
@@ -190,6 +199,21 @@ export function GeoOverview({
   const mapDomain = picked.size === 0 ? geo.domains[metric] : pickedDomain(filteredGeo, metric);
   const label = (regionId: string) => regionId ? rhqLabel(regionId, locale === "en" ? "en" : "ko") ?? regionId : t("geo.unassignedRegion");
   const metricLabel = tKpi(metric);
+  // a region row's value is its whole region (the country menu narrows the rows, not the region's sums): its 근거 reads
+  // every country of the region
+  const openEvidence = (row: GeoRegionView | GeoCountryView, kpi: OverviewKpiKey, opener: HTMLElement) => {
+    evidenceOpener.current = opener;
+    // a country row (국가 전체 adds its region to it) has its code; a region row has none
+    const region = "code" in row ? undefined : geo.markets.find((m) => m.region === row.region);
+    const codes = "code" in row ? [row.code] : (region?.countries.map((c) => c.code) ?? []);
+    setEvidence({
+      kpi,
+      codes,
+      market: region ? tM("evidence.regionLabel", { name: label(region.region), n: codes.length }) : countryName(codes[0], locale),
+      value: row.values[kpi],
+      counts: row.counts?.[kpi] ?? null,
+    });
+  };
   // QA #9 — 화면 기본값(빈 집합)은 "전체"를 뜻하지만, 기존엔 이 상태에서 드롭다운
   // 체크박스가 전부 비어 보였다(내부 의미와 표시가 불일치). realPickedCount 는
   // sentinel 을 뺀 "실제로 체크된 국가 수" — 트리거 라벨·"전체 선택" 판정 모두 이걸 쓴다.
@@ -334,6 +358,7 @@ export function GeoOverview({
               countryLabel={(code) => countryName(code, locale)}
               activeCountry={activeCountry}
               onCountryHover={hoverCountryFromList}
+              onEvidence={openEvidence}
             />
           ) : (
           <table className="w-full text-xs" data-geo-table>
@@ -366,6 +391,7 @@ export function GeoOverview({
         </div>
         </div>
       </div>
+      {renewal ? <GeoMarketEvidence target={evidence} ownLabel={geo.ourLabel} onClose={closeEvidence} /> : null}
     </section>
   );
 }

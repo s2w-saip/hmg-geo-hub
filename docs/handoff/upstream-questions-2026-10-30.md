@@ -555,6 +555,16 @@ HUB가 시드 키워드와 커뮤니티 수집 소스의 정본을 갖게 되었
 - **물을 것:** "분류 출처 6(Other)이 인용의 25.6%, Gemini는 44%입니다. 규칙(5) 분류를 넓힐 계획이 있나요? 경쟁사 공식 사이트(rolls-roycemotorcars.com · bentleymotors.com · global.honda)는 경쟁 브랜드 귀속과 함께 공식(경쟁사)이 되어야 하지 않나요? HUB 시드로 넣어야 하는 것이면 알려 주세요."
 - **답에 따라 HUB가 할 일:** 규칙이 넓어지면 화면은 새 분류를 그대로 읽는다. 시드로 넣으라는 답이면 Admin › 인용 출처 분류 › 시드(HUB 정본, 결정 G)로 넣고 외부 API로 넘긴다. 그 전까지 '기타'를 숨기거나 따로 나누지 않는다.
 
+### D12. 'SEVEN' 엔티티가 일반 단어 seven에 잡히고, 언급 위치 6.7%가 원문과 맞지 않음 (B팀, 2026-11-05 추가)
+
+- **화면 영향:** Overview 시장별 현황의 근거 서랍(D-12 3단계)은 답변마다 첫 당사 언급 둘레를 발췌해 강조한다. 'seven questions', Jeep의 'seven-slot grille'이 당사(Hyundai) 언급으로 강조된다. 위치가 원문과 맞지 않는 언급은 답변 화면처럼 건너뛰고, 맞는 위치가 없는 답변은 강조 없이 앞부분만 보인다. HUB는 귀속 · 위치를 고치지 않는다.
+- **근거 (live global release, fact build 737, 10-05, is_rep ∧ std_in, 관점 7):**
+  - `dim_entity` 'SEVEN'(entity_key 1790, Product, brand_key 1 Hyundai, first_seen 10-09)의 `answer_occurrence` 3,797건 중 3,789건이 소문자 'seven'이다. 예: answer_key 34721 'Ask these seven questions', 40755 · 21608 'the seven-slot grille'(Jeep).
+  - 10-05 당사 언급 답변 34,254개 중 261개에 이 엔티티가 있고, 26개는 이 엔티티 말고 당사 언급이 없다(노출률 분자에 든다).
+  - 당사 브랜드 엔티티 언급 322,894건 중 21,585건(6.7%)은 `substr(answer_body.answer_text, source_start+1, source_end-source_start)`가 surface_text와 다르다. 원문 길이를 넘는 위치도 있다(answer_key 26388: 원문 1,323자, source_start 5,366). 당사 언급 답변 1,541개(4.5%)는 맞는 위치가 하나도 없다.
+- **물을 것:** "'SEVEN' 엔티티가 일반 단어 seven(숫자 · 다른 브랜드의 디자인 요소)에 붙습니다. 대소문자 · 문맥 조건을 두거나 이 매칭을 빼 주실 수 있나요? 그리고 answer_occurrence의 source_start · source_end는 answer_body.answer_text 기준 글자 위치가 맞나요? 6.7%가 맞지 않는데, 다른 본문(원 응답 · 정규화 전 텍스트) 기준인가요?"
+- **답에 따라 HUB가 할 일:** 귀속 · 위치는 새 추출 결과를 그대로 읽는다. 위치 기준이 다른 본문이면 그 본문을 Gold에 두는지 묻고, 그 전까지 맞지 않는 위치는 지금처럼 건너뛴다.
+
 ### D 안에서 확인만 하고 보내지 않는 것
 
 - **W3 'loc_owned와 cit_m05 차이'.** Website 자사 인용은 Gold 정의(`citation_cell` 설명)대로 loc_owned ∨ tgt_hit이고, kpi_cell cit_m05도 같은 값이다. HUB가 W6에서 이 정의로 바꿨다. 10-09 값은 둘이 같다: 전체 24.93 = 24.93, US 19.90 = 19.90, en 18.38 = 18.38이다. loc_owned만 세면 US 18.93, en 18.29가 되는데, 이것이 W3가 본 차이다. 물을 것이 없다.
@@ -634,6 +644,18 @@ HUB가 시드 키워드와 커뮤니티 수집 소스의 정본을 갖게 되었
  - '기타' 인용 239,491건 / 전체 934,598건, 출처 20,713개(1위 2,713건, 긴 꼬리). 엔진별로 ChatGPT 18.7%, Gemini 44.0%입니다.
  - 상위에 이미 있는 카테고리에 맞을 출처가 있습니다: rolls-roycemotorcars.com 2,713 · bentleymotors.com 1,728 · global.honda 1,293(경쟁사 공식), ft.com 1,114(언론), autocarindia.com 981(자동차 미디어), cardesignaward.org 1,738(수상 · 인증), theicct.org 1,289 · mckinsey.com 802(연구).
  물을 것: 규칙(5) 분류를 넓힐 계획이 있나요? 경쟁사 공식 사이트는 경쟁 브랜드 귀속과 함께 공식(경쟁사)이 되어야 하지 않나요? HUB 시드로 넣어야 하는 것이면 알려 주세요.
+```
+```text
+[문의 추가] HMG GEO HUB — 엔티티 매칭 · 언급 위치 (2026-11-05, Gold live global release, fact build 737, 10-05)
+
+1. 'SEVEN'(entity_key 1790, Product, Hyundai)이 일반 단어 seven에 붙음
+ - answer_occurrence 3,797건 중 3,789건이 소문자 'seven'입니다. 예: answer_key 34721 'Ask these seven questions', 40755 · 21608 Jeep 'seven-slot grille'.
+ - 10-05 당사 언급 답변 261개에 있고, 26개는 이 엔티티 말고 당사 언급이 없습니다.
+ 물을 것: 대소문자 · 문맥 조건을 두거나 이 매칭을 빼 주실 수 있나요?
+
+2. 언급 위치 6.7%가 answer_body 원문과 맞지 않음
+ - 당사 브랜드 언급 322,894건 중 21,585건은 source_start · source_end 자리의 원문이 surface_text와 다릅니다. 원문 길이를 넘는 위치도 있습니다(answer_key 26388: 원문 1,323자, source_start 5,366). 당사 언급 답변 1,541개는 맞는 위치가 없습니다.
+ 물을 것: 위치는 answer_body.answer_text 기준 글자 위치가 맞나요? 다른 본문 기준이라면 그 본문을 Gold에 둘 수 있나요?
 ```
 ---
 

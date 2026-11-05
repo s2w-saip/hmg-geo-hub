@@ -510,8 +510,14 @@ def geo_metrics(own: dict, rival: dict | None) -> dict:
     }
 
 
-def market_of(row: dict) -> dict:
-    """marketOf: one /v1/geo row -> MarketCompetition (with metrics, answers, noMentions)."""
+#: the reader's own ratio of each KPI (the 근거 drawer's sample line)
+GEO_COUNT_KEYS = {"visibility": "visibility", "shareOfVoice": "share_of_voice", "sentiment": "sentiment",
+                  "position": "position", "citationShare": "citation_share"}
+
+
+def market_of(row: dict, counts: bool = False) -> dict:
+    """marketOf: one /v1/geo row -> MarketCompetition (with metrics, answers, noMentions); `counts` adds each KPI's
+    num / den (the position's sum / count) the value is made of, for the renewal 근거 drawer's sample line (D-12)."""
     top_own, top_rival = row.get("top_own_brand"), row.get("top_rival")
     sov = row["own"].get("share_of_voice")
     out = {
@@ -527,6 +533,8 @@ def market_of(row: dict) -> dict:
     # the renewal table's 브랜드 포함 column (D-12): the share of the market's answers from branded prompts, one decimal
     if "branded_answers" in row:
         out["brandedShare"] = pct1_or_null({"num": row["branded_answers"], "den": row["answers"]})
+    if counts:
+        out["counts"] = {k: row["own"].get(col) for k, col in GEO_COUNT_KEYS.items()}
     if not (isinstance(sov, dict) and is_num(sov.get("den")) and sov["den"] > 0):
         out["noMentions"] = True
     return out
@@ -622,12 +630,12 @@ def geo_view(live: dict, locale: str) -> dict:
     return live
 
 
-def to_live_geo(data: dict) -> dict:
+def to_live_geo(data: dict, counts: bool = False) -> dict:
     """toLiveGeo: the backend already rolled up and sorted (region ids and country order as sent)."""
     markets = []
     for m in data["markets"]:
-        markets.append({"region": m["region_id"], **market_of(m),
-                        "countries": [{"code": c["code"], **market_of(c)} for c in m["countries"]]})
+        markets.append({"region": m["region_id"], **market_of(m, counts),
+                        "countries": [{"code": c["code"], **market_of(c, counts)} for c in m["countries"]]})
     return {"markets": markets, "pending": list(data["pending"]), "ourLabel": data["own_label"]}
 
 
@@ -931,7 +939,8 @@ async def geo(q) -> dict:
     common = common_params(filters, "global")
     # The renewal table (ctx.view=renewal) also shows each market's branded-answer share (D-12), unless the filters
     # already pick branded or unbranded prompts (the share would only restate the pick).
-    branded_share = ctx.get("view") == "renewal" and not filters.get("brandPresence")
+    renewal = ctx.get("view") == "renewal"
+    branded_share = renewal and not filters.get("brandPresence")
     # The markets read leaves with the summary instead of after it (1.9 s later); its outcome counts only
     # when the summary has answers.
     summary, markets = await asyncio.gather(or_none_on_transient(fetch_dashboard_summary(common, "global")),
@@ -946,7 +955,8 @@ async def geo(q) -> dict:
         if not is_transient(markets):
             raise markets
         return {"geo": None, "degraded": True}
-    return {"geo": geo_view(to_live_geo(markets["data"]), ctx.get("locale", "ko")), "degraded": False}
+    # the renewal rows also carry each KPI's counts (the 근거 drawer's sample line, D-12 step 3)
+    return {"geo": geo_view(to_live_geo(markets["data"], counts=renewal), ctx.get("locale", "ko")), "degraded": False}
 
 
 @screen("overview/brand-matrix")

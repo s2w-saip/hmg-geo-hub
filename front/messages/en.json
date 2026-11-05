@@ -5505,7 +5505,60 @@
         "colMix": "Branded",
         "colMixTip": "Share of the market's answers from branded prompts — the prompt mix differs by country, so read it when comparing values",
         "headTip": "{name} — press to map and sort",
-        "countries": "{n} countries"
+        "countries": "{n} countries",
+        "cellTip": "{name} — see the answers behind it",
+        "evidence": {
+          "title": "Evidence",
+          "subtitle": "{kpi} · {own} · {market}",
+          "regionLabel": "{name} ({n} countries)",
+          "sample": {
+            "visibility": "Own brand in {num} of {den} answers · {value}",
+            "shareOfVoice": "Own brand {num} of {den} brand mentions · {value}",
+            "sentiment": "{num} positive of {den} own sentiment signals · {value}",
+            "position": "{count} answers ranking the own brand · average {value}",
+            "citationShare": "Official ({own}) {num} of {den} citations · {value}"
+          },
+          "tabs": "Answer split",
+          "tab": {
+            "visibility": {
+              "num": "Answers naming the own brand",
+              "rest": "Answers without it"
+            },
+            "shareOfVoice": {
+              "num": "Answers naming the own brand",
+              "rest": "Answers naming competitors only"
+            },
+            "sentiment": {
+              "num": "Answers with a positive signal",
+              "rest": "Neutral, negative or mixed only"
+            },
+            "position": {
+              "num": "Own brand 1st",
+              "rest": "Own brand 2nd or later"
+            },
+            "citationShare": {
+              "num": "Answers citing official ({own}) sources",
+              "rest": "Answers without an official ({own}) citation"
+            }
+          },
+          "count": "{n}",
+          "unitNote": "Tabs count answers. One answer can hold several mentions, signals or citations, so they differ from the line above.",
+          "order": "Answers to the same prompt are kept together (prompt → engine → country). Press one to read it.",
+          "mark": {
+            "mentions": "Own brand {n}×",
+            "noOwn": "No own brand · {n} brand mentions",
+            "share": "Own brand {own} / {total} brand mentions",
+            "sentiment": "{all} own sentiment signals · {positive} positive · {negative} negative",
+            "rank": "Own brand #{n}",
+            "noRank": "Own brand not ranked",
+            "citations": "Official ({own}) {official} / {all} citations"
+          },
+          "shown": "{shown} / {total}",
+          "more": "Show 50 more",
+          "loading": "Loading answers…",
+          "empty": "No answers in this split.",
+          "error": "We couldn't load the answers. Please try again shortly, and if it keeps happening, contact: {contact}"
+        }
       }
     },
     "prompts": {

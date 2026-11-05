@@ -5505,7 +5505,60 @@
         "colMix": "브랜드 포함",
         "colMixTip": "그 시장 답변 중 브랜드 포함 질문의 답변 비중 — 나라마다 질문 구성이 달라, 값끼리 비교할 때 함께 봅니다",
         "headTip": "{name} — 누르면 지도 · 정렬",
-        "countries": "{n}개국"
+        "countries": "{n}개국",
+        "cellTip": "{name} 근거 보기",
+        "evidence": {
+          "title": "근거",
+          "subtitle": "{kpi} · {own} · {market}",
+          "regionLabel": "{name} ({n}개국)",
+          "sample": {
+            "visibility": "답변 {den}개 중 당사 언급 {num}개 · {value}",
+            "shareOfVoice": "전체 브랜드 언급 {den}회 중 당사 {num}회 · {value}",
+            "sentiment": "당사 감정 신호 {den}개 중 긍정 {num}개 · {value}",
+            "position": "당사 순위가 있는 답변 {count}개 · 평균 {value}",
+            "citationShare": "전체 인용 {den}회 중 공식({own}) {num}회 · {value}"
+          },
+          "tabs": "답변 나눔",
+          "tab": {
+            "visibility": {
+              "num": "당사 언급 답변",
+              "rest": "당사 미언급 답변"
+            },
+            "shareOfVoice": {
+              "num": "당사 언급이 있는 답변",
+              "rest": "경쟁사만 언급한 답변"
+            },
+            "sentiment": {
+              "num": "긍정 신호가 있는 답변",
+              "rest": "긍정 없이 중립 · 부정 · 혼합만"
+            },
+            "position": {
+              "num": "당사 1번째",
+              "rest": "당사 2번째 이하"
+            },
+            "citationShare": {
+              "num": "공식({own}) 인용이 있는 답변",
+              "rest": "공식({own}) 인용 없는 답변"
+            }
+          },
+          "count": "{n}개",
+          "unitNote": "탭의 수는 답변 수입니다. 한 답변에 언급 · 신호 · 인용이 여럿 있을 수 있어 위 줄의 수와 다릅니다.",
+          "order": "같은 프롬프트의 답변을 모아 보입니다(프롬프트 → 엔진 → 국가 순). 누르면 답변 원문을 봅니다.",
+          "mark": {
+            "mentions": "당사 언급 {n}회",
+            "noOwn": "당사 미언급 · 브랜드 언급 {n}회",
+            "share": "당사 {own}회 / 브랜드 언급 {total}회",
+            "sentiment": "당사 감정 신호 {all}개 · 긍정 {positive} · 부정 {negative}",
+            "rank": "당사 {n}번째",
+            "noRank": "당사 순위 없음",
+            "citations": "공식({own}) 인용 {official}회 / 전체 {all}회"
+          },
+          "shown": "{shown} / {total}개",
+          "more": "50개 더 보기",
+          "loading": "답변을 불러오는 중…",
+          "empty": "이 나눔에 든 답변이 없습니다.",
+          "error": "답변을 불러오지 못했습니다. 잠시 후 다시 시도해 주시고, 계속되면 담당자에게 알려 주세요: {contact}"
+        }
       }
     },
     "prompts": {
