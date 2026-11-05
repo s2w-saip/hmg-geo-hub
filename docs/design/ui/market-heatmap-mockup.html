@@ -26,8 +26,6 @@
   h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
   .hint { color: var(--ink-muted); font-size: 12px; }
   .bar { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .chip { border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12px; cursor: pointer; }
-  .chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 600; }
   .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; margin-left: auto; }
   .seg button { border: 0; background: var(--surface); padding: 5px 12px; font: inherit; font-size: 12px; color: var(--ink-2); cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--navy-25); color: var(--navy); font-weight: 700; }
@@ -44,7 +42,9 @@
   table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 14px; table-layout: fixed; font-size: 13px; }
   th { position: sticky; top: 0; z-index: 1; background: var(--head); border-block: 1px solid var(--line); text-align: right; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 7px 10px; white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; }
-  th.kpi { cursor: pointer; }
+  th.kpi button { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 4px; }
+  th.kpi button:hover { color: var(--navy); text-decoration: underline; text-underline-offset: 3px; }
+  th.kpi button:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
   th.kpi.sel { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); }
   th .arrow { font-size: 10px; margin-left: 3px; }
   td { height: 34px; border-bottom: 1px solid var(--line); padding: 0 10px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -71,15 +71,14 @@
     <b>목업 — 시장별 현황 히트맵 안(A + B + C)</b> · 2026-11-05 · Gold 회차 2026-10-05 실데이터(51개국)
     <ul>
       <li>국가 × KPI 5종을 한 표에 둡니다. 칸 색은 지도와 같은 단계이고, 열마다 그 지표의 국가 범위를 씁니다(우선 노출도는 낮을수록 진함).</li>
-      <li>지표 칩이나 열 머리를 누르면 지도 색과 정렬이 그 지표로 바뀝니다. 같은 열을 다시 누르면 정렬 방향이 뒤집힙니다.</li>
+      <li>열 머리를 누르면 지도 색과 정렬이 그 지표로 바뀝니다. 같은 열을 다시 누르면 정렬 방향이 뒤집힙니다. 위의 지표 칩은 없앴습니다(열 머리로 합침, 키보드로도 조작).</li>
       <li>보기 전환: 권역별(기본, 닫힘) / 국가 전체(값 순). 답변 수 열을 더했습니다. 언급 1위 경쟁사는 고른 지표의 값을 열로, 5개 지표 값은 툴팁으로 보입니다.</li>
       <li>목업이라 국가 선택 메뉴 · CSV는 그리지 않았습니다. '조건' 전환은 목업 전용입니다(실제 화면은 왼쪽 필터 패널). 지도는 가벼운 해상도라 작은 나라(바레인 · 몰타 · 싱가포르 등)가 빠집니다(실제 화면은 지금 지도 그대로).</li>
     </ul>
   </div>
   <section class="card" aria-label="시장별 현황">
-    <div class="head"><h3>시장별 현황</h3><span class="hint">칸 색 = 그 열의 국가 범위 안 위치 · 우선 노출도는 낮을수록 앞섬 · 경쟁사 = 그 시장 언급 1위</span></div>
+    <div class="head"><h3>시장별 현황</h3><span class="hint">열 머리를 누르면 지도 · 정렬이 그 지표로 · 칸 색 = 그 열의 국가 범위 안 위치 · 우선 노출도는 낮을수록 앞섬 · 경쟁사 = 그 시장 언급 1위</span></div>
     <div class="bar">
-      <span id="chips"></span>
       <span class="mock">조건(목업)</span>
       <span class="seg" id="dataset"><button data-v="base" aria-pressed="true">기본</button><button data-v="unbranded" aria-pressed="false">브랜드 미포함</button></span>
       <span class="seg" id="view" style="margin-left:12px"><button data-v="region" aria-pressed="true">권역별</button><button data-v="flat" aria-pressed="false">국가 전체</button></span>
@@ -138,13 +137,10 @@ function sortRows(rows) {
     return s * better(k, va, vb);
   });
 }
-function chips() {
-  document.getElementById("chips").innerHTML = K.map((k) => `<button class="chip" data-k="${k}" aria-pressed="${k === state.metric}">${NAME[k]}</button>`).join(" ");
-}
 function head() {
   const arrow = state.dir === "desc" ? "▼" : "▲";
   document.getElementById("thead").innerHTML = `<th>${state.view === "flat" ? "국가" : "권역 / 국가"}</th><th>답변</th>` +
-    K.map((k) => `<th class="kpi${k === state.metric ? " sel" : ""}" data-k="${k}" title="${NAME[k]} — 누르면 지도 · 정렬">${SHORT[k]}${k === state.metric ? `<span class="arrow">${arrow}</span>` : ""}</th>`).join("") +
+    K.map((k) => `<th class="kpi${k === state.metric ? " sel" : ""}" aria-sort="${k === state.metric ? (state.dir === "desc" ? "descending" : "ascending") : "none"}"><button type="button" data-k="${k}" title="${NAME[k]} — 누르면 지도 · 정렬">${SHORT[k]}${k === state.metric ? `<span class="arrow" aria-hidden="true">${arrow}</span>` : ""}</button></th>`).join("") +
     `<th>언급 1위 경쟁사 · ${SHORT[state.metric]}</th>`;
 }
 function row(u, cls, label, extra = "") {
@@ -195,7 +191,7 @@ function paintMap() {
   document.getElementById("ramp").style.background = "linear-gradient(90deg, rgba(30,56,250,.16), rgba(30,56,250,1))";
   document.getElementById("lmetric").textContent = `· ${NAME[k]}`;
 }
-function render() { chips(); head(); body(); paintMap(); }
+function render() { head(); body(); paintMap(); }
 // tooltip: the country's five values, its answers and the rival of the picked KPI
 const tip = document.getElementById("tip");
 function country(code) { for (const m of geo().markets) for (const c of m.countries) if (c.code === code) return { ...c, region: m.region }; return null; }
