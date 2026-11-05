@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { isBlockedCrawler } from "./lib/crawlers";
-import { localReadOnly } from "./lib/local-readonly";
+import { localAllowedHost, localReadOnly } from "./lib/local-readonly";
 import { HUB_SESSION_COOKIE } from "./lib/hub/cookie";
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -35,7 +35,7 @@ function isPublicPath(rest: string, paths: readonly string[]): boolean {
 export async function middleware(req: NextRequest) {
   if (localReadOnly()) {
     const { pathname } = req.nextUrl;
-    if (!["localhost", "127.0.0.1", "[::1]", "::1"].includes(req.nextUrl.hostname)) {
+    if (!localAllowedHost(req.nextUrl.hostname)) {
       return new NextResponse("Local access only", { status: 403 });
     }
     // The only writes (2026-10-27): HUB login and Global prompt editing, /api/hub/* route handlers that

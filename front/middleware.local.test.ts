@@ -67,4 +67,13 @@ describe("local mode middleware", () => {
     expect((await at("POST", "/api/hub/session", { host: "192.168.0.10:3333" })).status).toBe(403);
     expect((await at("GET", "/ko/login", { host: "192.168.0.10:3333" })).status).toBe(403);
   });
+
+  it("answers a host added in HGH_LOCAL_ALLOWED_HOSTS, still behind the HUB login", async () => {
+    vi.stubEnv("HGH_LOCAL_ALLOWED_HOSTS", "10.0.20.132");
+    const host = "10.0.20.132:8081";
+    expect((await at("GET", "/ko/login", { host })).headers.get("x-pathname")).toBe("/ko/login");
+    expect(new URL((await at("GET", "/ko/renewal", { host })).headers.get("location") ?? "").pathname).toBe("/ko/login");
+    expect((await at("GET", "/api/filters/options", { host })).status).toBe(401);
+    expect((await at("GET", "/ko/login", { host: "10.0.20.133:8081" })).status).toBe(403);
+  });
 });
