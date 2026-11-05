@@ -545,6 +545,16 @@ HUB가 시드 키워드와 커뮤니티 수집 소스의 정본을 갖게 되었
 - **물을 것:** "엔티티별 답변 · 언급 수를 회차 기준 누계(그 회차까지)로 둘 수 있을까요? 서비스 기준 주까지의 값을 보이려 합니다."
 - **답에 따라 HUB가 할 일:** 그런 값이 생기면 기준 주의 회차로 읽는다. 그 전까지는 Gold 누계를 그대로 보인다.
 
+### D11. 인용의 25.6%가 '기타'(분류 출처 6), Gemini는 44.0% (B팀, 2026-11-05 추가)
+
+- **화면 영향:** Global Citation 출처 구성에서 가장 큰 칸이 '기타'(25.6%)라 구성이 읽히지 않는다. 엔진 매트릭스에서 Gemini는 44.0%가 '기타'다(ChatGPT 18.7%). 브랜드 미포함 질문은 33.4%, Hyundai 미포함은 36.9%다. HUB는 분류를 다시 정하지 않는다.
+- **근거 (live global release, cell build 738, 10-05, population 9 · 관점 7):**
+  - '기타' 인용 239,491건 / 전체 934,598건, 출처 20,713개. 모두 `dim_source.category_src` 6(어느 층도 정하지 않음)이다.
+  - 긴 꼬리다. 1위 출처가 2,713건(1.1%)이다.
+  - 상위에는 있는 카테고리에 맞을 출처가 있다: 경쟁사 공식(rolls-roycemotorcars.com 2,713 · bentleymotors.com 1,728 · global.honda 1,293), 언론(ft.com 1,114), 자동차 미디어(autocarindia.com 981), 수상 · 인증(cardesignaward.org 1,738), 연구(theicct.org 1,289 · worldbenchmarkingalliance.org 1,990 · mckinsey.com 802).
+- **물을 것:** "분류 출처 6(Other)이 인용의 25.6%, Gemini는 44%입니다. 규칙(5) 분류를 넓힐 계획이 있나요? 경쟁사 공식 사이트(rolls-roycemotorcars.com · bentleymotors.com · global.honda)는 경쟁 브랜드 귀속과 함께 공식(경쟁사)이 되어야 하지 않나요? HUB 시드로 넣어야 하는 것이면 알려 주세요."
+- **답에 따라 HUB가 할 일:** 규칙이 넓어지면 화면은 새 분류를 그대로 읽는다. 시드로 넣으라는 답이면 Admin › 인용 출처 분류 › 시드(HUB 정본, 결정 G)로 넣고 외부 API로 넘긴다. 그 전까지 '기타'를 숨기거나 따로 나누지 않는다.
+
 ### D 안에서 확인만 하고 보내지 않는 것
 
 - **W3 'loc_owned와 cit_m05 차이'.** Website 자사 인용은 Gold 정의(`citation_cell` 설명)대로 loc_owned ∨ tgt_hit이고, kpi_cell cit_m05도 같은 값이다. HUB가 W6에서 이 정의로 바꿨다. 10-09 값은 둘이 같다: 전체 24.93 = 24.93, US 19.90 = 19.90, en 18.38 = 18.38이다. loc_owned만 세면 US 18.93, en 18.29가 되는데, 이것이 W3가 본 차이다. 물을 것이 없다.
@@ -616,6 +626,15 @@ HUB가 시드 키워드와 커뮤니티 수집 소스의 정본을 갖게 되었
  물을 것: 엔티티별 답변 · 언급 수를 회차 기준 누계(그 회차까지)로 둘 수 있을까요?
 ```
 
+
+```text
+[문의 추가] HMG GEO HUB — 인용 출처 분류 '기타' 비중 (2026-11-05, Gold live global release, cell build 738, 10-05)
+
+1. 인용의 25.6%가 분류 출처 6(Other)
+ - '기타' 인용 239,491건 / 전체 934,598건, 출처 20,713개(1위 2,713건, 긴 꼬리). 엔진별로 ChatGPT 18.7%, Gemini 44.0%입니다.
+ - 상위에 이미 있는 카테고리에 맞을 출처가 있습니다: rolls-roycemotorcars.com 2,713 · bentleymotors.com 1,728 · global.honda 1,293(경쟁사 공식), ft.com 1,114(언론), autocarindia.com 981(자동차 미디어), cardesignaward.org 1,738(수상 · 인증), theicct.org 1,289 · mckinsey.com 802(연구).
+ 물을 것: 규칙(5) 분류를 넓힐 계획이 있나요? 경쟁사 공식 사이트는 경쟁 브랜드 귀속과 함께 공식(경쟁사)이 되어야 하지 않나요? HUB 시드로 넣어야 하는 것이면 알려 주세요.
+```
 ---
 
 ## 뺀 것 (해결됐거나 결정으로 닫힘)
