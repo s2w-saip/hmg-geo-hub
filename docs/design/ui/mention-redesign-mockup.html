@@ -144,7 +144,23 @@
   .seg button { border: 0; background: none; padding: 3px 10px; border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(16,16,18,.08); }
 
-  /* ── KPI 줄: 기준 지표 고르기 ── */
+  /* ── 추이 카드 안의 지표 탭 (Search Console 성과 카드처럼: 탭이 바꾸는 것은 이 카드의 차트뿐) ── */
+  .mtabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); border-radius: var(--r-card) var(--r-card) 0 0; overflow: hidden; }
+  .mtab { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 12px 20px 11px 22px; background: var(--page); box-shadow: inset 0 -1px 0 var(--line); position: relative; }
+  .mtab + .mtab { box-shadow: inset 1px 0 0 var(--line), inset 0 -1px 0 var(--line); }
+  .mtab:hover { background: #f1f2f4; }
+  .mtab[aria-selected="true"] { background: var(--surface); box-shadow: inset 0 3px 0 var(--navy); }
+  .mtab + .mtab[aria-selected="true"] { box-shadow: inset 0 3px 0 var(--navy), inset 1px 0 0 var(--line); }
+  .mtab .lab { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .mtab[aria-selected="true"] .lab { color: var(--navy); }
+  .mtab .row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .mtab .val { font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.2; color: var(--ink); }
+  .mtab .val small { font-size: 13px; font-weight: 600; margin-left: 1px; letter-spacing: 0; }
+  .mtab .meta { font-size: 11px; color: var(--muted); }
+  .mtab .neg { color: var(--down-ink); font-weight: 700; }
+  .ch2 { padding-top: 14px; }
+  .ch2 .legend { padding: 0; margin-left: 8px; }
+  /* (old KPI tiles, unused) */
   .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .kpi { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; gap: 2px 12px; padding: 14px 16px 12px 18px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); position: relative; transition: box-shadow .12s; }
   .kpi:hover { box-shadow: 0 0 0 1px var(--navy-300), 0 6px 18px -12px rgba(30,56,250,.45); }
@@ -341,12 +357,13 @@
     <span class="mk-tag">목업</span>
     <span class="mk-title">Global Mention 개편안 — 지표 탭 없이 한 페이지</span>
     <button class="mk-btn" id="mkCap" aria-expanded="false" type="button">무엇이 바뀌었나</button>
-    <span class="mk-note">Gold 2026-10-05 회차 실데이터 · 1920 × 915 · 화면 동작: KPI 칸 · 비교 브랜드 · 표 정렬 · 보기 전환 · 행 서랍</span>
+    <span class="mk-note">Gold 2026-10-05 회차 실데이터 · 1920 × 915 · 화면 동작: 추이 지표 탭 · 비교 브랜드 · 표 정렬 · 보기 전환 · 행 서랍</span>
   </div>
   <div class="mk-cap" id="mkCapBody">
     <div><h4>구성</h4><ul>
-      <li><b>지표 탭 4개 + 브랜드 상세 → 한 페이지.</b> 맨 위 KPI 4칸이 <b>기준 지표</b>를 고릅니다(페이지 탭이 아님): 추이 차트 · 표의 강조 열과 정렬 · 추이 열 · 엔진/유형 표의 강조 열이 그 지표로 바뀝니다.</li>
-      <li>구역: 현황(KPI) → 추이 → 경쟁 구도(표 · 트리맵 · 순위 변화) → 엔진 · 감정 → 멘션 유형.</li></ul></div>
+      <li><b>지표 탭 4개 + 브랜드 상세 → 한 페이지.</b> 네 지표의 값 · 증감은 <b>추이 카드의 탭</b>에 있고, 탭이 바꾸는 것은 그 카드의 차트뿐입니다(디자인 규칙 '탭 아래에는 그 탭이 바꾸는 것만').</li>
+      <li>표 · 엔진 · 유형은 탭과 무관합니다. 브랜드 표는 열 머리로 정렬하고, 추이 열은 정렬한 지표를 따릅니다.</li>
+      <li>구역: 현황과 추이 → 경쟁 구도(표 · 트리맵 · 순위 변화) → 엔진 · 감정 → 멘션 유형.</li></ul></div>
     <div><h4>합친 것 (값은 모두 남음)</h4><ul>
       <li>경쟁사 분석(노출률) · (점유율) · 우선 노출도 순위표 · 브랜드 언급 순위 → <b>브랜드 비교 표 하나</b>(노출률 · 점유율 · 우선 노출도 · 우호도 · 언급 수 · 프롬프트, 각 Δ · 추이).</li>
       <li>히어로 3개의 추이 → 추이 차트 하나. 엔진 카드(노출 · 점유) → <b>엔진 × 지표 표</b>. 유형 카드 셋(노출 · 점유 · 감정) → <b>유형 × 지표 표</b>.</li></ul></div>
@@ -414,7 +431,6 @@
         <div class="notice"><svg class="i s14" style="color:var(--warn-ink)"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">(Gold 마지막 확인 2026-11-03 17:33)</span></div>
 
         <div class="cbar" role="toolbar" aria-label="페이지 조작">
-          <span class="focus">기준 지표 <b id="focusName">AI 노출률</b></span>
           <div class="right">
             <span class="lab">비교 브랜드</span>
             <span id="chips" style="display:contents"></span>
@@ -427,17 +443,15 @@
           </div>
         </div>
 
-        <div class="sh"><h2>현황</h2><p>칸을 누르면 아래 추이 · 표 · 엔진 · 유형이 그 지표를 기준으로 바뀝니다.</p></div>
-        <div class="kpis" id="kpis" role="radiogroup" aria-label="기준 지표"></div>
-
-        <div class="sh"><h2>추이</h2><p>당사와 비교 브랜드의 회차별 값입니다.</p></div>
+        <div class="sh"><h2>현황과 추이</h2><p>지표를 누르면 이 카드의 추이 차트만 그 지표로 바뀝니다.</p></div>
         <section class="card">
-          <div class="ch"><h3 id="trendTitle">브랜드별 노출률 추이</h3><span class="info" title="회차마다 Gold가 집계한 값입니다. 측정 범위가 회차마다 달라 값이 튈 수 있습니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="trendChip">14회차 · 07-06 ~ 10-05</span>
+          <div class="mtabs" id="kpis" role="tablist" aria-label="추이 지표"></div>
+          <div class="ch ch2"><h3 id="trendTitle">브랜드별 노출률 추이</h3><span class="info" title="회차마다 Gold가 집계한 값입니다. 측정 범위가 회차마다 달라 값이 튈 수 있습니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="trendChip">14회차 · 07-06 ~ 10-05</span><div class="legend" id="legend"></div>
             <div class="acts"><button class="icon" type="button" title="표로 보기"><svg class="i s14"><use href="#i-table"/></svg></button><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
-          <div class="trend"><div class="legend" id="legend"></div><div class="chart" id="chart"></div></div>
+          <div class="trend"><div class="chart" id="chart"></div></div>
         </section>
 
-        <div class="sh"><h2>경쟁 구도</h2><p>브랜드마다 네 지표를 한 줄에 둡니다. 행을 누르면 그 브랜드의 프롬프트와 답변을 봅니다.</p></div>
+        <div class="sh"><h2>경쟁 구도</h2><p>브랜드마다 네 지표를 한 줄에 둡니다. 열 머리를 누르면 그 값으로 정렬하고, 추이 열도 그 지표로 바뀝니다.</p></div>
         <section class="card" id="boardCard">
           <div class="ch"><h3>브랜드 비교</h3><span class="info" title="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">측정 기준일 스냅샷</span><span class="bchip" id="brandCount">브랜드 752개</span>
             <div class="acts"><div class="seg" id="viewSeg"><button type="button" data-v="table" aria-pressed="true">표</button><button type="button" data-v="map" aria-pressed="false">트리맵</button><button type="button" data-v="bump" aria-pressed="false">순위 변화</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
@@ -509,21 +523,20 @@ const hideTip = () => (tip.hidden = true);
 
 // ── KPI 줄 ─────────────────────────────────────────────────────────────
 function renderKpis() {
-  const k = D.kpi, T = D.trend;
-  const tiles = [
-    ["exposure", `${k.exposure.v.toFixed(1)}<small>%</small>`, dchip(k.exposure.d), `${n0(k.exposure.num)} / ${n0(k.exposure.den)} 답변`, T.exposure.own, false, "당사 브랜드를 1회 이상 언급한 답변 ÷ 측정 답변"],
-    ["sov", `${k.sov.v.toFixed(1)}<small>%</small>`, dchip(k.sov.d), `${n0(k.sov.num)} / ${n0(k.sov.den)} 언급`, T.sov.own, false, "전체 브랜드 언급 중 당사 언급 비중"],
-    ["favorability", `${k.favorability.v.toFixed(1)}<small>%</small>`, dchip(k.favorability.d), `부정 <span class="neg">${k.favorability.neg.toFixed(1)}%</span> ${dchip(k.favorability.negD, { better: "down" })}`, T.favorability.own, false, "당사 언급 감정 신호 중 긍정 비율"],
-    ["first-rank", `${k["first-rank"].v.toFixed(1)}<small>번째</small>`, dchip(k["first-rank"].d, { unit: "", better: "down" }), `작을수록 먼저 언급`, T["first-rank"].own, true, "답변 안 경쟁 브랜드 중 당사가 나온 순서의 평균"],
+  const k = D.kpi;
+  const tabs = [
+    ["exposure", `${k.exposure.v.toFixed(1)}<small>%</small>`, dchip(k.exposure.d), `${n0(k.exposure.num)} / ${n0(k.exposure.den)} 답변`, "당사 브랜드를 1회 이상 언급한 답변 ÷ 측정 답변"],
+    ["sov", `${k.sov.v.toFixed(1)}<small>%</small>`, dchip(k.sov.d), `${n0(k.sov.num)} / ${n0(k.sov.den)} 언급`, "전체 브랜드 언급 중 당사 언급 비중"],
+    ["favorability", `${k.favorability.v.toFixed(1)}<small>%</small>`, dchip(k.favorability.d), `부정 <span class="neg">${k.favorability.neg.toFixed(1)}%</span> ${dchip(k.favorability.negD, { better: "down" })}`, "당사 언급 감정 신호 중 긍정 비율"],
+    ["first-rank", `${k["first-rank"].v.toFixed(1)}<small>번째</small>`, dchip(k["first-rank"].d, { unit: "", better: "down" }), "작을수록 먼저 언급", "답변 안 경쟁 브랜드 중 당사가 나온 순서의 평균"],
   ];
-  $("#kpis").innerHTML = tiles.map(([m, val, d, sub, s, inv, def]) => `
-    <button class="kpi" role="radio" aria-checked="${st.focus === m}" data-m="${m}">
-      <span class="lab">${M[m].label}<span class="info" title="${def}"><svg class="i s12"><use href="#i-info"/></svg></span><span class="fxtag">기준 지표</span></span>
-      <span class="val num">${val}</span>
-      <span class="sp">${spark(s, NAVY, { w: 96, h: 34, invert: inv })}</span>
-      <span class="meta">${d}<span>직전 회차(09-28) 대비</span><span class="sub2 num">${sub}</span></span>
+  $("#kpis").innerHTML = tabs.map(([m, val, d, sub, def]) => `
+    <button class="mtab" role="tab" aria-selected="${st.focus === m}" data-m="${m}">
+      <span class="lab">${M[m].label}<span class="info" title="${def}"><svg class="i s12"><use href="#i-info"/></svg></span></span>
+      <span class="row"><span class="val num">${val}</span>${d}</span>
+      <span class="meta num">${sub} · 직전 회차(09-28) 대비</span>
     </button>`).join("");
-  $("#kpis").querySelectorAll(".kpi").forEach((b) => b.addEventListener("click", () => { st.focus = b.dataset.m; st.sort = null; renderAll(); }));
+  $("#kpis").querySelectorAll(".mtab").forEach((b) => b.addEventListener("click", () => { st.focus = b.dataset.m; renderKpis(); renderTrend(); }));
 }
 
 // ── 추이 ───────────────────────────────────────────────────────────────
@@ -596,8 +609,8 @@ function renderBoard() {
   const body = $("#boardBody");
   if (st.view === "map") return renderMap(body);
   if (st.view === "bump") return renderBump(body);
-  const fcol = COLS.find((c) => c[0] === st.focus);
-  const sort = st.sort || { key: fcol[2], dir: fcol[3] };
+  const sort = st.sort || { key: "rank", dir: "asc" };
+  const tm = { exp: "exposure", share: "sov", pos: "first-rank", fav: "favorability" }[sort.key] || "sov";
   const own = D.rows.find((r) => r.own);
   let rows = D.rows.filter((r) => !r.own);
   if (st.q.trim()) rows = rows.filter((r) => r.brand.toLowerCase().includes(st.q.trim().toLowerCase()));
@@ -605,13 +618,14 @@ function renderBoard() {
   const shown = st.all ? rows : rows.filter((r, i) => i < 12 || st.compare.includes(r.brand));
   const list = [own, ...shown];
   const maxExp = Math.max(...D.rows.map((r) => r.exp || 0)), posMax = 6;
-  const sparkKey = { exposure: "expS", sov: "shareS", "first-rank": "posS", favorability: null }[st.focus];
-  const head = `<tr><th class="l" style="width:52px">#</th><th class="l" style="width:22%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${m === st.focus ? "fx" : ""} ${sort.key === key ? "sorted" : ""}" style="width:${m ? "13%" : "8.5%"}"><button type="button" data-sort="${key}">${lab}${sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : ""}</button></th>`).join("")}<th class="fx" style="width:110px">추이 · ${M[st.focus].short}</th></tr>`;
+  const sparkKey = { exposure: "expS", sov: "shareS", "first-rank": "posS", favorability: null }[tm];
+  const arrow = (key) => (sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "");
+  const head = `<tr><th class="l ${sort.key === "rank" ? "sorted" : ""}" style="width:52px"><button type="button" data-sort="rank">#${arrow("rank")}</button></th><th class="l" style="width:22%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${sort.key === key ? "fx" : ""}" style="width:${m ? "13%" : "8.5%"}"><button type="button" data-sort="${key}">${lab}${arrow(key)}</button></th>`).join("")}<th style="width:110px">추이 · ${M[tm].short}</th></tr>`;
   const tr = (r, i) => {
     const isOwn = r.own, c = colorOf(r.brand), on = st.compare.includes(r.brand);
     const name = isOwn ? `<b class="own">HMG</b><span class="own-tag">당사</span>` : `<b>${r.brand}</b>${r.grouped ? `<small>${r.group} 그룹</small>` : ""}`;
     const dot = isOwn ? `<span class="dot" style="background:${NAVY};box-shadow:none;cursor:default"></span>` : `<button class="dot" type="button" data-cmp="${r.brand}" title="${on ? "비교 브랜드에서 빼기" : "비교 브랜드로 넣기"}" style="${on ? `background:${c};box-shadow:none` : ""}"></button>`;
-    const fx = (m) => (m === st.focus ? "fx" : "");
+    const fx = (m) => (COLS.find((c) => c[0] === m)[2] === sort.key ? "fx" : "");
     const sv = sparkKey ? r[sparkKey] : null;
     return `<tr class="${isOwn ? "own" : ""} ${st.lit === r.brand ? "lit" : ""}" data-b="${r.brand}">
       <td>${isOwn ? 1 : r.rank}</td>
@@ -621,13 +635,13 @@ function renderBoard() {
       <td class="${fx("first-rank")}"><span class="vb"><span class="ptrack"><i style="left:${(((r.pos || 1) - 1) / (posMax - 1)) * 100}%;background:${isOwn ? NAVY : on ? c : "#b9bbbf"}"></i></span><b>${r1(r.pos)}</b>${dchip(r.posD, { unit: "", better: "down", own: isOwn })}</span></td>
       <td class="${fx("favorability")}"><span class="vb">${sentBar(r.sent)}<b>${p1(r.fav)}</b></span></td>
       <td>${n0(r.mentions)}</td><td>${n0(r.prompts)}</td>
-      <td class="fx">${st.focus === "favorability" ? '<span class="muted" style="font-size:11px">스냅샷</span>' : spark(sv, isOwn ? NAVY : on ? c : "#9fa1a6", { invert: st.focus === "first-rank" })}</td></tr>`;
+      <td>${tm === "favorability" ? '<span class="muted" style="font-size:11px">회차 값 없음</span>' : spark(sv, isOwn ? NAVY : on ? c : "#9fa1a6", { invert: tm === "first-rank" })}</td></tr>`;
   };
   body.innerHTML = `
-    <div class="tools"><label class="search"><svg class="i s14"><use href="#i-search"/></svg><input id="q" placeholder="예: Hyundai" value="${st.q}"></label><span class="muted">순위 = 언급 수 순 · 열 머리를 누르면 그 값으로 정렬 · 왼쪽 점을 누르면 비교 브랜드로 넣고 뺍니다</span></div>
+    <div class="tools"><label class="search"><svg class="i s14"><use href="#i-search"/></svg><input id="q" placeholder="예: Hyundai" value="${st.q}"></label><span class="muted"># = 언급 수 순위 · 열 머리를 누르면 그 값으로 정렬하고 추이 열도 그 지표로 · 왼쪽 점을 누르면 비교 브랜드로 넣고 뺍니다</span></div>
     <table class="bt"><thead>${head}</thead><tbody>${list.map(tr).join("")}</tbody></table>
     <div class="more"><button class="tbtn" id="moreBtn" type="button">${st.all ? "상위 12개 + 비교 브랜드만 보기" : `나머지 브랜드 더 보기 (전체 ${n0(D.brandCount)}개)`}</button><span>목업은 언급 상위 40개까지 담았습니다</span></div>`;
-  body.querySelectorAll("th button").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.sort; const c = COLS.find((x) => x[2] === k); st.sort = sort.key === k ? { key: k, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: k, dir: c[3] }; renderBoard(); }));
+  body.querySelectorAll("th button").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.sort; const c = COLS.find((x) => x[2] === k); const dir0 = c ? c[3] : "asc"; st.sort = sort.key === k ? { key: k, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: k, dir: dir0 }; renderBoard(); }));
   body.querySelectorAll("[data-cmp]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); toggleCompare(b.dataset.cmp); }));
   body.querySelectorAll("tbody tr").forEach((t) => {
     t.addEventListener("click", () => openDrawer(t.dataset.b));
@@ -697,10 +711,10 @@ function renderEngines() {
   const E = D.engines, names = { chatgpt: "ChatGPT", gemini: "Gemini" };
   const metr = [["exposure", "exp", "%"], ["sov", "sh", "%"], ["favorability", "pos", "%"], ["first-rank", "rk", "번째"]];
   const range = Object.fromEntries(metr.map(([m, k]) => { const v = Object.values(E).flatMap((e) => e[k]); return [m, [Math.min(...v), Math.max(...v)]]; }));
-  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th class="${m === st.focus ? "fx" : ""}">${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td>${names[en] || en}</td>${metr.map(([m, k, u]) => {
+  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th>${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td>${names[en] || en}</td>${metr.map(([m, k, u]) => {
     const s = e[k], v = s[s.length - 1], d = v - s[s.length - 2];
     const val = m === "first-rank" ? `${v.toFixed(1)}<small>번째</small>` : `${v.toFixed(1)}<small>%</small>`;
-    return `<td class="${m === st.focus ? "fx" : ""}"><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 30, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
+    return `<td><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 30, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
   }).join("")}</tr>`).join("")}</tbody></table><div class="ef">작은 차트는 지표마다 같은 눈금 · 14회차(07-06 ~ 10-05) · 우호도의 7월 값이 낮은 것은 측정 그대로입니다</div>`;
 }
 function renderDist() {
@@ -716,7 +730,7 @@ function renderTypes() {
   const picks = st.compare.filter((b) => T.dots[b]);
   const top = Math.ceil(Math.max(...T.cmp.map((r) => r.own), ...picks.flatMap((b) => T.dots[b])) / 10) * 10 + 10;
   const at = (v) => `${(v / top) * 100}%`;
-  const fx = (m) => (m === st.focus ? "fx" : "");
+  const fx = () => "";
   const rows = Object.keys(TYPES).map((t) => {
     const o = own[t], c = cmp[t], f = fav[t];
     const vals = picks.map((b) => ({ b, v: T.dots[b][c.i] }));
@@ -773,7 +787,6 @@ $("#mkCap").addEventListener("click", () => { const on = $("#mkCapBody").classLi
 function setMk() { document.documentElement.style.setProperty("--mk-h", `${$("#mk").offsetHeight}px`); }
 
 function renderAll() {
-  $("#focusName").textContent = M[st.focus].label;
   renderChips(); renderKpis(); renderTrend(); renderBoard(); renderEngines(); renderDist(); renderTypes();
 }
 setMk(); renderAll();
