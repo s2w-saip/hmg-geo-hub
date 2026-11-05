@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bookmark, MoreHorizontal } from "lucide-react";
 import { RnButton, RnMenu, RnMenuItem, RnSkeleton, RnTextButton, cx, useRnToast } from "@/components/renewal-ui";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Saved filters ("프리셋") of the renewal pages — per account, kept in the HUB operations DB
 // (2026-10-28, back/bff/hub_stores/saved_filters.py) through /api/hub/saved-filters, so every browser
@@ -282,7 +283,7 @@ export function RnSavedFiltersSection({
       ) : null}
       {status === "unavailable" ? (
         <p className="m-0 flex flex-wrap items-center gap-x-2 px-4.5 pb-1 text-rn-12 text-rn-muted">
-          {t("unavailable")}
+          {t("unavailable", SUPPORT)}
           <RnTextButton onClick={() => void saved.reload()}>{t("retry")}</RnTextButton>
         </p>
       ) : null}

@@ -52,6 +52,7 @@ import {
 } from "../_actions";
 import { KeywordSearchStart, saveTrackedTerms, withBusy } from "./keyword-search-start";
 import { nextActiveAfterRemoval, restoreHidden } from "./keyword-selection";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Google Keyword 분기 — wired to live data (2026-06):
 //   - 관심도 추이 / 평균 관심도 ← DataForSEO Google Ads monthly_searches
@@ -788,7 +789,7 @@ export function GoogleKeywordView({
             ) : currentInsight?.status === "error" ? (
               <CenterState
                 icon="error"
-                label={t("loadError")}
+                label={t("loadError", SUPPORT)}
                 action={
                   activeTab ? (
                     <Button variant="outline" size="sm" onClick={() => loadInsight(activeTab, true)}>
@@ -906,7 +907,7 @@ export function GoogleKeywordView({
           <div className="py-12">
             <CenterState
               icon="error"
-              label={t("loadError")}
+              label={t("loadError", SUPPORT)}
               action={
                 activeTab ? (
                   <Button variant="outline" size="sm" onClick={() => loadInsight(activeTab, true)}>
@@ -1078,7 +1079,7 @@ function RelatedSearchPanel({
               ? `${t("related.analysisComplete")} · ${t("related.found", { count: foundCount })}`
               : status === "loading"
                 ? t("related.loading")
-                : t("related.error")}
+                : t("related.error", SUPPORT)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -1110,7 +1111,7 @@ function RelatedSearchPanel({
         <div className="py-10">
           <CenterState
             icon="error"
-            label={t("related.error")}
+            label={t("related.error", SUPPORT)}
             action={
               <Button variant="outline" size="sm" onClick={onRetry}>
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden />

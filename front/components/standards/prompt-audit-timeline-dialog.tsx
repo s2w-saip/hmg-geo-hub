@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { PromptAuditLogView } from "@/lib/db/repositories/prompt-audit-logs";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 프롬프트별 변경 이력 타임라인 다이얼로그 (catalog-prompt-audit) — 그리기만 한다. 열릴 때 `load` 로
 // 이력을 가져온다: admin 카탈로그는 열람 게이트의 서버 액션(prompt-audit-timeline.tsx),
@@ -73,7 +74,7 @@ export function PromptAuditTimelineDialog({
           {state.phase === "loading" ? (
             <p className="px-1 py-4 text-sm text-muted-foreground">{t("loading")}</p>
           ) : state.phase === "error" ? (
-            <p className="px-1 py-4 text-sm text-destructive">{t("loadFailed")}</p>
+            <p className="px-1 py-4 text-sm text-destructive">{t("loadFailed", SUPPORT)}</p>
           ) : state.phase === "unavailable" ? (
             <p className="px-1 py-4 text-sm text-muted-foreground">{t("sourceUnavailable")}</p>
           ) : state.rows.length === 0 ? (

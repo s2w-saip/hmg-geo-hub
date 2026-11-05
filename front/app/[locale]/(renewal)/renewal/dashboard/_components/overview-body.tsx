@@ -48,6 +48,7 @@ import type {
 } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { periodChipText } from "@/lib/period-chip-text";
 import { GeoOverview } from "@/app/[locale]/(dash)/dashboard/_components/geo-overview";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** overview/brand-matrix with the old labels of the parts that failed transiently (absent = none failed). */
 export type RnBrandMatrixView = BrandMatrixView & { degraded?: string[] };
@@ -339,7 +340,7 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
     return (
       <RnCard aria-label={t("brandsTitle")}>
         <RnCardHeader title={t("brandsTitle")} />
-        <RnEmpty className="mx-6 mb-5">{t("brandsFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("brandsFailed", SUPPORT)}</RnEmpty>
       </RnCard>
     );
   if (!m) return null;
@@ -441,7 +442,7 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
         </table>
       </div>
       {m.degraded?.length ? (
-        <RnEmpty className="mx-6 mt-3">{t("brandsPartial")}</RnEmpty>
+        <RnEmpty className="mx-6 mt-3">{t("brandsPartial", SUPPORT)}</RnEmpty>
       ) : !rows.some((r) => !r.own && !r.ownBrand) ? (
         <RnEmpty className="mx-6 mt-3">{tO("noCompetitorData")}</RnEmpty>
       ) : null}

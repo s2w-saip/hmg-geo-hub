@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { type SearchIntent } from "../_data/model";
 import { addTrackedKeywords } from "../_actions";
+import { SUPPORT } from "@/lib/support-contact";
 
 const INTENT_TONE: Record<SearchIntent, string> = {
   transactional: "bg-sentiment-positive/10 text-positive",
@@ -170,7 +171,7 @@ export function KeywordSearchStart({
       ) : status === "error" ? (
         <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-card py-12 text-center">
           <AlertCircle className="h-5 w-5 text-destructive" aria-hidden />
-          <span className="text-xs text-muted-foreground">{t("loadError")}</span>
+          <span className="text-xs text-muted-foreground">{t("loadError", SUPPORT)}</span>
           <Button variant="outline" size="sm" onClick={() => void onSearch()}>
             {t("retry")}
           </Button>

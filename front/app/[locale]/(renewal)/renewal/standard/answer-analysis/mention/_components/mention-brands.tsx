@@ -34,6 +34,7 @@ import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, sl
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable, useDegradedText } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
 import { RN_INK, RN_ON_DARK, RN_QUIET, RN_QUIET_2 } from "@/components/renewal-ui/palette";
+import { SUPPORT } from "@/lib/support-contact";
 
 export function BrandDetail() {
   const t = useTranslations("renewal.mention");
@@ -946,7 +947,7 @@ export function PromptList({ state, onAnswer, initialSort = "mentions" }: { stat
   const tM = useTranslations("answerAnalysis.mentions.answerModal");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   const [sort, setSort] = useState<PromptSort>(initialSort);
-  const status = <ListStatus state={state} loading={tDd("promptsLoading")} error={tDd("promptsError")} empty={tDd("noPrompts")} />;
+  const status = <ListStatus state={state} loading={tDd("promptsLoading")} error={tDd("promptsError", SUPPORT)} empty={tDd("noPrompts")} />;
   if (state.status !== "ready" || !state.list.length) return status;
   // the orders, best rank and the TOP 3 flag come from the route (screen mention/drill-brand-prompts)
   const list = rowsInOrder(state.list, state.orders, sort, PROMPT_SORTS[sort]);
@@ -1054,7 +1055,7 @@ export function CitationList({
   const [open, setOpen] = useState<string | null>(null);
   const [sort, setSort] = useState<CiteSort>(initialSort);
   useEffect(() => setOpen(null), [detailQuery]);
-  const status = <ListStatus state={state} loading={tDd("citationsLoading")} error={tDd("citationsError")} empty={tDd("noCitations")} />;
+  const status = <ListStatus state={state} loading={tDd("citationsLoading")} error={tDd("citationsError", SUPPORT)} empty={tDd("noCitations")} />;
   if (state.status !== "ready" || !state.list.length) return status;
   const nos = citationNos(state.list.length, state.orders);
   const rows = rowsInOrder(
@@ -1174,7 +1175,7 @@ export function CitationDetail({
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
   const locale = useLocale();
   const [view, setView] = useState<"urls" | "prompts">(initialView);
-  if (detail?.status !== "ready") return <p className="m-0 py-3 text-center text-rn-12 text-rn-muted">{detail?.status === "error" ? tDd("citationsError") : tDd("citationsLoading")}</p>;
+  if (detail?.status !== "ready") return <p className="m-0 py-3 text-center text-rn-12 text-rn-muted">{detail?.status === "error" ? tDd("citationsError", SUPPORT) : tDd("citationsLoading")}</p>;
   return (
     <>
       <RnSegmented
@@ -1226,7 +1227,7 @@ function SignalSheet({ signal, label, hidden, onClose, onAnswer }: { signal: Dra
       {state.status === "loading" ? (
         <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("loading")}</p>
       ) : state.status === "error" ? (
-        <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("error")}</p>
+        <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("error", SUPPORT)}</p>
       ) : !state.list.length ? (
         <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("empty")}</p>
       ) : (

@@ -693,9 +693,9 @@
         "noPrompts": "해당 브랜드의 프롬프트 샘플이 없습니다",
         "noCitations": "해당 브랜드 답변이 인용한 도메인 샘플이 없습니다",
         "citationsLoading": "인용 출처 불러오는 중…",
-        "citationsError": "인용 출처를 불러오지 못했습니다",
+        "citationsError": "인용 출처를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "promptsLoading": "프롬프트 불러오는 중…",
-        "promptsError": "프롬프트를 불러오지 못했습니다",
+        "promptsError": "프롬프트를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "positive": "긍정",
         "neutral": "중립",
         "negative": "부정",
@@ -753,7 +753,7 @@
         "competitorGroup": "경쟁사",
         "modelMentionsTitle": "연관 차량모델",
         "loading": "답변 본문 불러오는 중…",
-        "loadError": "답변을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "loadError": "답변을 불러오지 못했습니다. 잠시 후 다시 시도해 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "noAnswer": "이 답변의 본문이 아직 수집되지 않았습니다. 다음 미러 동기화 후 다시 확인해 주세요.",
         "detected": "이 답변에서 감지된 항목",
         "legendTitle": "강조 표시",
@@ -822,7 +822,7 @@
         "title": "‘{signal}’ 신호가 발생한 프롬프트",
         "hint": "당사 브랜드 언급에 이 신호가 매겨진 프롬프트입니다. 행을 클릭하면 실제 AI 답변 원문을 볼 수 있습니다. (신호 수 많은 순 상위 50개)",
         "loading": "프롬프트 목록 불러오는 중…",
-        "error": "목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "error": "목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "empty": "현재 조건에서는 이 신호가 발생한 프롬프트가 없습니다.",
         "signalCount": "신호 {count}건",
         "engines": "엔진 {count}개"
@@ -961,7 +961,7 @@
             "description": "적용됐지만 이 측정 기준일 스냅샷에 답변이 없는 프롬프트 {n}개",
             "descriptionLoading": "적용됐지만 측정 스냅샷에 답변이 없는 프롬프트",
             "loading": "불러오는 중…",
-            "error": "목록을 불러오지 못했습니다",
+            "error": "목록을 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
             "empty": "미측정 프롬프트가 없습니다",
             "truncated": "{total}개 중 {shown}개 표시",
             "col": {
@@ -1715,7 +1715,7 @@
         "addSelected": "프롬프트 후보 풀로 전송",
         "regenerate": "재생성",
         "loading": "불러오는 중…",
-        "loadError": "데이터를 불러오지 못했습니다",
+        "loadError": "데이터를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "retry": "다시 시도",
         "serpEmpty": "검색 결과가 없습니다",
         "trendEmpty": "추이 데이터가 없습니다",
@@ -1766,7 +1766,7 @@
           "close": "닫기",
           "empty": "관련 검색어가 없습니다",
           "loading": "관련 검색어를 불러오는 중…",
-          "error": "관련 검색어를 불러오지 못했습니다",
+          "error": "관련 검색어를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
           "expand": "하위 키워드 보기"
         },
         "col": {
@@ -1857,7 +1857,7 @@
           "apply": "적용",
           "clear": "선택 해제",
           "applied": "{count}개 프롬프트에 적용되었습니다",
-          "selectFailed": "전체 선택 목록을 불러오지 못했습니다. 다시 시도해주세요.",
+          "selectFailed": "전체 선택 목록을 불러오지 못했습니다. 다시 시도해 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
           "incomplete": "{count}개 저장을 확인했습니다. 저장 여부가 확인되지 않은 {remaining}개는 선택을 유지했습니다. 같은 값으로 다시 적용할 수 있습니다.",
           "selectHint": "행을 선택하면 태그를 일괄 적용할 수 있습니다"
         },
@@ -2364,7 +2364,7 @@
     "marker": "프롬프트 변경 {count}건",
     "timelineTitle": "변경 이력",
     "loading": "불러오는 중…",
-    "loadFailed": "이력을 불러오지 못했습니다",
+    "loadFailed": "이력을 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
     "empty": "기록된 변경이 없습니다",
     "sourceUnavailable": "변경 이력은 데이터 원천에서 제공되지 않습니다.",
     "actorUnknown": "(시스템)",
@@ -3103,7 +3103,7 @@
         "scenario": "시나리오",
         "sourceUrls": "출처 URL",
         "cooccurrenceCount": "{count}건의 발화에서 동시 언급",
-        "loadError": "상세를 불러오지 못했습니다"
+        "loadError": "상세를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}"
       },
       "searchContexts": "구매 맥락 이름 검색",
       "searchConditions": "구매 조건 이름 검색",
@@ -3113,7 +3113,7 @@
       "prevPage": "이전",
       "nextPage": "다음",
       "loading": "불러오는 중…",
-      "loadError": "목록을 불러오지 못했습니다",
+      "loadError": "목록을 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
       "retry": "다시 시도",
       "noResults": "검색 결과가 없습니다",
       "catalogEmpty": "표시할 프롬프트가 없습니다",
@@ -3445,7 +3445,7 @@
     },
     "page": {
       "subtitle": "측정에서 발견된 엔티티의 역할·별칭·병합을 버전으로 관리합니다. 편집은 초안에만 쌓이고, 반영(미리보기와 승인)을 거쳐야 KPI에 적용됩니다.",
-      "unavailable": "엔티티 버전 정보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.",
+      "unavailable": "엔티티 버전 정보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
       "legacy": "엔티티 버전 관리는 새 백엔드 연결에서만 사용할 수 있습니다.",
       "precutover": "아직 활성 엔티티 버전이 없습니다(명부 v1 이관 전). 이관 뒤부터 버전 관리 화면을 쓸 수 있습니다."
     },
@@ -4007,7 +4007,7 @@
       "prompts": {
         "count": "프롬프트 {count}개",
         "basisRounds": "측정 회차 {from} ~ {to}",
-        "readFailed": "목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        "readFailed": "목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "retry": "다시 시도",
         "domainLabel": "도메인",
         "measurement": "측정",
@@ -4110,7 +4110,7 @@
         "kpiTitle": "KPI",
         "kpiHintDelta": "증감 = {compare}",
         "trendHint": "{from} ~ {to} {count}회차 · 지표마다 자기 축 · 측정 없는 회차는 선이 끊깁니다 · 답변 수에 마우스를 올리면 직전 회차 대비 증감",
-        "trendFailed": "KPI 추이를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+        "trendFailed": "KPI 추이를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "trendTooltip": "{x} 회차",
         "trendAria": "KPI 추이: {series}",
         "rankUp": "위쪽일수록 앞섬",
@@ -4130,13 +4130,13 @@
         "sourcesTitle": "출처별 구성비",
         "sourcesHint": "인용 수 상위 도메인 · 기타 = 나머지 합",
         "sourcesDetail": "인용 분석",
-        "sourcesFailed": "출처별 구성비를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+        "sourcesFailed": "출처별 구성비를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "sourcesBarAria": "출처별 구성비 막대",
         "citations": "{count}회",
         "brandsTitle": "HMG 브랜드별 비교",
         "brandsHint": "브랜드마다 따로 읽은 값 · 굵은 값 = 그 열에서 가장 앞섬 · 행을 누르면 그 브랜드만 봅니다",
-        "brandsFailed": "브랜드별 비교를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
-        "brandsRowFailed": "이 브랜드의 값을 불러오지 못했습니다",
+        "brandsFailed": "브랜드별 비교를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
+        "brandsRowFailed": "이 브랜드의 값을 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "brandsRowEmpty": "이 조건에서 측정 데이터가 없습니다",
         "brandsTotal": "HMG 전체",
         "brandsTotalTag": "위 KPI",
@@ -4145,7 +4145,7 @@
         "brandsFoot": "막대 = 그 열의 최고값 기준(우선 노출도는 낮을수록 앞섬) · 증감 = 위 KPI와 같은 기준 · 자사 · 타겟 URL 인용률은 증감을 제공하지 않습니다",
         "enginesTitle": "엔진별 비교",
         "enginesHint": "위 KPI의 '엔진 간 일관성'을 만든 엔진별 값 · 칸에 마우스를 올리면 분자와 분모 · 행을 누르면 그 엔진만 봅니다",
-        "enginesFailed": "엔진별 값을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+        "enginesFailed": "엔진별 값을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "enginesEmpty": "이 조건에서 엔진별 측정 데이터가 없습니다.",
         "colEngine": "엔진",
         "colAnswers": "답변",
@@ -4156,7 +4156,7 @@
         "enginesFoot": "일관성은 위 KPI 카드 배지와 같은 값입니다",
         "ratioPct": "{num} ÷ {den}",
         "ratioRank": "순위 합 {sum} ÷ 순위가 매겨진 답변 {count}",
-        "marketsFailed": "시장별 현황을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+        "marketsFailed": "시장별 현황을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "marketsPickBrand": "브랜드를 하나 고르면 그 브랜드의 시장별 현황이 보입니다.",
         "marketsHint": "{brand} 기준 · 칸 = 당사 값, 아래는 그 시장 점유율 1위 경쟁사의 같은 지표 값 · 열 제목을 누르면 지도와 국가 순서가 그 지표로 · 국가를 누르면 그 국가만 봅니다",
         "mapOf": "국가별 {kpi} ({brand})",
@@ -4382,7 +4382,7 @@
           "brand": "브랜드",
           "trendTitle": "비교 브랜드 추이",
           "typeTitle": "유형별 언급 구성",
-          "failed": "비교를 불러오지 못했습니다."
+          "failed": "비교를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}"
         }
       },
       "conversion": {
@@ -4431,7 +4431,7 @@
       },
       "states": {
         "downTitle": "데이터를 불러오지 못했습니다",
-        "downDesc": "분석 DB 연결 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요 — 필터와 기간은 그대로 둡니다.",
+        "downDesc": "분석 DB 연결 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요 — 필터와 기간은 그대로 둡니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "emptyTitle": "AI 가시성 측정 대기",
         "emptyDesc": "사이트 {n}개가 연결되어 있지만 {from} ~ {to}의 측정 데이터가 아직 없습니다. 기간을 바꾸거나 다음 수집 뒤에 다시 확인하세요.",
         "nomatchTitle": "이 조건에 해당하는 사이트가 없습니다",
@@ -4789,7 +4789,7 @@
       },
       "states": {
         "downTitle": "데이터를 불러오지 못했습니다",
-        "downDesc": "분석 DB 연결 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요 — 필터와 기간은 그대로 둡니다.",
+        "downDesc": "분석 DB 연결 상태를 확인할 수 없습니다. 잠시 후 다시 시도하세요 — 필터와 기간은 그대로 둡니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "nopropTitle": "연결된 GA4 속성이 없습니다",
         "nopropDesc": "AI 유입 전환은 브랜드 사이트의 GA4 보고서(AI Assistant 채널 유입 · 전환 이벤트)로 만듭니다. 연결된 GA4 속성이 아직 없어, 속성이 등록되고 수집이 연결되면 이 화면이 채워집니다.",
         "pendingTitle": "GA4 속성 {n}개가 아직 측정 중이 아닙니다",
@@ -5298,7 +5298,7 @@
         "noneTip": "선택 없음 — {n}회 / 반복 {total}회",
         "gridAria": "{sheet} 프롬프트별 선택 분포",
         "loading": "시트를 불러오는 중",
-        "failed": "시트를 불러오지 못했습니다.",
+        "failed": "시트를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
         "retry": "다시 시도",
         "engine": "엔진",
         "country": "국가",
@@ -5447,7 +5447,7 @@
       "undo": "되돌리기",
       "saving": "저장 중…",
       "loading": "저장한 필터를 불러오는 중",
-      "unavailable": "저장한 필터를 불러오지 못했습니다.",
+      "unavailable": "저장한 필터를 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}",
       "retry": "다시 시도",
       "failedToast": "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
       "limitToast": "한 화면에 저장할 수 있는 필터는 {max}개까지입니다.",
@@ -5478,8 +5478,8 @@
       "formulaPosition": "Σ(답변 내 브랜드 중 당사 순위 = 당사보다 먼저 언급된 비노이즈 브랜드 수 + 1) ÷ 당사 브랜드가 1회 이상 언급된 답변 수 (단위: 번째)",
       "brandsHint": "5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 경쟁사 증감 = {compare} · 당사 증감은 위 KPI",
       "brandsHintPeriod": "5개 지표를 한 표에 · 막대는 열마다 최고값 기준 · 우선 노출도는 낮을수록 앞섬 · 값 = 선택 기간 합산 · 당사 증감은 위 KPI · 경쟁사는 기간 증감 없음",
-      "brandsFailed": "브랜드 비교 표를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
-      "brandsPartial": "일부 값을 불러오지 못해 빈 칸이 있습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+      "brandsFailed": "브랜드 비교 표를 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
+      "brandsPartial": "일부 값을 불러오지 못해 빈 칸이 있습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
       "colBrand": "브랜드",
       "colStanding": "당사 {rank}위 / {count}",
       "short": {
@@ -6136,7 +6136,7 @@
         "loadedOf": "{total}개 중 {shown}개 표시",
         "more": "{n}개 더 보기",
         "moreLoading": "불러오는 중…",
-        "moreFailed": "다음 도메인을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요."
+        "moreFailed": "다음 도메인을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}"
       },
       "drawer": {
         "close": "닫기",
@@ -6223,7 +6223,7 @@
         },
         "statusTitle": "프로젝트 현황",
         "statusHint": "필터와 무관한 이 프로젝트 전체의 값",
-        "statusFailed": "프로젝트 현황을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주세요.",
+        "statusFailed": "프로젝트 현황을 불러오지 못했습니다. 잠시 뒤 페이지를 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: {contact}",
         "noData": "데이터 없음",
         "facts": {
           "prompts": "프롬프트",

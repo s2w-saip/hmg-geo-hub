@@ -25,6 +25,7 @@ import { RnWebsiteTrend } from "../../website/_overview/website-trend";
 import { CardSkeleton } from "../../website/_overview/website-overview-body";
 import type { Failed, WebsiteEnginesView } from "../../website/_overview/website-format";
 import { projectHref } from "./project-model";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** projects/dash-status */
 export interface ProjectStatusView {
@@ -121,7 +122,7 @@ export function RnProjectStatus({ id, status }: { id: string; status: Promise<Pr
     <RnCard aria-label={t("statusTitle")} className="min-w-0" data-rn-project-status="">
       <RnCardHeader title={t("statusTitle")} hint={t("statusHint")} />
       {v === "failed" ? (
-        <RnEmpty className="mx-6 mb-5">{t("statusFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("statusFailed", SUPPORT)}</RnEmpty>
       ) : (
         <>
           <dl className="m-0 grid grid-cols-6 border-y border-rn-line">

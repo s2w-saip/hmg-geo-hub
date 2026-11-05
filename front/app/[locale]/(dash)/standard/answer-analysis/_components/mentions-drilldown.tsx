@@ -14,6 +14,7 @@ import type { MentionsPromptLive, CitationDomainLive } from "@/lib/scope/result-
 import { AnswerModal } from "./answer-modal";
 import { CitationDomainTable, TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
 import type { DrillPromptRow, PromptSortKey } from "../_data/drilldown-screen-types";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Per-brand drilldown rendered inline when a Brand row is clicked — LIVE only.
 //   - "Prompts" tab: the prompts where this brand appeared (real: text,
@@ -197,7 +198,7 @@ export function BrandPromptsPanel({
   return state.status === "loading" ? (
     <LoadingBox label={t("promptsLoading")} />
   ) : state.status === "error" ? (
-    <ErrorBox label={t("promptsError")} />
+    <ErrorBox label={t("promptsError", SUPPORT)} />
   ) : state.list.length === 0 ? (
     <Empty label={t("noPrompts")} />
   ) : (
@@ -408,7 +409,7 @@ export function BrandCitationsPanel({ state, detailQuery }: { state: ListState<C
     return (
       <div className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/20 px-4 py-8 text-xs text-muted-foreground">
         <AlertCircle className="h-4 w-4" aria-hidden />
-        {t("citationsError")}
+        {t("citationsError", SUPPORT)}
       </div>
     );
   }

@@ -58,6 +58,7 @@ import {
 } from "../_actions";
 import { PromptIO } from "./prompt-io";
 import type { CustomFieldRow } from "./custom-fields-panel";
+import { SUPPORT } from "@/lib/support-contact";
 
 export type PromptType =
   | "comparison"
@@ -317,7 +318,7 @@ export function PromptList({
       if (!on) { setSelected(new Set()); return; }
       startTransition(async () => {
         try { setSelected(new Set(await remote.selectAll!())); }
-        catch { toast.error(t("bulk.selectFailed")); }
+        catch { toast.error(t("bulk.selectFailed", SUPPORT)); }
       });
       return;
     }

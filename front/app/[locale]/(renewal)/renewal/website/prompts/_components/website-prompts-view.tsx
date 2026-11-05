@@ -44,6 +44,7 @@ import {
   type WebsitePromptsPage,
 } from "./website-prompt-model";
 import { readWebsitePromptInsights, readWebsitePromptRows, readWebsitePromptsPage } from "./website-prompts-read";
+import { SUPPORT } from "@/lib/support-contact";
 
 const SORTS: readonly WebsitePromptSortKey[] = ["lastMeasuredAt", "answers", "rounds", "firstMeasuredAt", "prompt", "brand", "country", "lang", "targetUrl"];
 // a new text column sorts A→Z first, a count or date the largest / latest first
@@ -359,7 +360,7 @@ export function RnWebsitePrompts({
         ) : null}
         {failed ? (
           <RnNote className="m-5">
-            <span>{tw("readFailed")}</span>
+            <span>{tw("readFailed", SUPPORT)}</span>
             <RnButton size="sm" onClick={() => setRetry((n) => n + 1)}>
               <RotateCw className="size-3.5" aria-hidden />
               {tw("retry")}

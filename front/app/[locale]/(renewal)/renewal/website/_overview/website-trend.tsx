@@ -19,6 +19,7 @@ import type { TrendRowView } from "@/app/[locale]/(dash)/dashboard/_data/screen-
 import type { TrendKpiKey } from "@/app/[locale]/(dash)/dashboard/_data/live-types";
 import type { TrendChartView, WebsiteTrendView } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { useFormat, useShortName, type Failed } from "./website-format";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** The original chart's series, in its order (live-trend-chart.tsx TREND_SERIES). */
 export const TREND_KEYS: readonly TrendKpiKey[] = ["visibility", "shareOfVoice", "sentiment", "citationShare", "citationAccuracy", "position"];
@@ -57,7 +58,7 @@ export function RnWebsiteTrend({ trend }: { trend: Promise<WebsiteTrendView | Fa
         hint={v !== "failed" && v.trend ? t("trendHint", { from: md(v.trend.rows[0].day), to: md(v.trend.rows[v.trend.rows.length - 1].day), count: v.trend.rows.length }) : undefined}
       />
       {v === "failed" ? (
-        <RnEmpty className="mx-6 mb-5">{t("trendFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("trendFailed", SUPPORT)}</RnEmpty>
       ) : v.trend ? (
         <TrendMultiples view={v.trend} />
       ) : (

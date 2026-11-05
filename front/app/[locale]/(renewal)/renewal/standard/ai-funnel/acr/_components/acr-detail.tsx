@@ -26,6 +26,7 @@ import type { AcrDistRow, AcrDistSheet, AcrDistSort, AcrDistState, AcrDistTab, A
 import { fetchAcrSheet } from "../_data/sheet-client";
 import { AcrCardActions, CONTEXT_COLOR, OWN_COLOR, pctTxt, useAcr } from "./acr-context";
 import { RN_CONTEXT, RN_QUIET_2 } from "@/components/renewal-ui/palette";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 엔진·프롬프트 · 차종 · 선택 분포 cards of the renewal ACR page. Rows, orders, views, scales
 // and the distribution sheets come computed in the view model (screen acr/renewal; the sheets
@@ -621,7 +622,7 @@ export function AcrDistribution() {
           </div>
         ) : "failed" in read ? (
           <RnEmpty className="m-4">
-            {t("failed")}{" "}
+            {t("failed", SUPPORT)}{" "}
             <RnTextButton onClick={retry}>{t("retry")}</RnTextButton>
           </RnEmpty>
         ) : shown.length ? (

@@ -20,6 +20,7 @@ import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
 import { rhqLabel } from "@/lib/rhq";
 import { unitOf, useFormat, useShortName, type Failed } from "./website-format";
 import type { PickRow } from "./website-breakdowns";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** Countries of a market in the picked KPI's order, better first (rank: lower first), no value last; null = screen order. */
 export function orderCountries(countries: readonly GeoCountryView[], metric: OverviewKpiKey | null): GeoCountryView[] {
@@ -46,7 +47,7 @@ export function RnWebsiteMarkets({ geo, isAdmin, onPick }: { geo: Promise<Websit
     return (
       <RnCard aria-label={tR("marketsTitle")}>
         <RnCardHeader title={tR("marketsTitle")} />
-        <RnEmpty className="mx-6 mb-5">{t("marketsFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("marketsFailed", SUPPORT)}</RnEmpty>
       </RnCard>
     );
   if (v.geo.markets.length === 0 && v.geo.pending.length === 0) {

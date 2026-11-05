@@ -25,6 +25,7 @@ import type { RnCitationVm } from "./citation-input";
 import { CONTEXT_COLOR, MOVER_COLORS, OWN_COLOR, CitationCardActions, OwnTag, engineLabel, useCatLabel, useCitation } from "./citation-context";
 import { DegradedNote, InfoTip, TwinTable, useDegradedText } from "../../mention/_components/mention-kit";
 import { numTxt, pctTxt, slotLabel } from "../../mention/_components/mention-context";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** Answers a prompt of the domain sheet opens: the reader's cap (gold_reader/drilldown.py `domain`, most citations
  * first). The sheet says so, since the modal shows them without a "more" line. */
@@ -436,7 +437,7 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
           {moreOn ? (
             table.status === "error" ? (
               <span className="text-rn-12 text-rn-muted" role="status">
-                {t("moreFailed")}
+                {t("moreFailed", SUPPORT)}
               </span>
             ) : (
               <RnButton onClick={table.loadMore} disabled={table.loadingMore} aria-busy={table.loadingMore || undefined} data-rn-more="">

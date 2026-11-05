@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import ko from "@/messages/ko.json";
 import { TILES, part, settled, text, wrap } from "../../website/_overview/_fixtures";
 import type { ProjectStatusView } from "./project-dashboard";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // Renewal Project › Dashboard (2026-11-03, P2): the website Overview's sections on the project surface. The tiles open
 // the project's own analysis pages in the project tab (one tab per project, menu option D); ⑤ reads the project's own
@@ -84,6 +85,6 @@ describe("renewal Project Dashboard", () => {
 
 describe("renewal Project Dashboard: status card", () => {
   it("says it could not read the status", () => {
-    expect(text(wrap(<RnProjectStatus id={ID} status={settled("failed" as const)} />))).toContain(D.statusFailed);
+    expect(text(wrap(<RnProjectStatus id={ID} status={settled("failed" as const)} />))).toContain(D.statusFailed.replace("{contact}", FEEDBACK_EMAIL_TEXT));
   });
 });

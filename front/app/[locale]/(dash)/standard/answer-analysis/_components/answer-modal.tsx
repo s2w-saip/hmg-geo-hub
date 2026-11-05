@@ -17,6 +17,7 @@ import type { Sentiment, SentimentSpan } from "@/lib/answer-sentiment/spans";
 import type { StanceEvidenceMatch } from "@/lib/answer-sentiment/stance-evidence";
 import type { DrillAnswer } from "../_data/drilldown-screen-types";
 import { MarkdownAnswer } from "./markdown-answer";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Modal that shows the REAL AI answer behind a (brand, prompt) cell, dressed up
 // as a chat transcript: the prompt as the user turn, the model's answer as the
@@ -319,7 +320,7 @@ export function AnswerModal({
                   ) : body?.status === "error" ? (
                     <div className="flex items-center gap-2 py-6 text-xs text-muted-foreground">
                       <AlertCircle className="h-4 w-4" aria-hidden />
-                      {t("loadError")}
+                      {t("loadError", SUPPORT)}
                     </div>
                   ) : (
                     <Unavailable

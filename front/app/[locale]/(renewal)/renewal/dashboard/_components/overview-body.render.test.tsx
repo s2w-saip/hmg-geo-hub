@@ -5,6 +5,7 @@ import ko from "@/messages/ko.json";
 import { OVERVIEW_KPI_KEYS } from "@/app/[locale]/(dash)/dashboard/_data/overview-metrics";
 import type { BrandMatrixView, CardTrendView, OverviewCardView } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { RnOverviewBody } from "./overview-body";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // Renewal Overview KPI cards — every round the spark draws is dated under its point
 // (2026-10-28: with only the first and the last dated, the five-round line read as two rounds).
@@ -224,12 +225,12 @@ describe("renewal Overview basis and failure wording", () => {
   it("shows the brand table's failure instead of dropping the table", () => {
     const out = render({ matrix: "failed" });
     expect(out).toContain(`aria-label="${O.brandsTitle}"`);
-    expect(text(brandCard(out))).toContain(O.brandsFailed);
+    expect(text(brandCard(out))).toContain(O.brandsFailed.replace("{contact}", FEEDBACK_EMAIL_TEXT));
   });
 
   it("says a competitor read failed instead of 'no competitor value'", () => {
     const failed = render({ matrix: ownOnly(["standardMentions"]) });
-    expect(text(brandCard(failed))).toContain(O.brandsPartial);
+    expect(text(brandCard(failed))).toContain(O.brandsPartial.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(text(brandCard(failed))).not.toContain(ko.dashboard.overview.noCompetitorData);
     // nothing failed and nobody compared: the old wording stays
     const none = render({ matrix: ownOnly() });

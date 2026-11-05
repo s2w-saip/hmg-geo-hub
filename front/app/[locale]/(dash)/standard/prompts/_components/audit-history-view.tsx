@@ -17,6 +17,7 @@ import { downloadCsv, dateStamp } from "@/lib/export/csv";
 import { PROMPT_AUDIT_EVENT_TYPES } from "@/lib/standards/audit";
 import type { AuditRow, HistoryQuery, PromptsHistory } from "../_data/screen-types";
 import { fetchPromptsHistory } from "../_data/prompts-client";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 전역 변경 이력 (catalog-prompt-audit) — /standard/prompts의 이력 탭. 기간(30·90일)·이벤트
 // 종류 필터와 bulk 묶음 접기는 screen(catalog/prompts-history)이 하고, 여기서는 그 결과를
@@ -172,7 +173,7 @@ export function AuditHistoryView({ initial, load = fetchPromptsHistory }: { init
 
       {readError ? (
         <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-destructive">
-          {t("loadFailed")}
+          {t("loadFailed", SUPPORT)}
         </p>
       ) : groups.length === 0 ? (
         <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">

@@ -16,6 +16,7 @@ import { dateStamp, downloadCsv } from "@/lib/export/csv";
 import type { AuditRow, HistoryQuery, PromptsHistory } from "@/app/[locale]/(dash)/standard/prompts/_data/screen-types";
 import { fetchPromptTimeline, fetchPromptsHistory } from "@/app/[locale]/(dash)/standard/prompts/_data/prompts-client";
 import { RnChanges, RnTimeline } from "../../../_components/prompt-list";
+import { SUPPORT } from "@/lib/support-contact";
 
 type LoadState = { phase: "loading" } | { phase: "error" } | { phase: "unavailable" } | { phase: "ready"; rows: AuditRow[] };
 
@@ -33,7 +34,7 @@ export function RnPromptTimeline({ id }: { id: string }) {
     };
   }, [id]);
   if (state.phase === "loading") return <p className="m-0 text-rn-13 text-rn-muted">{t("loading")}</p>;
-  if (state.phase === "error") return <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed")}</p>;
+  if (state.phase === "error") return <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed", SUPPORT)}</p>;
   if (state.phase === "unavailable") return <RnEmpty>{t("sourceUnavailable")}</RnEmpty>;
   if (state.rows.length === 0) return <RnEmpty>{t("empty")}</RnEmpty>;
   return (
@@ -140,7 +141,7 @@ export function RnAuditHistory({ initial, load = fetchPromptsHistory }: { initia
         </RnButton>
       </div>
       {readError ? (
-        <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed")}</p>
+        <p className="m-0 text-rn-13 text-rn-danger-ink">{t("loadFailed", SUPPORT)}</p>
       ) : groups.length === 0 ? (
         <RnEmpty>{history.available ? t("empty") : t("sourceUnavailable")}</RnEmpty>
       ) : (

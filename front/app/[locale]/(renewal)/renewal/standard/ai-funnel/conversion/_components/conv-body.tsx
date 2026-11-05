@@ -29,6 +29,7 @@ import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/o
 import type { ConvFinding, ConvStatus, ConvView, RnConvBody } from "../_data/screen-types";
 import { ConvEngineCard, ConvEventCard, ConvPageCard, ConvPropCard, ConvTrendCard } from "./conv-cards";
 import { ConvChangeCard, ConvChannelCard, ConvRawCard, ConvSegmentCard } from "./conv-insights";
+import { SUPPORT } from "@/lib/support-contact";
 
 export type T = ReturnType<typeof useTranslations<"renewal.conversion">>;
 
@@ -145,7 +146,7 @@ export function RnConvBody({ input }: { input: RnConvBody }) {
     const active = input.properties.filter((p) => p.status === "active").length;
     const empty = input.period.from && input.period.to ? t("states.emptyDesc", { n: active, from: input.period.from, to: input.period.to }) : t("states.emptyDescNoDate", { n: active });
     const card = {
-      down: { icon: <AlertTriangle className="size-5" aria-hidden />, title: t("states.downTitle"), desc: t("states.downDesc") },
+      down: { icon: <AlertTriangle className="size-5" aria-hidden />, title: t("states.downTitle"), desc: t("states.downDesc", SUPPORT) },
       noprop: { icon: <Plug className="size-5" aria-hidden />, title: t("states.nopropTitle"), desc: t("states.nopropDesc") },
       pending: { icon: <ShieldCheck className="size-5" aria-hidden />, title: t("states.pendingTitle", { n }), desc: t("states.pendingDesc") },
       nomatch: { icon: <FilterX className="size-5" aria-hidden />, title: t("states.nomatchTitle"), desc: t("states.nomatchDesc") },

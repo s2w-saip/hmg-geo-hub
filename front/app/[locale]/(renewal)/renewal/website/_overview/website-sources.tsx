@@ -12,6 +12,7 @@ import { RnCard, RnCardHeader, RnEmpty, RnTag, cx } from "@/components/renewal-u
 import { RN_OTHER, RN_OWN, RN_OWN_RAMP, RN_QUIET } from "@/components/renewal-ui/palette";
 import type { CompositionView } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { useFormat } from "./website-format";
+import { SUPPORT } from "@/lib/support-contact";
 
 // own domains down the own ramp, the others down the first Chart - Other family, 기타 the quiet grey (the order of the list)
 const OWN_FILL = [RN_OWN, RN_OWN_RAMP[4], RN_OWN_RAMP[5], RN_OWN_RAMP[6]];
@@ -47,7 +48,7 @@ export function RnWebsiteSources({ composition, citationHref, newTab = true }: {
         }
       />
       {c.degraded ? (
-        <RnEmpty className="mx-6 mb-5">{t("sourcesFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("sourcesFailed", SUPPORT)}</RnEmpty>
       ) : c.sources.length === 0 ? (
         <RnEmpty className="mx-6 mb-5">{tC("empty")}</RnEmpty>
       ) : (

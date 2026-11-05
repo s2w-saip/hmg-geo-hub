@@ -26,6 +26,7 @@ import {
   type WebsiteBrandsView,
   type WebsiteEnginesView,
 } from "./website-format";
+import { SUPPORT } from "@/lib/support-contact";
 
 const TONE: Record<TileView["tone"], RnTone> = { good: "up", bad: "down", flat: "flat" };
 
@@ -78,7 +79,7 @@ export function RnWebsiteBrands({ brands, total: totalP, onPick }: { brands: Pro
     <RnCard aria-label={t("brandsTitle")}>
       <RnCardHeader title={t("brandsTitle")} hint={t("brandsHint")} />
       {v === "failed" ? (
-        <RnEmpty className="mx-6 mb-5">{t("brandsFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("brandsFailed", SUPPORT)}</RnEmpty>
       ) : (
         <div className="overflow-x-auto pb-3">
           <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0 text-rn-13" data-rn-brands="">
@@ -133,7 +134,7 @@ export function RnWebsiteBrands({ brands, total: totalP, onPick }: { brands: Pro
                   <th scope="row" className="h-11 border-b border-rn-line pr-3 pl-6 text-left font-semibold text-rn-ink">{b.brand}</th>
                   {b.state !== "ok" ? (
                     <td colSpan={cols.length} className="h-11 border-b border-rn-line px-2.5 text-rn-12 text-rn-muted">
-                      {b.state === "degraded" ? t("brandsRowFailed") : t("brandsRowEmpty")}
+                      {b.state === "degraded" ? t("brandsRowFailed", SUPPORT) : t("brandsRowEmpty")}
                     </td>
                   ) : (
                     cols.map((k) => {
@@ -185,7 +186,7 @@ export function RnWebsiteEngines({ engines, onPick, pickable }: { engines: Promi
     <RnCard aria-label={t("enginesTitle")} className="h-full min-w-0">
       <RnCardHeader title={t("enginesTitle")} hint={t("enginesHint")} />
       {v.degraded ? (
-        <RnEmpty className="mx-6 mb-5">{t("enginesFailed")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{t("enginesFailed", SUPPORT)}</RnEmpty>
       ) : v.engines.length === 0 ? (
         <RnEmpty className="mx-6 mb-5">{t("enginesEmpty")}</RnEmpty>
       ) : (

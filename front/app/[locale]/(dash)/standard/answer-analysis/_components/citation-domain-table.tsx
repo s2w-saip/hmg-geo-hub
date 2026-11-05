@@ -23,6 +23,7 @@ import type {
   CitationUrlLive,
 } from "@/lib/scope/result-adapter";
 import { AnswerModal } from "./answer-modal";
+import { SUPPORT } from "@/lib/support-contact";
 
 // ⚠️ "도메인" 열 표기에 대하여 (제품 결정 2026-08-28)
 // 이 열의 값은 **대부분 registrable domain 이지만 공식 HMG 소셜 계정 행만
@@ -287,7 +288,7 @@ function DomainRow({
     lazy && detail?.status !== "ready" ? (
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         {detail?.status === "error" ? (
-          tMd("citationsError")
+          tMd("citationsError", SUPPORT)
         ) : (
           <>
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

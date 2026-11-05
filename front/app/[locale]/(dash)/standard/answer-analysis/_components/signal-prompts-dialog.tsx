@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import type { MentionsPromptLive } from "@/lib/scope/result-adapter";
 import { AnswerModal } from "./answer-modal";
 import { TruncatedNote } from "./citation-domain-table";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 감정 분포 / Mention 유형 세그먼트 드릴다운 (2026-08-07 고객 피드백: 어떤
 // 프롬프트에서 어떤 긍정·부정 표현이 발생했는지 확인 불가).
@@ -125,7 +126,7 @@ export function SignalPromptsBody({
   ) : state.status === "error" ? (
     <p className="inline-flex items-center gap-2 text-xs text-destructive">
       <AlertCircle className="h-3.5 w-3.5" aria-hidden />
-      {t("error")}
+      {t("error", SUPPORT)}
     </p>
   ) : state.list.length === 0 ? (
     <p className="text-xs text-muted-foreground">{t("empty")}</p>

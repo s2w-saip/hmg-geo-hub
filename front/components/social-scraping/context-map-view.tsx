@@ -71,6 +71,7 @@ import type {
   PerspectiveBreakdown,
   PromptLayer,
 } from "./types";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Names read naturally ascending; counts descending.
 const ASC_BY_DEFAULT = ["name"] as const;
@@ -835,7 +836,7 @@ function ListState({
           </span>
         ) : error ? (
           <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-            {t("loadError")}
+            {t("loadError", SUPPORT)}
             <Button type="button" variant="outline" size="sm" onClick={onRetry}>
               {t("retry")}
             </Button>
@@ -1617,7 +1618,7 @@ function DetailDialog({
   } else if (loading) {
     body = <DetailSkeleton />;
   } else if (error) {
-    body = <p className="py-6 text-center text-xs text-muted-foreground">{t("loadError")}</p>;
+    body = <p className="py-6 text-center text-xs text-muted-foreground">{t("loadError", SUPPORT)}</p>;
   } else if (detail) {
     body = (
       <>

@@ -6,6 +6,7 @@ import ko from "@/messages/ko.json";
 import type { CitationDomainLive, CitationPromptLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
 import { BrandCitationsPanel, BrandPromptsPanel, startListLoad, type ListState } from "./mentions-drilldown";
 import { CitationPromptsDrilldown, startDomainDetailLoad, TruncatedNote, TRUNCATED_ROW_CLASS } from "./citation-domain-table";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // Brand drilldown tabs, route reply -> rendered state (no DOM in this repo: the effect bodies are
 // exported and run with an injected fetch, the resulting state is rendered statically).
@@ -72,7 +73,7 @@ describe("B005 prompts tab: route reply -> state -> markup", () => {
     expect(s).toEqual({ status: "ready", list: [prompt("p1", "best EV")] });
     const html = promptsHtml(s);
     expect(html).toContain("best EV");
-    expect(html).not.toContain(DD.promptsError);
+    expect(html).not.toContain(DD.promptsError.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).not.toContain(DD.noPrompts);
   });
   it("5xx JSON, 403 {prompts:[]} and 400 {prompts:[]} -> the existing error state, not 'no prompts'", async () => {
@@ -85,7 +86,7 @@ describe("B005 prompts tab: route reply -> state -> markup", () => {
       const s = await load<MentionsPromptLive>("prompts", res);
       expect(s).toEqual({ status: "error" });
       const html = promptsHtml(s);
-      expect(html).toContain(DD.promptsError);
+      expect(html).toContain(DD.promptsError.replace("{contact}", FEEDBACK_EMAIL_TEXT));
       expect(html).not.toContain(DD.noPrompts);
     }
   });
@@ -100,13 +101,13 @@ describe("B005 citation sources tab: route reply -> state -> markup", () => {
     const s = await load<CitationDomainLive>("domains", reply(200, { domains: [domain("linkedin.com/hyundai-motor-group"), domain("linkedin.com")] }));
     const html = citationsHtml(s);
     expect(html).toContain("linkedin.com/hyundai-motor-group");
-    expect(html).not.toContain(DD.citationsError);
+    expect(html).not.toContain(DD.citationsError.replace("{contact}", FEEDBACK_EMAIL_TEXT));
   });
   it("5xx JSON and 403 {domains:[]} -> the existing error state, not 'no sources'", async () => {
     for (const res of [reply(502, { error: { code: "bad_gateway" } }), reply(403, { domains: [] })]) {
       const s = await load<CitationDomainLive>("domains", res);
       const html = citationsHtml(s);
-      expect(html).toContain(DD.citationsError);
+      expect(html).toContain(DD.citationsError.replace("{contact}", FEEDBACK_EMAIL_TEXT));
       expect(html).not.toContain(DD.noCitations);
     }
   });

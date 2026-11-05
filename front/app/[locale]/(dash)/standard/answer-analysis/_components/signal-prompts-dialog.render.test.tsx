@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { MentionsPromptLive } from "@/lib/scope/result-adapter";
 import { readSignalReply, SignalPromptsBody, type SignalPromptsState } from "./signal-prompts-dialog";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // Signal drilldown dialog body (감정 분포 / Mention 유형 세그먼트), route reply -> state -> markup.
 //   B008: when the route says the 50-row cap cut the list (`total` above the rows shown), one line
@@ -53,7 +54,7 @@ describe("readSignalReply (route 2xx body -> state)", () => {
 describe("SignalPromptsBody", () => {
   it("loading / error / empty use the existing texts", () => {
     expect(render({ status: "loading" })).toContain(SD.loading);
-    expect(render({ status: "error" })).toContain(SD.error);
+    expect(render({ status: "error" })).toContain(SD.error.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(render({ status: "ready", list: [] })).toContain(SD.empty);
     expect(render({ status: "ready", list: [], total: 3 })).not.toContain(cutLine(0, 3));
   });

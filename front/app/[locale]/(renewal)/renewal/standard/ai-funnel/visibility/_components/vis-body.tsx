@@ -28,6 +28,7 @@ import { CONTEXT_GREY, engineColor, useVisFmt, useVisPage, type VisFmt } from ".
 import { VisLorenz, VisStackChart } from "./vis-charts";
 import { VisPageTab } from "./vis-pages";
 import { VisEngineTab, VisSiteTab } from "./vis-more";
+import { SUPPORT } from "@/lib/support-contact";
 
 type T = ReturnType<typeof useTranslations<"renewal.visibility">>;
 
@@ -38,7 +39,7 @@ export function RnVisBody({ input }: { input: RnVisBody }) {
   const { view } = input;
   if (input.state !== "ok" || !view) {
     const card = {
-      down: { icon: <AlertTriangle className="size-5" aria-hidden />, title: t("states.downTitle"), desc: t("states.downDesc") },
+      down: { icon: <AlertTriangle className="size-5" aria-hidden />, title: t("states.downTitle"), desc: t("states.downDesc", SUPPORT) },
       empty: { icon: <Hourglass className="size-5" aria-hidden />, title: t("states.emptyTitle"), desc: t("states.emptyDesc", { n: input.sites, from: input.period.from ?? "…", to: input.period.to ?? "…" }) },
       nomatch: { icon: <FilterX className="size-5" aria-hidden />, title: t("states.nomatchTitle"), desc: t("states.nomatchDesc") },
       nosite: { icon: <Plug className="size-5" aria-hidden />, title: t("states.nositeTitle"), desc: t("states.nositeDesc") },

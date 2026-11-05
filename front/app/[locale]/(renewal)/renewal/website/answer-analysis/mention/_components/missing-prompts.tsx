@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { RnDrawer, RnSearchField, RnSegmented, RnTag } from "@/components/renewal-ui";
 import type { MentionsPromptLive } from "@/lib/scope/result-adapter";
 import { AnswerModal } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal";
+import { SUPPORT } from "@/lib/support-contact";
 
 // The 미언급 프롬프트 list (2026-10-30): the members of the KPI breakdown's 미언급 프롬프트 count — measured prompts
 // where 당사 is in no answer, under the page's filters (/api/scope/missing-prompts → mention/drill-missing-prompts →
@@ -124,7 +125,7 @@ export function RnMissingPrompts({ open, onClose, ownLabel, country }: { open: b
         {state.status === "loading" ? (
           <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("loading")}</p>
         ) : state.status === "error" ? (
-          <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("error")}</p>
+          <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("error", SUPPORT)}</p>
         ) : state.rows.length === 0 && counts.partial === 0 ? (
           <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{t("empty")}</p>
         ) : (
@@ -154,7 +155,7 @@ export function RnMissingPrompts({ open, onClose, ownLabel, country }: { open: b
             {list.status === "loading" ? (
               <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("loading")}</p>
             ) : list.status === "error" ? (
-              <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("error")}</p>
+              <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tS("error", SUPPORT)}</p>
             ) : shown.length === 0 ? (
               <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{t("noMatch")}</p>
             ) : (
