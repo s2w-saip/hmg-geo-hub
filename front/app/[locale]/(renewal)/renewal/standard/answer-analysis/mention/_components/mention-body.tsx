@@ -138,9 +138,12 @@ function Measured({ shell }: { shell: RnShellVM }) {
                 <Summary />
               </Suspense>
             )}
-            <Suspense fallback={null}>
-              <PerAnswerLine />
-            </Suspense>
+            {/* not on Global (2026-11-05, the user's call): a calendar month's change of 답변당 언급 수 with no level beside it */}
+            {input.global ? null : (
+              <Suspense fallback={null}>
+                <PerAnswerLine />
+              </Suspense>
+            )}
             <RnMentionTabs />
             {view === "brands" ? (
               <>

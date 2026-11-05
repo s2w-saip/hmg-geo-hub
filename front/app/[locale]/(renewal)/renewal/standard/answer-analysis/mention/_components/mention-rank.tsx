@@ -86,37 +86,41 @@ export function RankHeroCard({ plain = false }: { plain?: boolean }) {
           <span>{hero.delta.basis?.kind === "period" ? basis(hero.delta) : t("basis")}</span>
         </div>
         {degraded ? <DegradedNote>{dg.all}</DegradedNote> : null}
-        <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
-          {/* without a 당사 position the screen sends no counts (null → "—", not "0개") */}
-          <Stat label={t("ranked")} value={hero.rankedAnswers == null ? "—" : t("count", { n: numTxt(hero.rankedAnswers, locale) })} />
-          {/* Global (2026-11-05 지표 정리): no 앞선 경쟁사 (the table below lists who is ahead) and no 표에서 당사 순위 (the
-              table's 당사 row: its # and, on its tooltip, the top %) */}
-          {plain || input.global ? null : (
-            <>
-              <Stat
-                label={
-                  <>
-                    {t("ahead")}
-                    <InfoTip label={t("ahead")} items={[[t("ahead"), t("aheadTip")]]} />
-                  </>
-                }
-                value={ahead == null ? "—" : t("count", { n: ahead })}
-              />
-              <Stat
-                label={
-                  <>
-                    {t("standing")}
-                    {standing ? <InfoTip label={t("standing")} items={[[t("standing"), t("standingTip", { n: standing.total })]]} /> : null}
-                  </>
-                }
-                value={standing ? `${tFR("unit", { n: standing.rank })} · ${tFR("topPct", { pct: standing.topPct })}` : "—"}
-              />
-            </>
-          )}
-        </dl>
+        {/* Global: no counts (2026-11-05). 앞선 경쟁사 and 표에서 당사 순위 went with 지표 정리 (the table below lists who
+            is ahead; its 당사 row holds the # and the top %); the ranked answers, the user's call the same day, are the
+            exposure hero's numerator in every Gold cell (ranked = tracked) and stay on the trend's tooltip and table */}
+        {input.global ? null : (
+          <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
+            {/* without a 당사 position the screen sends no counts (null → "—", not "0개") */}
+            <Stat label={t("ranked")} value={hero.rankedAnswers == null ? "—" : t("count", { n: numTxt(hero.rankedAnswers, locale) })} />
+            {plain ? null : (
+              <>
+                <Stat
+                  label={
+                    <>
+                      {t("ahead")}
+                      <InfoTip label={t("ahead")} items={[[t("ahead"), t("aheadTip")]]} />
+                    </>
+                  }
+                  value={ahead == null ? "—" : t("count", { n: ahead })}
+                />
+                <Stat
+                  label={
+                    <>
+                      {t("standing")}
+                      {standing ? <InfoTip label={t("standing")} items={[[t("standing"), t("standingTip", { n: standing.total })]]} /> : null}
+                    </>
+                  }
+                  value={standing ? `${tFR("unit", { n: standing.rank })} · ${tFR("topPct", { pct: standing.topPct })}` : "—"}
+                />
+              </>
+            )}
+          </dl>
+        )}
       </div>
       <div className="flex min-w-0 flex-col gap-2">
-        {plain ? null : (
+        {/* Global: no track (2026-11-05, the user's call) — the table below draws the same dots on the same axis */}
+        {plain || input.global ? null : (
           <>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <h3 className="m-0 text-rn-13 font-bold text-rn-ink">{t("trackTitle")}</h3>

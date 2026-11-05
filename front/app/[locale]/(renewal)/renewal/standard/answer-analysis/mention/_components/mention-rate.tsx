@@ -241,7 +241,8 @@ export function HeroTrend({ metric, title }: { metric: KpiMetric; title?: string
 
 const BOARD_COLS =
   "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px_70px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px_64px]";
-/** Global: no 당사 대비 column (2026-11-05 지표 정리 — the row tooltip and the CSV keep the gap, as the original table's tooltip) */
+/** Global: no 당사 대비 (2026-11-05 지표 정리 moved the column to the row tooltip and the CSV; the same day the user dropped
+ * it there too — the difference of the two values beside it, negative in every condition) */
 const BOARD_COLS_GLOBAL =
   "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px]";
 
@@ -257,12 +258,15 @@ export function Board({ metric }: { metric: KpiMetric }) {
   const hidden = b.rows.length - shown.length;
   const max = b.barMax;
   const keys = b.rows.map((r) => r.key);
+  const gapCol = !input.global;
   const csv = () => ({
     name: `mention-${metric}-competitors`,
-    rows: [["#", t("board.colBrand"), short, t("board.colDelta"), t("board.colGap")], ...b.rows.map((r, i) => [i + 1, r.own ? ownLabel : r.key, r.pct, r.delta, r.gap])],
+    rows: [
+      ["#", t("board.colBrand"), short, t("board.colDelta"), ...(gapCol ? [t("board.colGap")] : [])],
+      ...b.rows.map((r, i) => [i + 1, r.own ? ownLabel : r.key, r.pct, r.delta, ...(gapCol ? [r.gap] : [])]),
+    ],
   });
   const name = (r: BoardRow) => (r.own ? ownLabel : r.key);
-  const gapCol = !input.global;
   const cols = gapCol ? BOARD_COLS : BOARD_COLS_GLOBAL;
   // the trend axis's rounds the scope did not measure, counted as the original table's coverage line did (2026-11-05:
   // '추이 축 18회차 · 측정 14 · 미측정 4' for 06-01 ~ 10-31); none missing reads as before
@@ -271,7 +275,7 @@ export function Board({ metric }: { metric: KpiMetric }) {
     <>
       <RnCardHead
         title={t("board.title", { metric: short })}
-        info={<InfoTip label={t("board.infoLabel")} items={[[t("board.infoLabel"), t(metric === "sov" ? "board.infoSov" : "board.infoExposure")]]} />}
+        info={<InfoTip label={t("board.infoLabel")} items={[[t("board.infoLabel"), t(metric === "sov" ? (gapCol ? "board.infoSov" : "board.infoSovGlobal") : gapCol ? "board.infoExposure" : "board.infoExposureGlobal")]]} />}
         chips={
           <>
             <RnBasisChip>{t(input.period ? "board.chipPeriod" : "board.chipSnapshot")}</RnBasisChip>
@@ -302,7 +306,7 @@ export function Board({ metric }: { metric: KpiMetric }) {
               const color = r.own ? OWN_COLOR : on ? colorOf(r.key) : CONTEXT_COLOR;
               const canCompare = !r.own && covered.includes(r.key);
               const st = rnHighlightState(lit, [r.key], keys);
-              const tip = `${name(r)}\n${short} ${pctTxt(r.pct)} · ${t("board.colDelta")} ${deltaTxt(r.delta)}${r.gap == null ? "" : `\n${t("board.colGap")} ${ppTxt(r.gap)}`}${!r.own && !canCompare ? `\n${t("board.noCompare")}` : ""}`;
+              const tip = `${name(r)}\n${short} ${pctTxt(r.pct)} · ${t("board.colDelta")} ${deltaTxt(r.delta)}${r.gap == null || !gapCol ? "" : `\n${t("board.colGap")} ${ppTxt(r.gap)}`}${!r.own && !canCompare ? `\n${t("board.noCompare")}` : ""}`;
               const cells = (
                 <>
                   <span className="text-rn-12 text-rn-muted tabular-nums">{r.pos}</span>
@@ -356,7 +360,7 @@ export function Board({ metric }: { metric: KpiMetric }) {
 
 // ── AI 엔진별 ────────────────────────────────────────────────────────────────
 
-function Engines({ metric }: { metric: KpiMetric }) {
+export function Engines({ metric }: { metric: KpiMetric }) {
   const { input, engineLabel, ownLabel } = useMention();
   const t = useTranslations("renewal.mention");
   const tK = useTranslations("answerAnalysis.mentions.kpi");
@@ -371,16 +375,23 @@ function Engines({ metric }: { metric: KpiMetric }) {
   const hi = nums.length ? Math.max(...nums) : 1;
   const ticks = rnNiceTicks(Math.max(0, lo - (hi - lo) * 0.15), hi, 4);
   const domain = { lo: ticks[0], hi: ticks[ticks.length - 1], ticks };
+  // Global (the user's call, 2026-11-05): no competitor average — a HUB-made baseline (the engine's top 30 rivals) kept
+  // as the original's, 당사 ahead of it by 29 pp or more in every condition — so no gap chip either
+  const avg = !input.global;
   const csv = () => ({
     name: `mention-${metric}-engines`,
-    rows: [["AI", t("engine.own"), t("engine.avgShort"), t("engine.gapTitle"), ...x], ...rows.map((r) => [engineLabel(r.engine), r.own, r.avg, r.gap, ...r.series])],
+    rows: [
+      ["AI", t("engine.own"), ...(avg ? [t("engine.avgShort"), t("engine.gapTitle")] : []), ...x],
+      ...rows.map((r) => [engineLabel(r.engine), r.own, ...(avg ? [r.avg, r.gap] : []), ...r.series]),
+    ],
   });
+  const info = metric === "sov" ? (avg ? "engine.infoSov" : "engine.infoSovGlobal") : avg ? "engine.infoExposure" : "engine.infoExposureGlobal";
   return (
     <>
       <RnCardHead
         title={title}
-        info={<InfoTip label={t("engine.infoLabel")} items={[[t("engine.infoLabel"), t(metric === "sov" ? "engine.infoSov" : "engine.infoExposure")]]} />}
-        chips={<RnBasisChip>{t("engine.chip")}</RnBasisChip>}
+        info={<InfoTip label={t("engine.infoLabel")} items={[[t("engine.infoLabel"), t(info)]]} />}
+        chips={avg ? <RnBasisChip>{t("engine.chip")}</RnBasisChip> : undefined}
         actions={<MentionCardActions section="sec-mix" csv={csv} />}
       />
       {!rows.length ? (
@@ -391,9 +402,11 @@ function Engines({ metric }: { metric: KpiMetric }) {
             <div key={r.engine} data-rn-engine={r.engine} className="flex min-w-0 flex-col gap-1.5 border-t border-rn-line pt-3">
               <h4 className="m-0 flex items-center gap-2 text-rn-13 font-bold text-rn-ink">
                 {engineLabel(r.engine)}
-                <span title={t("engine.gapTitle")} className={cx("rounded-full px-1.5 text-rn-11 font-bold tabular-nums", r.gap == null ? "bg-rn-page text-rn-muted" : r.gap >= 0 ? "bg-rn-up/12 text-rn-up-ink" : "bg-rn-down/12 text-rn-danger-ink")}>
-                  {ppTxt(r.gap)}
-                </span>
+                {avg ? (
+                  <span title={t("engine.gapTitle")} className={cx("rounded-full px-1.5 text-rn-11 font-bold tabular-nums", r.gap == null ? "bg-rn-page text-rn-muted" : r.gap >= 0 ? "bg-rn-up/12 text-rn-up-ink" : "bg-rn-down/12 text-rn-danger-ink")}>
+                    {ppTxt(r.gap)}
+                  </span>
+                ) : null}
               </h4>
               <div className="flex items-end gap-3">
                 <div>
@@ -402,11 +415,15 @@ function Engines({ metric }: { metric: KpiMetric }) {
                     {t("engine.own")} <DeltaChip value={r.delta} />
                   </div>
                 </div>
-                <span className="pb-4 text-rn-11 text-rn-muted">vs</span>
-                <div>
-                  <div className="text-rn-20 font-bold text-rn-ink-2 tabular-nums">{pctTxt(r.avg)}</div>
-                  <div className="text-rn-11 text-rn-muted">{t("engine.avg", { n: r.avgCount })}</div>
-                </div>
+                {avg ? (
+                  <>
+                    <span className="pb-4 text-rn-11 text-rn-muted">vs</span>
+                    <div>
+                      <div className="text-rn-20 font-bold text-rn-ink-2 tabular-nums">{pctTxt(r.avg)}</div>
+                      <div className="text-rn-11 text-rn-muted">{t("engine.avg", { n: r.avgCount })}</div>
+                    </div>
+                  </>
+                ) : null}
               </div>
               {trendMissing ? (
                 <DegradedNote>{dg.trend}</DegradedNote>
@@ -451,11 +468,11 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
   const ownRows = own.rows;
   const id = `type-${metric}`;
   const tableOn = tables.has(id);
-  // Global (2026-11-05 지표 정리): the share tab has no 당사 view — the same signal counts stood on both tabs; each type's
-  // 유형 구성 % (its signals ÷ our type signals, the share view's own value) sits on the exposure view's rows instead
-  const ownView = !(input.global && metric === "sov");
-  const isCmp = !ownView || view === "cmp";
-  const mix = input.global && metric === "exposure" ? new Map(vm.own.sov.rows.map((r) => [r.type, r.pct])) : null;
+  // Global: one view per tab (2026-11-05). The share tab compares brands — its values are shares within a type — and the
+  // exposure tab shows 당사's type exposure; the same compare view stood on both tabs, as the 당사 signal counts did
+  // (지표 정리). The 유형 구성 % that moved onto the exposure rows' tooltip went too (the user's call, the same day).
+  const fixed = input.global ? (metric === "sov" ? "cmp" : "own") : null;
+  const isCmp = fixed ? fixed === "cmp" : view === "cmp";
   // the exposure lines' rounds: each point names its type answers and the round's answers (the original type chart's bar)
   const sparkTips = (r: (typeof ownRows)[number]) =>
     r.spark.map((v, i) =>
@@ -469,9 +486,9 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
       : {
           name: `mention-type-own-${metric}`,
           rows: [
-            [t("colType"), t(metric === "sov" ? "colOwnSov" : "colOwnExposure"), t("colSignals"), ...(mix ? [t("colOwnSov")] : []), t("colDelta"), ...own.x],
-            ...ownRows.map((r) => [tType(r.type), r.pct, r.signals, ...(mix ? [mix.get(r.type) ?? null] : []), r.delta, ...r.spark]),
-            ...(own.x.length ? [[t("colRoundAnswers"), "", "", ...(mix ? [""] : []), "", ...own.answers]] : []),
+            [t("colType"), t(metric === "sov" ? "colOwnSov" : "colOwnExposure"), t("colSignals"), t("colDelta"), ...own.x],
+            ...ownRows.map((r) => [tType(r.type), r.pct, r.signals, r.delta, ...r.spark]),
+            ...(own.x.length ? [[t("colRoundAnswers"), "", "", "", ...own.answers]] : []),
           ],
         };
   const empty = isCmp ? !cmpRows.length : !ownRows.length;
@@ -483,7 +500,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
         chips={<RnBasisChip>{t("chip")}</RnBasisChip>}
         controls={
           <>
-            {ownView ? (
+            {fixed ? null : (
               <RnSegmented
                 label={t("viewLabel")}
                 value={view}
@@ -493,7 +510,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
                   { value: "own", label: t(metric === "sov" ? "viewOwnSov" : "viewOwnExposure") },
                 ]}
               />
-            ) : null}
+            )}
             {!isCmp ? (
               <RnSegmented
                 label={t("unitLabel")}
@@ -552,7 +569,6 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
                   type="button"
                   data-rn-type={r.type}
                   disabled={!r.signals}
-                  title={mix ? t("mixTip", { type: tType(r.type), n: numTxt(r.signals, locale), pct: pctTxt(mix.get(r.type)) }) : undefined}
                   onClick={() => openDrawer({ kind: "signal", signal: r.type })}
                   className="col-span-3 grid min-h-10 cursor-pointer grid-cols-subgrid items-center rounded-md text-left hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy disabled:cursor-default disabled:hover:bg-transparent"
                 >
@@ -571,8 +587,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
             );
           })}
           <p className="m-0 pt-2 text-rn-11 text-rn-muted">
-            {t(metric === "sov" ? "footSov" : "footExposure")}
-            {mix ? ` · ${t("footMix")}` : ""} · {tB("drilldownHint")}
+            {t(metric === "sov" ? "footSov" : "footExposure")} · {tB("drilldownHint")}
           </p>
         </div>
       )}

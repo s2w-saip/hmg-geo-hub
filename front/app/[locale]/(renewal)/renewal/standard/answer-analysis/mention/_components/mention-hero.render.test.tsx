@@ -21,11 +21,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { MentionProvider } = await import("./mention-context");
-const { Board, HeroValue, RateHero, Types } = await import("./mention-rate");
+const { Board, Engines, HeroValue, RateHero, Types } = await import("./mention-rate");
 const { PerAnswerLine, Summary } = await import("./mention-body");
 const { FavorHeroCard } = await import("./mention-favor");
 const { RankBody, RankHeroCard } = await import("./mention-rank");
-const { RnMentionPageProvider } = await import("./mention-tabs");
+const { KpiBasisChip, RnMentionPageProvider } = await import("./mention-tabs");
 
 const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
 const NO_DELTA = { value: null, basis: null };
@@ -317,15 +317,37 @@ describe("renewal Mention: Global says each number once", () => {
     expect(global).toContain("당사 = Hyundai+Kia+Genesis 합산");
   });
 
-  it("the competitor board has no 당사 대비 column on Global; the row tooltip keeps the gap", () => {
+  // 지표 정리 moved the column to the row tooltip; the user dropped it there too the same day (and from the CSV)
+  it("the competitor board has no 당사 대비 on Global, neither a column nor on the row tooltip; Project keeps the column", () => {
     const head = `>${ko.renewal.mention.board.colGap}<`;
     const project = render(<Board metric="exposure" />);
     expect(project).toContain(head);
     expect(project).toContain(">−45.2pp<");
+    expect(project).toContain(ko.renewal.mention.board.infoExposure);
     const global = render(<Board metric="exposure" />, { input: { global: true } });
     expect(global).not.toContain(head);
-    expect(global).not.toContain(">−45.2pp<");
-    expect(global).toContain(`${ko.renewal.mention.board.colGap} −45.2pp`);
+    expect(global).not.toContain("−45.2pp");
+    expect(global).not.toContain(ko.renewal.mention.board.colGap);
+    expect(global).toContain(ko.renewal.mention.board.infoExposureGlobal);
+  });
+
+  // the engine card's competitor average: a HUB-made baseline (the engine's top 30 rivals), 당사 ahead of it by 29 pp or
+  // more in every condition — out on Global with its gap chip, its chip and the CSV columns (the user's call, 2026-11-05)
+  it("the engine card has no competitor average on Global; Project keeps it with the gap chip", () => {
+    const engines = { exposure: { rows: [{ engine: "chatgpt", own: 78.2, avg: 10.8, avgCount: 29, gap: 67.4, series: [77.9, 78.2], delta: 0.3, hasSeries: true }], x: ["2026-09-28", "2026-10-05"], trendMissing: false } };
+    const over = (global: boolean) => ({ input: { rateEngines: settled({ ...engines, sov: engines.exposure }), global } });
+    const project = render(<Engines metric="exposure" />, over(false));
+    expect(project).toContain("78.2%");
+    expect(project).toContain("10.8%");
+    expect(project).toContain("경쟁사 평균 (상위 29개사)");
+    expect(project).toContain(`title="${ko.renewal.mention.engine.gapTitle}"`);
+    expect(project).toContain(ko.renewal.mention.engine.chip);
+    const global = render(<Engines metric="exposure" />, over(true));
+    expect(global).toContain("78.2%");
+    expect(global).not.toContain("10.8%");
+    expect(global).not.toContain("경쟁사 평균");
+    expect(global).not.toContain("+67.4pp");
+    expect(global).toContain(ko.renewal.mention.engine.infoExposureGlobal);
   });
 
   // the first-position hero: 앞선 경쟁사 (0 of 21 conditions) out; 표에서 당사 순위 · 상위 N% onto the table's 당사 row
@@ -345,16 +367,39 @@ describe("renewal Mention: Global says each number once", () => {
     track: { lo: 2.4, hi: 3.7 },
   } as unknown as RnRankVM;
 
-  it("first position: the hero drops 앞선 경쟁사 and 표에서 당사 순위 on Global; Project keeps both", () => {
+  // 앞선 경쟁사 and 표에서 당사 순위 went with 지표 정리; the ranked answers (the exposure hero's numerator in every Gold
+  // cell) and the track (the table's dots on the same axis) the same day, the user's call
+  it("first position: the hero has no counts and no track on Global; Project keeps both, the Website card its count", () => {
     const project = render(<RankHeroCard />, { input: { rank: settled(ranked) } });
     expect(dd(project)).toEqual(["900개", "0개", "1위 · 상위 9%"]);
     expect(project).toContain(ko.renewal.mention.rank.ahead);
-    const global = render(<RankHeroCard />, { input: { rank: settled(ranked), global: true } });
-    expect(dd(global)).toEqual(["900개"]);
+    expect(project).toContain(ko.renewal.mention.rank.trackTitle);
+    const global = render(<RankHeroCard />, { input: { rank: settled(ranked), global: true }, tables: ["rank-trend"] });
+    expect(dd(global)).toEqual([]);
     expect(global).not.toContain(ko.renewal.mention.rank.ahead);
     expect(global).not.toContain(ko.renewal.mention.rank.aheadTip);
+    expect(global).not.toContain(ko.renewal.mention.rank.trackTitle);
+    expect(global).not.toContain(`aria-label="${ko.renewal.mention.rank.trackAria}"`);
+    // each round's ranked answers stay on the trend's table
+    expect(cells(global)).toContainEqual([ko.renewal.mention.rank.ranked, "800", "900"]);
     // the Website page's plain card stays as it was
     expect(dd(render(<RankHeroCard plain />, { input: { rank: settled(ranked) } }))).toEqual(["900개"]);
+  });
+
+  it("favorability: the hero has no counts on Global (the 감정 분포 card shows them); Project keeps them", () => {
+    const measured = { ...favorHero, positivePct: 54.1, negativePct: 1.9, positive: 175995, total: 325173, degraded: false };
+    const project = render(<FavorHeroCard />, { input: { favorHero: settled(measured) } });
+    expect(dd(project)).toEqual(["175,995", "325,173"]);
+    const global = render(<FavorHeroCard />, { input: { favorHero: settled(measured), global: true }, tables: ["fav-trend"] });
+    expect(dd(global)).toEqual([]);
+    expect(global).toContain(ko.renewal.mention.favor.chipSignal);
+    expect(cells(global)).toContainEqual([ko.renewal.mention.favor.posCount, "169,090", "175,995"]);
+  });
+
+  it("the section heads carry no '{KPI} 기준' chip on Global; Project keeps it", () => {
+    const chip = (global: boolean) => render(<KpiBasisChip />, { input: { global } });
+    expect(chip(false)).toContain("AI 노출률 기준");
+    expect(chip(true)).toBe("");
   });
 
   it("first position: the table has no 당사 대비 column on Global, and 당사's row names its place and top %", () => {
@@ -372,7 +417,9 @@ describe("renewal Mention: Global says each number once", () => {
     expect(global).toContain(ko.renewal.mention.rank.tableInfoGlobal);
   });
 
-  it("the share tab has no 당사 유형 구성 view on Global; the exposure tab's rows carry it on their tooltip", () => {
+  // one view per tab on Global: the share tab compares brands (shares within a type), the exposure tab shows 당사 (지표
+  // 정리 took the share tab's 당사 view; the exposure tab's compare view and the 유형 구성 % tooltip went the same day)
+  it("the type card has one view per tab on Global: compare on the share tab, 당사 on the exposure tab; Project has both", () => {
     const two = {
       ...rateTypes,
       own: {
@@ -381,14 +428,19 @@ describe("renewal Mention: Global says each number once", () => {
       },
     };
     const over = (global: boolean) => ({ input: { rateTypes: settled(two), global } });
-    const viewOwnSov = `>${ko.renewal.mention.type.viewOwnSov}<`;
-    expect(render(<Types metric="sov" />, over(false))).toContain(viewOwnSov);
+    const ty = ko.renewal.mention.type;
+    const views = (html: string) => [ty.viewCompare, ty.viewOwnExposure, ty.viewOwnSov].filter((v) => html.includes(`>${v}<`));
+    expect(views(render(<Types metric="sov" />, over(false)))).toEqual([ty.viewCompare, ty.viewOwnSov]);
+    expect(views(render(<Types metric="exposure" />, over(false)))).toEqual([ty.viewCompare, ty.viewOwnExposure]);
     const sov = render(<Types metric="sov" initialView="own" />, over(true));
-    expect(sov).not.toContain(viewOwnSov);
-    expect(sov).not.toContain(ko.renewal.mention.type.footSov);
-    const exposure = render(<Types metric="exposure" initialView="own" />, over(true));
-    expect(exposure).toContain('title="추천 · 당사 유형 신호 9건 · 당사 유형 구성 1.8%(당사 유형 신호 합 대비)"');
-    expect(exposure).toContain(ko.renewal.mention.type.footMix);
-    expect(render(<Types metric="exposure" initialView="own" />, over(false))).not.toContain("당사 유형 구성 1.8%");
+    expect(views(sov)).toEqual([]);
+    expect(sov).not.toContain(ty.footSov);
+    expect(sov).not.toContain("data-rn-type=");
+    const exposure = render(<Types metric="exposure" />, over(true));
+    expect(views(exposure)).toEqual([]);
+    expect(exposure).not.toContain(ty.footCompare);
+    expect(exposure).toContain(ty.footExposure);
+    expect(exposure).toContain('data-rn-type="recommendation"');
+    expect(exposure).not.toContain("당사 유형 구성 1.8%");
   });
 });

@@ -100,11 +100,13 @@ export function useMentionPage(): PageCtx {
   return c;
 }
 
-/** "AI 노출률 기준" — the KPI a tab-driven section shows. */
+/** "AI 노출률 기준" — the KPI a tab-driven section shows. Not on Global (2026-11-05, the user's call): it said the active
+ * tab's name two or three times per view, and the rail that names it sticks under the control bar. */
 export function KpiBasisChip() {
-  const { kpi } = useMentionPage();
+  const { input, kpi } = useMentionPage();
   const t = useTranslations("renewal.mention.tabs");
   const tTab = useTranslations("answerAnalysis.mentions.kpi.tabs");
+  if (input.global) return null;
   return (
     <span data-rn-kchip="" className="inline-flex h-[22px] items-center self-center rounded-full bg-rn-surface px-2.5 text-rn-11 font-bold whitespace-nowrap text-rn-navy shadow-[inset_0_0_0_1px_rgba(30,56,250,0.2)]">
       {t("basis", { kpi: tTab(kpi) })}

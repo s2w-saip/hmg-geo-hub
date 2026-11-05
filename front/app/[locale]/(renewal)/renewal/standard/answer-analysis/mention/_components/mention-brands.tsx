@@ -260,10 +260,10 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
   const [view, setView] = useState<"map" | "table">(tableOnly ? "table" : initialView);
   const [multi, setMulti] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
-  // Global (2026-11-05 지표 정리): no 복수 언급 toggle — turned on, the top 10 stayed the same 10 (the top 50's rank
-  // correlation 0.99); its values sit on each table row's tooltip and in the CSV beside the plain ones
-  const both = Boolean(input.global);
-  const mode = multi && !both ? "on" : "off";
+  // Global: no 복수 언급 (2026-11-05) — turned on, the top 10 stayed the same 10 (the top 50's rank correlation 0.99).
+  // 지표 정리 took the toggle off and kept its values on the row tooltip and in the CSV; the user dropped those too.
+  const noMulti = Boolean(input.global);
+  const mode = multi && !noMulti ? "on" : "off";
   // the API sends both value sets (multi toggle off / on) of every body brand
   const rows = useMemo<RankRow[]>(() => vm.rows.map((r) => ({ ...r, v: r[mode] })), [vm.rows, mode]);
   // a parent with several brands reads "{name} 그룹" (HMG stays HMG); a single brand is just its name
@@ -287,7 +287,7 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
                 ]}
               />
             )}
-            {both ? null : (
+            {noMulti ? null : (
               <button type="button" role="switch" aria-checked={multi} title={tT("multiHint")} onClick={() => setMulti((v) => !v)} className="inline-flex cursor-pointer items-center gap-2 text-rn-12 font-semibold text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-rn-navy">
                 <span aria-hidden className={cx("relative h-[18px] w-8 rounded-full transition-colors", multi ? "bg-rn-navy" : "bg-rn-line-2")}>
                   <i className={cx("absolute top-0.5 size-3.5 rounded-full bg-white shadow transition-[left]", multi ? "left-4" : "left-0.5")} />
@@ -303,8 +303,8 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
             csv={() => ({
               name: "brand-mentions",
               rows: [
-                ["#", tT("col.brand"), tT("col.mentions"), tT("col.share"), t("brands.colDelta"), tT("col.position"), tT("col.prompts"), tT("col.rate"), ...(both ? [tT("col.multiMentions"), t("brands.multiShare"), t("brands.multiPrompts"), tT("col.multiRate")] : [])],
-                ...rows.map((r) => [r.rank, r.brand, r.v.mentions, r.v.share, r.v.delta, r.avgPosition, r.v.prompts, r.v.mentionRate, ...(both ? [r.on.mentions, r.on.share, r.on.prompts, r.on.mentionRate] : [])]),
+                ["#", tT("col.brand"), tT("col.mentions"), tT("col.share"), t("brands.colDelta"), tT("col.position"), tT("col.prompts"), tT("col.rate")],
+                ...rows.map((r) => [r.rank, r.brand, r.v.mentions, r.v.share, r.v.delta, r.avgPosition, r.v.prompts, r.v.mentionRate]),
               ],
             })}
           />
@@ -574,24 +574,16 @@ function RankTable({
   // the cut note counts the list being cut: every brand (the backend's count if it cut the list), or the matches
   const listTotal = !dq.trim() && !group && total !== undefined && total > count ? total : matched;
   const tB = (k: string) => t(`brands.${k}`);
-  const def = (definition: string, formula?: string): Array<[string, string]> => (formula ? [[tB("defLabel"), definition], [tB("formulaLabel"), formula]] : [[tB("defLabel"), definition]]);
-  // Global (no toggle): each value's 복수 언급 basis under its own, named as the row tooltip and the CSV name it
-  const both = Boolean(input.global);
-  const plus = (items: Array<[string, string]>, label: string, text: string): Array<[string, string]> => (both ? [...items, [label, text]] : items);
+  const def = (definition: string, formula?: string): ReadonlyArray<[string, string]> => (formula ? [[tB("defLabel"), definition], [tB("formulaLabel"), formula]] : [[tB("defLabel"), definition]]);
   const info: Partial<Record<SortKey, ReadonlyArray<[string, string]>>> = {
     rank: def(tT("colDefinition.rank")),
-    mentions: multi ? def(tT("colDefinition.multiMentions")) : plus(def(tT("colDefinition.mentions")), tT("col.multiMentions"), tT("colDefinition.multiMentions")),
-    share: multi ? def(tB("multiShareDef"), tB("multiShareFormula")) : plus(def(tT("colDefinition.share"), tT("colFormula.share")), tB("multiShare"), `${tB("multiShareDef")} ${tB("multiShareFormula")}`),
+    mentions: def(multi ? tT("colDefinition.multiMentions") : tT("colDefinition.mentions")),
+    share: multi ? def(tB("multiShareDef"), tB("multiShareFormula")) : def(tT("colDefinition.share"), tT("colFormula.share")),
     delta: def(multi ? tB("multiNoDelta") : tB(input.period ? "deltaInfoPeriod" : "deltaInfo")),
     avgPosition: def(tT("colDefinition.position")),
-    prompts: multi ? def(tB("multiPromptsDef")) : plus(def(tT("colDefinition.prompts")), tB("multiPrompts"), tB("multiPromptsDef")),
-    mentionRate: multi ? def(tT("colDefinition.multiRate"), tB("multiRateFormula")) : plus(def(tT("colDefinition.rate"), tT("colFormula.rate")), tT("col.multiRate"), `${tT("colDefinition.multiRate")} ${tB("multiRateFormula")}`),
+    prompts: def(multi ? tB("multiPromptsDef") : tT("colDefinition.prompts")),
+    mentionRate: multi ? def(tT("colDefinition.multiRate"), tB("multiRateFormula")) : def(tT("colDefinition.rate"), tT("colFormula.rate")),
   };
-  // the row's tooltip: what a click opens, and on Global its 복수 언급 values (the toggle's, CSV columns of the same names)
-  const rowTip = (r: RankRow) =>
-    both
-      ? `${t("brands.rowTip")}\n${t("brands.multiTip", { mentions: numTxt(r.on.mentions, locale), share: pctTxt(r.on.share), prompts: numTxt(r.on.prompts, locale), rate: pctTxt(r.on.mentionRate) })}`
-      : t("brands.rowTip");
   const head = (k: SortKey, label: string, right = true) => (
     <span className={cx("inline-flex min-w-0 items-center gap-1", right && "justify-end")}>
       <button
@@ -652,7 +644,7 @@ function RankTable({
                     type="button"
                     data-rn-b={r.brand}
                     data-rn-row={r.rank}
-                    title={rowTip(r)}
+                    title={t("brands.rowTip")}
                     onClick={() => openDrawer({ kind: "brand", brand: r.brand, row: r.drawer })}
                     onPointerEnter={() => hover(r.brand)}
                     onPointerLeave={() => hover(null)}
@@ -806,7 +798,7 @@ function BrandSheet({
   onAnswer: (p: MentionsPromptLive) => void;
   onCitationAnswer: (p: CitationPromptLive) => void;
 }) {
-  const { drawer } = useMention();
+  const { drawer, input } = useMention();
   const t = useTranslations("renewal.mention");
   const tT = useTranslations("answerAnalysis.mentions.table");
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
@@ -830,6 +822,12 @@ function BrandSheet({
   const sent = row?.sentiment ?? null;
   const sentPct = row?.sentimentPct ?? null;
   const rank = row?.rank ?? 0;
+  // Global: the four values under the title are one subtitle line (2026-11-05, the user's call) — the ranking row the
+  // drawer opened from shows them, as the Global Citation domain sheet's subtitle does (지표 정리)
+  const stats =
+    input.global && row
+      ? { mentions: numTxt(row.mentions, locale), share: pctTxt(row.share), position: posTxt(row.avgPosition), rate: pctTxt(row.mentionRate) }
+      : null;
   return (
     <RnDrawer
       open={!hidden}
@@ -841,9 +839,11 @@ function BrandSheet({
           {row?.isTracked ? <RnTag>{t("board.own")}</RnTag> : row?.sibling ? <RnTag>{t("board.sibling")}</RnTag> : null}
         </span>
       }
-      subtitle={rank > 0 ? t("drawer.rankLine", { rank }) : undefined}
+      subtitle={
+        stats ? t(rank > 0 ? "drawer.rankStats" : "drawer.stats", { rank, ...stats }) : rank > 0 ? t("drawer.rankLine", { rank }) : undefined
+      }
     >
-      {row ? (
+      {row && !stats ? (
         <dl className="m-0 grid grid-cols-4 gap-3 rounded-xl bg-rn-page px-4 py-3">
           {[
             [tT("col.mentions"), numTxt(row.mentions, locale)],

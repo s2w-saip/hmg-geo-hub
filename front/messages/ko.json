@@ -5683,6 +5683,8 @@
         "infoLabel": "읽는 법",
         "infoExposure": "전체 AI 답변 중 브랜드가 등장한 비율입니다. 값은 측정 기준일 스냅샷, 추이·증감은 회차 집계입니다. 당사 대비 = 경쟁사 값 − 당사 값.",
         "infoSov": "전체 브랜드 언급 중 각 브랜드가 차지하는 비율입니다. 값은 측정 기준일 스냅샷, 추이·증감은 회차 집계입니다. 당사 대비 = 경쟁사 값 − 당사 값.",
+        "infoExposureGlobal": "전체 AI 답변 중 브랜드가 등장한 비율입니다. 값은 측정 기준일 스냅샷, 추이·증감은 회차 집계입니다.",
+        "infoSovGlobal": "전체 브랜드 언급 중 각 브랜드가 차지하는 비율입니다. 값은 측정 기준일 스냅샷, 추이·증감은 회차 집계입니다.",
         "chipSnapshot": "측정 기준일 스냅샷",
         "chipPeriod": "선택 기간 누적",
         "chipTrend": "추이 {n}회차",
@@ -5709,6 +5711,8 @@
         "infoLabel": "이 카드",
         "infoExposure": "AI 엔진별 당사 노출률입니다. 비교 기준은 그 엔진에서 언급이 있는 경쟁사(엔진별 상위 30개사)의 평균이며, 페이지의 비교 브랜드와 무관합니다. 선은 당사 추이입니다 — 경쟁사 평균의 회차 추이는 데이터에 없습니다.",
         "infoSov": "전체 브랜드 언급 중 당사 점유율을 AI 엔진별로 나타냅니다. 비교 기준은 그 엔진에서 언급이 있는 경쟁사(엔진별 상위 30개사)의 평균이며, 페이지의 비교 브랜드와 무관합니다. 선은 당사 추이입니다 — 경쟁사 평균의 회차 추이는 데이터에 없습니다.",
+        "infoExposureGlobal": "AI 엔진별 당사 노출률입니다. 선은 당사 추이입니다.",
+        "infoSovGlobal": "전체 브랜드 언급 중 당사 점유율을 AI 엔진별로 나타냅니다. 선은 당사 추이입니다.",
         "chip": "비교 = 경쟁사 평균",
         "own": "당사",
         "avg": "경쟁사 평균 (상위 {n}개사)",
@@ -5746,11 +5750,9 @@
         "sparkTipCounts": "당사 {type} 답변 {n}개 / 전체 답변 {den}개",
         "colRoundAnswers": "회차 답변 수",
         "footSov": "분모 = 당사 유형 신호 합 (유형 간 구성비)",
-        "footMix": "행에 올리면 당사 유형 구성(신호 합 대비)",
         "footCompare": "유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫",
         "noCompare": "비교 브랜드를 고르면 차이가 보입니다",
         "dotTip": "{type} · {who}\n유형 안 점유율 {value}",
-        "mixTip": "{type} · 당사 유형 신호 {n}건 · 당사 유형 구성 {pct}(당사 유형 신호 합 대비)",
         "rowAria": "{type}: 당사 {own}, {ref} {refValue}",
         "rowAriaOwn": "{type}: 당사 {own}",
         "aria": "멘션 유형별 유형 안 점유율"
@@ -5826,9 +5828,6 @@
         "deltaInfo": "점유율 증감(직전 회차 대비).",
         "deltaInfoPeriod": "점유율 증감(선택 기간 직전의 같은 길이 기간 대비). 직전 기간에 언급이 없던 브랜드는 증감이 없습니다.",
         "multiNoDelta": "복수 언급은 추이가 없습니다",
-        "multiShare": "복수 언급 점유율",
-        "multiPrompts": "복수 언급 프롬프트",
-        "multiTip": "복수 언급 기준 — 브랜드 복수 언급 수 {mentions} · 복수 언급 점유율 {share} · 복수 언급 프롬프트 {prompts} · 복수 언급률 {rate}",
         "rowTip": "누르면 이 브랜드의 프롬프트와 실제 AI 답변을 봅니다",
         "groupOnly": "{group} 그룹만 보기",
         "clearGroup": "그룹 필터 해제",
@@ -5882,7 +5881,9 @@
         "answersTitle": "답변 {n}개",
         "openAnswer": "답변 보기",
         "back": "프롬프트 목록으로",
-        "rankLine": "언급 수 {rank}위 · 현재 필터 기준"
+        "rankLine": "언급 수 {rank}위 · 현재 필터 기준",
+        "rankStats": "언급 수 {rank}위 · 언급 {mentions}회 · 점유율 {share} · 평균 위치 {position} · 언급률 {rate} · 현재 필터 기준",
+        "stats": "언급 {mentions}회 · 점유율 {share} · 평균 위치 {position} · 언급률 {rate} · 현재 필터 기준"
       }
     },
     "citation": {

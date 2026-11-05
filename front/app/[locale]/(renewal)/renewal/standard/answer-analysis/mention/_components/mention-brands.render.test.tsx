@@ -274,7 +274,9 @@ describe("renewal Mention treemap", () => {
 
 // Global 지표 정리 (2026-11-05): the 복수 언급 toggle goes on Global (turned on, the top 10 stayed the same 10); its values sit
 // on each row's tooltip and in the CSV, and each column's ⓘ names both bases. Project and Website keep the toggle.
-describe("renewal Mention brand ranking: Global has no 복수 언급 toggle", () => {
+// Global (2026-11-05): no 복수 언급 at all — 지표 정리 took the toggle off and kept its values on the row tooltip, the CSV
+// and the heads' ⓘ; the user dropped those the same day. Project and Website keep the toggle.
+describe("renewal Mention brand ranking: Global has no 복수 언급", () => {
   const multi = (i: number): RankingRow => ({ ...row(i), on: { mentions: 40 - i, prompts: 3, share: 2.5, mentionRate: 0.7, delta: null, covered: false } });
   const two = { ...ranking, rows: [multi(1), multi(2)], count: 2, orders: { off: { ...orders, rank: { asc: [0, 1], desc: [1, 0] } }, on: orders } as RnRankingVM["orders"] };
   const at = (global: boolean) => {
@@ -295,16 +297,44 @@ describe("renewal Mention brand ranking: Global has no 복수 언급 toggle", ()
     expect(html).not.toContain("복수 언급 기준 —");
   });
 
-  it("Global: no toggle; each row names its 복수 언급 values, each head both definitions", () => {
+  it("Global: no toggle, a plain row tooltip, and the heads name the plain definitions only", () => {
     const html = at(true);
     expect(html).not.toContain('role="switch"');
     expect(html).not.toContain(`${c.multiToggle}</button>`);
-    expect(html).toContain(`${b.rowTip}\n복수 언급 기준 — 브랜드 복수 언급 수 39 · 복수 언급 점유율 2.5% · 복수 언급 프롬프트 3 · 복수 언급률 0.7%`);
+    expect(html).toContain(`title="${b.rowTip}"`);
+    expect(html).not.toContain("복수 언급");
     const head = tips(html);
-    expect(head.find((h) => h.includes(c.colDefinition.mentions))).toContain(c.colDefinition.multiMentions);
-    expect(head.find((h) => h.includes(c.colDefinition.share))).toContain(b.multiShareFormula);
-    expect(head.find((h) => h.includes(c.colDefinition.prompts))).toContain(b.multiPromptsDef);
-    expect(head.find((h) => h.includes(c.colDefinition.rate))).toContain(b.multiRateFormula);
+    expect(head.find((h) => h.includes(c.colDefinition.mentions))).not.toContain(c.colDefinition.multiMentions);
+    expect(head.find((h) => h.includes(c.colDefinition.share))).not.toContain(b.multiShareFormula);
+    expect(head.find((h) => h.includes(c.colDefinition.prompts))).not.toContain(b.multiPromptsDef);
+    expect(head.find((h) => h.includes(c.colDefinition.rate))).not.toContain(b.multiRateFormula);
+  });
+});
+
+// Global (2026-11-05): the drawer's four values under the title are one subtitle line; Project and Website keep the cells
+describe("renewal Mention brand drawer head", () => {
+  const open = (global: boolean) => {
+    const inp = { ...(input as object), global } as never;
+    return render(
+      <MentionProvider value={{ ...ctx, input: inp }}>
+        <BrandDrawer target={{ kind: "brand", brand: name(140), row: drawerRow(140) }} onClose={() => {}} />
+      </MentionProvider>,
+    );
+  };
+
+  it("Project keeps the four cells under the rank line", () => {
+    const html = open(false);
+    expect(html).toContain("언급 수 140위 · 현재 필터 기준");
+    expect(html).toContain("<dt");
+    expect(html).toContain(">860</dd>");
+  });
+
+  it("Global names the four values in the subtitle, with no cells", () => {
+    const html = open(true);
+    expect(html).toContain("언급 수 140위 · 언급 860회 · 점유율 0.1% · 평균 위치 4.2 · 언급률 0.2% · 현재 필터 기준");
+    expect(html).not.toContain("<dt");
+    expect(html).toContain(ko.answerAnalysis.mentions.breakdown.sentimentTitle);
+    expect(html).toContain(ko.answerAnalysis.mentions.breakdown.typesTitle);
   });
 });
 

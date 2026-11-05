@@ -5683,6 +5683,8 @@
         "infoLabel": "How to read",
         "infoExposure": "Share of all AI answers in which the brand appears. Values are the snapshot of the measurement date; trends and changes are per round. vs us = competitor − us.",
         "infoSov": "Each brand's share of all brand mentions. Values are the snapshot of the measurement date; trends and changes are per round. vs us = competitor − us.",
+        "infoExposureGlobal": "Share of all AI answers in which the brand appears. Values are the snapshot of the measurement date; trends and changes are per round.",
+        "infoSovGlobal": "Each brand's share of all brand mentions. Values are the snapshot of the measurement date; trends and changes are per round.",
         "chipSnapshot": "Measurement-date snapshot",
         "chipPeriod": "Selected period, cumulative",
         "chipTrend": "{n}-round trend",
@@ -5709,6 +5711,8 @@
         "infoLabel": "This card",
         "infoExposure": "Our exposure by AI engine. The reference is the average of the competitors mentioned on that engine (top 30 per engine), independent of the page's compare brands. The line is our trend — the data has no round trend of the competitor average.",
         "infoSov": "Our share of all brand mentions by AI engine. The reference is the average of the competitors mentioned on that engine (top 30 per engine), independent of the page's compare brands. The line is our trend — the data has no round trend of the competitor average.",
+        "infoExposureGlobal": "Our exposure by AI engine. The line is our trend.",
+        "infoSovGlobal": "Our share of all brand mentions by AI engine. The line is our trend.",
         "chip": "Reference = competitor average",
         "own": "Us",
         "avg": "Competitor average (top {n})",
@@ -5746,11 +5750,9 @@
         "sparkTipCounts": "Our {type} answers {n} / all answers {den}",
         "colRoundAnswers": "Answers in the round",
         "footSov": "Denominator = our type signals (mix across types)",
-        "footMix": "hover a row for our type mix (of all our signals)",
         "footCompare": "Share within the type = each brand's part of the type's signals",
         "noCompare": "Pick a compare brand to see the gap",
         "dotTip": "{type} · {who}\nShare within the type {value}",
-        "mixTip": "{type} · our type signals {n} · our type mix {pct} (of all our type signals)",
         "rowAria": "{type}: us {own}, {ref} {refValue}",
         "rowAriaOwn": "{type}: us {own}",
         "aria": "Share within each mention type"
@@ -5826,9 +5828,6 @@
         "deltaInfo": "Share change vs the previous round.",
         "deltaInfoPeriod": "Share change vs the equal period just before the selected one. A brand not mentioned then has no change.",
         "multiNoDelta": "Multi-mentions have no trend",
-        "multiShare": "Multi-mention share",
-        "multiPrompts": "Multi-mention prompts",
-        "multiTip": "Multi-mentions — brand multi-mentions {mentions} · multi-mention share {share} · multi-mention prompts {prompts} · multi-mention rate {rate}",
         "rowTip": "Click to see this brand's prompts and real AI answers",
         "groupOnly": "{group} only",
         "clearGroup": "Clear group filter",
@@ -5882,7 +5881,9 @@
         "answersTitle": "{n} answers",
         "openAnswer": "View answer",
         "back": "Back to prompts",
-        "rankLine": "#{rank} by mentions · current filters"
+        "rankLine": "#{rank} by mentions · current filters",
+        "rankStats": "#{rank} by mentions · {mentions} mentions · share {share} · average position {position} · mention rate {rate} · current filters",
+        "stats": "{mentions} mentions · share {share} · average position {position} · mention rate {rate} · current filters"
       }
     },
     "citation": {

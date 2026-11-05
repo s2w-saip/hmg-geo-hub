@@ -106,12 +106,12 @@ describe("renewal Mention body: nothing measured", () => {
 describe("renewal Mention body: 이번 회차 요약 on Global and Project", () => {
   const pending = <T,>(): Promise<T> => new Promise<T>(() => {});
   const MEASURED = { measured: true, degraded: false, ownBrands: ["Hyundai", "Kia", "Genesis"], ownSum: [], drawer: [] } as unknown as RnShellVM;
-  const page = (global: boolean, shell: Promise<RnShellVM>) => {
+  const page = (global: boolean, shell: Promise<RnShellVM>, over: object = {}) => {
     nav.path = global ? "/ko/renewal/standard/answer-analysis/mention" : "/ko/renewal/projects/p1/analysis/mention";
     nav.search = "";
     const tabValue = Object.fromEntries(["exposure", "sov", "favorability", "first-rank"].map((k) => [k, pending()]));
     const reads = Object.fromEntries(["tabDeltas", "compare", "summary", "rateValue", "rateHero", "rateEngines", "rateTypes", "favorHero", "favorDist", "favorMatrix", "rank", "bump", "ranking"].map((k) => [k, pending()]));
-    const input = { kpi: "exposure", view: "brands", ownLabel: "HMG", period: null, filtered: false, shell, tabValue, ...reads, ...(global ? { brandsFirst: true, global: true } : {}) } as never;
+    const input = { kpi: "exposure", view: "brands", ownLabel: "HMG", period: null, filtered: false, shell, tabValue, ...reads, ...(global ? { brandsFirst: true, global: true } : {}), ...over } as never;
     const html = renderToStaticMarkup(
       <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
         <ServiceWeek.Provider value={null}>
@@ -139,6 +139,14 @@ describe("renewal Mention body: 이번 회차 요약 on Global and Project", () 
       expect(global).not.toMatch(/rounded-rn-card rn-hero/);
       expect(global).toContain('id="rn-kpi-tabs"');
     }
+  });
+
+  // a calendar month's 답변당 언급 수 change, with no level beside it: off Global (the user's call, 2026-11-05)
+  it("a calendar month's 답변당 언급 수 line stays on Project, not on Global", () => {
+    const monthLine = { days: 30, presetKey: "lastMonth", caption: { key: "window", params: { curCycles: 4, prevCycles: 5 } }, chips: [{ key: "mentionsPerAnswer", unit: "pct", suppressed: false, value: 4.2, direction: "up" }] };
+    const summary = settled({ asOf: "2026-10-05", exp: null, sov: null, fav: null, pos: null, covered: [], fixed: [], typeFindings: [], options: {}, monthLine });
+    expect(page(false, settled(MEASURED), { summary })).toContain("답변당 언급 수");
+    expect(page(true, settled(MEASURED), { summary })).not.toContain("답변당 언급 수");
   });
 
   it("on Global the view rail follows the control bar", () => {

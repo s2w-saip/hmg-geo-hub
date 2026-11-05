@@ -112,10 +112,14 @@ export function FavorHeroCard() {
         </div>
         {foot ? <p className="m-0 text-rn-11 text-rn-muted">{foot}</p> : null}
         {degraded ? <DegradedNote>{dg.all}</DegradedNote> : null}
-        <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
-          <Stat label={t("favor.posCount")} value={numTxt(h.positive, locale)} />
-          <Stat label={t("favor.total")} value={numTxt(h.total, locale)} />
-        </dl>
+        {/* Global: no counts (2026-11-05, the user's call) — the 감정 분포 card right below shows the same two (its positive
+            tile and its '신호 N건' chip); each round's stay on the trend's tooltip and table */}
+        {input.global ? null : (
+          <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
+            <Stat label={t("favor.posCount")} value={numTxt(h.positive, locale)} />
+            <Stat label={t("favor.total")} value={numTxt(h.total, locale)} />
+          </dl>
+        )}
         <div className="flex flex-wrap gap-1.5">
           <RnBasisChip>{t("favor.chipSignal")}</RnBasisChip>
         </div>
