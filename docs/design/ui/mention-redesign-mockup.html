@@ -196,7 +196,7 @@
   .tcard .mini span { display: inline-flex; align-items: center; gap: 6px; }
   .tcard .mini i { width: 9px; height: 9px; border-radius: 50%; }
   .chart { position: relative; height: 128px; }
-  .tcard.lg .chart, .tcard.lg .twinwrap { height: 200px; }
+  .tcard.lg .chart, .tcard.lg .twinwrap { height: 176px; }
   .tcard.sm .chart, .tcard.sm .twinwrap { height: 100px; }
   .tcard.sm .tv b { font-size: 28px; }
   .tcard.sm .tv b small { font-size: 14px; }
@@ -325,11 +325,15 @@
   .tt tr:last-child td { border-bottom: 0; }
   .ty { display: inline-flex; align-items: center; gap: 10px; }
   .ty .ibox { width: 30px; height: 30px; border-radius: 9px; color: var(--muted); }
-  .tyv { display: grid; grid-template-columns: 56px 72px 80px; align-items: center; gap: 12px; }
+  .tyv { display: grid; grid-template-columns: minmax(80px, 1fr) 56px 72px; align-items: center; gap: 12px; }
+  .svb { display: grid; grid-template-columns: minmax(60px, 1fr) 52px; align-items: center; gap: 12px; }
+  .svb .bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
+  .svb .bar i { display: block; height: 100%; border-radius: 3px; background: var(--navy-300); }
+  .svb b { text-align: right; font-weight: 600; color: var(--ink); }
   .tyv .bar { height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
   .tyv .bar i { display: block; height: 100%; border-radius: 3px; background: var(--navy); }
   .tyv b { text-align: right; font-weight: 600; color: var(--ink); }
-  .dots { position: relative; height: 26px; }
+  .dots { display: block; position: relative; height: 26px; margin: 0 12px 0 28px; }
   .dots .ax { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--hair); }
   .dots .rg { position: absolute; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 3px; background: color-mix(in srgb, #3df134 22%, #fff); }
   .dots .rg.bad { background: color-mix(in srgb, #fa1e2a 16%, #fff); }
@@ -365,6 +369,23 @@
   .ph-note { padding: 30px; border-radius: 14px; background: var(--page); color: var(--muted); font-size: 12.5px; text-align: center; }
   #toast { position: fixed; right: 24px; bottom: 24px; z-index: 320; max-width: 440px; padding: 13px 16px; border-radius: 12px; background: var(--surface); color: var(--ink-2); font-size: 13px; box-shadow: var(--shadow-pop); }
   #toast[hidden] { display: none; }
+  /* ── 두 안: 구역(#sections) · 탭(#tabs) ── */
+  .sec-h { display: flex; align-items: baseline; gap: 12px; margin: 8px 2px -4px; }
+  .sec-h h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+  .sec-h p { margin: 0; font-size: 13px; color: var(--muted); }
+  .tabbar { display: none; align-self: stretch; gap: 4px; }
+  .tabbar button { all: unset; cursor: pointer; display: flex; align-items: center; padding: 0 14px; font-size: 14px; font-weight: 550; color: var(--muted); box-shadow: inset 0 -2px 0 transparent; transition: color .15s, box-shadow .15s; }
+  .tabbar button:hover { color: var(--ink); }
+  .tabbar button[aria-selected="true"] { color: var(--ink); font-weight: 650; box-shadow: inset 0 -2px 0 var(--navy); }
+  .tabbar button:focus-visible { outline-offset: -4px; }
+  body.v-tabs .tabbar { display: flex; }
+  body.v-tabs .cbar { margin-bottom: 4px; }
+  body.v-tabs .cbar .legend { padding-left: 16px; border-left: 1px solid var(--line); }
+  body.v-tabs .sec-h { display: none; }
+  body.v-tabs.t-own .only-cmp, body.v-tabs.t-cmp .only-own { display: none !important; }
+  body.v-tabs.t-own .cbar .legend, body.v-tabs.t-own .cbar .right { display: none; }
+  .mk-seg { display: flex; margin-top: 10px; }
+  .mk-seg button { flex: 1; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -415,7 +436,8 @@
   <div><h4>새로 보이는 Gold 값 · 그대로인 것</h4><ul>
     <li>브랜드별 우호도(지금은 서랍에만), 엔진별 우호도 · 우선 노출도(Gold에 있음, 구현 때 BFF에 더함).</li>
     <li>그대로: 비교 브랜드 제한 없음(타사 15색), 서랍, 원문, HUB가 만든 기준선 · 문턱 없음, 측정 변화로 값을 숨기지 않음(7월 우호도 그대로).</li>
-    <li>목업 표는 언급 상위 40개 브랜드까지 담았습니다.</li></ul></div>
+    <li>목업 표는 언급 상위 40개 브랜드까지 담았습니다.</li>
+    <li><b>두 안</b>(사이드바 카드에서 전환, 주소 #sections · #tabs): 구역 안 = 한 페이지를 현황 → 경쟁 비교 → 당사 상세 순서와 구역 제목으로, 탭 안 = '당사 지표'(추이 카드는 당사 선만 · 엔진 · 감정 · 유형별 노출 · 감정)와 '경쟁 비교'(비교 브랜드 · 브랜드 비교 · 유형 안 점유율). 유형 표는 두 안 모두 당사 표와 경쟁 표로 나눴습니다.</li></ul></div>
 </div>
 
 <div class="sx">
@@ -445,6 +467,7 @@
     </nav>
     <div class="mkcard">
       <div class="mk-top"><span class="mk-tag">목업</span><b>Mention 개편안</b></div>
+      <div class="seg mk-seg" id="variantSeg" role="group" aria-label="안 고르기"><button type="button" data-variant="sections">구역 안</button><button type="button" data-variant="tabs">탭 안</button></div>
       <button class="mk-btn" id="mkCap" aria-expanded="false" type="button">무엇이 바뀌었나</button>
     </div>
     <div class="acct"><span class="av">T</span><div><b>test-admin</b><small>시스템 관리자</small></div></div>
@@ -481,6 +504,7 @@
         <div class="notice"><svg class="i s14"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">Gold 마지막 확인 2026-11-03 17:33</span></div>
 
         <div class="cbar" role="toolbar" aria-label="페이지 조작">
+          <div class="tabbar" role="tablist" aria-label="보기"><button type="button" role="tab" data-tab="own" aria-selected="true">당사 지표</button><button type="button" role="tab" data-tab="cmp" aria-selected="false">경쟁 비교</button></div>
           <div class="legend" id="legend"></div>
           <div class="right">
             <span class="lab">비교 브랜드</span>
@@ -494,20 +518,27 @@
           </div>
         </div>
 
-        <div class="tgrid" id="tgrid"></div>
+        <div class="sec-h"><h2>현황</h2><p>네 지표의 이번 회차 값과 회차별 추이 · 당사와 비교 브랜드</p></div>
+        <div class="tgrid only-own" id="tgrid"></div>
 
-        <section class="card" id="boardCard">
+        <div class="sec-h"><h2>경쟁 비교</h2><p>비교 브랜드와 나란히 · 비교 브랜드는 위 막대나 표의 '비교' 칸에서 고릅니다</p></div>
+        <section class="card only-cmp" id="boardCard">
           <div class="ch"><span class="ic"><svg class="i"><use href="#i-users"/></svg></span><h3>브랜드 비교</h3><span class="info" tabindex="0" data-tip="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다.&#10;열 머리를 누르면 그 값으로 정렬하고, 추이 열도 그 지표로 바뀝니다. 행을 누르면 서랍(프롬프트 · 출처 · 원문)이 열립니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note"><span id="brandCount">브랜드 752개</span> · 측정 기준일 스냅샷 · <span id="trendCov"></span></span>
             <div class="acts"><label class="search" id="qWrap"><svg class="i s14"><use href="#i-search"/></svg><input id="q" placeholder="브랜드 검색 (예: Hyundai)" aria-label="브랜드 검색"></label><div class="seg" id="viewSeg"><button type="button" data-v="table" aria-pressed="true">표</button><button type="button" data-v="map" aria-pressed="false">트리맵</button><button type="button" data-v="bump" aria-pressed="false">순위 변화</button><button type="button" data-v="ladder" aria-pressed="false">순위별 보기</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
           <div class="tile" id="boardBody"></div>
         </section>
 
-        <div class="row2">
+        <section class="card only-cmp"><div class="ch"><span class="ic"><svg class="i"><use href="#i-tag"/></svg></span><h3>멘션 유형별 점유율</h3><span class="info" tabindex="0" data-tip="유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫입니다.&#10;차이 = 당사 − 가장 앞선 비교 브랜드 · 점 = 당사(파랑)와 비교 브랜드(그 색)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note">당사 vs 비교 브랜드 · 유형 신호 기준</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile" id="typesCmp"></div></section>
+
+        <div class="sec-h"><h2>당사 상세</h2><p>AI 엔진별 · 감정 · 멘션 유형별 당사 값</p></div>
+        <div class="row2 only-own">
           <section class="card"><div class="ch"><span class="ic"><svg class="i"><use href="#i-cpu"/></svg></span><h3>AI 엔진별</h3><span class="info" tabindex="0" data-tip="엔진마다 같은 정의로 센 당사 값입니다.&#10;작은 차트는 지표마다 같은 눈금 · 14회차(07-06 ~ 10-05) · 우호도의 7월 값이 낮은 것은 측정 그대로입니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note">당사</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile" id="engines"></div></section>
           <section class="card"><div class="ch"><span class="ic"><svg class="i"><use href="#i-smile"/></svg></span><h3>감정 분포</h3><span class="info" tabindex="0" data-tip="당사 언급마다 붙은 감정 신호의 구성입니다(언급 단위)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note" id="distChip"></span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile"><div class="dist" id="dist"></div></div></section>
         </div>
 
-        <section class="card"><div class="ch"><span class="ic"><svg class="i"><use href="#i-tag"/></svg></span><h3>멘션 유형별 노출 · 점유 · 감정</h3><span class="info" tabindex="0" data-tip="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다.&#10;노출률 분모 = 전체 답변 수 · 유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫(막대 = 당사와 가장 앞선 비교 브랜드의 차이) · 유형 이름을 누르면 그 신호가 붙은 프롬프트를 봅니다 · 우선 노출도는 유형별 값이 없습니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note">유형 신호 기준</span><div class="acts"><div class="seg" id="unitSeg" aria-label="감정 단위"><button type="button" data-u="pct" aria-pressed="true">비율</button><button type="button" data-u="count" aria-pressed="false">건수</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile" id="types"></div></section>
+        <section class="card only-own"><div class="ch"><span class="ic"><svg class="i"><use href="#i-tag"/></svg></span><h3>멘션 유형별 노출 · 감정</h3><span class="info" tabindex="0" data-tip="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다.&#10;노출률 분모 = 전체 답변 수 · 유형 이름을 누르면 그 신호가 붙은 프롬프트를 봅니다 · 우선 노출도는 유형별 값이 없습니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note">유형 신호 기준</span><div class="acts"><div class="seg" id="unitSeg" aria-label="감정 단위"><button type="button" data-u="pct" aria-pressed="true">비율</button><button type="button" data-u="count" aria-pressed="false">건수</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile" id="typesOwn"></div></section>
+
+
       </div>
     </div>
   </div>
@@ -529,7 +560,8 @@ const M = {
   favorability: { label: "AI 우호도", short: "우호도", unit: "%", better: "up", dUnit: "pp", row: "fav", d: null },
   "first-rank": { label: "AI 우선 노출도", short: "우선 노출도", unit: "번째", better: "down", dUnit: "", row: "pos", d: "posD" },
 };
-const st = { focus: "exposure", compare: ["Toyota"], auto: true, view: "bump", sort: null, all: false, q: "", lit: null, unit: "pct", ownOpen: true, tbl: {} };
+let VARIANT = location.hash === "#tabs" ? "tabs" : "sections";
+const st = { tab: "own", focus: "exposure", compare: ["Toyota"], auto: true, view: "bump", sort: null, all: false, q: "", lit: null, unit: "pct", ownOpen: true, tbl: {} };
 
 const $ = (s, el = document) => el.querySelector(s);
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
@@ -586,7 +618,7 @@ function seriesOf(m) {
     { key: "neg", name: "부정 신호 비율", color: "#fa1e2a", values: T.neg },
     { key: "__own", name: "긍정 신호 비율", color: NAVY, values: T.own, own: true },
   ];
-  const s = st.compare.filter((b) => T.brands[b]).map((b) => ({ key: b, name: b, color: colorOf(b), values: T.brands[b] }));
+  const s = (VARIANT === "tabs" ? [] : st.compare).filter((b) => T.brands[b]).map((b) => ({ key: b, name: b, color: colorOf(b), values: T.brands[b] }));
   return [...s, { key: "__own", name: "HMG", color: NAVY, values: T.own, own: true }];
 }
 function headOf(m) {
@@ -625,7 +657,7 @@ function avatar(b, kind) {
 }
 /** 질문 유형별(Gold 카탈로그 brand presence 라벨): 브랜드 미포함 질문에서 당사와 첫 비교 브랜드, 포함 질문의 당사 */
 function splitOf(m, compact) {
-  const U = D.split.unb, B = D.split.br, ref = st.compare.find((b) => U[b]);
+  const U = D.split.unb, B = D.split.br, ref = VARIANT === "tabs" ? null : st.compare.find((b) => U[b]);
   const f = (v) => (v == null ? "—" : m === "first-rank" ? `${v.toFixed(1)}번째` : `${v.toFixed(1)}%`);
   const tipTxt = `질문 유형 = Gold 카탈로그의 브랜드 포함 여부 라벨(브랜드 행 값)\n브랜드 미포함 질문 ${n0(D.split.nUnb)}답변 · 포함 질문 ${n0(D.split.nBr)}답변 (이번 회차)\n라벨 정의는 업스트림 확인 중(U1)`;
   if (compact) return `<div class="splitline"><span class="info" tabindex="0" data-tip="${esc(tipTxt)}"><svg class="i s12"><use href="#i-info"/></svg></span>브랜드 미포함 질문 <b>HMG ${f(U.HMG[m])}</b>${ref ? `<span>${ref} ${f(U[ref][m])}</span>` : ""}<span class="sep"></span>포함 질문 <b>HMG ${f(B.HMG[m])}</b><button class="tbtn" type="button" data-pres="unbranded">미포함 질문만 보기 →</button></div>`;
@@ -653,6 +685,7 @@ function renderTrends() {
 }
 function drawChart(m) {
   const x = D.x, series = chartSeriesOf(m), el = $(`#ch-${m}`);
+  if (!el || !el.clientWidth) return;
   const W = el.clientWidth, H = el.clientHeight, L = 36, R = 8, Tp = 8, B = 22, inv = m === "first-rank";
   const all = series.flatMap((s) => s.values).filter((v) => v != null);
   let lo = Math.min(...all), hi = Math.max(...all), ticks;
@@ -816,7 +849,7 @@ function tileColor(g) {
 }
 function renderMap(body) {
   body.innerHTML = `<div class="map" id="map"></div><div class="maplegend"><span>크기 = 언급 점유율 · 색 = 직전 회차 대비 점유율 증감(모그룹)</span><span><i style="background:rgba(61,241,52,.32)"></i>늘어남</span><span><i style="background:#f1f2f4"></i>변화 없음</span><span><i style="background:rgba(250,30,42,.25)"></i>줄어듦</span><span><i style="background:${NAVY}"></i>당사</span></div>`;
-  const el = $("#map"); const W = el.clientWidth, H = el.clientHeight;
+  const el = $("#map"); if (!el.clientWidth) return; const W = el.clientWidth, H = el.clientHeight;
   const items = D.treemap.map((g) => ({ ...g, value: g.value }));
   el.innerHTML = squarify(items, 0, 0, W, H).map((t) => {
     const [bg, fg] = tileColor(t); const name = t.key === "__rest" ? "그 외" : t.members.length > 1 ? `${t.key} 그룹` : t.key;
@@ -827,7 +860,7 @@ function renderMap(body) {
 }
 function renderBump(body) {
   body.innerHTML = `<div class="bump" id="bump"></div><div class="maplegend"><span>회차별 언급 수 순위 (당사 + 상위 10) · 점 크기 = 그 회차 점유율 · 비교 브랜드는 그 색, 나머지는 회색</span></div>`;
-  const el = $("#bump"); const W = el.clientWidth, H = el.clientHeight, L = 28, R = 170, Tp = 12, B = 26;
+  const el = $("#bump"); if (!el.clientWidth) return; const W = el.clientWidth, H = el.clientHeight, L = 28, R = 170, Tp = 12, B = 26;
   const x = D.bump.x, S = D.bump.series, n = S.length;
   const X = (i) => L + (i / (x.length - 1)) * (W - L - R), Y = (r) => Tp + ((r - 1) / (n - 1)) * (H - Tp - B);
   let svg = `<svg viewBox="0 0 ${W} ${H}">`;
@@ -849,7 +882,7 @@ function renderBump(body) {
 function renderLadder(body) {
   const rows = D.rows.filter((r) => r.posS && r.pos != null);
   body.innerHTML = `<div class="ladder" id="lad"></div><div class="maplegend"><span>우선 노출도 표의 ${rows.length}개 브랜드(당사 + 언급 상위) · 위일수록 먼저 언급 · HMG는 표 ${D.rankTable.n}개 중 ${D.rankTable.rank}위 · 상위 ${D.rankTable.topPct}%</span></div>`;
-  const el = $("#lad"); const W = el.clientWidth, H = el.clientHeight, Tp = 16, B = 16, cx = W / 2;
+  const el = $("#lad"); if (!el.clientWidth) return; const W = el.clientWidth, H = el.clientHeight, Tp = 16, B = 16, cx = W / 2;
   const lo = 1, hi = Math.max(6, Math.ceil(Math.max(...rows.map((r) => r.pos))));
   const Y = (v) => Tp + ((v - lo) / (hi - lo)) * (H - Tp - B);
   let svg = `<svg viewBox="0 0 ${W} ${H}">`;
@@ -894,27 +927,42 @@ function renderDist() {
 // ── 멘션 유형 × 지표 ─────────────────────────────────────────────────
 /** the four sentiment counts behind a positive share, on hover */
 const sentTip = (f) => (f ? `data-tip="${esc(Object.keys(SENT).map((k) => `${SENT[k][0]} ${n0(f[k])}건`).join("\n"))}"` : "");
+const TYPE_ICON = { final_choice: "i-trophy", recommendation: "i-smile", comparison: "i-pie", definition: "i-file", mention: "i-msg" };
+const typeName = (t) => `<span class="ty"><span class="ibox"><svg class="i s14"><use href="#${TYPE_ICON[t]}"/></svg></span>${TYPES[t]}</span>`;
+/** two tables: 당사 (exposure · sentiment · signals) and rivals (share inside each type) */
 function renderTypes() {
   const T = D.types, own = Object.fromEntries(T.own.map((r) => [r.type, r])), cmp = Object.fromEntries(T.cmp.map((r, i) => [r.type, { ...r, i }])), fav = Object.fromEntries(T.fav.map((r) => [r.type, r]));
+  const pos = (f) => (st.unit === "count" ? n0(f?.positive) : p1(f?.positivePct));
+  const maxPct = Math.max(...T.own.map((r) => r.pct || 0));
+  const posBar = (f) => `<span class="svb" ${sentTip(f)}><span class="bar"><i style="width:${f?.positivePct || 0}%"></i></span><b>${pos(f)}</b></span>`;
+  const ownRows = Object.keys(TYPES).map((t) => {
+    const o = own[t], f = fav[t];
+    return `<tr><td>${typeName(t)}</td>
+      <td><span class="tyv"><span class="bar"><i style="width:${(o.pct / maxPct) * 100}%"></i></span><b>${p1(o.pct)}</b>${dchip(o.delta)}</span></td>
+      <td>${spark(o.spark, NAVY, { w: 72, h: 22, tips: o.spark.map((v, i) => (v == null ? null : `${md(D.x[i])} · ${v.toFixed(1)}%\n당사 ${TYPES[t]} 답변 ${n0(o.counts[i])}개 / 전체 답변 ${n0(T.answers[i])}개`)) })}</td>
+      <td>${posBar(f)}</td>
+      <td style="text-align:right">${n0(o.signals)}</td></tr>`;
+  }).join("");
+  const all = fav.all;
+  $("#typesOwn").innerHTML = `<table class="tt"><thead><tr><th style="width:190px">유형</th><th style="width:36%">당사 노출률 · 증감</th><th style="width:110px">추이</th><th style="width:26%">${st.unit === "count" ? "당사 긍정 신호 수" : "당사 긍정 비율"}</th><th style="width:130px;text-align:right">당사 유형 신호</th></tr></thead><tbody>${ownRows}
+    <tr class="all"><td>전체 언급</td><td></td><td></td><td>${posBar(all)}</td><td style="text-align:right">${n0(all.total)}</td></tr></tbody></table>`;
+
   const picks = st.compare.filter((b) => T.dots[b]);
   const top = Math.ceil(Math.max(...T.cmp.map((r) => r.own), ...picks.flatMap((b) => T.dots[b])) / 10) * 10 + 10;
   const at = (v) => `${(v / top) * 100}%`;
-  const fx = () => "";
-  const rows = Object.keys(TYPES).map((t) => {
-    const o = own[t], c = cmp[t], f = fav[t];
+  const cmpRows = Object.keys(TYPES).map((t) => {
+    const c = cmp[t];
     const vals = picks.map((b) => ({ b, v: T.dots[b][c.i] }));
     const ref = vals.filter((x) => x.v != null).sort((a, b) => b.v - a.v)[0];
     const gap = ref ? c.own - ref.v : null;
     const lo = ref ? Math.min(ref.v, c.own) : null, hi = ref ? Math.max(ref.v, c.own) : null;
-    return `<tr><td><span class="ty"><span class="ibox"><svg class="i s14"><use href="#${{ final_choice: "i-trophy", recommendation: "i-smile", comparison: "i-pie", definition: "i-file", mention: "i-msg" }[t]}"/></svg></span>${TYPES[t]}</span></td>
-      <td class="${fx("exposure")}"><span class="tyv"><b>${p1(o.pct)}</b>${dchip(o.delta)}${spark(o.spark, NAVY, { w: 72, h: 22, tips: o.spark.map((v, i) => (v == null ? null : `${md(D.x[i])} · ${v.toFixed(1)}%\n당사 ${TYPES[t]} 답변 ${n0(o.counts[i])}개 / 전체 답변 ${n0(T.answers[i])}개`)) })}</span></td>
-      <td class="${fx("sov")}"><span class="cmpv"><span class="dots"><span class="ax"></span>${ref ? `<span class="rg ${gap < 0 ? "bad" : ""}" style="left:${at(lo)};width:calc(${at(hi)} - ${at(lo)})"></span>` : ""}${vals.map((x) => (x.v == null ? "" : `<i style="left:${at(x.v)};background:${colorOf(x.b)}" title="${TYPES[t]} · ${x.b} 유형 안 점유율 ${p1(x.v)}"></i>`)).join("")}<i class="own" style="left:${at(c.own)}" title="${TYPES[t]} · HMG 유형 안 점유율 ${p1(c.own)}"></i></span><span tabindex="0" data-tip="${esc(ref ? `${TYPES[t]} · 유형 안 점유율\nHMG ${p1(c.own)} · ${ref.b} ${p1(ref.v)}\n차이 = HMG − 가장 앞선 비교 브랜드` : `${TYPES[t]} · HMG ${p1(c.own)}`)}" style="color:${gap == null ? "var(--muted)" : gap >= 0 ? "var(--up-ink)" : "var(--down-ink)"}">${gap == null ? "—" : `${gap >= 0 ? "+" : "−"}${Math.abs(gap).toFixed(1)}pp`} <small style="display:inline;color:var(--muted)">${ref ? `vs ${ref.b}` : ""}</small></span></span></td>
-      <td style="text-align:right" ${sentTip(f)}><b class="num">${st.unit === "count" ? `${n0(f?.positive)}` : p1(f?.positivePct)}</b></td>
-      <td style="text-align:right">${n0(o.signals)}</td></tr>`;
+    return `<tr><td>${typeName(t)}</td>
+      <td style="text-align:right"><b class="num" style="color:var(--navy)">${p1(c.own)}</b></td>
+      <td style="text-align:right">${ref ? `${p1(ref.v)} <span class="muted" style="font-size:12px">${ref.b}</span>` : "—"}</td>
+      <td><span class="dots"><span class="ax"></span>${ref ? `<span class="rg ${gap < 0 ? "bad" : ""}" style="left:${at(lo)};width:calc(${at(hi)} - ${at(lo)})"></span>` : ""}${vals.map((x) => (x.v == null ? "" : `<i style="left:${at(x.v)};background:${colorOf(x.b)}" title="${TYPES[t]} · ${x.b} 유형 안 점유율 ${p1(x.v)}"></i>`)).join("")}<i class="own" style="left:${at(c.own)}" title="${TYPES[t]} · HMG 유형 안 점유율 ${p1(c.own)}"></i></span></td>
+      <td style="text-align:right;font-weight:600;color:${gap == null ? "var(--muted)" : gap >= 0 ? "var(--up-ink)" : "var(--down-ink)"}">${gap == null ? "—" : `${gap >= 0 ? "+" : "−"}${Math.abs(gap).toFixed(1)}pp`}</td></tr>`;
   }).join("");
-  const all = fav.all;
-  $("#types").innerHTML = `<table class="tt"><thead><tr><th>유형</th><th style="width:28%">당사 노출률 · 증감 · 추이</th><th style="width:34%">유형 안 점유율 (당사 vs 비교 브랜드)</th><th style="width:16%;text-align:right">${st.unit === "count" ? "당사 긍정 신호 수" : "당사 긍정 비율"}</th><th style="width:12%;text-align:right">당사 유형 신호</th></tr></thead><tbody>${rows}
-    <tr class="all"><td>전체 언급</td><td></td><td></td><td style="text-align:right" ${sentTip(all)}><b class="num">${st.unit === "count" ? n0(all.positive) : p1(all.positivePct)}</b></td><td style="text-align:right">${n0(all.total)}</td></tr></tbody></table>`;
+  $("#typesCmp").innerHTML = `<table class="tt"><thead><tr><th>유형</th><th style="width:11%;text-align:right">HMG</th><th style="width:17%;text-align:right">가장 앞선 비교 브랜드</th><th style="padding-left:28px">유형 안 점유율 (당사 · 비교 브랜드)</th><th style="width:13%;text-align:right">차이</th></tr></thead><tbody>${cmpRows}</tbody></table>`;
 }
 
 // ── 비교 브랜드 ───────────────────────────────────────────────────────
@@ -965,6 +1013,17 @@ document.addEventListener("click", (e) => { if (!e.target.closest("#mkCapBody") 
 function renderAll() {
   renderChips(); renderTrends(); renderBoard(); renderEngines(); renderDist(); renderTypes();
 }
+function applyVariant() {
+  document.body.classList.toggle("v-tabs", VARIANT === "tabs"); document.body.classList.toggle("v-sections", VARIANT !== "tabs");
+  document.body.classList.toggle("t-own", st.tab === "own"); document.body.classList.toggle("t-cmp", st.tab === "cmp");
+  $("#variantSeg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.variant === VARIANT)));
+  document.querySelectorAll(".tabbar [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === st.tab)));
+  document.title = `Mention 개편안 — ${VARIANT === "tabs" ? "탭 안" : "구역 안"}`;
+}
+$("#variantSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.variant; }));
+addEventListener("hashchange", () => { VARIANT = location.hash === "#tabs" ? "tabs" : "sections"; applyVariant(); $("#content").scrollTop = 0; renderAll(); });
+document.querySelectorAll(".tabbar [data-tab]").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; applyVariant(); $("#content").scrollTop = 0; renderAll(); }));
+applyVariant();
 renderAll();
 $("#content").addEventListener("scroll", () => $(".cbar").classList.toggle("stuck", $("#content").scrollTop > 8), { passive: true });
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderAll, 120); });
