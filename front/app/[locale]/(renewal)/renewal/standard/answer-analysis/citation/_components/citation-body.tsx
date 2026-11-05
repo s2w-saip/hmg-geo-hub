@@ -363,15 +363,9 @@ function Overview() {
   const { input, live } = useCitation();
   const t = useTranslations("renewal.citation");
   const isPeriod = Boolean(input.period);
-  if (input.global)
-    return (
-      <>
-        <HeroKpis />
-        <Suspense fallback={null}>
-          <MonthLine />
-        </Suspense>
-      </>
-    );
+  // Global has no month line (2026-11-05, the user's legacy exception: 답변당 인용 수 counts the engines' and the
+  // collection's scale, not 당사's); Website and Project keep it
+  if (input.global) return <HeroKpis />;
   return (
     <>
       <div className="grid grid-cols-1 gap-2.5 @min-[520px]/rnpage:grid-cols-2 @min-[960px]/rnpage:grid-cols-4" role="group" aria-label={t("lens.label")}>

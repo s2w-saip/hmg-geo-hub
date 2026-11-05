@@ -95,6 +95,8 @@ const input = parts;
 // The standard body renders the Global page (`global`, 2026-11-05 지표 정리) unless `asProject` runs it as the Project
 // page, which keeps the layout the Global page had (the same body without `website` or `global`)
 let PROJECT = false;
+// the calendar month's line (`periodView`, null = no month picked)
+let PERIOD_VIEW: import("@/lib/kpi/period-compare-view").PeriodDeltaView | null = null;
 const asProject = <T,>(fn: () => T): T => {
   PROJECT = true;
   try {
@@ -118,7 +120,7 @@ const render = (p: Parts, search = "", website?: Input["website"], rnSearch = we
     prevCategories: settled(p.prevCategories),
     toneSummary: settled({ positive: { urls: 120, citations: 300, answers: 90 }, negative: { urls: 12, citations: 20, answers: 8 } }),
     tableSource: settled(null),
-    periodView: settled(null),
+    periodView: settled(PERIOD_VIEW),
     rn: settled(((vm) => (vm && rnEdit ? rnEdit(vm) : vm))(rnVmFor({ live: rnBase.data, prev: rnBase.prevCategories, card: rnBase.officialDelta, typeRows: rnBase.typeCategories, sections: null, search: rnSearch }))),
     website,
     ...(website || PROJECT ? {} : { global: true }),
@@ -481,6 +483,16 @@ describe("renewal Citation body — Global 지표 정리 (2026-11-05)", () => {
     expect(project).toContain("data-rn-daxis");
     expect(project).toContain('data-rn-dlg=""');
     expect(project).toContain(topLine);
+  });
+  it("no month line on Global (C4, the user's legacy exception); Project and Website keep it", () => {
+    // the 2026-09 month's live line: 답변당 인용 수 +46.6 %, 4 rounds against 5
+    PERIOD_VIEW = { days: 30, presetKey: null, caption: { key: "window", params: { prevCycles: 5, curCycles: 4 } }, chips: [{ key: "citationsPerAnswer", unit: "pct", suppressed: false, value: 46.6, direction: "up" }] };
+    try {
+      expect(render(input())).not.toContain("data-period-delta-line");
+      for (const other of [asProject(() => render(input())), render(input(), "", site())]) expect(other).toContain('data-period-delta-line="window"');
+    } finally {
+      PERIOD_VIEW = null;
+    }
   });
 });
 
