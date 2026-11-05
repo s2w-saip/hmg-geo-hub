@@ -148,6 +148,21 @@
   /* ── 카드: 흰 면 + 선 1px, 머리 = 아이콘 · 제목 · 동작 ── */
   .card { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-card); display: flex; flex-direction: column; position: relative; }
   .card > .tile { flex: 1; }
+  /* 카드 바탕: 옅은 칠 위에 흰 면(참고 1의 잔액 카드 · 참고 2의 KPI 칸). 추이 카드는 값 · 차트를 칠 위에 두고 아이콘 상자 · 질문 유형 칸 · 버튼을 흰 면으로,
+     표 카드는 머리를 칠 위에 두고 표를 흰 판으로 띄운다 */
+  :root { --card-tint: #f6f7f9; --card-line: #e8e9ed; }
+  .card { background: var(--card-tint); box-shadow: inset 0 0 0 1px var(--card-line); }
+  .card:not(.tcard) > .tile { background: var(--surface); border-radius: 12px; margin: 0 6px 6px; box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgba(16,16,18,.04); }
+  .card:not(.tcard) > .tile thead th { border-top: 0; }
+  .card:not(.tcard) > .tile thead th:first-child { border-top-left-radius: 12px; }
+  .card:not(.tcard) > .tile thead th:last-child { border-top-right-radius: 12px; }
+  .card .ibox, .card .st, .card .stgo, .card .search { background: var(--surface); }
+  .card .ibox { box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgba(16,16,18,.04); }
+  .card .st, .card .stgo { box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgba(16,16,18,.03); }
+  .card .stgo:hover { background: var(--page); }
+  .card .seg { background: #eceef2; }
+  .card .ch .icon:hover, .card .th .icon:hover { background: #eceef2; }
+  .tcard .grid line { stroke: #e3e4e8; }
   .ch, .tcard .th { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 0 16px 0 20px; flex-wrap: wrap; }
   .ch h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -.015em; }
   .ic { display: inline-grid; place-items: center; color: var(--muted); }
@@ -333,8 +348,8 @@
   .sv .sent { width: 100%; }
   .sv b { text-align: right; font-weight: 600; color: var(--ink); }
   .tt tr.all td { background: var(--page); color: var(--muted); }
-  .tt tr.all td:first-child { border-bottom-left-radius: var(--r-card); font-weight: 550; color: var(--muted); }
-  .tt tr.all td:last-child { border-bottom-right-radius: var(--r-card); }
+  .tt tr.all td:first-child { border-bottom-left-radius: 12px; font-weight: 550; color: var(--muted); }
+  .tt tr.all td:last-child { border-bottom-right-radius: 12px; }
 
   /* ── 서랍: 판처럼 띄운 패널 ── */
   .scrim { position: fixed; inset: 0; z-index: 240; background: rgba(16,16,18,.24); opacity: 0; transition: opacity .2s var(--ease); }
