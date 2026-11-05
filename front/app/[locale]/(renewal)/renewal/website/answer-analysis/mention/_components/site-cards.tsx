@@ -10,6 +10,7 @@ import { useServiceWeekReadState } from "@/components/service-week/provider";
 import { posTxt } from "../../../../standard/answer-analysis/mention/_components/mention-context";
 import { InfoTip, useDegradedText } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
 import { KPI_QUESTION, TabDelta, useMentionPage } from "../../../../standard/answer-analysis/mention/_components/mention-tabs";
+import { asked } from "../../../../standard/answer-analysis/mention/_components/mention-input";
 import { RnMissingPrompts } from "./missing-prompts";
 
 // The KPI cells (2026-11-02): the page's picker, the KPI tabs and the KPI breakdown in one card. A cell shows its KPI
@@ -189,7 +190,7 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
 function KpiValue({ k }: { k: KpiTab }) {
   const { input } = useMentionPage();
   const tRank = useTranslations("renewal.mention.rank");
-  const { value } = use(input.tabValue[k]);
+  const { value } = use(asked(input.tabValue?.[k], "tabValue"));
   return (
     <span className="flex flex-col whitespace-nowrap tabular-nums">
       <b className="text-rn-20 leading-tight font-bold text-rn-ink">{value == null ? "—" : k === "first-rank" ? tRank("unit", { n: posTxt(value) }) : `${value.toFixed(1)}%`}</b>

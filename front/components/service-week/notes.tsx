@@ -44,17 +44,18 @@ export type ServiceWeekNotesPeriod = ServiceWeekPagePeriod | PromiseLike<Service
  * Renewal: heads the dense content column (RnPageFrame / RnFilterSplit). `period`: the page's own period for the
  * notes; absent, the URL `time`, else the service week (a snapshot page).
  */
-export function RnServiceWeekNotices({ period }: { period?: ServiceWeekNotesPeriod }) {
+/** `delay={false}`: the page shows the delay in its header chip instead (Global Mention, 2026-11-05 개편). */
+export function RnServiceWeekNotices({ period, delay: showDelay = true }: { period?: ServiceWeekNotesPeriod; delay?: boolean }) {
   const ctx = useServiceWeekContext();
   if (!ctx) return null;
   return (
     <Suspense fallback={null}>
-      <RnNotices ctx={ctx} period={period} />
+      <RnNotices ctx={ctx} period={period} showDelay={showDelay} />
     </Suspense>
   );
 }
 
-function RnNotices({ ctx, period }: { ctx: ServiceWeekContextValue; period?: ServiceWeekNotesPeriod }) {
+function RnNotices({ ctx, period, showDelay }: { ctx: ServiceWeekContextValue; period?: ServiceWeekNotesPeriod; showDelay: boolean }) {
   const view = useServiceWeekView(ctx);
   const sp = useSearchParams();
   const delay = useDelayText(view);
@@ -63,7 +64,7 @@ function RnNotices({ ctx, period }: { ctx: ServiceWeekContextValue; period?: Ser
   const noted = view && readFor === (ctx.sites ?? "") ? (view.notes ?? []) : [];
   return (
     <>
-      {delay ? (
+      {delay && showDelay ? (
         <RnNote>
           <TriangleAlert className="size-3.5 shrink-0 text-rn-warn-ink" aria-hidden />
           <span data-rn-service-week-delay="">{delay.text}</span>
@@ -117,7 +118,7 @@ function NoteLines({ notes }: { notes: ServiceWeekNote[] }) {
 }
 
 /** The delay sentence and Gold's last check, null while the next week is on time (or there is no week). */
-function useDelayText(view: ServiceWeekView | null): { text: string; checked: string | null } | null {
+export function useDelayText(view: ServiceWeekView | null): { text: string; checked: string | null } | null {
   const t = useTranslations("serviceWeek");
   const week = useWeekText();
   if (!view?.week || !view.delay) return null;

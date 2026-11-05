@@ -107,9 +107,9 @@ describe("renewal Mention body: nothing measured", () => {
 describe("renewal Mention body: 이번 회차 요약 on Global and Project", () => {
   const pending = <T,>(): Promise<T> => new Promise<T>(() => {});
   const MEASURED = { measured: true, degraded: false, ownBrands: ["Hyundai", "Kia", "Genesis"], ownSum: [], drawer: [] } as unknown as RnShellVM;
-  const page = (global: boolean, shell: Promise<RnShellVM>, over: object = {}) => {
+  const page = (global: boolean, shell: Promise<RnShellVM>, over: object = {}, search = "") => {
     nav.path = global ? "/ko/renewal/standard/answer-analysis/mention" : "/ko/renewal/projects/p1/analysis/mention";
-    nav.search = "";
+    nav.search = search;
     const tabValue = Object.fromEntries(["exposure", "sov", "favorability", "first-rank"].map((k) => [k, pending()]));
     const reads = Object.fromEntries(["tabDeltas", "compare", "summary", "rateValue", "rateHero", "rateEngines", "rateTypes", "favorHero", "favorDist", "favorMatrix", "rank", "bump", "ranking"].map((k) => [k, pending()]));
     const input = { kpi: "exposure", view: "brands", ownLabel: "HMG", period: null, filtered: false, shell, tabValue, ...reads, ...(global ? { brandsFirst: true, global: true } : {}), ...over } as never;
@@ -138,7 +138,8 @@ describe("renewal Mention body: 이번 회차 요약 on Global and Project", () 
       expect(global).not.toContain('id="sec-summary"');
       expect(project).toMatch(/rounded-rn-card rn-hero/);
       expect(global).not.toMatch(/rounded-rn-card rn-hero/);
-      expect(global).toContain('id="rn-kpi-tabs"');
+      expect(project).toContain('id="rn-kpi-tabs"');
+      expect(global).toContain("data-rn-gbar");
     }
   });
 
@@ -150,12 +151,20 @@ describe("renewal Mention body: 이번 회차 요약 on Global and Project", () 
     expect(page(true, settled(MEASURED), { summary })).not.toContain("답변당 언급 수");
   });
 
-  it("on Global the view rail follows the control bar", () => {
-    const html = page(true, settled(MEASURED));
-    const bar = html.indexOf("data-rn-cbar");
-    const rail = html.indexOf('id="rn-kpi-tabs"');
-    expect(bar).toBeGreaterThan(-1);
-    expect(rail).toBeGreaterThan(bar);
-    expect(html.slice(bar, rail)).not.toContain("rounded-rn-card");
+  // 2026-11-05 Mention 개편 (docs/handoff/global-mention-redesign.md): one bar with 당사 지표 | 경쟁 비교 replaces the
+  // control bar and the KPI rail; 당사 지표 lands, `?tab=cmp` opens the comparison tab, the loading state shows the same bar
+  it("on Global the tabs 당사 지표 | 경쟁 비교 replace the control bar and the view rail", () => {
+    for (const shell of [settled(MEASURED), pending<RnShellVM>()]) {
+      const html = page(true, shell);
+      expect(html).toContain('role="tablist"');
+      expect(html).toMatch(/aria-selected="true"[^>]*data-rn-gtab="own"/);
+      expect(html).toContain(`>${ko.renewal.mention.g.tabOwn}<`);
+      expect(html).toContain(`>${ko.renewal.mention.g.tabCmp}<`);
+      expect(html).not.toContain("data-rn-cbar");
+      expect(html).not.toContain('id="rn-kpi-tabs"');
+    }
+    expect(page(true, settled(MEASURED))).toContain('data-rn-gpane="own"');
+    expect(page(true, settled(MEASURED), {}, "tab=cmp")).toMatch(/aria-selected="true"[^>]*data-rn-gtab="cmp"/);
+    expect(page(true, settled(MEASURED), {}, "tab=cmp")).toContain('data-rn-gpane="cmp"');
   });
 });

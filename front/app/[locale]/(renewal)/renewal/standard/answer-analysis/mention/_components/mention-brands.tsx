@@ -30,6 +30,7 @@ import {
   type TreemapGroup,
 } from "../_data/screen-types";
 import { squarify } from "./treemap-layout";
+import type { CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerSignal, type DrawerTarget } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable, useDegradedText } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
@@ -70,19 +71,24 @@ function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] 
 
 // ── 주별 언급 순위 · 점유율 (bump) ─────────────────────────────────────────────
 
-function BumpCard() {
-  const { input, ownLabel, tables } = useMention();
+/** The weekly rank CSV (the bump card's; the Global board's 순위 변화 view too). */
+export function useBumpCsv(): () => { name: string; rows: CsvCell[][] } {
+  const { input, ownLabel } = useMention();
   const t = useTranslations("renewal.mention");
-  const dg = useDegradedText();
   const vm = use(input.bump);
   const d = vm.data;
   const name = (k: string) => (k === OWN_KEY ? ownLabel : k);
-  const tableOn = tables.has("bump");
-  const measured = vm.measured;
-  const csv = () => ({
+  return () => ({
     name: "mention-weekly-rank",
     rows: [["", ...(d?.x ?? []).flatMap((x) => [`${x} ${t("bump.colRank")}`, `${x} ${t("bump.colShare")}`, `${x} ${t("bump.colMentions")}`])], ...(d?.series ?? []).map((s) => [name(s.key), ...s.ranks.flatMap((r, i) => [r, s.shares[i], s.mentions[i]])])],
   });
+}
+
+function BumpCard() {
+  const { input } = useMention();
+  const t = useTranslations("renewal.mention");
+  const d = use(input.bump).data;
+  const csv = useBumpCsv();
   return (
     <>
       <RnCardHead
@@ -92,6 +98,24 @@ function BumpCard() {
         actions={<MentionCardActions tableId="bump" section="sec-brands" csv={csv} />}
       />
       <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
+        <BumpView />
+      </div>
+    </>
+  );
+}
+
+/** The bump chart, its table twin (`tableId` "bump") or its degraded / too-short note. */
+export function BumpView() {
+  const { input, ownLabel, tables } = useMention();
+  const t = useTranslations("renewal.mention");
+  const dg = useDegradedText();
+  const vm = use(input.bump);
+  const d = vm.data;
+  const name = (k: string) => (k === OWN_KEY ? ownLabel : k);
+  const tableOn = tables.has("bump");
+  const measured = vm.measured;
+  return (
+    <>
         {!vm.trend ? (
           <DegradedNote>{dg.trend}</DegradedNote>
         ) : !d || measured < 2 ? (
@@ -104,7 +128,6 @@ function BumpCard() {
         ) : (
           <BumpChart d={d} maxShare={vm.maxShare} />
         )}
-      </div>
     </>
   );
 }
@@ -373,18 +396,21 @@ const textW = (text: string, px: number): number => {
   return measureCtx.measureText(text).width;
 };
 
-function Treemap({
+export function Treemap({
   groups,
   multi,
   groupName,
   onBrand,
   onGroupTable,
+  ringOf,
 }: {
   groups: import("../_data/screen-types").TreemapGroup[];
   multi: boolean;
   groupName: (g: string, several?: boolean) => string;
   onBrand: (brand: string) => void;
   onGroupTable: (group: string) => void;
+  /** the ring colour of a tile holding these brands (a compare brand's colour), or null (the Global board) */
+  ringOf?: (brands: readonly string[]) => string | null;
 }) {
   const { lit, hover, input } = useMention();
   const t = useTranslations("renewal.mention.treemap");
@@ -406,7 +432,7 @@ function Treemap({
   const steps = t("steps").split(",");
   const covered = (b: TreemapBrand) => b.delta != null;
   const fill = (d: number | null, hasTrend: boolean) => (multi ? DIV_ZERO : hasTrend ? divColor(d) : null);
-  const tile = (key: string, rect: { x: number; y: number; w: number; h: number }, body: { title: string; short?: string; share: number; delta: number | null; hasTrend: boolean; own: boolean; dashed?: boolean; drillN?: number; members?: TreemapBrand[]; tip: string; onClick: () => void }) => {
+  const tile = (key: string, rect: { x: number; y: number; w: number; h: number }, body: { title: string; short?: string; share: number; delta: number | null; hasTrend: boolean; own: boolean; dashed?: boolean; drillN?: number; members?: TreemapBrand[]; tip: string; onClick: () => void; ring?: string | null }) => {
     const bg = fill(body.delta, body.hasTrend);
     const ink = bg ? inkOn(bg) : RN_INK;
     const big = rect.w > 70 && rect.h > 44;
@@ -435,7 +461,8 @@ function Treemap({
           body.dashed && "outline-1 -outline-offset-4 outline-rn-navy-300 outline-dashed",
           lit1 && "z-[1] shadow-[inset_0_0_0_2.5px_var(--color-rn-ink)]",
         )}
-        style={{ left: rect.x + 1, top: rect.y + 1, width: Math.max(0, rect.w - 2), height: Math.max(0, rect.h - 2), background: bg ?? DIV_NA, color: ink }}
+        data-rn-ring={body.ring ? "" : undefined}
+        style={{ left: rect.x + 1, top: rect.y + 1, width: Math.max(0, rect.w - 2), height: Math.max(0, rect.h - 2), background: bg ?? DIV_NA, color: ink, ...(body.ring ? { boxShadow: `inset 0 0 0 2.5px ${body.ring}`, zIndex: 2 } : {}) }}
       >
         {body.members && body.members.length > 1 && rect.w > 40 && rect.h > 40 ? (
           <span aria-hidden className="pointer-events-none absolute inset-0">
@@ -494,6 +521,7 @@ function Treemap({
                   dashed: m.sibling,
                   tip: t("brandTip", { brand: m.brand, share: pctTxt(m.share), delta: fmtD(m.delta), mentions: numTxt(m.value, locale) }),
                   onClick: () => onBrand(m.brand),
+                  ring: ringOf?.([m.brand]) ?? null,
                 }),
               )
             : squarify(groups, 0, 0, area.w, area.h).map((g) => {
@@ -509,6 +537,7 @@ function Treemap({
                   members: g.members,
                   tip: `${t("groupTip", { group: groupName(g.key, g.members.length > 1), share: pctTxt(g.share), delta: fmtD(g.delta), n: g.members.length })}${g.partial ? `\n${t("partial")}` : ""}`,
                   onClick: () => (g.members.length > 1 ? setDrill(g.key) : onBrand(g.members[0].brand)),
+                  ring: ringOf?.(g.members.map((m) => m.brand)) ?? null,
                 });
               })
           : null}

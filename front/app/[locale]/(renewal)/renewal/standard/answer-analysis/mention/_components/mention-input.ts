@@ -9,6 +9,8 @@ import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_dat
 import type {
   RnBumpVM,
   RnCompareVM,
+  RnEngineExtraVM,
+  RnPresenceSplitVM,
   RnFavorDistVM,
   RnFavorHeroVM,
   RnFavorMatrixVM,
@@ -72,14 +74,18 @@ export interface RnMentionInput {
   /** The page's own sections in place of the standard bar, rail and views (the Website page, 2026-11-02: its prompts aim
    * at its own pages, so the page reads differently), inside the same providers. */
   body?: ReactNode;
-  /** the tab rail: each tab's value, then the Δ of all four */
-  tabValue: Record<KpiTab, Promise<RnTabValueVM>>;
-  tabDeltas: Promise<RnTabDeltasVM>;
+  /** Global Mention 개편 (2026-11-05): engine favorability · first-rank and the brand-presence split (Global page only) */
+  engineExtra?: Promise<RnEngineExtraVM>;
+  presence?: Promise<RnPresenceSplitVM>;
+  /** the tab rail: each tab's value, then the Δ of all four (not on Global since its 개편: no rail) */
+  tabValue?: Record<KpiTab, Promise<RnTabValueVM>>;
+  tabDeltas?: Promise<RnTabDeltasVM>;
   /** the body aggregate: page state, 당사 brands, the brand drawer rows */
   shell: Promise<RnShellVM>;
   /** the competitors that can be compared */
   compare: Promise<RnCompareVM>;
-  summary: Promise<RnSummaryVM>;
+  /** 이번 회차 요약 (not on Global since 2026-11-05) */
+  summary?: Promise<RnSummaryVM>;
   rateValue: Promise<RnRateValueVM>;
   rateHero: Promise<RnRateHeroVM>;
   rateEngines: Promise<RnRateEnginesVM>;
@@ -90,4 +96,10 @@ export interface RnMentionInput {
   rank: Promise<RnRankVM>;
   bump: Promise<RnBumpVM>;
   ranking: Promise<RnRankingVM>;
+}
+
+/** A read this page does not ask for (Global: no KPI rail, no 이번 회차 요약) reached by a part that needs it: a bug. */
+export function asked<T>(read: Promise<T> | undefined, name: string): Promise<T> {
+  if (!read) throw new Error(`mention: the page does not read ${name}`);
+  return read;
 }

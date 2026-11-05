@@ -59,7 +59,8 @@ export function RnPageFrame({ header, children }: { header: ReactNode; children:
  * `notesPeriod`: the period the service week's notes take on a page that shows every round with no
  * `time` (Website · Global Prompts, review r1-13); without it, the URL `time` or the service week.
  */
-export function RnFilterSplit({ header, top, panel, rail, notesPeriod, children }: { header?: ReactNode; top?: ReactNode; panel: ReactNode; rail: ReactNode; notesPeriod?: ServiceWeekNotesPeriod; children: ReactNode }) {
+/** `delayInHeader`: the header chip names the publish delay, so the content shows no delay note (Global Mention, 2026-11-05 개편). */
+export function RnFilterSplit({ header, top, panel, rail, notesPeriod, delayInHeader = false, children }: { header?: ReactNode; top?: ReactNode; panel: ReactNode; rail: ReactNode; notesPeriod?: ServiceWeekNotesPeriod; delayInHeader?: boolean; children: ReactNode }) {
   // null = automatic (open from 1360px wide, collapsed below) until the viewer toggles.
   const [open, setOpen] = useState<boolean | null>(null);
   const isOpenNow = useCallback(() => (open === null ? window.matchMedia("(min-width: 1360px)").matches : open), [open]);
@@ -80,7 +81,7 @@ export function RnFilterSplit({ header, top, panel, rail, notesPeriod, children 
   const scroll = (
     <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-[var(--rn-edge)]", top ? "flex-1" : "")}>
       <div className={cx("@container/rncontent", DENSE)}>
-        <RnServiceWeekNotices period={notesPeriod} />
+        <RnServiceWeekNotices period={notesPeriod} delay={!delayInHeader} />
         {children}
       </div>
     </div>

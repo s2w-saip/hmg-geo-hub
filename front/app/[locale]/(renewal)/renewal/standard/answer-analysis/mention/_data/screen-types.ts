@@ -87,6 +87,8 @@ export interface RnShellVM {
   ownSum: string[];
   /** one per brand of the first 100 body brands (the treemap's, the boards'); a ranking row past them carries its own */
   drawer: RnDrawerBrand[];
+  /** 당사's positive share among the drawer brands' competitors (Global Mention 개편, 2026-11-05); null without one */
+  favStanding?: { rank: number; n: number } | null;
 }
 
 export interface RnCompareVM {
@@ -165,6 +167,8 @@ export interface RnRateHeroMetric {
     competitors: string[];
     /** per competitor, on x */
     values: (number | null)[][];
+    /** per competitor, on x: 당사 − the competitor (+ = 당사 ahead; Global Mention 개편 comparison chart) */
+    gaps?: (number | null)[][];
   };
   board: { rows: BoardRow[]; axis: string[]; measuredCycles: number; barMax: number };
 }
@@ -288,6 +292,8 @@ export interface RnRankVM {
   covered: string[];
   /** per covered brand, on hero.axis */
   series: (number | null)[][];
+  /** per covered brand, on hero.axis: the brand − 당사 (+ = 당사 mentioned first) */
+  gaps?: (number | null)[][];
   hasValue: boolean[];
   /** per pick: the chart's y top */
   options: Record<string, number>;
@@ -369,4 +375,30 @@ export interface RnRankingVM {
   multiUnavailable: boolean;
   orders: Record<"off" | "on", Record<RankingSortKey, { asc: number[]; desc: number[] }>>;
   treemap: Record<"off" | "on", TreemapGroup[]>;
+}
+
+// ── Global Mention 개편 (2026-11-05, docs/handoff/global-mention-redesign.md): the BFF's added screens ──
+
+/** mention/rn-engine-extra: per engine, the page's favorability and first-rank read under that engine */
+export interface RnEngineExtraVM {
+  engines: Array<{
+    engine: string;
+    favorability: { pct: number | null; delta: RnDelta; x: string[]; series: (number | null)[] } | null;
+    firstRank: { avg: number | null; delta: RnDelta; x: string[]; series: (number | null)[] } | null;
+  }>;
+  degraded: boolean;
+}
+
+export type PresenceKey = "unbranded" | "branded";
+
+export interface PresenceValues {
+  own: { exposure: number | null; answers: number | null; sov: number | null; favorability: number | null; firstRank: number | null };
+  /** competitors of the body brand read under that presence */
+  brands: Record<string, { exposure: number | null; sov: number | null; firstRank: number | null }>;
+}
+
+/** mention/rn-presence-split: the values under the filter '브랜드 포함 여부'; `applied` = the page already picks one */
+export interface RnPresenceSplitVM {
+  applied: boolean;
+  presences: Partial<Record<PresenceKey, PresenceValues | null>>;
 }

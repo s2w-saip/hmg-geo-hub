@@ -27,7 +27,7 @@ import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { RnSkeleton, cx } from "@/components/renewal-ui";
 import { KPI_TAB_PARAM, kpiTabQuery, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
-import { MENTION_VIEW_PARAM, type MentionView, type RnMentionInput } from "./mention-input";
+import { MENTION_VIEW_PARAM, asked, type MentionView, type RnMentionInput } from "./mention-input";
 import { posTxt } from "./mention-context";
 import { useDeltaBasis } from "./mention-kit";
 
@@ -298,7 +298,7 @@ function TabLink({
 // The value shows as soon as its own read lands; Δ waits for the trend reads.
 function TabValue({ k }: { k: KpiTab }) {
   const { input } = useMentionPage();
-  const { value } = use(input.tabValue[k]);
+  const { value } = use(asked(input.tabValue?.[k], "tabValue"));
   const t = useTranslations("renewal.mention.rank");
   return (
     <>
@@ -313,7 +313,7 @@ function TabValue({ k }: { k: KpiTab }) {
 // Δ as text, not a chip (a chip row reads as a KPI summary): arrow = direction, ink = better / worse.
 export function TabDelta({ k }: { k: KpiTab }) {
   const { input } = useMentionPage();
-  const delta = use(input.tabDeltas)[k];
+  const delta = use(asked(input.tabDeltas, "tabDeltas"))[k];
   const t = useTranslations("renewal.mention.delta");
   const tt = useTranslations("renewal.mention.tabs");
   const basis = useDeltaBasis()(delta);

@@ -7,6 +7,7 @@ import { CalendarDays, TriangleAlert } from "lucide-react";
 import { RnPill } from "@/components/renewal-ui/chip";
 import { monthDay, type ServiceWeekRange, type ServiceWeekView } from "@/lib/service-week";
 import { useServiceWeekContext, useServiceWeekView, type ServiceWeekContextValue } from "./provider";
+import { useDelayText } from "./notes";
 
 // The service-week chip (2026-11-02): the week the page's Gold rounds are held to, at the end of the page header's
 // meta row (the design rules' 기준 칩 slot) — "10월 2주차 · 10/5~10/11". A late next week adds a warning and the days
@@ -57,22 +58,26 @@ function useChipModel(view: ServiceWeekView | null): ChipModel {
 
 
 /** Renewal page header (RnPageHeader). `row`: the meta line's class, for a header without one (the chip on its own line). */
-export function RnServiceWeekChip({ row }: { row?: string }) {
+/** `withDelay`: the pill's title and screen-reader text also carry the delay sentence (the page shows no delay note; Global Mention). */
+export function RnServiceWeekChip({ row, withDelay = false }: { row?: string; withDelay?: boolean }) {
   const ctx = useServiceWeekContext();
   if (!ctx) return null;
   const chip = (
     <Suspense fallback={<span data-rn-service-week="loading" aria-hidden className="block h-[26px] w-[150px] animate-pulse rounded-full bg-rn-inset" />}>
-      <RnChip ctx={ctx} />
+      <RnChip ctx={ctx} withDelay={withDelay} />
     </Suspense>
   );
   return row ? <div className={row}>{chip}</div> : chip;
 }
 
-function RnChip({ ctx }: { ctx: ServiceWeekContextValue }) {
-  const m = useChipModel(useServiceWeekView(ctx));
+function RnChip({ ctx, withDelay }: { ctx: ServiceWeekContextValue; withDelay: boolean }) {
+  const view = useServiceWeekView(ctx);
+  const m = useChipModel(view);
+  const delay = useDelayText(view);
+  const title = withDelay && delay ? [m.title, delay.text, delay.checked].filter(Boolean).join("\n") : m.title;
   return (
     <span data-rn-service-week={m.kind} className="contents">
-      <RnPill title={m.title}>
+      <RnPill title={title}>
         <CalendarDays className="size-3 text-rn-muted" aria-hidden />
         {/* no week (unconfigured, a failed read): the state in muted text */}
         <span className={m.range ? "font-semibold text-rn-ink-2" : "text-rn-muted"}>{m.label}</span>
@@ -84,7 +89,7 @@ function RnChip({ ctx }: { ctx: ServiceWeekContextValue }) {
             <span className="font-semibold text-rn-ink-2 tabular-nums">{m.late}</span>
           </>
         ) : null}
-        <span className="sr-only">{m.title}</span>
+        <span className="sr-only">{title}</span>
       </RnPill>
     </span>
   );

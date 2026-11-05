@@ -31,6 +31,8 @@ import { FavorBody } from "./mention-favor";
 import { RankBody } from "./mention-rank";
 import { BrandDetail, BrandDrawer } from "./mention-brands";
 import { KPI_QUESTION, KpiBasisChip, RnMentionTabs, RnMentionTabsFallback, useMentionPage } from "./mention-tabs";
+import { GlobalMentionBody, GlobalTabsFallback } from "./mention-global";
+import { asked } from "./mention-input";
 
 /** The page body; the reads and the view (KPI tab or 브랜드 상세) come from RnMentionPageProvider (mention-tabs). */
 export function RnMentionBody() {
@@ -39,8 +41,8 @@ export function RnMentionBody() {
     <Suspense
       fallback={
         <div className="rn-dense flex flex-col gap-2.5">
-          {input.global ? null : <SummarySkeleton />}
-          {input.body ? null : <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst={input.brandsFirst} />}
+          {input.global ? <GlobalTabsFallback /> : <SummarySkeleton />}
+          {input.body || input.global ? null : <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst={input.brandsFirst} />}
           <RnCard className="p-6">
             <RnSkeleton className="h-40 w-full" />
           </RnCard>
@@ -117,33 +119,29 @@ function Measured({ shell }: { shell: RnShellVM }) {
       }),
     engineLabel: (e) => ENGINE_LABEL[e] ?? e,
     openDrawer: setDrawer,
+    favStanding: shell.favStanding ?? null,
   };
   const closeDrawer = useCallback(() => setDrawer(null), [setDrawer]);
   return (
     <MentionProvider value={ctx}>
       {/* always the compact rhythm (2026-10-29, the user's call: the 기본 / 촘촘 toggle is gone) */}
       <div className="@container/rnpage rn-dense flex flex-col gap-2.5">
-        {input.body ?? (
+        {/* Global (2026-11-05 Mention 개편, docs/handoff/global-mention-redesign.md): 당사 지표 | 경쟁 비교 tabs over the same reads */}
+        {input.body ?? (input.global ? <GlobalMentionBody /> : (
           <>
             <RnControlBar label={t("bar.label")}>
               <Suspense fallback={<span className="text-rn-12 font-semibold text-rn-muted">{t("compare.label")}</span>}>
                 <ComparePicker />
               </Suspense>
             </RnControlBar>
-            {/* every KPI at once: above the rail, outside what it switches. Not on Global (2026-11-05 지표 정리, the user's
-                choice C): its headline restated the tab rail and its findings the cards below, so the rail follows the
-                control bar there and the page has no navy card (the heroes' trend charts have no on-navy variant) */}
-            {input.global ? null : (
-              <Suspense fallback={<SummarySkeleton />}>
-                <Summary />
-              </Suspense>
-            )}
-            {/* not on Global (2026-11-05, the user's call): a calendar month's change of 답변당 언급 수 with no level beside it */}
-            {input.global ? null : (
-              <Suspense fallback={null}>
-                <PerAnswerLine />
-              </Suspense>
-            )}
+            {/* every KPI at once: above the rail, outside what it switches (Global has none since 2026-11-05 지표 정리, the
+                user's choice C, nor the calendar month's 답변당 언급 수 line) */}
+            <Suspense fallback={<SummarySkeleton />}>
+              <Summary />
+            </Suspense>
+            <Suspense fallback={null}>
+              <PerAnswerLine />
+            </Suspense>
             <RnMentionTabs />
             {view === "brands" ? (
               <>
@@ -158,7 +156,7 @@ function Measured({ shell }: { shell: RnShellVM }) {
               </>
             )}
           </>
-        )}
+        ))}
         <BrandDrawer target={drawer} onClose={closeDrawer} />
       </div>
     </MentionProvider>
@@ -239,7 +237,7 @@ export function ComparePicker() {
  * (renewal audit 5-2; the renewal Citation keeps its 답변당 인용 수 line the same way). */
 export function PerAnswerLine() {
   const { input } = useMention();
-  const line = use(input.summary).monthLine;
+  const line = use(asked(input.summary, "summary")).monthLine;
   return line ? <PeriodDeltaLine view={line} className="mt-0" /> : null;
 }
 
@@ -264,7 +262,7 @@ export function Summary() {
   const { compare } = useCompare();
   const t = useTranslations("renewal.mention");
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
-  const s = use(input.summary);
+  const s = use(asked(input.summary, "summary"));
   const list = useMemo(() => {
     const opt = s.options[pickKey(compare, s.covered)] ?? { type: null, order: [] };
     return opt.order.map((i) => (i < 0 && opt.type != null ? pickTypeFinding(s.typeFindings[opt.type], compare) : s.fixed[i]));
@@ -324,7 +322,7 @@ export function Summary() {
 export function SummaryCard({ items, how }: { items: RnFinding[]; how: string }) {
   const { input, ownLabel } = useMention();
   const t = useTranslations("renewal.mention");
-  const s = use(input.summary);
+  const s = use(asked(input.summary, "summary"));
   const isPeriod = Boolean(input.period);
   const asOf = s.asOf;
   // one flat message (nesting rich texts repeats their element keys)

@@ -7,7 +7,7 @@ import type { AllowedScope } from "@/lib/auth/types";
 import { screenGet, type ScreenQuery } from "@/lib/screen";
 import type { FilterDatesView, PanelFilterOptions } from "@/lib/hgh/filter-types";
 import { throwForPage } from "@/lib/hgh/errors";
-import { KPI_TAB_PARAM, resolveKpiTab, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
+import { KPI_TAB_PARAM, resolveKpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import { RnCard, RnPageHeader, RnPill, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
 import { loadSavedFilters } from "../../../_components/saved-filters-server";
@@ -20,10 +20,11 @@ import {
   RnOverviewFilters,
   type OverviewFilterProps,
 } from "../../../_components/overview-filters";
-import { MENTION_VIEW_PARAM, resolveMentionView, type MentionView, type RnMentionInput } from "./_components/mention-input";
+import { MENTION_VIEW_PARAM, resolveMentionView, type RnMentionInput } from "./_components/mention-input";
 import type { RnAsOfVM, RnPageVM } from "./_data/screen-types";
 import { RnMentionBody } from "./_components/mention-body";
-import { RnMentionPageProvider, RnMentionTabsFallback } from "./_components/mention-tabs";
+import { RnMentionPageProvider } from "./_components/mention-tabs";
+import { GlobalTabsFallback } from "./_components/mention-global";
 
 // Renewal Mention (2026-10-21) — the redesigned /standard/answer-analysis/mention, served side
 // by side with the original. Data: the screens "mention/rn-<section>" of the API (one read per
@@ -34,7 +35,6 @@ import { RnMentionPageProvider, RnMentionTabsFallback } from "./_components/ment
 export const maxDuration = 120;
 
 const MENTION_AXES = ["brand", "geography", "language", "engine", "time", "promptContext", "brandPresence", "listType", "depth1", "depth2", "depth3", "depth4"] as const;
-const KPI_TABS: readonly KpiTab[] = ["exposure", "sov", "favorability", "first-rank"];
 
 export default async function RenewalMentionPage({
   params,
@@ -86,6 +86,8 @@ export default async function RenewalMentionPage({
         </>
       }
       actions={<RnCopyLinkButton />}
+      // the publish delay sits in the week chip (its tooltip): the content shows no delay note (2026-11-05 Mention 개편)
+      delayInChip
     />
   );
   const body: RnMentionInput = {
@@ -102,7 +104,7 @@ export default async function RenewalMentionPage({
   };
   return (
     <RnFilterRuntime>
-      <Suspense fallback={<PageSkeleton header={header} kpi={body.kpi} view={body.view} />}>
+      <Suspense fallback={<PageSkeleton header={header} />}>
         <RenewalMention sp={sp} scope={session.user.scope} userId={session.user.id} locale={locale} header={header} body={body} />
       </Suspense>
     </RnFilterRuntime>
@@ -124,16 +126,14 @@ async function AsOfText({ asOf }: { asOf: Promise<string | null> }) {
 
 type Reads = Omit<RnMentionInput, "kpi" | "view" | "ownLabel" | "period" | "filtered">;
 
-/** One screen read per section, all started now (the tabs switch in place, every section is needed). */
+/** One screen read per section, all started now (the tabs switch in place, every section is needed). No KPI rail and no
+ * 이번 회차 요약 since the 개편 (2026-11-05): their reads are not asked for. */
 function sectionReads(q: ScreenQuery, locale: string): Reads {
   const get = <T,>(name: string, extra?: ScreenQuery) => screenGet<T>(`mention/${name}`, extra ? { ...q, ...extra } : q);
   return {
-    tabValue: Object.fromEntries(KPI_TABS.map((k) => [k, get("rn-tab-value", { "ctx.kpi": k })])) as Reads["tabValue"],
-    tabDeltas: get("rn-tab-deltas"),
     // the body aggregate decides the page; its 401/403/404 are the page's (original MentionsData)
     shell: get<Awaited<Reads["shell"]>>("rn-shell").catch((e) => throwForPage(e, locale)),
     compare: get("rn-compare"),
-    summary: get("rn-summary"),
     rateValue: get("rn-rate-value"),
     rateHero: get("rn-rate-hero"),
     rateEngines: get("rn-rate-engines"),
@@ -144,6 +144,9 @@ function sectionReads(q: ScreenQuery, locale: string): Reads {
     rank: get("rn-rank"),
     bump: get("rn-bump"),
     ranking: get("rn-ranking"),
+    // Global Mention 개편 (2026-11-05): read with the rest, each card resolves its own
+    engineExtra: get("rn-engine-extra"),
+    presence: get("rn-presence-split"),
   };
 }
 
@@ -192,7 +195,7 @@ async function RenewalMention({
       {/* one provider feeds the view rail and the body; the rail sits in the body, under the page controls
           (2026-10-29: it frames only the view it switches; Global has no 이번 회차 요약 since 2026-11-05) */}
       <RnMentionPageProvider input={body}>
-        <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
+        <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />} delayInHeader>
           <RnOverviewApplied />
           <RnBusyScope className="flex flex-col gap-4">
             <RnMentionBody />
@@ -203,11 +206,10 @@ async function RenewalMention({
   );
 }
 
-function PageSkeleton({ header, kpi, view }: { header: ReactNode; kpi: KpiTab; view: MentionView }) {
+function PageSkeleton({ header }: { header: ReactNode }) {
   return (
     <RnFilterSplit header={header} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
-      <RnCard className="h-12" />
-      <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst />
+      <GlobalTabsFallback />
       <RnCard className="h-[320px]" />
     </RnFilterSplit>
   );

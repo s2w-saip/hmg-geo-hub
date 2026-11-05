@@ -52,6 +52,8 @@ export interface MentionCtx {
   toggleTable: (id: string) => void;
   engineLabel: (engine: string) => string;
   openDrawer: (target: DrawerTarget) => void;
+  /** 당사's positive share among the drawer brands' competitors (the shell's; Global Mention 개편) */
+  favStanding?: { rank: number; n: number } | null;
 }
 
 const Ctx = createContext<MentionCtx | null>(null);

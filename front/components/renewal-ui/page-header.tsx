@@ -9,7 +9,8 @@ const META = "mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-rn-13 te
  * without a meta line gets the chip alone. The chip renders nothing outside the renewal shell's provider and on a
  * page not held to the week.
  */
-export function RnPageHeader({ title, meta, actions }: { title: ReactNode; meta?: ReactNode; actions?: ReactNode }) {
+/** `delayInChip`: the service-week chip also names the delay (a page whose content shows no delay note, Global Mention). */
+export function RnPageHeader({ title, meta, actions, delayInChip = false }: { title: ReactNode; meta?: ReactNode; actions?: ReactNode; delayInChip?: boolean }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2.5">
       {/* flex-1: a long meta line (page description) wraps inside instead of pushing the actions to a new row */}
@@ -18,10 +19,10 @@ export function RnPageHeader({ title, meta, actions }: { title: ReactNode; meta?
         {meta ? (
           <div className={META}>
             {meta}
-            <RnServiceWeekChip />
+            <RnServiceWeekChip withDelay={delayInChip} />
           </div>
         ) : (
-          <RnServiceWeekChip row={META} />
+          <RnServiceWeekChip row={META} withDelay={delayInChip} />
         )}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}

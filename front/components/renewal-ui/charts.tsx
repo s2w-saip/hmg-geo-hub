@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -135,6 +136,11 @@ export function RnLineChart({
   invert = false,
   domain,
   tooltipNote,
+  syncId,
+  endLabels = true,
+  curve = "linear",
+  zeroLine = false,
+  band,
 }: {
   x: ReadonlyArray<string>;
   series: ReadonlyArray<RnLineSeries>;
@@ -151,11 +157,22 @@ export function RnLineChart({
   domain?: { lo: number; hi: number; ticks: number[] };
   /** lines under the tooltip's values for point `index` of x (e.g. that round's counts); none = no note */
   tooltipNote?: (index: number) => ReadonlyArray<string> | null;
+  /** charts sharing an id point at the same x label together (synced crosshair, 2026-11-05 새 외형) */
+  syncId?: string;
+  /** direct labels at the series' last points (default on); off = a dot only */
+  endLabels?: boolean;
+  /** "monotone": a smooth line that never overshoots a value (default straight segments) */
+  curve?: "linear" | "monotone";
+  /** a gap chart: the axis holds 0 and draws its line */
+  zeroLine?: boolean;
+  /** a light band between two series (keys), e.g. 당사 and the first compare brand */
+  band?: { a: string; b: string; color: string };
 }) {
   const nums = series.flatMap((s) => s.values).filter((v): v is number => v != null);
   const rawLo = nums.length ? Math.min(...nums) : 0;
   const rawHi = nums.length ? Math.max(...nums) : 1;
-  const ticks = domain?.ticks ?? rnNiceTicks(Math.max(0, rawLo - (rawHi - rawLo) * 0.15), rawHi, 4);
+  const pad = (rawHi - rawLo) * 0.15;
+  const ticks = domain?.ticks ?? (zeroLine ? rnNiceTicks(Math.min(0, rawLo) - pad, Math.max(0, rawHi) + pad, 4) : rnNiceTicks(Math.max(0, rawLo - pad), rawHi, 4));
   const lo = domain?.lo ?? ticks[0];
   const hi = domain?.hi ?? ticks[ticks.length - 1];
   const data = x.map((label, i) => ({ x: label, [ROW_INDEX]: i, ...Object.fromEntries(series.map((s) => [s.key, s.values[i] ?? null])) }));
@@ -164,13 +181,27 @@ export function RnLineChart({
     const i = lastIndex(s.values);
     return i < 0 ? "" : `${s.name.length > 12 ? `${s.name.slice(0, 11)}…` : s.name} ${value(s.values[i]!)}`;
   };
-  const right = Math.min(180, Math.max(64, ...series.map((s) => TEXT_W(labelText(s)) + 22)));
+  const right = endLabels ? Math.min(180, Math.max(64, ...series.map((s) => TEXT_W(labelText(s)) + 22))) : 12;
   const order = [...series].sort((a, b) => (a.own ? 1 : 0) - (b.own ? 1 : 0));
   return (
     <div role="img" aria-label={ariaLabel} className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 10, right, bottom: 0, left: 0 }} onMouseLeave={() => onHover?.(null)}>
-          <CartesianGrid vertical={false} stroke="var(--color-rn-line)" />
+        <ComposedChart data={data} syncId={syncId} syncMethod="value" margin={{ top: 10, right, bottom: 0, left: 0 }} onMouseLeave={() => onHover?.(null)}>
+          <CartesianGrid vertical={false} stroke="var(--color-rn-line)" strokeDasharray={syncId ? "3 4" : undefined} />
+          {zeroLine ? <ReferenceLine y={0} stroke="var(--color-rn-muted)" strokeWidth={1} /> : null}
+          {band ? (
+            <Area
+              key="band"
+              dataKey={(d: Record<string, number | null>) => (d[band.a] == null || d[band.b] == null ? null : [d[band.a], d[band.b]])}
+              type={curve}
+              fill={band.color}
+              fillOpacity={0.07}
+              stroke="none"
+              isAnimationActive={false}
+              activeDot={false}
+              tooltipType="none"
+            />
+          ) : null}
           {/* equal steps counted back from the latest round (preserveStartEnd thinned by fit alone: 7/6, 7/13, 7/27, 8/3 …) */}
           <XAxis dataKey="x" tick={TICK} tickLine={false} axisLine={false} interval="equidistantPreserveEnd" minTickGap={28} />
           <YAxis width={44} tick={TICK} tickLine={false} axisLine={false} domain={[lo, hi]} ticks={ticks} tickFormatter={yTick} reversed={invert} />
@@ -180,9 +211,10 @@ export function RnLineChart({
             isAnimationActive={false}
           />
           {series
-            .filter((s) => s.own && !invert)
+            // a band (the gap to a rival) replaces the own area wash
+            .filter((s) => s.own && !invert && !band)
             .map((s) => (
-              <Area key={`a-${s.key}`} dataKey={s.key} fill={s.color} fillOpacity={fading && !lit.includes(s.key) ? 0.03 : 0.08} stroke="none" isAnimationActive={false} activeDot={false} tooltipType="none" />
+              <Area key={`a-${s.key}`} dataKey={s.key} type={curve} fill={s.color} fillOpacity={fading && !lit.includes(s.key) ? 0.03 : 0.08} stroke="none" isAnimationActive={false} activeDot={false} tooltipType="none" />
             ))}
           {order.map((s) => {
             const dim = fading && !lit.includes(s.key);
@@ -191,6 +223,7 @@ export function RnLineChart({
               <Line
                 key={s.key}
                 dataKey={s.key}
+                type={curve}
                 name={s.name}
                 stroke={s.color}
                 strokeWidth={s.own ? 2.5 : s.dashed ? 1.5 : 2}
@@ -206,7 +239,7 @@ export function RnLineChart({
                   )
                 }
                 activeDot={{ r: 4, stroke: "#fff", strokeWidth: 2 }}
-                label={<EndLabel series={series} me={s} lo={lo} hi={hi} invert={invert} text={labelText(s)} dim={dim} />}
+                label={endLabels ? <EndLabel series={series} me={s} lo={lo} hi={hi} invert={invert} text={labelText(s)} dim={dim} /> : undefined}
                 onMouseEnter={() => onHover?.(s.key)}
               />
             );
