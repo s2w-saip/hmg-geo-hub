@@ -300,12 +300,12 @@
   .bump svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 
   /* engines × KPIs */
-  .row2 { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 12px; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; }
   .et { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
   .et th { height: 32px; border-block: 1px solid var(--line); background: var(--surface); font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 12px; }
   .et th:first-child { padding-left: 22px; width: 104px; }
   .et th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
-  .et td { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .et td { padding: 8px 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
   .et td:first-child { padding-left: 22px; font-weight: 700; }
   .et tr:last-child td { border-bottom: 0; }
   .et td.fx { background: rgba(237,239,255,.55); }
@@ -317,11 +317,11 @@
 
   .dist { padding: 0 22px 18px; }
   .dist .bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 0 14px; }
-  .dist .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .dist .tile { padding: 10px 12px; border-radius: 10px; background: var(--page); }
+  .dist .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .dist .tile { padding: 8px 10px; border-radius: 10px; background: var(--page); }
   .dist .tile .k { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
   .dist .tile .k i { width: 8px; height: 8px; border-radius: 2px; }
-  .dist .tile b { display: block; font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .dist .tile b { display: block; font-size: 18px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
   .dist .tile small { color: var(--muted); font-size: 11px; }
   .dist .tile a { display: inline-block; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--navy); text-decoration: none; }
 
@@ -329,7 +329,7 @@
   .tt { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
   .tt th { height: 34px; border-block: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 12px; white-space: nowrap; }
   .tt th:first-child { padding-left: 22px; width: 120px; }
-  .tt td { height: 52px; border-bottom: 1px solid var(--line); padding: 0 12px; font-variant-numeric: tabular-nums; }
+  .tt td { height: 44px; border-bottom: 1px solid var(--line); padding: 0 12px; font-variant-numeric: tabular-nums; }
   .tt td:first-child { padding-left: 22px; font-weight: 700; color: var(--ink); }
   .tt tr:last-child td { border-bottom: 0; }
   .tt th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
@@ -598,7 +598,7 @@ function splitOf(m) {
   const U = D.split.unb, B = D.split.br, ref = st.compare.find((b) => U[b]);
   const f = (v) => (v == null ? "—" : m === "first-rank" ? `${v.toFixed(1)}번째` : `${v.toFixed(1)}%`);
   const tipTxt = `질문 유형 = Gold 카탈로그의 브랜드 포함 여부 라벨(브랜드 행 값)\n브랜드 미포함 질문 ${n0(D.split.nUnb)}답변 · 포함 질문 ${n0(D.split.nBr)}답변 (이번 회차)\n라벨 정의는 업스트림 확인 중(U1)`;
-  return `<div class="split"><span class="k">브랜드 미포함 질문</span><b>HMG ${f(U.HMG[m])}</b>${ref ? `<span>· ${ref} ${f(U[ref][m])}</span>` : ""}<span class="sep"></span><span class="k">포함 질문</span><span>HMG ${f(B.HMG[m])}</span><span class="info" tabindex="0" data-tip="${esc(tipTxt)}"><svg class="i s12"><use href="#i-info"/></svg></span></div>`;
+  return `<div class="split"><span class="k">브랜드 미포함 질문</span><b>HMG ${f(U.HMG[m])}</b>${ref ? `<span>· ${ref} ${f(U[ref][m])}</span>` : ""}<span class="sep"></span><span class="k">포함 질문</span><span>HMG ${f(B.HMG[m])}</span><span class="info" tabindex="0" data-tip="${esc(tipTxt)}"><svg class="i s12"><use href="#i-info"/></svg></span><button class="tbtn" type="button" data-pres="unbranded" style="margin-left:auto;font-size:11px">미포함 질문만 보기 ›</button></div>`;
 }
 function twinOf(m) {
   const T = D.trend[m], ser = seriesOf(m), x = D.x;
@@ -613,6 +613,7 @@ function renderTrends() {
     <div class="tv">${headOf(m)}</div>
     ${splitOf(m)}
     ${st.tbl[m] ? twinOf(m) : `<div class="chart" id="ch-${m}" tabindex="0" role="img" aria-label="${lab} 회차별 추이 · 화살표 키로 회차를 옮깁니다"></div>`}</section>`).join("");
+  $("#tgrid").querySelectorAll("[data-pres]").forEach((b) => b.addEventListener("click", () => toast("왼쪽 필터 '브랜드 포함 여부 = 미포함'을 걸고 페이지 전체를 다시 읽습니다 (목업에서는 안내만)")));
   $("#tgrid").querySelectorAll("[data-tbl]").forEach((b) => b.addEventListener("click", () => { st.tbl[b.dataset.tbl] = !st.tbl[b.dataset.tbl]; renderTrends(); }));
   for (const [m] of CARDS) if (!st.tbl[m]) drawChart(m);
 }
@@ -842,7 +843,7 @@ function renderEngines() {
   $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th>${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td>${names[en] || en}</td>${metr.map(([m, k, u]) => {
     const s = e[k], v = s[s.length - 1], d = v - s[s.length - 2];
     const val = m === "first-rank" ? `${v.toFixed(1)}<small>번째</small>` : `${v.toFixed(1)}<small>%</small>`;
-    return `<td><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 30, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
+    return `<td><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 24, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
   }).join("")}</tr>`).join("")}</tbody></table><div class="ef">작은 차트는 지표마다 같은 눈금 · 14회차(07-06 ~ 10-05) · 우호도의 7월 값이 낮은 것은 측정 그대로입니다</div>`;
 }
 function renderDist() {
@@ -890,6 +891,10 @@ $("#popClose").addEventListener("click", () => { $("#pop").hidden = true; });
 $("#popReset").addEventListener("click", () => { st.auto = true; st.compare = [D.covered[0]]; renderAll(); });
 
 // ── 서랍 ─────────────────────────────────────────────────────────────
+function toast(msg) {
+  let t = $("#toast"); if (!t) { t = h(`<div id="toast" role="status" style="position:fixed;right:24px;bottom:24px;z-index:320;max-width:420px;padding:12px 16px;border-radius:12px;background:#101012;color:#f7f7f7;font-size:12.5px;box-shadow:var(--shadow-pop)"></div>`); document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => (t.hidden = true), 3200);
+}
 function openDrawer(b) {
   const r = D.rows.find((x) => x.brand === b); if (!r) return;
   const s = r.sent, t = s ? s.positive + s.neutral + s.mixed + s.negative : 0;
