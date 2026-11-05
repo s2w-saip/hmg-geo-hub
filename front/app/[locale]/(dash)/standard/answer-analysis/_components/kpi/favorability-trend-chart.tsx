@@ -28,7 +28,7 @@ import { AUTO_PCT_DOMAIN, BandedGrid, ChartBox } from "./chart-box";
 
 /** 라인 정의 — 테스트가 볼 수 있는 seam(recharts 는 정적 렌더에서 SVG 를 내지 않는다). */
 export const FAVORABILITY_LINES = [
-  // 피그마 327:981 감정색 토큰(globals.css): 긍정 #29a65f · 부정 #b83838.
+  // 감정색 토큰(globals.css, 2026-11-05 서비스 팔레트): 긍정 #278323 · 부정 #d01b26.
   { dataKey: "positivePct", nameKey: "favorability.trendPositive", stroke: "var(--color-sentiment-positive-ink)", connectNulls: false },
   { dataKey: "negativePct", nameKey: "favorability.trendNegative", stroke: "var(--color-sentiment-negative-ink)", connectNulls: false },
 ] as const;

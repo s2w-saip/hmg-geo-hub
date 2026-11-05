@@ -40,7 +40,7 @@ function MarkerLabel(props: {
       y={y + 10}
       dx={4}
       fontSize={10}
-      fill="rgba(0,44,95,0.7)"
+      fill="rgba(30,56,250,0.7)"
       style={href ? { cursor: "pointer" } : undefined}
       onClick={href ? () => router.push(href) : undefined}
     >
@@ -58,7 +58,7 @@ export function promptChangeMarkerLines(opts: PromptChangeMarkerOptions) {
         key={"pcm-" + m.day}
         x={label}
         yAxisId={opts.yAxisId}
-        stroke="rgba(0,44,95,0.35)"
+        stroke="rgba(30,56,250,0.35)"
         strokeDasharray="4 4"
         label={
           <MarkerLabel value={opts.markerLabel(m.total)} historyHref={opts.historyHref} />

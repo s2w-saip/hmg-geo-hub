@@ -108,38 +108,35 @@ import { AnswerModal } from "./answer-modal";
 import { TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
 
 const PIE_COLORS = [
-  "#002c5f", "#e63312", "#00aad2", "#a36b4f", "#6b89b3",
-  "#1a4d8e", "#0d6e2f", "#fbbf24", "#f97316", "#a855f7",
+  "var(--color-brand-700)", "var(--color-series-1)", "var(--color-series-2)", "var(--color-series-3)", "var(--color-series-4)",
+  "var(--color-series-5)", "var(--color-series-6)", "var(--color-series-7)", "var(--color-series-8)", "var(--color-series-9)",
 ];
 
 // 출처 카테고리 → 고정 색 (색은 순위가 아니라 엔티티를 따른다 — 필터로 슬라이스가
-// 줄어도 같은 카테고리는 같은 색). dataviz validator 통과 팔레트 (light·dark,
-// 2026-07-02): 명도 밴드·채도 바닥·인접 CVD 분리·표면 대비 전항목 PASS.
+// 줄어도 같은 카테고리는 같은 색). 2026-11-05 서비스 팔레트로 바꿨다: 당사 공식 = 포인트
+// 파랑, 경쟁사 공식 = 비교 주황, 나머지는 팔레트 안에서 서로 가장 먼 색(가장 가까운 쌍
+// CIEDE2000 15.0). 종전 dataviz 검증기(2026-07-02 · 08-28 PASS)는 다시 돌리지 않았다.
+// 행 배경이 이 값 뒤에 알파 hex 를 붙이므로(`${color}26`) var() 가 아니라 hex 로 둔다.
 const CATEGORY_COLORS: Record<string, string> = {
-  "Official (HMG)": "#2563eb",
-  "Official (Competitor)": "#0891b2",
-  "Dealer & Marketplace": "#b45309",
-  "Automotive Media": "#7c3aed",
-  "News & Media": "#d97706",
-  "Community & Forums": "#16a34a",
-  "Social & Video": "#db2777",
-  "Blogs & Reviews": "#0d9488",
+  "Official (HMG)": "#1e38fa",
+  "Official (Competitor)": "#ff7651",
+  "Dealer & Marketplace": "#c00ced",
+  "Automotive Media": "#00cfff",
+  "News & Media": "#ff0082",
+  "Community & Forums": "#5afbd9",
+  "Social & Video": "#ff99cd",
+  "Blogs & Reviews": "#ffbe42",
   // Wiki 는 카테고리 신설(2026-08-06) 때 색이 안 들어가 회색 폴백으로 그려지고
   // 있었다. 2026-08-28 카테고리 2종이 더 늘면서 폴백 공유가 실제 충돌이 되므로
   // 여기서 함께 채운다.
-  "Wiki & Reference": "#4f46e5",
-  "Government & Public": "#dc2626",
-  // 2026-08-28 신설. dataviz 검증기(light, surface #fcfcfb) 전항목 PASS —
-  // 인접쌍 CVD·명도밴드·채도바닥·대비 모두 통과. 유일한 FAIL 은 **기존** 쌍
-  // #db2777(소셜)↔#0d9488(블로그) deutan ΔE 3.8 로, 이 변경 이전부터 있던 것이다.
-  // 다크모드는 이 리포에 미설치(globals.css: "We do NOT install next-themes")라
-  // 다크 대비 WARN 은 적용 대상이 아니다.
-  "Award & Certification": "#a21caf",
-  "Academic & Research": "#0284c7",
-  Other: "#6e9a3d",
+  "Wiki & Reference": "#6274fc",
+  "Government & Public": "#111f8a",
+  "Award & Certification": "#a5affd",
+  "Academic & Research": "#ffb49f",
+  Other: "#6c6d70",
 };
 // 택소노미 밖 문자열(레거시 scope 값 등)은 중립 회색 — 시리즈 색을 침범하지 않는다.
-const CATEGORY_FALLBACK_COLOR = "#8c8578";
+const CATEGORY_FALLBACK_COLOR = "#d5d5d6";
 
 export function categoryColor(name: string): string {
   return CATEGORY_COLORS[name] ?? CATEGORY_FALLBACK_COLOR;

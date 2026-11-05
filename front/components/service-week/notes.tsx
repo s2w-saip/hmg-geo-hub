@@ -143,7 +143,7 @@ function DashDelay({ ctx }: { ctx: ServiceWeekContextValue }) {
   if (!delay) return null;
   return (
     <div role="note" data-rn-service-week-delay="" className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-card px-4 py-2.5 text-sm text-foreground">
-      <TriangleAlert className="h-4 w-4 shrink-0 text-[#d65a43]" aria-hidden />
+      <TriangleAlert className="h-4 w-4 shrink-0 text-accent-gold" aria-hidden />
       <span>{delay.text}</span>
       {delay.checked ? <span className="text-muted-foreground tabular-nums">{delay.checked}</span> : null}
     </div>

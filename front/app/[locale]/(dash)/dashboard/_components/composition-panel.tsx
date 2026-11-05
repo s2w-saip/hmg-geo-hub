@@ -7,10 +7,11 @@ import type { LiveTopicSlice, LiveSourceSlice } from "../_data/live-types";
 
 // 구성 분석 — #21 프롬프트 주제별 / #22 출처별 구성비. 둘 다 다범주 분포라
 // Core 카드 칩이 아닌 미니 도넛으로 요약 노출(상세는 답변분석/인용분석 화면).
-// 차트 시리즈 색상은 도넛 슬라이스용 고정 팔레트(기존 인용분석 차트와 동일 관례).
+// 차트 시리즈 색상은 도넛 슬라이스용 고정 팔레트(기존 인용분석 차트와 동일 관례) —
+// 2026-11-05 서비스 팔레트: 포인트 파랑, 그다음 globals.css 의 계열색.
 const PIE_COLORS = [
-  "#002c5f", "#e63312", "#00aad2", "#a36b4f", "#6b89b3",
-  "#1a4d8e", "#0d6e2f", "#fbbf24", "#f97316", "#a855f7",
+  "var(--color-brand-700)", "var(--color-series-1)", "var(--color-series-2)", "var(--color-series-3)", "var(--color-series-4)",
+  "var(--color-series-5)", "var(--color-series-6)", "var(--color-series-7)", "var(--color-series-8)", "var(--color-series-9)",
 ];
 
 interface Slice {

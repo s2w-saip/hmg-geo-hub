@@ -11,15 +11,15 @@ export const CHART_TOOLTIP_STYLE: CSSProperties = {
   borderRadius: 6,
   boxShadow: "0 4px 14px rgba(0, 0, 0, 0.10)",
   fontSize: 12,
-  color: "#0a0908", // --color-ink-900
+  color: "#101012", // --color-ink-900
   padding: "6px 8px",
 };
 
 export const CHART_TOOLTIP_LABEL_STYLE: CSSProperties = {
-  color: "#0a0908",
+  color: "#101012",
   fontWeight: 600,
 };
 
 export const CHART_TOOLTIP_ITEM_STYLE: CSSProperties = {
-  color: "#0a0908",
+  color: "#101012",
 };

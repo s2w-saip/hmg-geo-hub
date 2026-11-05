@@ -38,12 +38,12 @@ import type { TrendChartView } from "../_data/screen-types";
 // 문법으로 읽히게 (2026-08-06 고객 피드백).
 type AxisId = "pct" | "rank";
 const TREND_SERIES: { key: TrendKpiKey; color: string; axis: AxisId }[] = [
-  { key: "visibility", color: "#002c5f", axis: "pct" },
-  { key: "shareOfVoice", color: "#e63312", axis: "pct" },
-  { key: "sentiment", color: "#00aad2", axis: "pct" },
-  { key: "citationShare", color: "#6b89b3", axis: "pct" },
-  { key: "citationAccuracy", color: "#1a4d8e", axis: "pct" },
-  { key: "position", color: "#a36b4f", axis: "rank" },
+  { key: "visibility", color: "var(--color-brand-700)", axis: "pct" },
+  { key: "shareOfVoice", color: "var(--color-series-2)", axis: "pct" },
+  { key: "sentiment", color: "var(--color-series-3)", axis: "pct" },
+  { key: "citationShare", color: "var(--color-brand-300)", axis: "pct" },
+  { key: "citationAccuracy", color: "var(--color-brand-500)", axis: "pct" },
+  { key: "position", color: "var(--color-series-1)", axis: "rank" },
 ];
 
 const DEFAULT_VISIBLE: TrendKpiKey[] = ["visibility", "shareOfVoice"];

@@ -5,7 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { CalendarDays, TriangleAlert } from "lucide-react";
 // the primitives' own files, not the renewal-ui index: page-header.tsx (in that index) renders this chip
 import { RnPill } from "@/components/renewal-ui/chip";
-import { cx } from "@/components/renewal-ui/cx";
 import { monthDay, type ServiceWeekRange, type ServiceWeekView } from "@/lib/service-week";
 import { useServiceWeekContext, useServiceWeekView, type ServiceWeekContextValue } from "./provider";
 
@@ -56,7 +55,6 @@ function useChipModel(view: ServiceWeekView | null): ChipModel {
   };
 }
 
-const WARN = "text-[#d65a43]"; // the (dash) shell's warn tone; the renewal chip takes RnFindingGrid's (rn-warn-ink)
 
 /** Renewal page header (RnPageHeader). `row`: the meta line's class, for a header without one (the chip on its own line). */
 export function RnServiceWeekChip({ row }: { row?: string }) {
@@ -117,7 +115,7 @@ function DashChip({ ctx }: { ctx: ServiceWeekContextValue }) {
       {m.late ? (
         <>
           <span aria-hidden className="h-3 w-px bg-border" />
-          <TriangleAlert className={cx("h-3 w-3", WARN)} aria-hidden />
+          <TriangleAlert className="h-3 w-3 text-accent-gold" aria-hidden />
           <span className="font-semibold text-foreground tabular-nums">{m.late}</span>
         </>
       ) : null}

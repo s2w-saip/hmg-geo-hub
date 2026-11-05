@@ -197,7 +197,7 @@ export function TypeKpiSection({
                       />
                       {b.competitorPct != null ? (
                         <span
-                          className="h-full bg-accent-gold"
+                          className="h-full bg-series-1"
                           style={{ width: `${clamp(b.competitorPct)}%` }}
                         />
                       ) : null}
@@ -238,7 +238,7 @@ export function TypeKpiSection({
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
               <LegendDot className="bg-brand-700" text={t("type.own")} />
               {stacked && competitor ? (
-                <LegendDot className="bg-accent-gold" text={competitor} />
+                <LegendDot className="bg-series-1" text={competitor} />
               ) : null}
               {stacked ? <LegendDot className="bg-ink-300" text={t("type.other")} /> : null}
             </div>

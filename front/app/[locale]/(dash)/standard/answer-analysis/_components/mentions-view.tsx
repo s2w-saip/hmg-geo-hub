@@ -593,12 +593,13 @@ function SummaryCard({
 // 당사 3사는 인덱스 순환이 아니라 브랜드 고정색 — 필터로 시리즈 구성이 바뀌어도
 // 당사 색이 흔들리지 않는다 ("색은 순위가 아니라 엔티티를 따른다").
 const OWN_TREND_COLORS: Record<string, string> = {
-  Hyundai: "#002c5f",
-  Kia: "#e63312",
-  Genesis: "#a36b4f",
+  Hyundai: "var(--color-own-hyundai)",
+  Kia: "var(--color-own-kia)",
+  Genesis: "var(--color-own-genesis)",
 };
 const COMPETITOR_TREND_COLORS = [
-  "#00aad2", "#6b89b3", "#1a4d8e", "#0d6e2f", "#fbbf24", "#f97316", "#a855f7",
+  "var(--color-series-1)", "var(--color-series-2)", "var(--color-series-3)", "var(--color-series-4)",
+  "var(--color-series-5)", "var(--color-series-6)", "var(--color-series-7)",
 ];
 
 // Weekly Top-N brand mention trend — one line per series brand over ISO
@@ -688,7 +689,7 @@ export function MentionTrendChart({
                 type="monotone"
                 dataKey={b}
                 name={b}
-                stroke={OWN_TREND_COLORS[b] ?? "#002c5f"}
+                stroke={OWN_TREND_COLORS[b] ?? OWN_TREND_COLORS.Hyundai}
                 strokeWidth={3}
                 dot={{ r: 2.5 }}
               />
@@ -787,7 +788,7 @@ function CompetitorHeadToHead({
               mode === "designated"
                 ? "border-accent-gold text-accent-gold"
                 : mode === "manual"
-                  ? "border-accent-info text-accent-info"
+                  ? "border-accent-info text-ink-700"
                   : "border-border text-foreground",
             )}
           >
@@ -875,7 +876,7 @@ function CompareMetric({
                   role === "ours"
                     ? "font-bold text-brand-700"
                     : role === "target"
-                      ? "font-bold text-accent-info"
+                      ? "font-bold text-ink-700"
                       : "text-muted-foreground",
                 )}
                 title={name}
@@ -889,7 +890,7 @@ function CompareMetric({
                     role === "ours"
                       ? "bg-brand-700"
                       : role === "target"
-                        ? "bg-accent-info"
+                        ? "bg-series-1"
                         : "bg-muted-foreground/40",
                   )}
                   style={{ width: `${pct}%` }}

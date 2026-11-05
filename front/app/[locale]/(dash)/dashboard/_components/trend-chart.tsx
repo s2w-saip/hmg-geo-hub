@@ -21,13 +21,13 @@ import type { KpiKey, TrendPoint } from "../_data/model";
 // 있어 동일 Y축에 그리면 시각적 비교가 어렵지만, 트렌드 자체를 보는 게
 // 목적이라 그대로 둔다 — 정확한 비교는 ③ 상세 테이블에서.
 const SERIES: { key: KpiKey; color: string }[] = [
-  { key: "visibility", color: "#002c5f" },
-  { key: "shareOfVoice", color: "#e63312" },
-  { key: "sentiment", color: "#00aad2" },
-  { key: "position", color: "#a36b4f" },
-  { key: "citationShare", color: "#6b89b3" },
-  { key: "citationAccuracy", color: "#1a4d8e" },
-  { key: "trafficConversion", color: "#0d6e2f" },
+  { key: "visibility", color: "var(--color-brand-700)" },
+  { key: "shareOfVoice", color: "var(--color-series-2)" },
+  { key: "sentiment", color: "var(--color-series-3)" },
+  { key: "position", color: "var(--color-series-1)" },
+  { key: "citationShare", color: "var(--color-brand-300)" },
+  { key: "citationAccuracy", color: "var(--color-brand-500)" },
+  { key: "trafficConversion", color: "var(--color-own-kia)" },
 ];
 
 const DEFAULT_VISIBLE: KpiKey[] = [

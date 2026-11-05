@@ -10,7 +10,7 @@
 
 // Placeholder blocks are filled `bg-ink-100` and sweep a lighter band across
 // themselves. They used to be `bg-card` + animate-pulse — but bg-card is white
-// and the page surface is bg-soft (#f6f3f2), so a loading route rendered as a
+// and the page surface is bg-soft (#f8f8f9), so a loading route rendered as a
 // grid of empty bordered boxes with an almost imperceptible opacity throb. It
 // read as "the page is blank", not "the page is loading". The fill has to be
 // darker than the surface, and the motion has to travel.

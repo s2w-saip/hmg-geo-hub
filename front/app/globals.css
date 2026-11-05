@@ -29,24 +29,25 @@
  * required. See openspec/changes/adopt-shadcn-design-stack/design.md.
  * ------------------------------------------------------------------------- */
 @theme {
-  /* === HMG identity (corporate palette) — fixed values === */
+  /* === Service palette (2026-11-05, the user's final palette) — fixed values ===
+     Point · Surface · Text · Chart - Own · Chart - Other · System, the same values as
+     the renewal tokens (app/renewal-theme.css, components/renewal-ui/palette.ts).
+     Token names keep their roles; the HMG logo is an SVG asset and keeps its own colour. */
 
-  /* Brand — Hyundai Blue (primary) + computed shades around it.
-     #002c5f is the exact corporate value. */
-  --color-brand-50:  #e6eaf0;
-  --color-brand-300: #6b89b3;
-  --color-brand-500: #1a4d8e;
-  --color-brand-700: #002c5f; /* Hyundai Blue */
-  --color-brand-900: #001533;
+  /* Brand — Point 1 (= Chart - Own base) and the Chart - Own steps around it. */
+  --color-brand-50:  #d2d7fe;
+  --color-brand-300: #6274fc;
+  --color-brand-500: #172abc;
+  --color-brand-700: #1e38fa; /* Point 1 */
+  --color-brand-900: #111f8a;
 
-  /* Ink (text) — warm near-black + grays. Slight warmth aligns with the Sand
-     family, instead of clinical Tailwind neutrals. */
-  --color-ink-100:   #ece8e3;
-  --color-ink-300:   #c7c2bb;
-  --color-ink-400:   #939393; /* PR #228 정본값 — 감성 밑줄 neutral 톤(2026-09-07) */
-  --color-ink-500:   #6b6660;
-  --color-ink-700:   #2b2825;
-  --color-ink-900:   #0a0908;
+  /* Ink — Text 1–4 and the Surface line grey. */
+  --color-ink-100:   #e5e6e9;
+  --color-ink-300:   #d5d5d6;
+  --color-ink-400:   #6c6d70; /* 감성 밑줄 neutral 톤 · 보조 글자 (Text 3) */
+  --color-ink-500:   #6c6d70;
+  --color-ink-700:   #222326;
+  --color-ink-900:   #101012;
 
   /* Backgrounds — White + Hyundai Sand family (warm light). 4-tier scale:
      bg(white) < bg-soft(page) < bg-subtle(inset) < bg-warm(emphasis chip).
@@ -55,30 +56,30 @@
      page render as fully transparent. Inserting a slightly darker beige gives
      muted-tinted surfaces just enough delta to be visible on the page. */
   --color-bg:        #ffffff;
-  --color-bg-soft:   #f6f3f2; /* Hyundai Light Sand — page surface */
-  --color-bg-subtle: #eee9e2; /* inset surfaces (muted/accent) on page bg */
-  --color-bg-warm:   #e4dcd3; /* Hyundai Sand — emphasis chips */
+  --color-bg-soft:   #f8f8f9; /* Surface 2 — page surface */
+  --color-bg-subtle: #e5e6e9; /* Surface 3 — inset surfaces (muted/accent) on page bg */
+  --color-bg-warm:   #d5d5d6; /* emphasis chips */
 
-  /* Accent — used sparingly. Gold = premium signal; Active Blue = info badge;
-     Sky Blue = soft chips; Active Red = errors only. */
-  --color-accent-gold:  #a36b4f; /* Hyundai Gold */
-  --color-accent-info:  #00aad2; /* Active Blue */
-  --color-accent-soft:  #aacae6; /* Sky Blue */
-  --color-danger:       #e63312; /* Active Red */
+  /* Accent — used sparingly. Gold = an attention mark (text: the System yellow's
+     ink, 4.5:1); Info = Point 2 for badges; Soft = Chart - Own 6 for soft chips;
+     Danger = System red. */
+  --color-accent-gold:  #77750a;
+  --color-accent-info:  #00cfff; /* Point 2 */
+  --color-accent-soft:  #a5affd;
+  --color-danger:       #fa1e2a; /* System red */
 
-  /* 시맨틱 — 증감·감정 (2026-09-02 피그마 1:1 정합, 제품 결정).
-     positive = 개선 방향 Δ 배지(피그마 #2d9257). 악화는 danger 그대로.
-     sentiment-* = 우호도 화면의 긍정·중립·혼합·부정 4분류(피그마 327:981). */
-  --color-positive:               #2d9257;
-  --color-sentiment-positive:     #58b982;
-  --color-sentiment-positive-ink: #29a65f;
-  --color-sentiment-neutral:      #d9d9d9;
-  --color-sentiment-mixed:        #edbc23;
-  --color-sentiment-negative:     #c94429;
-  --color-sentiment-negative-ink: #b83838;
-  /* 피그마 보조 텍스트 회색·당사 행 배경(가장 가까운 기존 토큰이 없어 신설). */
-  --color-ink-400:  #939393;
-  --color-brand-25: #f2f5fd;
+  /* 시맨틱 — 증감·감정 (2026-09-02 피그마 정합, 2026-11-05 서비스 팔레트 System 색).
+     positive = 개선 방향 Δ 배지(글자로 읽히므로 System 초록의 진한 색). 악화는 danger 그대로.
+     sentiment-* = 우호도 화면의 긍정·중립·혼합·부정 4분류. */
+  --color-positive:               #278323; /* the System green's text/icon ink (4.5:1) — it is read as text */
+  --color-sentiment-positive:     #3df134; /* System green */
+  --color-sentiment-positive-ink: #278323;
+  --color-sentiment-neutral:      #d5d5d6;
+  --color-sentiment-mixed:        #faf600; /* System yellow */
+  --color-sentiment-negative:     #fa1e2a; /* System red */
+  --color-sentiment-negative-ink: #d01b26;
+  /* 당사 행 배경 = Chart - Own 7 at 40% on white. */
+  --color-brand-25: #edefff;
 
   /* Chart series — 다중 시리즈(브랜드·엔진) 라인·바 색.
      recharts 는 Tailwind 클래스를 소비하지 못하고 stroke/fill 에 색 문자열을
@@ -87,37 +88,36 @@
      선언하고, 컴포넌트는 `var(--color-series-N)` 문자열만 참조한다.
      당사 브랜드는 순환 색이 아니라 엔티티 고정색이다 — "색은 순위가 아니라
      엔티티를 따른다"(mentions-view.tsx 의 기존 규칙과 동일). */
-  --color-series-1: var(--color-accent-info);
-  --color-series-2: var(--color-brand-300);
-  --color-series-3: var(--color-brand-500);
-  --color-series-4: #0d6e2f;
-  --color-series-5: #b8860b;
-  --color-series-6: #c2410c;
-  --color-series-7: #7c3aed;
-  --color-series-8: var(--color-accent-gold);
+  /* 2026-11-05 서비스 팔레트: Chart - Other 네 계열의 기준색(주황 · 분홍 · 보라 · 노랑),
+     그다음 둘째 단계, 셋째 단계 — 리뉴얼의 비교 색 순서와 같다. */
+  --color-series-1: #ff7651;
+  --color-series-2: #ff0082;
+  --color-series-3: #c00ced;
+  --color-series-4: #ffbe42;
+  --color-series-5: #ff9174;
+  --color-series-6: #ff59ae;
+  --color-series-7: #d355f3;
+  --color-series-8: #ffce71;
   /* 9~12 — 2026-09-10 확장. 경쟁사 표는 당사 포함 **12행**까지 그리고 색 인덱스가
      곧 행 인덱스인데, 팔레트가 8색이면 idx 3 과 idx 11 이 같은 색을 받는다. 종전엔
      도넛 조각이 당사+1개뿐이라 안 보였지만 QA 2차 #4(선택 전부를 조각으로) 이후
      한 도넛 안에 같은 녹색 두 조각이 나왔다(검증자 B5 실측 Tesla·Volvo #0d6e2f).
-     1~8 의 순서·값은 그대로 두고 뒤에만 붙인다 — 다른 화면의 색이 흔들리면 안 된다.
-     고른 근거: 기존 8색이 비워 둔 색상환 구간(teal 175 · magenta 295 · olive 72 ·
-     wine 336)이고, 넷 다 기존 색과의 최소 Lab ΔE 가 31.8 이상 = 이미 배포된 팔레트의
-     최소 간격(#00aad2↔#6b89b3 = 24.6)보다 멀다. 흰 배경 대비는 3.8~7.9:1. */
-  --color-series-9:  #0f766e; /* teal */
-  --color-series-10: #a21caf; /* magenta */
-  --color-series-11: #728d07; /* olive */
-  --color-series-12: #9d174d; /* wine */
+     12색 모두 서로 다른 값이어야 한다(series-colors.test.ts). 2026-11-05부터는 네 계열의
+     셋째 단계 — 같은 계열의 기준색과 4칸씩 떨어져 이웃 행에 오지 않는다. */
+  --color-series-9:  #ffb49f;
+  --color-series-10: #ff99cd;
+  --color-series-11: #ecb6fa;
+  --color-series-12: #ffdfa0;
 
-  /* 당사(HMG 3사) 고정색 — 필터로 시리즈 구성이 바뀌어도 흔들리지 않는다. */
+  /* 당사(HMG 3사) 고정색 — 필터로 시리즈 구성이 바뀌어도 흔들리지 않는다.
+     2026-11-05: 당사 = Chart - Own(기준 · 가장 진한 · 옅은 단계). */
   --color-own-hyundai: var(--color-brand-700);
-  --color-own-kia:     var(--color-danger);
-  --color-own-genesis: var(--color-accent-gold);
-  /* Beta — SNB 의 `(beta)` 접미사 전용 파랑. 값은 2026-09-04 제품 책임자 목업에서
-     픽셀 추출(파랑 1,175px 중 안티에일리어싱을 뺀 최암부 60px 평균 #0850dc).
-     brand-700(네이비)·accent-info(시안) 어느 쪽도 이 톤이 아니라 별도 토큰으로
-     둔다. 다크 표면에서는 대비가 모자라 --color-beta-dark 를 쓴다. */
-  --color-beta:      #0850dc;
-  --color-beta-dark: #6b9dff;
+  --color-own-kia:     #0b1458;
+  --color-own-genesis: #a5affd;
+  /* Beta — SNB 의 `(beta)` 접미사 전용 파랑(2026-09-04 목업의 #0850dc 였다).
+     다크 표면에서는 대비가 모자라 --color-beta-dark 를 쓴다. */
+  --color-beta:      #1e38fa; /* 2026-11-05: Point 1 */
+  --color-beta-dark: #6274fc;
 
   /* === shadcn semantic tokens (point at :root / .dark vars) === */
 
@@ -257,18 +257,18 @@ h1, h2, h3 {
   /* Soft elevation tiers (low → high). */
   .shadow-soft {
     box-shadow:
-      0 1px 3px 0 rgba(10, 9, 8, 0.08),
-      0 1px 2px 0 rgba(10, 9, 8, 0.04);
+      0 1px 3px 0 rgba(16, 16, 18, 0.08),
+      0 1px 2px 0 rgba(16, 16, 18, 0.04);
   }
   .shadow-soft-lg {
     box-shadow:
-      0 4px 6px -1px rgba(10, 9, 8, 0.08),
-      0 2px 4px -1px rgba(10, 9, 8, 0.04);
+      0 4px 6px -1px rgba(16, 16, 18, 0.08),
+      0 2px 4px -1px rgba(16, 16, 18, 0.04);
   }
   .shadow-soft-xl {
     box-shadow:
-      0 10px 15px -3px rgba(10, 9, 8, 0.08),
-      0 4px 6px -2px rgba(10, 9, 8, 0.04);
+      0 10px 15px -3px rgba(16, 16, 18, 0.08),
+      0 4px 6px -2px rgba(16, 16, 18, 0.04);
   }
 
   /* Card surface conventions — semantic tokens so they swap with theme. */
@@ -278,8 +278,8 @@ h1, h2, h3 {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow:
-      0 1px 3px 0 rgba(10, 9, 8, 0.08),
-      0 1px 2px 0 rgba(10, 9, 8, 0.04);
+      0 1px 3px 0 rgba(16, 16, 18, 0.08),
+      0 1px 2px 0 rgba(16, 16, 18, 0.04);
   }
   /* HMG-toned gradient. Only for hero / login / occasional callouts.
      Brand-derived, not generic blue. */
@@ -401,7 +401,7 @@ h1, h2, h3 {
   .geo-hl--model {
     background-image: linear-gradient(
       transparent 52%,
-      color-mix(in srgb, var(--color-accent-gold) 46%, transparent) 52%
+      color-mix(in srgb, var(--color-series-4) 46%, transparent) 52%
     );
   }
   /* Static swatch (legend) — no sweep, fully painted. */
