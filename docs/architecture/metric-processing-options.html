@@ -138,7 +138,7 @@ td .tier { margin-left: 0; }
 
 
 <h1>지표 가공 위치 비교</h1>
-<p class="lede">지표 계산(가공)을 파이프라인에 둘까(현행), BFF로 옮길까(안 B)</p>
+<p class="lede">지표 계산(가공)을 파이프라인에 둘까(현행), BFF로 옮길까(최종안)</p>
 <p class="meta">초안 · 2026-11-05 · 결정 전 · 대상: 개발팀 전체 · 근거: 서비스 중인 데이터 양(2026-11-05)</p>
 
 <div class="tabs" role="tablist" aria-label="문서 보기">
@@ -150,9 +150,7 @@ td .tier { margin-left: 0; }
 <div class="legend">
   <b>그림 읽는 법</b>
   <span><svg width="36" height="10" aria-hidden="true"><path d="M0 5H29" style="stroke:var(--line);stroke-width:2"/><path d="M28 1L36 5L28 9z" style="fill:var(--line)"/></svg>데이터가 흐름</span>
-  <span><svg width="36" height="10" aria-hidden="true"><path d="M0 5H29" style="stroke:var(--cross);stroke-width:2;stroke-dasharray:5 3"/><path d="M28 1L36 5L28 9z" style="fill:var(--cross)"/></svg>지표 변경 요청이 다른 팀으로 감</span>
   <span><svg width="36" height="10" aria-hidden="true"><path d="M0 5H29" style="stroke:var(--svc);stroke-width:2;stroke-dasharray:5 3"/><path d="M28 1L36 5L28 9z" style="fill:var(--svc)"/></svg>지표 변경이 같은 담당 안에서 끝남</span>
-  <span><svg width="26" height="14" aria-hidden="true"><rect x="1" y="1" width="24" height="12" rx="3" style="fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:4 3"/></svg>안마다 달라지는 칸</span>
   <span><svg width="26" height="14" aria-hidden="true"><rect x="1" y="1" width="24" height="12" rx="3" style="fill:var(--pipe-bg);stroke:var(--pipe);stroke-width:1.4;stroke-dasharray:4 3"/></svg>데이터 파이프라인 영역</span>
   <span><svg width="26" height="18" aria-hidden="true"><path d="M1 4A12 3 0 0 1 25 4V14A12 3 0 0 1 1 14Z" style="fill:var(--bronze-bg);stroke:var(--bronze);stroke-width:1.8"/><path d="M1 4A12 3 0 0 0 25 4" style="fill:none;stroke:var(--bronze);stroke-width:1.8"/></svg>Bronze DB · 수집한 그대로</span>
   <span><svg width="26" height="18" aria-hidden="true"><path d="M1 4A12 3 0 0 1 25 4V14A12 3 0 0 1 1 14Z" style="fill:var(--silver-bg);stroke:var(--silver);stroke-width:1.8"/><path d="M1 4A12 3 0 0 0 25 4" style="fill:none;stroke:var(--silver);stroke-width:1.8"/></svg>Silver DB · 추출 사실</span>
@@ -162,124 +160,9 @@ td .tier { margin-left: 0; }
 </div>
 
 
-<h2>그림 1 — 현행: 분석팀이 OBT Table에 바로 넣고, 파이프라인이 가공</h2>
+<h2>그림 — 최종안: BFF가 가공한다</h2>
 <figure>
-<svg class="arch" viewBox="0 0 1200 535" role="img" aria-label="현행 아키텍처: 분석팀이 추출 결과를 OBT Table에 바로 넣고, 파이프라인이 가공해 Gold 지표 셀을 만든다">
-  <defs>
-    <marker id="n-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker>
-    <marker id="n-hx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-x" d="M0 0L10 5L0 10z"/></marker>
-  </defs>
-  <rect class="col-ext" x="20" y="10" width="260" height="360" rx="12"/>
-  <rect class="col-ana" x="320" y="10" width="260" height="360" rx="12"/>
-  <rect class="col-pipe" x="620" y="10" width="260" height="360" rx="12"/>
-  <rect class="col-svc" x="920" y="10" width="260" height="360" rx="12"/>
-  <text class="stage" x="150" y="38">수집</text><text class="owner" x="150" y="58">앤써</text>
-  <text class="stage" x="450" y="38">분석</text><text class="owner" x="450" y="58">분석 · 신민철 · 박보규</text>
-  <text class="stage" x="750" y="38">가공</text><text class="owner" x="750" y="58">파이프라인 · 이시형 · 김혜민 (아래 띠 안)</text>
-  <text class="stage" x="1050" y="38">서비스 출력</text><text class="owner" x="1050" y="58">서비스 · 김태호</text>
-
-  <!-- 수집 -->
-  <rect class="box b-ext" x="40" y="76" width="220" height="56" rx="8"/>
-  <text class="bt" x="150" y="99">입력</text><text class="bs" x="150" y="119">프롬프트 · 측정 설정</text>
-  <rect class="box b-ext" x="40" y="170" width="220" height="70" rx="8"/>
-  <text class="bt" x="150" y="196">수집 서버</text><text class="bs" x="150" y="216">AI 엔진에 질의하고</text><text class="bs" x="150" y="232">응답을 받음</text>
-  <path class="store bronze" d="M40 297A110 7 0 0 1 260 297V353A110 7 0 0 1 40 353Z"/><path class="rim bronze" d="M40 297A110 7 0 0 0 260 297"/>
-  <text class="bt" x="150" y="322">응답 원문</text><text class="bs" x="150" y="340">답변 본문 · 인용 원문 · 측정 메타</text><text class="tl bronze" x="150" y="355">Bronze</text>
-  <path class="flow" d="M150 132V168" marker-end="url(#n-h)"/>
-  <path class="flow" d="M150 240V288" marker-end="url(#n-h)"/>
-
-  <!-- 분석: 추출 결과를 OBT Table에 바로 넣는다 (판정 · 집계 없음) -->
-  <rect class="box b-ana" x="340" y="170" width="220" height="70" rx="8"/>
-  <text class="bt" x="450" y="196">AI 모델 추출</text><text class="bs" x="450" y="216">엔티티 · 감성 · 언급 유형</text><text class="bs" x="450" y="232">순위 · 출처 분류</text>
-
-  <!-- 서비스 출력 -->
-  <rect class="box b-svc" x="940" y="170" width="220" height="70" rx="8"/>
-  <text class="bt" x="1050" y="196">BFF</text><text class="bs" x="1050" y="216">Gold DB 조회</text><text class="bs" x="1050" y="232">화면 조립 · API</text>
-  <rect class="box b-svc" x="940" y="290" width="105" height="56" rx="8"/>
-  <text class="bt" x="992" y="323">웹 화면</text>
-  <rect class="box b-svc" x="1055" y="290" width="105" height="56" rx="8"/>
-  <text class="bt" x="1107" y="323">외부 API</text>
-  <path class="flow" d="M992 240V288" marker-end="url(#n-h)"/>
-  <path class="flow" d="M1107 240V288" marker-end="url(#n-h)"/>
-
-  <!-- 데이터 파이프라인: 가공을 여기서 한다 -->
-  <rect class="lane" x="20" y="390" width="1160" height="130" rx="10"/>
-  <text class="lt" x="40" y="447">데이터 파이프라인</text>
-  <text class="ls" x="40" y="467">이시형 · 김혜민</text>
-  <rect class="box b-pipe" x="200" y="417" width="200" height="70" rx="8"/>
-  <text class="bt" x="300" y="443">분석 입력 준비</text><text class="bs" x="300" y="463">수집 데이터를 받아</text><text class="bs" x="300" y="479">분석이 쓸 수 있게 정리</text>
-  <path class="store silver" d="M410 417A75 7 0 0 1 560 417V473A75 7 0 0 1 410 473Z"/><path class="rim silver" d="M410 417A75 7 0 0 0 560 417"/>
-  <text class="bt" x="485" y="442">추출 결과 (OBT Table)</text><text class="bs" x="485" y="460">프롬프트 1행 · 수십 열</text><text class="tl silver" x="485" y="475">Silver</text>
-  <rect class="box b-pipe" x="650" y="417" width="200" height="70" rx="8"/>
-  <text class="bt" x="750" y="443">가공 (지표 계산)</text><text class="bs" x="750" y="463">분모 조건 · 자사 판정</text><text class="bs" x="750" y="479">지표별 합산</text>
-  <path class="store gold" d="M970 417A80 7 0 0 1 1130 417V473A80 7 0 0 1 970 473Z"/><path class="rim gold" d="M970 417A80 7 0 0 0 1130 417"/>
-  <text class="bt" x="1050" y="442">지표 셀</text><text class="bs" x="1050" y="460">회차 · 국가 · 엔진 · 브랜드</text><text class="tl gold" x="1050" y="475">Gold</text>
-  <path class="flow" d="M560 452H648" marker-end="url(#n-h)"/>
-  <path class="flow" d="M850 452H968" marker-end="url(#n-h)"/>
-  <rect class="diff" x="616" y="6" width="268" height="508" rx="14"/>
-
-  <!-- 흐름 -->
-  <path class="flow" d="M230 360V415" marker-end="url(#n-h)"/>
-  <path class="flow" d="M300 417V205H338" marker-end="url(#n-h)"/>
-  <path class="flow" d="M485 240V408" marker-end="url(#n-h)"/>
-  <path class="flow" d="M1130 445H1176V205H1162" marker-end="url(#n-h)"/>
-  <!-- 계약 번호는 DB에 붙인다: 빨강 = 다른 팀이 읽는 DB -->
-  <circle class="c-x" cx="36" cy="296" r="11"/><text class="cn" x="36" y="300">1</text>
-  <circle class="c-x" cx="564" cy="416" r="11"/><text class="cn" x="564" y="420">2</text>
-  <circle class="c-x" cx="966" cy="416" r="11"/><text class="cn" x="966" y="420">3</text>
-
-  <!-- 지표 변경 고리: 가공은 파이프라인 -->
-  <path class="loop-x" d="M1050 168V146H750V415" marker-end="url(#n-hx)"/>
-  <text class="lx" x="770" y="138">새 지표 · 분모 변경 요청 → 파이프라인(가공)으로 넘어감</text>
-</svg>
-<div class="shapes">
-  <div class="shape">
-    <h4><span class="badge x">1</span>응답 원문 (답변 1건)<span class="tier bronze">Bronze</span></h4>
-    <p class="by">앤써가 만듦 → 파이프라인이 분석 입력으로 준비 → 분석</p>
-    <table>
-      <tr><th>answer_key</th><td class="mono">8812031</td></tr>
-      <tr><th>프롬프트</th><td>best 3-row SUV for families</td></tr>
-      <tr><th>엔진 · 국가 · 언어</th><td>ChatGPT · US · en</td></tr>
-      <tr><th>측정 시각</th><td class="mono">2026-10-05 09:12</td></tr>
-      <tr><th>본문</th><td>“1. <b>Kia Telluride</b> – roomy, top safety picks … 2. <b>Hyundai Palisade</b> … 3. Toyota Grand Highlander … [1][2][3]”</td></tr>
-      <tr><th>인용 원문</th><td class="mono">[1] kia.com/us/telluride<br>[2] caranddriver.com/…<br>[3] edmunds.com/…</td></tr>
-    </table>
-  </div>
-  <div class="shape">
-    <h4><span class="badge x">2</span>추출 결과 (OBT Table) · 프롬프트 1개 = 1행, 수십 개 열<span class="tier silver">Silver</span></h4>
-    <p class="by">분석팀이 추출 정보를 바로 넣음 → 파이프라인 가공이 읽음</p>
-    <table>
-      <tr><th>prompt_key</th><td class="mono">10234</td></tr>
-      <tr><th>프롬프트 · 회차</th><td>best 3-row SUV for families · <span class="mono">2026-10-05</span></td></tr>
-      <tr><th>답변 수</th><td class="mono">12</td></tr>
-      <tr><th>답변별 언급 브랜드 (순위 · 감성 · 유형)</th><td>여러 열에 나눠 담음</td></tr>
-      <tr><th>답변별 인용 (URL · 출처 분류)</th><td>여러 열에 나눠 담음</td></tr>
-      <tr><th>…</th><td>같은 행에 수십 개 열이 더 있음</td></tr>
-    </table>
-    <p class="sub">판정 · 집계 없음</p>
-    <p class="by">프롬프트 단위라 답변 단위로 세려면 분석팀이 열을 바꿔야 한다.</p>
-  </div>
-  <div class="shape">
-    <h4><span class="badge x">3</span>지표 셀 (파이프라인이 가공)<span class="tier gold">Gold</span></h4>
-    <p class="by">파이프라인이 OBT를 판정 · 합산 → BFF가 읽음</p>
-    <table>
-      <tr><th>묶음</th><td>2026-10-05 · US · ChatGPT · Hyundai</td></tr>
-      <tr><th>분모 (유효 답변)</th><td class="mono">1,240</td></tr>
-      <tr><th>노출 답변</th><td class="mono">812 → 노출률 65.5%</td></tr>
-      <tr><th>1순위 답변</th><td class="mono">228 → 1순위율 18.4%</td></tr>
-      <tr><th>인용 / 공식(HMG)</th><td class="mono">13,950 / 1,325 → 9.5%</td></tr>
-    </table>
-    <p class="sub">규칙 위치</p>
-    <p class="by">분모 조건 · 자사 판정 · 대표 답변 · 회차 창 · 지표 공식 → 파이프라인 가공</p>
-  </div>
-</div>
-<p class="shapes-note">값은 예시다.</p>
-<figcaption>분석팀이 추출 정보를 OBT Table(프롬프트 1행)에 넣고, 파이프라인이 가공해 Gold 지표 셀을 만든다. BFF는 Gold DB를 읽는다. 지표를 바꾸려면 파이프라인 가공을 고쳐야 한다(빨간 점선). 팀 사이 계약은 1 · 2 · 3 모두.</figcaption>
-</figure>
-
-<h2>그림 2 — 안 B: BFF가 가공한다</h2>
-<figure>
-<svg class="arch" viewBox="0 0 1200 535" role="img" aria-label="안 B 아키텍처: 수집, 분석(추출만), 가공(BFF), 서비스 출력, 데이터 파이프라인(층마다 저장소 하나)">
+<svg class="arch" viewBox="0 0 1200 535" role="img" aria-label="최종안 아키텍처: 수집, 분석(추출만), 가공(BFF), 서비스 출력, 데이터 파이프라인(층마다 저장소 하나)">
   <defs>
     <marker id="b-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker>
     <marker id="b-hi" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-i" d="M0 0L10 5L0 10z"/></marker>
@@ -287,7 +170,6 @@ td .tier { margin-left: 0; }
   <rect class="col-ext" x="20" y="10" width="260" height="360" rx="12"/>
   <rect class="col-ana" x="320" y="10" width="260" height="360" rx="12"/>
   <rect class="col-svc" x="620" y="10" width="260" height="360" rx="12"/>
-  <rect class="diff" x="616" y="6" width="268" height="368" rx="14"/>
   <rect class="col-svc" x="920" y="10" width="260" height="360" rx="12"/>
   <text class="stage" x="150" y="38">수집</text><text class="owner" x="150" y="58">앤써</text>
   <text class="stage" x="450" y="38">분석 (추출만)</text><text class="owner" x="450" y="58">분석 · 신민철 · 박보규</text>
@@ -400,24 +282,24 @@ td .tier { margin-left: 0; }
 
 <section id="tab-details" role="tabpanel" aria-labelledby="t-details" hidden>
 <div class="verdict">
-  <strong>권고: 안 B. 가공(지표 계산)을 BFF로 옮기고, 분석팀은 추출만 한다.</strong>
-  <p>현행은 지표를 쓰는 쪽(서비스)과 계산하는 쪽(파이프라인)이 달라, 지표를 바꿀 때마다 팀 사이를 오간다. B는 서비스가 지표를 정의하고 계산한다. 요청 때 집계는 1~4회차 기준 1초 안팎이고, 무거운 계열만 롤업한다. 전제 조건은 5절.</p>
+  <strong>권고: 최종안. 가공(지표 계산)을 BFF로 옮기고, 분석팀은 추출만 한다.</strong>
+  <p>현행은 지표를 쓰는 쪽(서비스)과 계산하는 쪽(파이프라인)이 달라, 지표를 바꿀 때마다 팀 사이를 오간다. 최종안은 서비스가 지표를 정의하고 계산한다. 요청 때 집계는 1~4회차 기준 1초 안팎이고, 무거운 계열만 롤업한다. 전제 조건은 5절.</p>
 </div>
 
 <h2>1. 단계와 담당</h2>
 <table>
-  <tr><th style="width:12%">단계</th><th style="width:26%">하는 일</th><th>현행</th><th>안 B</th></tr>
+  <tr><th style="width:12%">단계</th><th style="width:26%">하는 일</th><th>현행</th><th>최종안</th></tr>
   <tr><td>수집</td><td>AI 엔진에 질의, 응답 수신</td><td colspan="2"><span class="who ext"></span>앤써</td></tr>
   <tr><td>분석</td><td>응답에서 사실 추출 (AI 모델)</td><td colspan="2"><span class="who ana"></span>신민철 · 박보규</td></tr>
   <tr><td><strong>가공</strong></td><td>추출 사실을 규칙대로 세어 지표 계산</td><td><span class="who pipe"></span><strong>파이프라인 · 이시형 · 김혜민</strong></td><td><span class="who svc"></span><strong>서비스 · 김태호 (BFF)</strong></td></tr>
   <tr><td>서비스 출력</td><td>화면, 외부 API</td><td colspan="2"><span class="who svc"></span>김태호</td></tr>
   <tr><td>데이터 파이프라인</td><td>분석 입력 준비, 저장, 서비스 제공</td><td><span class="who pipe"></span>이시형 · 김혜민: 입력 준비, OBT 보관, 가공</td><td><span class="who pipe"></span>이시형 · 김혜민: 입력 준비, OBT 세대 적재 · 공개</td></tr>
 </table>
-<p class="note">차이는 두 가지다. 가공 담당(현행 파이프라인, B 서비스)과 OBT 단위(현행 프롬프트 1행, B 답변 1행).</p>
+<p class="note">차이는 두 가지다. 가공 담당(현행 파이프라인, 최종안 서비스)과 OBT 단위(현행 프롬프트 1행, 최종안 답변 1행).</p>
 
 <h3>메달리온 층</h3>
 <table>
-  <tr><th style="width:9%">층</th><th>현행</th><th>안 B</th></tr>
+  <tr><th style="width:9%">층</th><th>현행</th><th>최종안</th></tr>
   <tr><td><span class="tier bronze">Bronze</span></td><td colspan="2">응답 원문 (앤써)</td></tr>
   <tr><td><span class="tier silver">Silver</span></td><td>추출 결과 OBT Table: 프롬프트 1행 · 수십 열, 추출만</td><td>추출 사실 OBT Table: 답변 1행, 추출만, 세대로 적재 · 공개</td></tr>
   <tr><td><span class="tier gold">Gold</span></td><td>지표 셀: 파이프라인이 모든 조합을 계산</td><td>롤업 표(무거운 계열만, 서비스 소유) + 요청 때 BFF 계산</td></tr>
@@ -426,7 +308,7 @@ td .tier { margin-left: 0; }
 
 <h2>2. 추출 · 가공 경계와 계약</h2>
 <table>
-  <tr><th style="width:12%"></th><th>추출 (분석팀)</th><th>가공 (현행 파이프라인 / B BFF)</th></tr>
+  <tr><th style="width:12%"></th><th>추출 (분석팀)</th><th>가공 (현행 파이프라인 / 최종안 BFF)</th></tr>
   <tr><td>정의</td><td>응답에서 읽어 낸 사실과 분류</td><td>사실을 세는 규칙</td></tr>
   <tr><td>예</td><td>엔티티 · 브랜드 묶음, 감성, 언급 유형, 순위 · 첫 등장, 인용 URL · 출처 분류</td><td>분모 조건, 자사 판정, 대표 답변, 회차 · 기간 창, 지표 공식</td></tr>
   <tr><td>바뀌는 때</td><td>모델이 바뀔 때</td><td>화면 요구가 바뀔 때</td></tr>
@@ -434,14 +316,14 @@ td .tier { margin-left: 0; }
 
 <h3>단계 사이 계약</h3>
 <table>
-  <tr><th style="width:5%">번호</th><th style="width:14%">DB</th><th style="width:24%">현행</th><th style="width:24%">안 B</th><th>담는 것</th></tr>
+  <tr><th style="width:5%">번호</th><th style="width:14%">DB</th><th style="width:24%">현행</th><th style="width:24%">최종안</th><th>담는 것</th></tr>
   <tr><td>1</td><td>응답 원문 <span class="tier bronze">Bronze</span></td><td colspan="2">앤써 → 분석 (팀 경계)</td><td>답변 키, 프롬프트 · 엔진 · 국가 · 언어 · 측정 시각, 본문, 인용 원문</td></tr>
-  <tr><td>2</td><td>OBT Table <span class="tier silver">Silver</span></td><td><strong>분석 → 파이프라인 (팀 경계)</strong></td><td><strong>분석 → 서비스 (팀 경계)</strong></td><td>현행: 프롬프트 1행 · 수십 열<br>B: 답변 1행, 추출 규칙 버전, 세대 번호</td></tr>
+  <tr><td>2</td><td>OBT Table <span class="tier silver">Silver</span></td><td><strong>분석 → 파이프라인 (팀 경계)</strong></td><td><strong>분석 → 서비스 (팀 경계)</strong></td><td>현행: 프롬프트 1행 · 수십 열<br>최종안: 답변 1행, 추출 규칙 버전, 세대 번호</td></tr>
   <tr><td>3</td><td>지표 · 롤업 <span class="tier gold">Gold</span></td><td><strong>파이프라인 → 서비스 (팀 경계)</strong></td><td>서비스 안에서만 씀 (계약 아님)</td><td>회차 · 국가 · 엔진 · 브랜드 지표, 정의 버전</td></tr>
 </table>
-<p class="note">현행은 팀 사이 계약이 3개이고, 3에 지표 규칙이 들어 있어 지표 정의가 바뀌면 계약도 바뀐다. B는 2개이고, 2는 추출만 담아 지표 정의가 바뀌어도 계약은 그대로다. 대신 2의 열 · 뜻을 넓게 맞춰야 한다.</p>
+<p class="note">현행은 팀 사이 계약이 3개이고, 3에 지표 규칙이 들어 있어 지표 정의가 바뀌면 계약도 바뀐다. 최종안은 2개이고, 2는 추출만 담아 지표 정의가 바뀌어도 계약은 그대로다. 대신 2의 열 · 뜻을 넓게 맞춰야 한다.</p>
 
-<h3>서비스 딜리버리 (안 B)</h3>
+<h3>서비스 딜리버리 (최종안)</h3>
 <p>Silver 저장소는 하나다. 쓰는 것은 파이프라인뿐이고, 서비스는 공개 세대만 읽는다. 임시 저장은 공개 전 세대이고, 딜리버리는 세대를 공개로 바꾸는 일이다(복사 없음).</p>
 <table>
   <tr><th style="width:12%">세대 상태</th><th>뜻</th><th style="width:18%">바꾸는 주체</th><th style="width:14%">서비스가 보나</th></tr>
@@ -482,23 +364,23 @@ td .tier { margin-left: 0; }
 <p><strong>책임.</strong> 세대가 다 왔는지는 파이프라인, 내용은 분석팀, 지표는 서비스가 진다. 문제가 생기면 매니페스트와 롤업에 남은 세대 · 정의 버전으로 단계를 가린다.</p>
 
 <h2>3. 기준별 비교</h2>
-<p>현행은 지금 그대로, B는 4절의 계산 방식으로 비교했다.</p>
+<p>현행은 지금 그대로, 최종안은 4절의 계산 방식으로 비교했다.</p>
 <table>
-  <tr><th style="width:12%">기준</th><th style="width:38%">현행 · 파이프라인 가공</th><th style="width:38%">안 B · BFF 가공</th><th style="width:12%">우세</th></tr>
+  <tr><th style="width:12%">기준</th><th style="width:38%">현행 · 파이프라인 가공</th><th style="width:38%">최종안 · BFF 가공</th><th style="width:12%">우세</th></tr>
   <tr><td><strong>개발 효율성</strong></td>
     <td><ul>
       <li><span class="plus">+</span> BFF는 읽기만 한다.</li>
-      <li><span class="minus">−</span> 지표 · 필터 · 분모를 바꾸려면 파이프라인이 가공을 고치고 다시 계산해야 반영된다(그림 1 빨간 점선).</li>
+      <li><span class="minus">−</span> 지표 · 필터 · 분모를 바꾸려면 파이프라인이 가공을 고치고 다시 계산해야 반영된다.</li>
       <li><span class="minus">−</span> 파이프라인에 데이터 이동 · 저장과 지표 규칙이 몰린다.</li>
       <li><span class="minus">−</span> OBT가 프롬프트 단위라 답변 단위로 세려면 분석팀이 열을 바꿔야 한다.</li>
     </ul></td>
     <td><ul>
-      <li><span class="plus">+</span> 화면 요구와 지표 계산을 한 담당이 고친다(그림 2 초록 점선).</li>
+      <li><span class="plus">+</span> 화면 요구와 지표 계산을 한 담당이 고친다(그림의 초록 점선).</li>
       <li><span class="plus">+</span> 분석팀은 추출 품질에 집중한다.</li>
       <li><span class="minus">−</span> 서비스 담당 한 명의 일이 는다.</li>
       <li><span class="minus">−</span> OBT 열 · 뜻이 바뀌면 BFF도 고쳐야 한다.</li>
     </ul></td>
-    <td><span class="pill win">B</span></td></tr>
+    <td><span class="pill win">최종안</span></td></tr>
   <tr><td><strong>책임 · 소유</strong></td>
     <td><ul>
       <li><span class="plus">+</span> 서비스는 계산된 값을 그대로 보인다.</li>
@@ -510,7 +392,7 @@ td .tier { margin-left: 0; }
       <li><span class="plus">+</span> 맡은 일이 팀 전문성과 맞는다.</li>
       <li><span class="minus">−</span> 숫자가 틀리면 추출과 가공 사이에서 원인을 가려야 한다. 추출 검수 기준이 필요하다.</li>
     </ul></td>
-    <td><span class="pill win">B</span></td></tr>
+    <td><span class="pill win">최종안</span></td></tr>
   <tr><td><strong>정확성 · 일관성</strong></td>
     <td><ul>
       <li><span class="plus">+</span> 회차 마감 때 한 번 계산하므로 모든 소비자가 같은 값을 본다.</li>
@@ -555,7 +437,7 @@ td .tier { margin-left: 0; }
 </table>
 <p><strong>1년 뒤.</strong> 52회차(회차당 4.7만 답변)가 쌓이면 global 인용은 약 2,600만 행으로 지금의 5.6배가 된다. 선형으로 가정하면 기간 전체 인용 집계는 첫 실행 37초, 재실행 12초다. 1~4회차 질의는 기간 길이와 관계없다.</p>
 <table>
-  <tr><th style="width:16%">계산 방식</th><th>현행</th><th>안 B</th></tr>
+  <tr><th style="width:16%">계산 방식</th><th>현행</th><th>최종안</th></tr>
   <tr><td>분석팀</td><td>추출만 (OBT 프롬프트 1행)</td><td>추출만 (OBT 답변 1행)</td></tr>
   <tr><td>미리 계산</td><td>파이프라인이 모든 조합을 지표 셀로 만든다</td><td>BFF가 무거운 계열만 회차 단위로 롤업한다</td></tr>
   <tr><td>요청 때</td><td>BFF는 읽기만 한다</td><td>BFF가 OBT에서 집계하고 캐시한다</td></tr>
@@ -563,7 +445,7 @@ td .tier { margin-left: 0; }
 <p class="note">센 곳: <code>answer_fact</code> · <code>answer_brand_fact</code> · <code>citation_fact</code> · <code>answer_stance_fact</code>, 지표 셀 <code>kpi_cell</code> · <code>brand_cell</code> · <code>citation_cell</code> · <code>url_prompt_cell</code> · <code>kpi_rollup</code>. 행 수는 활성 릴리스가 가리키는 빌드의 <code>row_counts</code> 합이다.</p>
 
 <h2>5. 권고와 조건</h2>
-<p><strong>안 B를 권고한다.</strong> 성능은 현행이 빠르지만 B도 1~4회차 1초 안팎으로 충분하고, 저장 · 재계산 비용은 B가 작다. 개발 효율성과 책임은 B가 낫다. B의 약점(넓은 계약, 세대 고정, 1인 집중)은 아래 조건으로 막는다.</p>
+<p><strong>최종안을 권고한다.</strong> 성능은 현행이 빠르지만 최종안도 1~4회차 1초 안팎으로 충분하고, 저장 · 재계산 비용은 최종안이 작다. 개발 효율성과 책임은 최종안이 낫다. 최종안의 약점(넓은 계약, 세대 고정, 1인 집중)은 아래 조건으로 막는다.</p>
 <ol>
   <li><strong>OBT 계약을 고정한다.</strong> 열 · 뜻 · 세대 번호를 문서로 두고, 바꿀 때는 미리 알린다.</li>
   <li><strong>지표는 BFF로만 내보낸다.</strong> 외부 API를 포함해 모든 소비자가 BFF를 거친다.</li>
