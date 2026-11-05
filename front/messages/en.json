@@ -5191,59 +5191,6 @@
         "none": "No matching brand",
         "empty": "No rival has a trend"
       },
-      "summary": {
-        "title": "This round",
-        "titlePeriod": "This period",
-        "howLabel": "How it is made",
-        "how": "The numbers of this page's cards restated in one fixed order (no new data): our standing and gap → the Top1 ACR difference to the competitor shortlisted most alike → the prompts we top per engine → a competitor topping every engine → our model conversion → the prompts we were never picked in → the brand that moved most, the first four that have values. No threshold filters them and nothing is ranked by importance; the colour shows only the direction for us (ahead · behind, up · down).",
-        "chipSnapshot": "As of {date} · vs the previous round",
-        "chipPeriod": "Period total",
-        "headline": "<b>{own}</b> — Top1 ACR <b>#{rank}</b> {share}{delta}, shortlist rate {coverage}, picked first {count} times · {prompts} prompts × {engines} engines"
-      },
-      "find": {
-        "standing": {
-          "tag": "Competition",
-          "titleFirst": "#1 in Top1 ACR — {gap}pp ahead of {rival}",
-          "titleBehind": "Top1 ACR {gap}pp behind {rival}",
-          "detailWidened": "The gap widened by {move}pp since the previous round",
-          "detailNarrowed": "The gap narrowed by {move}pp since the previous round",
-          "detailSame": "No change in the gap since the previous round",
-          "detail": "Us {own}% · {rival} {rivalShare}%"
-        },
-        "leak": {
-          "tag": "Shortlist → pick",
-          "titleLess": "{own}: Top1 ACR {gap}pp below {rival}, the competitor with the closest shortlist rate",
-          "titleMore": "{own}: Top1 ACR {gap}pp above {rival}, the competitor with the closest shortlist rate",
-          "titleSame": "{own}: the same Top1 ACR as {rival}, the competitor with the closest shortlist rate",
-          "detail": "Shortlist rate {ownCov}% vs {rivalCov}% · Top1 ACR {ownTop1}% vs {rivalTop1}%"
-        },
-        "engine": {
-          "tag": "AI engine",
-          "title": "We top {wins}/{total} prompts on {engine} — {diff} fewer than on {other}",
-          "titleSame": "We top {wins}/{total} prompts on every engine",
-          "detail": "Of the {total} prompts with a pick ({measured} measured) · by the brand picked most per prompt × engine"
-        },
-        "sweep": {
-          "tag": "Prompts",
-          "title": "{rival} tops {count} prompts on every engine",
-          "detail": "Prompts where we top no engine · by the brand picked most per prompt × engine"
-        },
-        "model": {
-          "tag": "Models",
-          "title": "{model} converts {rate}% — our best model in the table",
-          "detail": "Lowest of our models in the table: {worst} at {worstRate}% · how often a shortlisted model is picked"
-        },
-        "mover": {
-          "tag": "Change",
-          "title": "{brand} Top1 ACR {delta} — the biggest move",
-          "detail": "Among brands with a trend, vs the previous round"
-        },
-        "dist": {
-          "tag": "Choice spread",
-          "title": "{zero} prompts in {sheet} never picked us",
-          "detail": "Out of {rows} prompts in this sheet"
-        }
-      },
       "hero": {
         "label": "Top1 ACR (final pick rate)",
         "basisRound": "vs the previous round",
@@ -5253,11 +5200,6 @@
         "leadFirst": "+{gap}pp over #2 {brand}",
         "leadBehind": "{gap}pp vs #1 {brand}",
         "coverage": "Shortlist rate",
-        "choices": "Picked first",
-        "cells": "Cells measured",
-        "iterations": "Repetitions",
-        "times": "{n}",
-        "count": "{n}",
         "ownSum": "Us = {brands} combined",
         "trendTitle": "Top1 ACR trend",
         "trendNoteLabel": "Trend",
@@ -5272,7 +5214,7 @@
       "board": {
         "title": "ACR by brand",
         "infoLabel": "How to read",
-        "info": "Top1 ACR = the brand's share of AI's final picks (per repetition — brands add up to at most 100%; the rest is brands below the top 12 and no pick). Bar length is relative to #1. Shortlist rate = the share of cells where the brand was shortlisted at least once in ~10 repetitions (per cell, 0–100%). The units differ, so the two bars are drawn apart. Pick and mention counts are in the row tooltip and the table view. Only we and the top rivals have a trend.",
+        "info": "Top1 ACR = the brand's share of AI's final picks (per repetition — brands add up to at most 100%; the rest is brands below the top 12 and no pick). Bar length is relative to #1. Shortlist rate = the share of cells where the brand was shortlisted at least once in ~10 repetitions (per cell, 0–100%). The units differ, so the two bars are drawn apart. Pick and mention counts are in the row tooltip and the table view, each round's Top1 ACR on the trend line's points and in the table view. Only we and the top rivals have a trend.",
         "chip": "Top 12 · by final picks",
         "sub": "Select a rival row that has a trend to add or remove it as a compare brand — every chart on the page follows.",
         "sortLabel": "Sort",
@@ -5289,6 +5231,7 @@
         "colCoverage": "Shortlist rate",
         "colChoices": "Final picks",
         "colMentions": "Mentions",
+        "colRound": "Top1 ACR {date}",
         "ownTotal": "Us combined",
         "own": "Us",
         "sibling": "HMG",
@@ -5296,23 +5239,17 @@
         "noTrendTip": "Only we and the top rivals have a trend",
         "noCompare": "No trend, so it cannot be compared",
         "rowTip": "Top1 ACR {top1} · shortlist rate {coverage} · {choices} final picks · {mentions} mentions",
-        "ownTip": "Top1 ACR {top1} · shortlist rate {coverage} · {choices} final picks"
-      },
-      "map": {
-        "title": "Shortlist → final pick",
-        "infoLabel": "How to read",
-        "info": "x = shortlist rate, y = Top1 ACR, one dot per brand — further right = shortlisted more, higher = picked more. The units differ (repetition · cell), so y ÷ x is not a conversion rate. No new data.",
-        "chip": "{n} brands",
-        "x": "Shortlist rate →",
-        "y": "↑ Top1 ACR",
-        "aria": "Top1 ACR against the shortlist rate, one dot per brand",
-        "tip": "{brand} — shortlist rate {x} · Top1 ACR {y}"
+        "ownTip": "Top1 ACR {top1} · shortlist rate {coverage} · {choices} final picks",
+        "sparkTip": "Round {date} · Top1 ACR {value}"
       },
       "battle": {
         "title": "Picks by AI engine",
         "infoLabel": "How to read",
-        "info": "For each prompt × engine cell, the brand picked most (countries added up; ties by brand name). Bars = how many prompts each brand tops on that engine. The base is the prompts with at least one final pick on any engine — measured prompts with no pick on any engine are left out, so it can be smaller than the measured prompts in the summary.",
+        "info": "For each prompt × engine cell, the brand picked most (countries added up; ties by brand name). Bars = how many prompts each brand tops on that engine. The base is the prompts with at least one final pick on any engine — measured prompts with no pick on any engine are left out, so it can be smaller than the measured prompts in the chip.",
         "chip": "{prompts} prompts with a pick ({measured} measured) × {engines} engines",
+        "sweepChip": "{rival} tops every engine in {count} prompts",
+        "sweepLabel": "Tops every engine",
+        "sweepInfo": "Prompts where the same rival is #1 on every engine — in them we are #1 on no engine. The rival with the most such prompts is shown (ties by name). The ‘We are not #1’ view includes these prompts.",
         "viewLabel": "Prompt view",
         "all": "All",
         "notOwn": "We are not #1",

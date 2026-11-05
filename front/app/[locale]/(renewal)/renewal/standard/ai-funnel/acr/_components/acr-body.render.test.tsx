@@ -62,9 +62,8 @@ describe("renewal ACR body: 후보 → 선택 전환 and 결선 맞대결", () =
 });
 
 describe("renewal ACR body: what the page counts, and when", () => {
-  it("a snapshot names its round in the summary chip and the footer", () => {
+  it("a snapshot names its round in the footer", () => {
     const html = render(bodies.snapshot);
-    expect(html).toContain(">2026-09-14 기준 · 직전 회차 대비<");
     expect(html).toContain("최신 회차(2026-09-14) 스냅샷 — 프롬프트 3개");
   });
   it("the engine card counts the prompts with a pick, of the prompts measured", () => {
@@ -140,51 +139,97 @@ describe("renewal ACR body: rounds compared", () => {
   });
   it("a period of several rounds shows their sums and its trend", () => {
     const html = render(bodies.period);
-    expect(html).toContain(T.summary.titlePeriod);
+    expect(html).toContain("기간 누적 — 프롬프트 3개");
+    expect(html).toContain(T.hero.basisPeriod);
     expect(html).toContain(`aria-label="${T.hero.trendAria}"`);
   });
 });
 
-describe("renewal ACR body: the summary restates the page's numbers (renewal audit 11-1)", () => {
-  const withFindings = (findings: NonNullable<RnAcrInput["view"]>["findings"]): RnAcrInput => ({ ...bodies.snapshot, view: { ...bodies.snapshot.view!, findings } });
-  it("the leak names the rival shortlisted most alike and the Top1 difference either way", () => {
-    expect(render(bodies.snapshot)).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota보다 Top1 ACR 30.0pp 높음");
-    const leak = bodies.snapshot.view!.findings[1];
-    const less = render(withFindings([{ ...leak, tone: "warn", params: { ...leak.params, gap: 2, dir: "less" } }]));
-    expect(less).toContain("Hyundai, 후보군 포함율이 가장 가까운 Toyota보다 Top1 ACR 2.0pp 낮음");
-    const same = render(withFindings([{ ...leak, tone: "info", params: { ...leak.params, gap: 0, dir: "same" } }]));
-    expect(same).toContain("Hyundai · 후보군 포함율이 가장 가까운 Toyota — Top1 ACR 같음");
-    expect(same).not.toContain("비슷하지만");
+describe("renewal ACR body: each number once (2026-11-05 Global 지표 정리)", () => {
+  it("has no round summary, no navy card and no 후보 → 최종 선택 map", () => {
+    for (const input of [bodies.snapshot, bodies.period]) {
+      const html = render(input);
+      expect(html).not.toContain('id="sec-summary"');
+      expect(html).not.toContain('data-rn-tone="hero"');
+      expect(html).not.toContain('aria-label="후보 → 최종 선택"');
+      expect(html).not.toContain("후보군 포함율 대비 Top1 ACR");
+    }
   });
-  it("an engine gap of none says so, and a sweep names no content to add", () => {
-    const engine = bodies.snapshot.view!.findings[2];
-    expect(render(withFindings([{ ...engine, params: { ...engine.params, wins: 1, diff: 0 } }]))).toContain("엔진마다 당사 1위 프롬프트 1/1로 같음");
-    const sweep = render(withFindings([{ kind: "sweep", tone: "info", pri: 4, target: "sec-prompt", brand: "Toyota", params: { rival: "Toyota", count: 1 } }]));
-    expect(sweep).toContain("모든 엔진에서 Toyota 1위인 프롬프트 1개");
-    expect(sweep).not.toContain("보강");
+  it("the hero keeps Top1 ACR and 후보군 포함율; 1순위 선택 is the board's 최종 선택, the cells and repetitions the footer's", () => {
+    const html = render(bodies.snapshot);
+    const hero = html.slice(html.indexOf(`aria-label="${T.hero.label}"`), html.indexOf(`aria-label="${T.board.title}"`));
+    expect(hero.match(/<dt/g)).toHaveLength(1);
+    expect(hero).toContain(T.hero.coverage);
+    for (const gone of ["1순위 선택", "측정 셀", "반복 측정"]) expect(html).not.toContain(`>${gone}<`);
+    // the single own brand's row carries 당사's 최종 선택 (7 = the own total's)
+    expect(html).toMatch(/data-rn-b="Hyundai"[^>]*>[^]*?title="Hyundai — Top1 ACR 35\.0% · 후보군 포함율 37\.5% · 최종 선택 7회/);
+    expect(html.match(/셀\(프롬프트×엔진×국가\) 8개 · 반복 20회/g)).toHaveLength(1);
   });
-  // renewal audit 15 (W6): a gap change shown as 0.0 is no change, not 'widened' or 'narrowed'
-  it("a gap change of 0.0 is told as no change", () => {
-    const standing = { kind: "standing", tone: "warn", pri: 7, target: "sec-comp", brand: "Toyota", params: { rival: "Toyota", gap: 10, first: 0, own: 20, rivalShare: 30 } } as const;
-    const same = render(withFindings([{ ...standing, params: { ...standing.params, move: 0, widened: "same" } }]));
-    expect(same).toContain("직전 회차 대비 격차 변화 없음");
-    expect(same).not.toContain("벌어졌습니다");
-    expect(same).not.toContain("좁혀졌습니다");
-    expect(render(withFindings([{ ...standing, params: { ...standing.params, move: 1.2, widened: 1 } }]))).toContain("격차가 직전 회차보다 1.2pp 벌어졌습니다");
+  it("the 당사 row stays when the top 12 leave the one own brand out", () => {
+    const view = bodies.snapshot.view!;
+    const kept = view.brands.flatMap((b, i) => (b.own ? [] : [i]));
+    const boardOrders = Object.fromEntries(Object.entries(view.boardOrders).map(([k, o]) => [k, o.filter((i) => kept.includes(i)).map((i) => kept.indexOf(i))])) as typeof view.boardOrders;
+    const out: RnAcrInput = { ...bodies.snapshot, view: { ...view, brands: kept.map((i) => view.brands[i]), boardOrders } };
+    const html = render(out);
+    expect(html).toMatch(/data-rn-b="__own" data-rn-top1[^>]*>[^]*?title="HMG — Top1 ACR 35\.0% · 후보군 포함율 37\.5% · 최종 선택 7회/);
+    const row = html.slice(html.indexOf('data-rn-b="__own" data-rn-top1'), html.indexOf('data-rn-b="Toyota" data-rn-top1'));
+    expect(row).toContain(`>${T.board.own}<`);
+    expect(row).not.toContain(`>${T.board.ownTotal}<`);
+    // an own brand on the board is 당사's row: no second one
+    expect(render(bodies.snapshot)).not.toContain('data-rn-b="__own" data-rn-top1');
   });
-  it("the how-to names the fixed order and no importance", () => {
-    expect(T.summary.how).not.toContain("중요도를 매겨");
-    expect(T.summary.how).toContain("정해진 순서");
+  it("the head-to-head sample is said once, in the card's ⓘ", () => {
+    const html = render(bodies.snapshot);
+    expect(html.match(/셀당 반복 1개를 표본으로 계산합니다/g)).toHaveLength(1);
+    const card = html.slice(html.indexOf(`aria-label="${T.duel.title}"`));
+    expect(card.slice(0, card.indexOf("</section>"))).toContain(`role="tooltip"`);
+  });
+  it("the engine card's chip names the rival topping every engine in the most prompts, the summary's one value of its own", () => {
+    const view = bodies.snapshot.view!;
+    const swept: RnAcrInput = { ...bodies.snapshot, view: { ...view, sweeps: [{ brand: "Toyota", count: 156 }, { brand: "Tesla", count: 96 }] } };
+    const html = render(swept);
+    expect(html).toContain(">모든 엔진에서 Toyota 1위인 프롬프트 156개<");
+    expect(html).not.toContain("Tesla 1위인");
+    expect(html).toContain(`>${T.battle.sweepLabel}<`);
+    const none = render(bodies.snapshot);
+    expect(view.sweeps).toEqual([]);
+    expect(none).not.toContain("모든 엔진에서");
+    expect(none).not.toContain(`>${T.battle.sweepLabel}<`);
   });
 });
 
-describe("renewal ACR body: 후보 → 최종 선택 (renewal audit 15, ⛔L)", () => {
-  it("draws each brand's two values as a dot, without a brand average line or a distance to it", () => {
+describe("renewal ACR body: the rounds' numbers come back (the original 선택률 추이)", () => {
+  it("every brand's spark names each round's Top1 ACR", () => {
     const html = render(bodies.snapshot);
-    expect(html).toContain(T.map.title);
-    expect(html).toContain(`>브랜드 ${bodies.snapshot.view!.brands.length}개<`);
-    expect(html).not.toContain("평균선");
-    expect(html).not.toContain("평균보다");
+    const row = (brand: string) => html.slice(html.indexOf(`data-rn-b="${brand}" data-rn-top1`), html.indexOf("</div>", html.indexOf(`data-rn-b="${brand}" data-rn-top1`)));
+    expect(row("Hyundai")).toContain('data-rn-tip="2026-09-03 회차 · Top1 ACR 6.3%"');
+    expect(row("Hyundai")).toContain('data-rn-tip="2026-09-10 회차 · Top1 ACR 33.3%"');
+    // a round without a value has no point to name
+    expect(row("Toyota")).not.toContain("2026-09-03 회차");
+    expect(row("Toyota")).toContain('data-rn-tip="2026-09-10 회차 · Top1 ACR 66.7%"');
+  });
+  it("the spark's points sit outside the compare button (a focusable point inside a button is not reachable)", () => {
+    const html = render(bodies.snapshot);
+    const start = html.indexOf('data-rn-b="Toyota" data-rn-top1');
+    const row = html.slice(start, html.indexOf("</div>", start));
+    expect(row).toContain("aria-pressed=");
+    const button = row.slice(row.indexOf("<button"), row.indexOf("</button>"));
+    expect(button).toContain(">Toyota<");
+    expect(button).not.toContain("data-rn-spark-point");
+    expect(row).toContain("data-rn-spark-point");
+  });
+});
+
+describe("renewal ACR body: the model table's name sorts (the original table's)", () => {
+  it("sorts by rate, shortlist, picks, brand and model", () => {
+    const html = render(bodies.snapshot);
+    const card = html.slice(html.indexOf(`aria-label="${T.models.title}"`));
+    const head = card.slice(0, card.indexOf('role="radiogroup"') + 2000);
+    for (const [seg, label] of [["conversionRate", T.models.colRate], ["shortlistCount", T.models.colShortlist], ["top1Count", T.models.colTop1], ["brand", T.models.colBrand], ["model", T.models.colModel]]) {
+      expect(head).toContain(`data-rn-seg="${seg}" class=`);
+      expect(head).toMatch(new RegExp(`data-rn-seg="${seg}"[^>]*>${label.replace(/[()]/g, "\\$&")}<`));
+    }
+    expect(bodies.snapshot.view!.models.orders.brand).toEqual([0]);
   });
 });
 

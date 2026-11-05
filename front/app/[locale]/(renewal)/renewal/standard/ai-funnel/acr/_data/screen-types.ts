@@ -1,6 +1,6 @@
 // Renewal ACR screen payloads (back/bff/screens/acr.py): acr/renewal-header (the page header's
-// period pill) and acr/renewal (filter option props + the body view model). Every number, order,
-// rule and finding is computed by the API; the cards format and render it.
+// period pill) and acr/renewal (filter option props + the body view model). Every number, order
+// and rule is computed by the API; the cards format and render it.
 import type { CatalogTaxonomyRow } from "@/components/dash/dimension-filter-panel";
 import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
 
@@ -11,19 +11,6 @@ export interface AcrOwnTotal {
   appearanceCount: number;
   choiceShare: number | null;
   coverage: number | null;
-}
-
-export type AcrFindingKind = "standing" | "leak" | "engine" | "sweep" | "model" | "mover" | "dist";
-export interface AcrFinding {
-  kind: AcrFindingKind;
-  tone: "warn" | "good" | "info";
-  pri: number;
-  target: "sec-overview" | "sec-comp" | "sec-prompt" | "sec-model" | "sec-dist";
-  /** brand to light after the jump */
-  brand?: string;
-  /** a view the target card should switch to first */
-  act?: { battle?: "notown" } | { sheet: string };
-  params: Record<string, string | number>;
 }
 
 export interface AcrBrandRow extends AcrBrand {
@@ -41,13 +28,11 @@ export interface AcrBrandRow extends AcrBrand {
   canCompare: boolean;
   /** Top1 bar width (% of the largest Top1 on the board) */
   top1Bar: number;
-  /** 후보 → 최종 선택 map: coverage (x) and Top1 (y), a dot without a reference line (2026-10-31 ⛔L) */
-  mapX: number;
-  mapY: number;
 }
 
 export type AcrBattleView = "all" | "notown" | "split";
-export type AcrModelSort = "conversionRate" | "shortlistCount" | "top1Count";
+/** the metrics descending, the brand and the model ascending (the original table's name sorts) */
+export type AcrModelSort = "conversionRate" | "shortlistCount" | "top1Count" | "brand" | "model";
 /** row sorts: 당사 열세 (the most picked rival's share − 당사's) / 당사 몫, low first / prompt text */
 export type AcrDistSort = "gap" | "own" | "text";
 /** 당사 in a row: picked / a candidate never picked / not a candidate */
@@ -160,8 +145,8 @@ export interface RnAcrView {
   /** per engine: own wins, prompts nobody was picked in (or not measured on it), wins per winner brand (null = nobody
    * chosen), prompts another brand won (prompts − own − none) */
   engineWins: { engine: string; ownWins: number; noneWins: number; byBrand: { brand: string | null; count: number }[]; restBase: number }[];
+  /** per rival, the prompts it tops on every engine (당사 tops none of them), the most first, then by name */
   sweeps: Array<{ brand: string; count: number }>;
-  findings: AcrFinding[];
   battle: {
     rows: { promptId: string; label: string; winners: (string | null)[]; notOwn: boolean }[];
     views: Record<AcrBattleView, number[]>;

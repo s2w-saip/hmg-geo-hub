@@ -5191,59 +5191,6 @@
         "none": "일치하는 브랜드가 없습니다",
         "empty": "추이가 있는 경쟁사가 없습니다"
       },
-      "summary": {
-        "title": "이번 회차 요약",
-        "titlePeriod": "이 기간 요약",
-        "howLabel": "만드는 방법",
-        "how": "이 페이지 카드들의 숫자를 정해진 순서로 다시 적은 요약입니다(새 데이터 없음). 당사 순위와 격차 → 후보군 포함율이 가장 가까운 경쟁사와의 Top1 ACR 차 → 엔진별 당사 1위 프롬프트 → 모든 엔진에서 1위인 경쟁사 → 당사 차종 전환율 → 당사가 한 번도 선택되지 않은 프롬프트 → 가장 크게 움직인 브랜드 순서로, 값이 있는 것 4개를 보입니다. 기준값으로 거르거나 중요도를 매기지 않고, 색은 당사 기준의 방향(앞섬 · 뒤짐, 늘어남 · 줄어듦)만 나타냅니다.",
-        "chipSnapshot": "{date} 기준 · 직전 회차 대비",
-        "chipPeriod": "기간 누적",
-        "headline": "<b>{own}</b> — Top1 ACR <b>{rank}위</b> {share}{delta}, 후보군 포함율 {coverage}, 1순위 선택 {count}회 · 프롬프트 {prompts}개 × 엔진 {engines}개"
-      },
-      "find": {
-        "standing": {
-          "tag": "경쟁 구도",
-          "titleFirst": "Top1 ACR 1위 — {rival}보다 {gap}pp 앞섬",
-          "titleBehind": "Top1 ACR {rival}에 {gap}pp 뒤짐",
-          "detailWidened": "격차가 직전 회차보다 {move}pp 벌어졌습니다",
-          "detailNarrowed": "격차가 직전 회차보다 {move}pp 좁혀졌습니다",
-          "detailSame": "직전 회차 대비 격차 변화 없음",
-          "detail": "당사 {own}% · {rival} {rivalShare}%"
-        },
-        "leak": {
-          "tag": "후보 → 선택",
-          "titleLess": "{own}, 후보군 포함율이 가장 가까운 {rival}보다 Top1 ACR {gap}pp 낮음",
-          "titleMore": "{own}, 후보군 포함율이 가장 가까운 {rival}보다 Top1 ACR {gap}pp 높음",
-          "titleSame": "{own} · 후보군 포함율이 가장 가까운 {rival} — Top1 ACR 같음",
-          "detail": "후보군 포함율 {ownCov}% vs {rivalCov}% · Top1 ACR {ownTop1}% vs {rivalTop1}%"
-        },
-        "engine": {
-          "tag": "AI 엔진",
-          "title": "{engine}에서 당사 1위 프롬프트 {wins}/{total} — {other}보다 {diff}개 적음",
-          "titleSame": "엔진마다 당사 1위 프롬프트 {wins}/{total}로 같음",
-          "detail": "분모 = 선택이 나온 프롬프트 {total}개(측정 {measured}개 중) · 프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
-        },
-        "sweep": {
-          "tag": "프롬프트",
-          "title": "모든 엔진에서 {rival} 1위인 프롬프트 {count}개",
-          "detail": "이 프롬프트에서 당사는 어느 엔진에서도 1위가 아닙니다 · 프롬프트 × 엔진에서 가장 많이 최종 선택된 브랜드 기준"
-        },
-        "model": {
-          "tag": "차종",
-          "title": "{model} 전환율 {rate}% — 표의 당사 차종 중 최고",
-          "detail": "표의 당사 차종 중 가장 낮음: {worst} {worstRate}% · 후보에 오르면 실제로 선택되는 정도"
-        },
-        "mover": {
-          "tag": "변화",
-          "title": "{brand} Top1 ACR {delta} — 가장 큰 변화",
-          "detail": "추이가 있는 브랜드 중 직전 회차 대비"
-        },
-        "dist": {
-          "tag": "선택 분포",
-          "title": "{sheet}에서 당사가 한 번도 선택되지 않은 프롬프트 {zero}개",
-          "detail": "이 시트 프롬프트 {rows}개 중"
-        }
-      },
       "hero": {
         "label": "Top1 ACR (최종 선택률)",
         "basisRound": "직전 회차 대비",
@@ -5253,11 +5200,6 @@
         "leadFirst": "2위 {brand} 대비 +{gap}pp",
         "leadBehind": "1위 {brand} 대비 {gap}pp",
         "coverage": "후보군 포함율",
-        "choices": "1순위 선택",
-        "cells": "측정 셀",
-        "iterations": "반복 측정",
-        "times": "{n}회",
-        "count": "{n}개",
         "ownSum": "당사 = {brands} 합산",
         "trendTitle": "Top1 ACR 추이",
         "trendNoteLabel": "추이",
@@ -5272,7 +5214,7 @@
       "board": {
         "title": "브랜드별 ACR",
         "infoLabel": "읽는 법",
-        "info": "Top1 ACR = AI가 최종 선택한 브랜드의 몫(반복 단위 — 브랜드끼리 더하면 100% 이하, 나머지는 상위 12 밖 브랜드·선택 없음). 막대 길이는 1위 대비. 후보군 포함율 = 약 10번 반복 중 한 번이라도 후보로 언급된 셀의 비율(셀 단위, 0–100%). 단위가 달라 두 막대를 따로 그립니다. 최종 선택·언급 횟수는 행에 올리거나 표 보기에서 봅니다. 추이·증감은 당사와 상위 경쟁사만 계산합니다.",
+        "info": "Top1 ACR = AI가 최종 선택한 브랜드의 몫(반복 단위 — 브랜드끼리 더하면 100% 이하, 나머지는 상위 12 밖 브랜드·선택 없음). 막대 길이는 1위 대비. 후보군 포함율 = 약 10번 반복 중 한 번이라도 후보로 언급된 셀의 비율(셀 단위, 0–100%). 단위가 달라 두 막대를 따로 그립니다. 최종 선택·언급 횟수는 행에 올리거나 표 보기에서, 회차별 Top1 ACR은 추이 선의 점에 올리거나 표 보기에서 봅니다. 추이·증감은 당사와 상위 경쟁사만 계산합니다.",
         "chip": "상위 12 · 최종 선택 순",
         "sub": "추이가 있는 경쟁사 행을 누르면 비교 브랜드로 넣고 뺍니다 — 페이지의 모든 차트가 같은 브랜드로 바뀝니다.",
         "sortLabel": "정렬",
@@ -5289,6 +5231,7 @@
         "colCoverage": "후보군 포함율",
         "colChoices": "최종 선택",
         "colMentions": "언급 수",
+        "colRound": "Top1 ACR {date}",
         "ownTotal": "당사 합계",
         "own": "당사",
         "sibling": "HMG 계열",
@@ -5296,23 +5239,17 @@
         "noTrendTip": "추이는 당사와 상위 경쟁사만 계산합니다",
         "noCompare": "추이가 없어 비교 브랜드로 고를 수 없습니다",
         "rowTip": "Top1 ACR {top1} · 후보군 포함율 {coverage} · 최종 선택 {choices}회 · 언급 {mentions}회",
-        "ownTip": "Top1 ACR {top1} · 후보군 포함율 {coverage} · 최종 선택 {choices}회"
-      },
-      "map": {
-        "title": "후보 → 최종 선택",
-        "infoLabel": "읽는 법",
-        "info": "가로 = 후보군 포함율, 세로 = Top1 ACR. 점 하나가 브랜드 하나입니다 — 오른쪽일수록 후보에 많이 오르고, 위쪽일수록 최종 선택을 많이 받습니다. 두 지표는 단위가 달라(반복 · 셀) 세로 ÷ 가로는 전환율이 아닙니다. 새 데이터 없음.",
-        "chip": "브랜드 {n}개",
-        "x": "후보군 포함율 →",
-        "y": "↑ Top1 ACR",
-        "aria": "후보군 포함율 대비 Top1 ACR, 브랜드별 점",
-        "tip": "{brand} — 후보군 포함율 {x} · Top1 ACR {y}"
+        "ownTip": "Top1 ACR {top1} · 후보군 포함율 {coverage} · 최종 선택 {choices}회",
+        "sparkTip": "{date} 회차 · Top1 ACR {value}"
       },
       "battle": {
         "title": "AI 엔진별 선택 구도",
         "infoLabel": "읽는 법",
-        "info": "프롬프트 × 엔진 셀마다 가장 많이 최종 선택된 브랜드(국가 합산, 동점이면 브랜드 이름순)입니다. 위 막대 = 엔진마다 각 브랜드가 1위인 프롬프트 수. 분모는 어느 엔진에서든 최종 선택이 한 번 이상 나온 프롬프트입니다 — 측정했지만 어느 엔진에서도 선택이 없는 프롬프트는 빠져, 위 요약의 측정 프롬프트 수보다 작을 수 있습니다.",
+        "info": "프롬프트 × 엔진 셀마다 가장 많이 최종 선택된 브랜드(국가 합산, 동점이면 브랜드 이름순)입니다. 위 막대 = 엔진마다 각 브랜드가 1위인 프롬프트 수. 분모는 어느 엔진에서든 최종 선택이 한 번 이상 나온 프롬프트입니다 — 측정했지만 어느 엔진에서도 선택이 없는 프롬프트는 빠져, 칩의 측정 프롬프트 수보다 작을 수 있습니다.",
         "chip": "선택이 나온 프롬프트 {prompts}개(측정 {measured}개) × 엔진 {engines}개",
+        "sweepChip": "모든 엔진에서 {rival} 1위인 프롬프트 {count}개",
+        "sweepLabel": "모든 엔진 1위",
+        "sweepInfo": "모든 엔진에서 같은 경쟁사가 1위인 프롬프트 수입니다 — 그 프롬프트에서 당사는 어느 엔진에서도 1위가 아닙니다. 그런 프롬프트가 가장 많은 경쟁사 하나를 보이고, 같으면 이름순입니다. ‘당사 1위 아님’ 보기에 이 프롬프트들이 들어 있습니다.",
         "viewLabel": "프롬프트 보기",
         "all": "전체",
         "notOwn": "당사 1위 아님",

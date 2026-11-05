@@ -44,9 +44,7 @@
      "own": true,
      "sibling": false,
      "canCompare": false,
-     "top1Bar": 100.0,
-     "mapX": 37.5,
-     "mapY": 35.0
+     "top1Bar": 100.0
     },
     {
      "brand": "Toyota",
@@ -65,9 +63,7 @@
      "own": false,
      "sibling": false,
      "canCompare": true,
-     "top1Bar": 14.285714285714285,
-     "mapX": 12.5,
-     "mapY": 5.0
+     "top1Bar": 14.285714285714285
     }
    ],
    "dates": [
@@ -125,69 +121,6 @@
     }
    ],
    "sweeps": [],
-   "findings": [
-    {
-     "kind": "standing",
-     "tone": "good",
-     "pri": 7,
-     "target": "sec-comp",
-     "brand": "Toyota",
-     "params": {
-      "rival": "Toyota",
-      "gap": 30.0,
-      "first": 1,
-      "move": "",
-      "widened": "",
-      "own": 35.0,
-      "rivalShare": 5.0
-     }
-    },
-    {
-     "kind": "leak",
-     "tone": "good",
-     "pri": 6,
-     "target": "sec-comp",
-     "brand": "Toyota",
-     "params": {
-      "own": "Hyundai",
-      "rival": "Toyota",
-      "gap": 30.0,
-      "dir": "more",
-      "ownCov": 37.5,
-      "rivalCov": 12.5,
-      "ownTop1": 35.0,
-      "rivalTop1": 5.0
-     }
-    },
-    {
-     "kind": "engine",
-     "tone": "info",
-     "pri": 5,
-     "target": "sec-prompt",
-     "act": {
-      "battle": "notown"
-     },
-     "params": {
-      "engine": "gemini",
-      "wins": 0,
-      "total": 1,
-      "other": "chatgpt",
-      "diff": 1
-     }
-    },
-    {
-     "kind": "mover",
-     "tone": "good",
-     "pri": 1,
-     "target": "sec-overview",
-     "brand": "Hyundai",
-     "params": {
-      "brand": "Hyundai",
-      "d": 27.1,
-      "ownD": 27.1
-     }
-    }
-   ],
    "defaultCompare": [
     "Toyota"
    ],
@@ -275,6 +208,12 @@
       0
      ],
      "top1Count": [
+      0
+     ],
+     "brand": [
+      0
+     ],
+     "model": [
       0
      ]
     }
@@ -592,9 +531,7 @@
      "own": true,
      "sibling": false,
      "canCompare": false,
-     "top1Bar": 100.0,
-     "mapX": 37.5,
-     "mapY": 35.0
+     "top1Bar": 100.0
     },
     {
      "brand": "Toyota",
@@ -613,9 +550,7 @@
      "own": false,
      "sibling": false,
      "canCompare": true,
-     "top1Bar": 14.285714285714285,
-     "mapX": 12.5,
-     "mapY": 5.0
+     "top1Bar": 14.285714285714285
     }
    ],
    "dates": [
@@ -673,57 +608,6 @@
     }
    ],
    "sweeps": [],
-   "findings": [
-    {
-     "kind": "standing",
-     "tone": "good",
-     "pri": 7,
-     "target": "sec-comp",
-     "brand": "Toyota",
-     "params": {
-      "rival": "Toyota",
-      "gap": 30.0,
-      "first": 1,
-      "move": "",
-      "widened": "",
-      "own": 35.0,
-      "rivalShare": 5.0
-     }
-    },
-    {
-     "kind": "leak",
-     "tone": "good",
-     "pri": 6,
-     "target": "sec-comp",
-     "brand": "Toyota",
-     "params": {
-      "own": "Hyundai",
-      "rival": "Toyota",
-      "gap": 30.0,
-      "dir": "more",
-      "ownCov": 37.5,
-      "rivalCov": 12.5,
-      "ownTop1": 35.0,
-      "rivalTop1": 5.0
-     }
-    },
-    {
-     "kind": "engine",
-     "tone": "info",
-     "pri": 5,
-     "target": "sec-prompt",
-     "act": {
-      "battle": "notown"
-     },
-     "params": {
-      "engine": "gemini",
-      "wins": 0,
-      "total": 1,
-      "other": "chatgpt",
-      "diff": 1
-     }
-    }
-   ],
    "defaultCompare": [
     "Toyota"
    ],
@@ -811,6 +695,12 @@
       0
      ],
      "top1Count": [
+      0
+     ],
+     "brand": [
+      0
+     ],
+     "model": [
       0
      ]
     }

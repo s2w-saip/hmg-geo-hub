@@ -65,6 +65,8 @@ export function AcrBattle() {
   const rows = grid.views[battle].map((i) => grid.rows[i]);
   const shown = more ? rows : rows.slice(0, grid.visible);
   const total = grid.total;
+  // the rival topping every engine in the most prompts (it was the round summary's one value of its own, 2026-11-05)
+  const sweep = view.sweeps[0];
   const cols = { gridTemplateColumns: `minmax(0,1fr) repeat(${engines.length}, minmax(112px, 150px))` };
   const csv = () => ({
     name: "acr-prompt-engine",
@@ -77,9 +79,15 @@ export function AcrBattle() {
         info={
           <RnInfoTip label={t("infoLabel")}>
             <RnInfoTipItem label={t("infoLabel")}>{t("info")}</RnInfoTipItem>
+            {sweep ? <RnInfoTipItem label={t("sweepLabel")}>{t("sweepInfo")}</RnInfoTipItem> : null}
           </RnInfoTip>
         }
-        chips={<RnBasisChip>{t("chip", { prompts: grid.count, measured: totals.prompts, engines: engines.length })}</RnBasisChip>}
+        chips={
+          <>
+            <RnBasisChip>{t("chip", { prompts: grid.count, measured: totals.prompts, engines: engines.length })}</RnBasisChip>
+            {sweep ? <RnBasisChip>{t("sweepChip", { rival: sweep.brand, count: sweep.count })}</RnBasisChip> : null}
+          </>
+        }
         controls={
           <RnSegmented
             label={t("viewLabel")}
@@ -223,6 +231,8 @@ export function AcrModels() {
               { value: "conversionRate", label: t("colRate") },
               { value: "shortlistCount", label: t("colShortlist") },
               { value: "top1Count", label: t("colTop1") },
+              { value: "brand", label: t("colBrand") },
+              { value: "model", label: t("colModel") },
             ]}
           />
         }

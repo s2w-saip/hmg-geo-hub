@@ -31,7 +31,7 @@ export interface AcrCtx {
   toggleTable: (id: string) => void;
   engineLabel: (engine: string) => string;
   countryLabel: (code: string | null) => string;
-  /** 엔진·프롬프트 view (a finding can switch it before jumping) */
+  /** 엔진·프롬프트 view */
   battle: "all" | "notown" | "split";
   setBattle: (v: "all" | "notown" | "split") => void;
   /** 선택 분포 sheet (country|engine), null = the first */

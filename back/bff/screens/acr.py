@@ -6,16 +6,15 @@ Ports, with the front's rules unchanged:
 - (dash)/standard/ai-funnel/_data/acr-card.ts acrCardRow and the AcrLiveView computations
   (acr-live-view.tsx: language axis rule, trend rows, brand colours, table orders, battle pivot and
   top 30, territory legend and per-row choice counts)
-- (renewal)/renewal/standard/ai-funnel/acr: acr-model.ts acrView / acrFindings / sortBrandRows,
+- (renewal)/renewal/standard/ai-funnel/acr: acr-model.ts acrView / sortBrandRows,
   the derived values of acr-body.tsx and acr-detail.tsx
-  (gap, standing count, board orders and bar scale, map dots, battle views, engine segments
-  base, model orders and scale, distribution sheets: own picks, orders, present brands, CSV pivot)
-  and the page-level period / filtered / 당사 label.
+  (gap, standing count, board orders and bar scale, battle views, engine segments base, the
+  prompts a rival tops on every engine, model orders and scale, distribution sheets: own picks,
+  orders, present brands, CSV pivot) and the page-level period / filtered / 당사 label.
 
 JS semantics kept on purpose: `null + n` is n (null choice / valid_acr count as 0), `x || 1`
 guards, Object.keys order for brand keys (array-index names first), the territory's first entry is
-its dominant brand in API order, float sums in array order (no compensated summation).
-Findings are codes + params only; the front turns them into text."""
+its dominant brand in API order, float sums in array order (no compensated summation)."""
 from __future__ import annotations
 
 import asyncio
@@ -27,7 +26,7 @@ from bff import api
 from bff.access import reader_scope
 from bff.hub_stores import service_week
 from bff.screens import screen, split_context
-from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, whole_suppression
+from bff.screens._convert import as_of_date, delta1, filter_notices, pct1_or_null, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters, to_catalog_rows
 from bff.screens._js import is_num, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
@@ -419,8 +418,8 @@ def _last_two(vs: list) -> float | None:
 
 
 def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
-    """acr-model.ts acrView (findings included). 당사 (its brands, trend and standing) is the reader's own total:
-    every own brand, not the own brands among the top series (2026-10-29 metric review R1)."""
+    """acr-model.ts acrView. 당사 (its brands, trend and standing) is the reader's own total: every own brand, not the
+    own brands among the top series (2026-10-29 metric review R1)."""
     own_brands = list(data.get("ownBrands") or [])
     series_keys = trend_brands(data)
     series_set = set(series_keys)
@@ -458,6 +457,8 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
                 own_wins += 1
         engine_wins.append({"engine": engine, "ownWins": own_wins, "noneWins": by_brand.get(None, 0),
                             "byBrand": [{"brand": b, "count": n} for b, n in by_brand.items()]})
+    # the prompts one rival tops on every engine (당사 tops none of them), most first: the 엔진·프롬프트 card's chip names
+    # the first (2026-11-05 Global 지표 정리: it was the round summary's 'sweep' finding, the one value only it showed)
     sweep_count: dict[str, int] = {}
     if len(engines) > 1:
         for r in data["battle"]:
@@ -466,109 +467,10 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
                 sweep_count[ws[0]] = sweep_count.get(ws[0], 0) + 1
     sweeps = sort_by([{"brand": b, "count": n} for b, n in sweep_count.items()],
                      lambda a, b: _cmp_num(b["count"] - a["count"]) or locale_compare(a["brand"], b["brand"]))
-    view = {"own": own, "ownBrands": own_brands, "brands": brands, "dates": dates, "ownTrend": own_trend, "ownDelta": own_delta,
+    return {"own": own, "ownBrands": own_brands, "brands": brands, "dates": dates, "ownTrend": own_trend, "ownDelta": own_delta,
             "rivals": rivals, "showDelta": show_delta, "rank": standing["rank"], "standingN": standing["of"],
             "leader": comps[0] if comps else None,
             "engines": engines, "engineWins": engine_wins, "sweeps": sweeps}
-    view["findings"] = acr_findings(data, view)
-    return view
-
-
-#: The round summary's findings in one fixed order — 당사's standing, an own brand against the rival shortlisted most
-#: alike, 당사 by engine, a rival topping every engine, 당사's models, the prompts 당사 was never picked in, then the
-#: brand that moved most — the first FINDINGS_MAX that have a value. No threshold or HUB priority decides which show
-#: or their tone, which follows 당사's direction only: a competitor's fact is info (2026-10-31 renewal audit 11-1, the
-#: rule W6 gave Mention · Citation · Conversion on 2026-10-30).
-FINDING_ORDER = {"standing": 7, "leak": 6, "engine": 5, "sweep": 4, "model": 3, "dist": 2, "mover": 1}
-FINDINGS_MAX = 4
-
-
-def _closest_rival(a: dict, rivals: list[dict]) -> dict:
-    """The rival whose 후보군 포함율 is closest to `a`'s (exact values), the first in table order on a tie."""
-    best = rivals[0]
-    for c in rivals[1:]:
-        if abs(exact(a["coverage"]) - exact(c["coverage"])) < abs(exact(a["coverage"]) - exact(best["coverage"])):
-            best = c
-    return best
-
-
-def acr_findings(data: dict, v: dict) -> list[dict]:
-    """acr-model.ts acrFindings: the page's numbers restated in FINDING_ORDER, the first FINDINGS_MAX with a value."""
-    out: list[dict] = []
-    o = v["own"]
-    lead = v["leader"]
-    if o is not None and o.get("choiceShare") is not None and lead is not None and lead.get("choiceShare") is not None:
-        gap = delta1(o["choiceShare"], lead["choiceShare"])
-        first = gap >= 0
-        lead_row = next((b for b in v["brands"] if b["brand"] == lead["brand"]), None)
-        gap_move = (delta1(v["ownDelta"], lead_row["d"])
-                    if v["ownDelta"] is not None and lead_row is not None and lead_row["d"] is not None else None)
-        out.append({"kind": "standing", "tone": "good" if first else "warn", "pri": FINDING_ORDER["standing"], "target": "sec-comp",
-                    "brand": lead["brand"],
-                    "params": {"rival": lead["brand"], "gap": abs(gap), "first": 1 if first else 0,
-                               "move": "" if gap_move is None else abs(gap_move),
-                               # a change shown as 0.0 is no change (W6; renewal audit 15: it read widened or narrowed)
-                               "widened": "" if gap_move is None else "same" if gap_move == 0 else (1 if (gap_move > 0) == first else 0),
-                               "own": o["choiceShare"], "rivalShare": lead["choiceShare"]}})
-    # an own brand against the rival whose 후보군 포함율 is closest to its own, the own brand with the smallest Top1 ACR
-    # difference (the largest trail, else the smallest lead; the first in table order on a tie): 'shortlisted alike'
-    # was a cut-off (6pp apart, then −0.5pp), the closest rival is a fact
-    def valued(b: dict) -> bool:
-        return b["coverage"] is not None and b["choiceShare"] is not None
-    rivals = [b for b in data["brands"] if not b["isOurs"] and valued(b)]
-    leak = None
-    for a in (b for b in data["brands"] if b["isOurs"] and valued(b)) if rivals else ():
-        c = _closest_rival(a, rivals)
-        dt = delta1(a["choiceShare"], c["choiceShare"])
-        if leak is None or dt < leak[2]:
-            leak = (a, c, dt)
-    if leak is not None:
-        a, c, dt = leak
-        out.append({"kind": "leak", "tone": "info" if dt == 0 else "warn" if dt < 0 else "good", "pri": FINDING_ORDER["leak"],
-                    "target": "sec-comp", "brand": c["brand"],
-                    "params": {"own": a["brand"], "rival": c["brand"], "gap": abs(dt), "dir": "same" if dt == 0 else "less" if dt < 0 else "more",
-                               "ownCov": a["coverage"], "rivalCov": c["coverage"], "ownTop1": a["choiceShare"], "rivalTop1": c["choiceShare"]}})
-    if len(v["engineWins"]) > 1:
-        # 당사's prompts on the engine it tops fewest against the one it tops most (diff 0: the same on every engine)
-        w = sort_by(list(v["engineWins"]), lambda a, b: _cmp_num(a["ownWins"] - b["ownWins"]))
-        lo, hi = w[0], w[-1]
-        out.append({"kind": "engine", "tone": "info", "pri": FINDING_ORDER["engine"], "target": "sec-prompt", "act": {"battle": "notown"},
-                    "params": {"engine": lo["engine"], "wins": lo["ownWins"], "total": len(data["battle"]), "other": hi["engine"],
-                               "diff": hi["ownWins"] - lo["ownWins"]}})
-    sw = v["sweeps"][0] if v["sweeps"] else None
-    if sw is not None:
-        out.append({"kind": "sweep", "tone": "info", "pri": FINDING_ORDER["sweep"], "target": "sec-prompt", "brand": sw["brand"], "act": {"battle": "notown"},
-                    "params": {"rival": sw["brand"], "count": sw["count"]}})
-    om = sort_by([m for m in data["modelConversion"] if m["isOurs"] and m["conversionRate"] is not None],
-                 lambda a, b: _cmp_num(b["conversionRate"] - a["conversionRate"]))
-    if len(om) >= 2:
-        best, worst = om[0], om[-1]
-        f = {"kind": "model", "tone": "info", "pri": FINDING_ORDER["model"], "target": "sec-model",
-             "params": {"model": best["model"], "rate": best["conversionRate"], "worst": worst["model"], "worstRate": worst["conversionRate"]}}
-        if best["brand"] is not None:
-            f["brand"] = best["brand"]
-        out.append(f)
-    sheet = data["territory"][0] if data["territory"] else None
-    if sheet is not None:
-        # prompts of the sheet in which 당사 was never picked, of its prompts (a prompt can hold several cells;
-        # 2026-10-29 metric review R5: rows without a 당사 entry, of the cells — 7 of 80 for 43 of 65)
-        own_picks: dict[Any, float] = {}
-        for r in sheet["rows"]:
-            own_picks[r["promptId"]] = _n(own_picks.get(r["promptId"])) + _sum(_n(e["choice"]) for e in r["entries"] if e["isOurs"])
-        zero = len([p for p, n in own_picks.items() if n == 0])
-        if zero > 0:
-            region = "" if sheet["region"] is None else sheet["region"]
-            out.append({"kind": "dist", "tone": "info", "pri": FINDING_ORDER["dist"], "target": "sec-dist",
-                        "act": {"sheet": sheet_key(sheet["region"], sheet["engine"])},
-                        "params": {"region": region, "engine": sheet["engine"], "zero": zero, "rows": len(own_picks)}})
-    movers = sort_by([b for b in v["brands"] if b["d"] is not None], lambda a, b: _cmp_num(abs(b["d"]) - abs(a["d"])))
-    mover = movers[0] if movers else None
-    # a move shown as 0.0 is no move (rounding, not a threshold); a competitor's move is neither good nor bad
-    if mover is not None and mover["d"] != 0:
-        tone = ("good" if mover["d"] > 0 else "warn") if mover["isOurs"] else "info"
-        out.append({"kind": "mover", "tone": tone, "pri": FINDING_ORDER["mover"], "target": "sec-overview", "brand": mover["brand"],
-                    "params": {"brand": mover["brand"], "d": mover["d"], "ownD": "" if v["ownDelta"] is None else v["ownDelta"]}})
-    return sort_by(out, lambda a, b: _cmp_num(b["pri"] - a["pri"]))[:FINDINGS_MAX]
 
 
 def sort_brand_rows(rows: list[dict], key: str) -> list[int]:
@@ -618,7 +520,9 @@ def _battle(data: dict, engines: list[str]) -> dict:
 
 
 def _models(data: dict) -> dict:
-    """acr-detail.tsx AcrModels: rank, the three sort orders, the bar scale, own / sibling marks."""
+    """acr-detail.tsx AcrModels: rank, the sort orders, the bar scale, own / sibling marks. The metrics descending (nulls
+    last), the brand and the model ascending (localeCompare, the original table's name sorts: 2026-11-05 Global 지표
+    정리; a model without a parent brand first, as it was there), ties by rank."""
     rows = data["modelConversion"]
     rates = [_n(r["conversionRate"]) for r in rows]
     mx = 1
@@ -637,7 +541,12 @@ def _models(data: dict) -> dict:
             return -1 if out[i][key] is None else out[i][key]
         return sort_by(list(range(len(out))), lambda i, j: _cmp_num(val(j) - val(i)) or _cmp_num(out[i]["rank"] - out[j]["rank"]))
 
-    return {"rows": out, "orders": {k: order(k) for k in ("conversionRate", "shortlistCount", "top1Count")}}
+    def by_name(name) -> list[int]:
+        return sort_by(list(range(len(out))), lambda i, j: locale_compare(name(out[i]), name(out[j])) or _cmp_num(out[i]["rank"] - out[j]["rank"]))
+
+    return {"rows": out, "orders": {**{k: order(k) for k in ("conversionRate", "shortlistCount", "top1Count")},
+                                    "brand": by_name(lambda r: "" if r["brand"] is None else r["brand"]),
+                                    "model": by_name(lambda r: r["model"])}}
 
 
 def _shares(counts: dict, n: int) -> dict:
@@ -787,12 +696,9 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
     max_t1 = max_t1 or 1
     for b in v["brands"]:
         is_own = b["brand"] in own_brands
-        # the map's dot: the brand's two Gold values. The 'brand average line' through it (k = ΣTop1 ACR ÷ Σ후보군 포함율
-        # of the brands shown) and each brand's distance to it were a baseline the HUB made (2026-10-31 ⛔L, renewal audit 15)
         b.update({"own": is_own, "sibling": _sibling(b, is_own),
                   "canCompare": (not is_own) and b["brand"] in v["rivals"],
-                  "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100,
-                  "mapX": _n(b["coverage"]), "mapY": _n(b["choiceShare"])})
+                  "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100})
     gap = None
     if o is not None and o.get("choiceShare") is not None and lead is not None and lead.get("choiceShare") is not None:
         gap = delta1(o["choiceShare"], lead["choiceShare"])

@@ -171,6 +171,7 @@ export function AcrDuels() {
   if (!d) return null;
   const rows = d.views[engine] ?? d.views.all;
   const keys = rows.map((r) => r.brand);
+  // the sample: the chip and the ⓘ (the page's cells and repetitions are its footer's, 2026-11-05 Global 지표 정리)
   const sample = t("sample", { valid: totals.iterations.toLocaleString(), iterations: d.sample.iterations.toLocaleString(), cells: d.sample.cells.toLocaleString() });
   const part = (r: (typeof rows)[number], p: AcrDuelPart) => countTxt(r.counts[p], r.shares[p]);
   const csv = () => ({
@@ -255,7 +256,6 @@ export function AcrDuels() {
           <RnEmpty className="m-4">{t("empty")}</RnEmpty>
         )}
       </div>
-      <p className="m-0 border-t border-rn-line px-6 py-3 text-rn-12 break-keep text-rn-muted [.rn-dense_&]:px-4.5">{sample}</p>
     </RnCard>
   );
 }

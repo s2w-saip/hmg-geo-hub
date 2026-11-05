@@ -108,9 +108,9 @@ class Acr(unittest.TestCase):
         # 당사 12.361 · Toyota 17.741: 12.4 − 17.7 = −5.3; exact −5.38 → −5.4
         v = self.view()
         self.assertEqual(v["gap"], -5.4)
-        self.assertEqual(next(f for f in v["findings"] if f["kind"] == "standing")["params"]["gap"], 5.4)
 
-    # the map's average line (k) and the distance to it (dev) are gone (2026-10-31 ⛔L, renewal audit 15)
+    # the map's average line (k) and the distance to it (dev) are gone (2026-10-31 ⛔L, renewal audit 15), and the map
+    # and the summary's standing finding with them (2026-11-05 Global 지표 정리)
 
 
 if __name__ == "__main__":

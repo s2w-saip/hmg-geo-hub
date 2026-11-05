@@ -15,12 +15,10 @@ import {
   RnControlBar,
   RnDeltaChip,
   RnEmpty,
-  RnFindingGrid,
   RnHighlightProvider,
   RnInfoTip,
   RnInfoTipItem,
   RnLineChart,
-  RnScatterChart,
   RnSectionHead,
   RnSegmented,
   RnSparkline,
@@ -31,10 +29,9 @@ import {
   useRnHighlight,
   useRnHighlightKey,
   useRnToast,
-  type RnFinding,
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
-import type { AcrFinding, RnAcrInput, RnAcrView } from "../_data/screen-types";
+import type { RnAcrInput, RnAcrView } from "../_data/screen-types";
 import { AcrCardActions, AcrProvider, COMPARE_COLORS, CONTEXT_COLOR, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
 import { AcrConversion, AcrDuels } from "./acr-funnel";
@@ -135,12 +132,10 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
         <RnControlBar label={t("bar.label")}>
           <ComparePicker pick={pick} setPick={setPick} />
         </RnControlBar>
-        <AcrFindings period={input.period} asOf={input.asOf} />
         <RnSectionHead id="sec-overview" title={t("sec.overview")} desc={t("sec.overviewDesc")} />
         <AcrHero period={input.period} roundBuckets={input.roundBuckets} />
         <RnSectionHead id="sec-comp" title={t("sec.comp")} desc={t("sec.compDesc")} />
         <AcrBoard />
-        <AcrMap />
         <AcrConversion />
         <AcrDuels />
         <RnSectionHead id="sec-prompt" title={t("sec.prompt")} desc={t("sec.promptDesc")} />
@@ -149,6 +144,7 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
         <AcrModels />
         <RnSectionHead id="sec-dist" title={t("sec.dist")} desc={t("sec.distDesc")} />
         <AcrDistribution />
+        {/* the page's one place for the cells and repetitions measured (the hero and the duel card repeated them) */}
         <p className="m-0 px-1 text-rn-11 text-rn-muted">
           {t(input.period ? "foot.period" : "foot.snapshot", { date: input.asOf ?? "—", prompts: T.prompts, cells: T.promptRuns.toLocaleString(locale), iterations: T.iterations.toLocaleString(locale) })}
         </p>
@@ -224,112 +220,15 @@ function ComparePicker({ pick, setPick }: { pick: { auto: boolean; brands: strin
   );
 }
 
-// ── 이번 회차 요약 ─────────────────────────────────────────────────────────────
-
-function AcrFindings({ period, asOf }: { period: boolean; asOf: string | null }) {
-  const { view, totals, ownLabel, engineLabel, countryLabel } = useAcr();
-  const t = useTranslations("renewal.acr");
-  const o = view.own;
-  // read-only findings (no jump to the card)
-  const items: RnFinding[] = view.findings.map((f, i) => findingCopy(f, i, t, { engineLabel, countryLabel, measured: totals.prompts }));
-  return (
-    <RnCard id="sec-summary" aria-label={t(period ? "summary.titlePeriod" : "summary.title")} tone="hero" className="pb-[18px] [.rn-dense_&]:pb-3">
-      <RnCardHead
-        title={t(period ? "summary.titlePeriod" : "summary.title")}
-        info={
-          <RnInfoTip label={t("summary.howLabel")}>
-            <RnInfoTipItem label={t("summary.howLabel")}>{t("summary.how")}</RnInfoTipItem>
-          </RnInfoTip>
-        }
-        chips={<RnBasisChip>{period ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: asOf ?? "—" })}</RnBasisChip>}
-      />
-      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-rn-on-dark/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-rn-on-dark">
-        {t.rich("summary.headline", {
-          b: (c) => <b>{c}</b>,
-          own: ownLabel,
-          rank: view.rank ?? "—",
-          share: pctTxt(o?.choiceShare),
-          delta: view.ownDelta != null ? ` (${deltaTxt(view.ownDelta)})` : "",
-          coverage: pctTxt(o?.coverage),
-          count: (o?.choiceCount ?? 0).toLocaleString(),
-          prompts: totals.prompts,
-          engines: view.engines.length,
-        })}
-      </p>
-      {items.length ? <RnFindingGrid items={items} /> : null}
-    </RnCard>
-  );
-}
-
-type Tr = ReturnType<typeof useTranslations<"renewal.acr">>;
-function findingCopy(
-  f: AcrFinding,
-  i: number,
-  t: Tr,
-  h: { engineLabel: (e: string) => string; countryLabel: (c: string | null) => string; measured: number },
-): RnFinding {
-  const p = f.params;
-  const num = (v: string | number) => (typeof v === "number" ? v.toFixed(1) : v);
-  let title = "";
-  let detail = "";
-  switch (f.kind) {
-    case "standing":
-      title = t(p.first ? "find.standing.titleFirst" : "find.standing.titleBehind", { rival: String(p.rival), gap: num(p.gap) });
-      // a gap change shown as 0.0 is no change (W6, renewal audit 15)
-      detail =
-        p.move === ""
-          ? t("find.standing.detail", { own: num(p.own), rival: String(p.rival), rivalShare: num(p.rivalShare) })
-          : p.widened === "same"
-            ? t("find.standing.detailSame")
-            : t(p.widened ? "find.standing.detailWidened" : "find.standing.detailNarrowed", { move: num(p.move) });
-      break;
-    case "leak":
-      // the rival with the closest 후보군 포함율 and the Top1 ACR difference, either way (renewal audit 11-1)
-      title = t(p.dir === "same" ? "find.leak.titleSame" : p.dir === "more" ? "find.leak.titleMore" : "find.leak.titleLess", { own: String(p.own), rival: String(p.rival), gap: num(p.gap) });
-      detail = t("find.leak.detail", { ownCov: num(p.ownCov), rivalCov: num(p.rivalCov), ownTop1: num(p.ownTop1), rivalTop1: num(p.rivalTop1) });
-      break;
-    case "engine":
-      title =
-        p.diff === 0
-          ? t("find.engine.titleSame", { wins: p.wins, total: p.total })
-          : t("find.engine.title", { engine: h.engineLabel(String(p.engine)), wins: p.wins, total: p.total, other: h.engineLabel(String(p.other)), diff: p.diff });
-      detail = t("find.engine.detail", { total: p.total, measured: h.measured });
-      break;
-    case "sweep":
-      title = t("find.sweep.title", { rival: String(p.rival), count: p.count });
-      detail = t("find.sweep.detail");
-      break;
-    case "model":
-      title = t("find.model.title", { model: String(p.model), rate: num(p.rate) });
-      detail = t("find.model.detail", { worst: String(p.worst), worstRate: num(p.worstRate) });
-      break;
-    case "mover":
-      title = t("find.mover.title", { brand: String(p.brand), delta: deltaTxt(Number(p.d)) });
-      detail = t("find.mover.detail");
-      break;
-    case "dist":
-      title = t("find.dist.title", { sheet: `${h.countryLabel(String(p.region) || null)} · ${h.engineLabel(String(p.engine))}`, zero: p.zero });
-      detail = t("find.dist.detail", { rows: p.rows });
-      break;
-  }
-  return {
-    key: `${f.kind}-${i}`,
-    tone: f.tone,
-    tag: t(`find.${f.kind}.tag` as "find.leak.tag"),
-    title,
-    detail,
-  };
-}
-
 // ── 개요: Top1 ACR (당사 합계) + trend ────────────────────────────────────────
 
+type Tr = ReturnType<typeof useTranslations<"renewal.acr">>;
 const DELTA_LABELS = (t: Tr) => ({ up: t("delta.up"), down: t("delta.down"), flat: t("delta.flat") });
 
 function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: boolean }) {
-  const { view, totals, ownLabel, compare, colorOf, lit, hover, tables } = useAcr();
+  const { view, ownLabel, compare, colorOf, lit, hover, tables } = useAcr();
   const t = useTranslations("renewal.acr");
   const tDef = useTranslations("aiFunnelView.acr.def");
-  const locale = useLocale();
   const o = view.own;
   const lead = view.leader;
   const gap = view.gap;
@@ -371,11 +270,9 @@ function AcrHero({ period, roundBuckets }: { period: boolean; roundBuckets: bool
               </span>
             </div>
           ) : null}
+          {/* 1순위 선택 is the board's 최종 선택 (당사 row: tooltip, table view, CSV); the cells and repetitions are the footer's */}
           <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
             <Stat label={<>{t("hero.coverage")} <CoverageTip /></>} value={pctTxt(o?.coverage)} />
-            <Stat label={t("hero.choices")} value={t("hero.times", { n: (o?.choiceCount ?? 0).toLocaleString(locale) })} />
-            <Stat label={t("hero.cells")} value={t("hero.count", { n: totals.promptRuns.toLocaleString(locale) })} />
-            <Stat label={t("hero.iterations")} value={t("hero.times", { n: totals.iterations.toLocaleString(locale) })} />
           </dl>
           {view.ownBrands.length > 1 ? (
             <div className="flex flex-wrap gap-1.5">
@@ -502,22 +399,33 @@ function AcrBoard() {
   const rows = view.boardOrders[sort].map((i) => view.brands[i]);
   const o = view.own;
   const multiOwn = view.multiOwn;
+  // 당사's own row: the total of several own brands, or the one own brand when the top 12 leave it out — the hero's
+  // 1순위 선택 lives here (2026-11-05 Global 지표 정리), so 당사 always has a row
+  const ownRow = o && (multiOwn || !view.brands.some((b) => b.own)) ? o : null;
+  const ownName = `${ownLabel} (${t(multiOwn ? "board.ownTotal" : "board.own")})`;
   const tableOn = tables.has("acr-board");
+  // each round's Top1 ACR (the original 선택률 추이's numbers): the spark's points, the table view and the CSV
+  const rounds = view.dates;
+  const perRound = (trend: Array<number | null> | null) => rounds.map((_, i) => trend?.[i] ?? null);
+  const sparkTips = (trend: Array<number | null>) => trend.map((v, i) => (v == null ? null : t("board.sparkTip", { date: rounds[i] ?? "", value: pctTxt(v) })));
   const csv = () => ({
     name: "acr-brands",
     rows: [
-      [t("board.colBrand"), t("board.colTop1"), t("board.colCoverage"), t("board.colDelta"), t("board.colChoices"), t("board.colMentions")],
-      ...(multiOwn && o ? [[`${ownLabel} (${t("board.ownTotal")})`, o.choiceShare, o.coverage, view.ownDelta, o.choiceCount, null]] : []),
-      ...rows.map((r) => [r.brand, r.choiceShare, r.coverage, r.d, r.choiceCount, r.appearanceCount]),
+      [t("board.colBrand"), t("board.colTop1"), t("board.colCoverage"), t("board.colDelta"), t("board.colChoices"), t("board.colMentions"), ...rounds.map((d) => t("board.colRound", { date: d }))],
+      ...(ownRow ? [[ownName, ownRow.choiceShare, ownRow.coverage, view.ownDelta, ownRow.choiceCount, null, ...perRound(view.ownTrend)]] : []),
+      ...rows.map((r) => [r.brand, r.choiceShare, r.coverage, r.d, r.choiceCount, r.appearanceCount, ...perRound(r.trend)]),
     ],
   });
+  /** the table view: CSV columns 1–2 and the rounds are shares, 3 the Δ, 4–5 counts; the rounds headed M/D */
+  const tableCell = (c: string | number | null, i: number) => (i === 0 ? c : typeof c === "number" ? (i === 3 ? deltaTxt(c) : i === 4 || i === 5 ? c.toLocaleString() : pctTxt(c)) : c == null ? "—" : c);
+  const tableHead = () => csv().rows[0].map((h, i) => (i < 6 ? h : t("board.colRound", { date: `${+rounds[i - 6].slice(5, 7)}/${+rounds[i - 6].slice(8, 10)}` })));
   const keys = ["__own", ...view.brands.map((b) => b.brand)];
   const row = (r: { key: string; name: string; rank: number | null; top1: number | null; bar: number; cov: number | null; trend: Array<number | null> | null; d: number | null; own: boolean; sibling: boolean; canCompare: boolean; total: boolean; tip: string }) => {
     const on = compare.includes(r.key);
     const color = r.own ? OWN_COLOR : on ? colorOf(r.key) : CONTEXT_COLOR;
-    const canCompare = r.canCompare;
     const st = rnHighlightState(lit, [r.key], keys);
-    const cells = (
+    const tip = r.tip + (r.own || r.canCompare ? "" : `\n${t("board.noCompare")}`);
+    const lead = (
       <>
         <span className="text-rn-12 text-rn-muted tabular-nums">{r.rank ?? ""}</span>
         <span className="flex min-w-0 items-center gap-2">
@@ -529,7 +437,10 @@ function AcrBoard() {
           <i className="block h-full rounded" style={{ width: `${r.bar}%`, background: color }} />
         </span>
         <span className="text-right text-rn-13 font-bold text-rn-ink tabular-nums">{pctTxt(r.top1)}</span>
-        <span className="@max-[680px]/rnpage:hidden">{r.trend ? <RnSparkline values={r.trend} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
+      </>
+    );
+    const rest = (
+      <>
         <span className="justify-self-end">
           {r.trend && view.showDelta ? (
             <RnDeltaChip delta={r.d} neutral={!r.own} format={(v) => `${Math.abs(v).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} />
@@ -545,19 +456,39 @@ function AcrBoard() {
         <span className="text-right text-rn-12 text-rn-ink-2 tabular-nums">{pctTxt(r.cov)}</span>
       </>
     );
-    const cls = cx(
-      "grid min-h-11 w-full items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
-      BOARD_COLS,
-      r.own && (r.total || !multiOwn) && st !== "on" && "bg-rn-navy-25/50",
-      st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
-    );
-    return canCompare ? (
-      <button key={r.key} type="button" data-rn-b={r.key} data-rn-top1={r.top1 ?? ""} data-rn-cov={r.cov ?? ""} aria-pressed={on} title={r.tip} onClick={() => toggleCompare(r.key)} onPointerEnter={() => hover(r.key)} onPointerLeave={() => hover(null)} className={cx(cls, "cursor-pointer hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy")}>
-        {cells}
-      </button>
-    ) : (
-      <div key={r.key} data-rn-b={r.key} data-rn-top1={r.top1 ?? ""} data-rn-cov={r.cov ?? ""} title={r.tip + (r.own ? "" : `\n${t("board.noCompare")}`)} onPointerEnter={() => hover(r.key)} onPointerLeave={() => hover(null)} className={cls}>
-        {cells}
+    const part = "grid grid-cols-subgrid items-center self-stretch text-left";
+    // the compare toggle spans the values; the trend line between them has its own points (a focusable point inside a
+    // button is not reachable), so the row takes the click and the button the keyboard (its click reaches the row)
+    return (
+      <div
+        key={r.key}
+        data-rn-b={r.key}
+        data-rn-top1={r.top1 ?? ""}
+        data-rn-cov={r.cov ?? ""}
+        onClick={r.canCompare ? () => toggleCompare(r.key) : undefined}
+        onPointerEnter={() => hover(r.key)}
+        onPointerLeave={() => hover(null)}
+        className={cx(
+          "grid min-h-11 w-full items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
+          BOARD_COLS,
+          r.canCompare && "cursor-pointer hover:bg-rn-navy-25",
+          r.own && (r.total || !multiOwn) && st !== "on" && "bg-rn-navy-25/50",
+          st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
+        )}
+      >
+        {r.canCompare ? (
+          <button type="button" aria-pressed={on} title={tip} className={cx(part, "col-span-4 cursor-pointer rounded-[3px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy")}>
+            {lead}
+          </button>
+        ) : (
+          <span title={tip} className={cx(part, "col-span-4")}>
+            {lead}
+          </span>
+        )}
+        <span className="@max-[680px]/rnpage:hidden">{r.trend ? <RnSparkline values={r.trend} tips={sparkTips(r.trend)} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
+        <span title={tip} className={cx(part, "col-span-3")}>
+          {rest}
+        </span>
       </div>
     );
   };
@@ -591,7 +522,7 @@ function AcrBoard() {
       />
       {tableOn ? (
         <div className="px-6 pb-4">
-          <TwinTable head={csv().rows[0]} rows={csv().rows.slice(1).map((r) => r.map((c, i) => (i === 0 ? c : typeof c === "number" ? (i === 3 ? deltaTxt(c) : i >= 4 ? c.toLocaleString() : pctTxt(c)) : c == null ? "—" : c)))} />
+          <TwinTable head={tableHead()} rows={csv().rows.slice(1).map((r) => r.map(tableCell))} />
         </div>
       ) : (
         <>
@@ -615,8 +546,8 @@ function AcrBoard() {
             <span />
           </div>
           <div>
-            {multiOwn && o
-              ? row({ key: "__own", name: ownLabel, rank: null, top1: o.choiceShare, bar: view.ownTop1Bar ?? 0, cov: o.coverage, trend: view.ownTrend, d: view.ownDelta, own: true, sibling: false, canCompare: false, total: true, tip: `${ownLabel} — ${t("board.ownTip", { top1: pctTxt(o.choiceShare), coverage: pctTxt(o.coverage), choices: o.choiceCount.toLocaleString() })}` })
+            {ownRow
+              ? row({ key: "__own", name: ownLabel, rank: null, top1: ownRow.choiceShare, bar: view.ownTop1Bar ?? 0, cov: ownRow.coverage, trend: view.ownTrend, d: view.ownDelta, own: true, sibling: false, canCompare: false, total: multiOwn, tip: `${ownLabel} — ${t("board.ownTip", { top1: pctTxt(ownRow.choiceShare), coverage: pctTxt(ownRow.coverage), choices: ownRow.choiceCount.toLocaleString() })}` })
               : null}
             {rows.map((r) =>
               row({
@@ -638,55 +569,6 @@ function AcrBoard() {
           </div>
         </>
       )}
-    </RnCard>
-  );
-}
-
-// ── 후보 → 최종 선택 (each brand's two values as a dot; the brand average line was a HUB-made baseline, ⛔L) ──
-
-function AcrMap() {
-  const { view, compare, colorOf, lit, hover, tables } = useAcr();
-  const t = useTranslations("renewal.acr");
-  const points = view.brands.map((b) => ({
-    key: b.brand,
-    name: b.brand,
-    x: b.mapX,
-    y: b.mapY,
-    color: colorOf(b.brand),
-    own: b.own,
-    emph: b.own || compare.includes(b.brand),
-    tip: t("map.tip", { brand: b.brand, x: pctTxt(b.coverage), y: pctTxt(b.choiceShare) }),
-  }));
-  const tableOn = tables.has("acr-map");
-  const csv = () => ({ name: "acr-shortlist-pick", rows: [[t("board.colBrand"), t("board.colCoverage"), t("board.colTop1")], ...points.map((p) => [p.name, p.x, p.y])] });
-  return (
-    <RnCard aria-label={t("map.title")}>
-      <RnCardHead
-        title={t("map.title")}
-        info={
-          <RnInfoTip label={t("map.infoLabel")}>
-            <RnInfoTipItem label={t("map.infoLabel")}>{t("map.info")}</RnInfoTipItem>
-          </RnInfoTip>
-        }
-        chips={<RnBasisChip>{t("map.chip", { n: points.length })}</RnBasisChip>}
-        actions={<AcrCardActions tableId="acr-map" section="sec-comp" csv={csv} />}
-      />
-      <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
-        {tableOn ? (
-          <TwinTable head={csv().rows[0]} rows={points.map((p) => [p.name, pctTxt(p.x), pctTxt(p.y)])} />
-        ) : (
-          <RnScatterChart
-            points={points}
-            height={320}
-            ariaLabel={t("map.aria")}
-            xTitle={t("map.x")}
-            yTitle={t("map.y")}
-            pct={(v) => `${v.toFixed(1)}%`}
-            lit={lit}
-            onHover={hover}
-          />
-        )}
-      </div>
     </RnCard>
   );
 }
