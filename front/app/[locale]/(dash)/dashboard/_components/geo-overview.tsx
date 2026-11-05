@@ -71,6 +71,17 @@ export function toggleSingleCountry(picked: Set<string>, countries: { code: stri
   return next.size === 0 ? new Set([NONE_SENTINEL]) : next;
 }
 
+/** 리뉴얼(권역이 닫힌 채로 시작): 국가 메뉴에서 새로 고른 나라의 권역을 연다. 빈 집합(=전체)에서 시작한 변경과
+ *  해제는 아무 권역도 열지 않는다(전체에서 하나를 빼면 나머지 전부가 '새로 고른' 것처럼 보이므로). */
+export function regionsOpenedByPick(open: Set<string>, prev: Set<string>, next: Set<string>, regionOf: Map<string, string>): Set<string> {
+  if (prev.size === 0 || next.size === 0) return open;
+  const added = [...next]
+    .filter((code) => code !== NONE_SENTINEL && !prev.has(code))
+    .map((code) => regionOf.get(code))
+    .filter((region): region is string => region !== undefined && !open.has(region));
+  return added.length ? new Set([...open, ...added]) : open;
+}
+
 /** 권역 헤더의 트라이스테이트(checked/indeterminate/unchecked) — regionCodes 는 그 권역의(검색 필터 적용된) 국가 코드. */
 export function regionCheckState(picked: Set<string>, regionCodes: string[]): boolean | "indeterminate" {
   if (regionCodes.length === 0) return false;
@@ -101,7 +112,8 @@ export function GeoOverview({
   initialCountries?: string[];
   title?: string;
   /** 리뉴얼 Overview(2026-10-28): 리뉴얼 카드 틀·카드 제목 크기(rn 토큰), 위아래 여백을 줄인다.
-   *  2026-11-05: 지도 툴팁 순위 배지는 점유율 지표에서만(GeoMap rankOnShare). */
+   *  2026-11-05: 지도 툴팁 순위 배지는 점유율 지표에서만(GeoMap rankOnShare). 권역은 닫힌 채로 시작하고(사용자),
+   *  지도에서 가리킨 나라와 메뉴에서 새로 고른 나라의 권역만 연다. 원본은 모두 열린 채로 시작한다. */
   renewal?: boolean;
 }) {
   const t = useTranslations("dashboard.overview");
@@ -111,7 +123,7 @@ export function GeoOverview({
   const [metric, setMetric] = useState<OverviewKpiKey>(initialMetric);
   const [picked, setPicked] = useState<Set<string>>(new Set(initialCountries ?? []));
   const [q, setQ] = useState("");
-  const [open, setOpen] = useState<Set<string>>(() => new Set(geo.markets.map((m) => m.region)));
+  const [open, setOpen] = useState<Set<string>>(() => new Set(renewal ? [] : geo.markets.map((m) => m.region)));
   const [activeCountry, setActiveCountry] = useState<string | null>(null);
   const countryListRef = useRef<HTMLDivElement>(null);
   const hoverSource = useRef<"map" | "list">("list");
@@ -131,6 +143,10 @@ export function GeoOverview({
     const region = code ? regionOfCountry.get(code) : undefined;
     if (region !== undefined) setOpen(current => current.has(region) ? current : new Set([...current, region]));
   }, [regionOfCountry]);
+  const pick = (next: Set<string>) => {
+    if (renewal) setOpen((current) => regionsOpenedByPick(current, picked, next, regionOfCountry));
+    setPicked(next);
+  };
   const hoverCountryFromList = useCallback((code: string | null) => {
     hoverSource.current = "list";
     setActiveCountry(code);
@@ -232,7 +248,7 @@ export function GeoOverview({
             {/* QA #9 — 전체가 선택된 상태에서는 "전체 선택"이 아니라 "전체 선택 해제"로
                 읽혀야 하고, 누르면 실제로 전부 해제된다(NONE_SENTINEL). 내부 "빈 집합=전체"
                 의미는 그대로다 — 다시 "전체 선택"을 누르면 빈 집합으로 돌아간다. */}
-            <DropdownMenuItem onSelect={() => setPicked(toggleAllCountries(picked, countries))}>
+            <DropdownMenuItem onSelect={() => pick(toggleAllCountries(picked, countries))}>
               {allChecked ? t("geo.deselectAll") : t("geo.selectAll")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -249,7 +265,7 @@ export function GeoOverview({
                     <DropdownMenuCheckboxItem
                       checked={regionState}
                       onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={(v) => setPicked(toggleRegionCountries(picked, countries, regionCodes, !!v))}
+                      onCheckedChange={(v) => pick(toggleRegionCountries(picked, countries, regionCodes, !!v))}
                       className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase data-[state=checked]:text-brand-700 data-[state=indeterminate]:text-brand-700"
                     >
                       {label(g.region)}
@@ -261,7 +277,7 @@ export function GeoOverview({
                         // (QA #9) — 내부 판정(isCountryChecked)은 개별 해제 후에도 그대로 쓴다.
                         checked={isCountryChecked(picked, c.code)}
                         onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={(v) => setPicked(toggleSingleCountry(picked, countries, c.code, !!v))}
+                        onCheckedChange={(v) => pick(toggleSingleCountry(picked, countries, c.code, !!v))}
                         className="pl-10"
                       >
                         {c.name}

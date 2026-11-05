@@ -23,6 +23,7 @@ import {
   isCountryChecked,
   realPickedCount,
   regionCheckState,
+  regionsOpenedByPick,
   toggleAllCountries,
   toggleRegionCountries,
   toggleSingleCountry,
@@ -220,5 +221,33 @@ describe("GeoOverview country menu logic (11·12)", () => {
     const afterExplicit = toggleAllCountries(explicitAll, COUNTRIES);
     expect(countryMenuAllChecked(afterExplicit, COUNTRIES)).toBe(false);
     expect(realPickedCount(afterExplicit)).toBe(0);
+  });
+});
+
+// 2026-11-05 (사용자 '시장별 현황의 expand는 기본적으로 닫혀있도록'): the renewal table starts with every region closed;
+// the original starts open. A country the menu newly picks opens its region; 'all' and unpicking open none.
+describe("GeoOverview regions on the renewal screen", () => {
+  const countryRow = /<tr[^>]*data-geo-country="DE"/;
+  // the region rows' toggles (the country menu's trigger has its own aria-expanded)
+  const regionStates = (html: string) => [...html.matchAll(/<button type="button" aria-expanded="(true|false)" class="inline-flex items-center gap-1\.5"/g)].map((m) => m[1]);
+  it("start closed on the renewal screen, open on the original", () => {
+    const renewal = render(<GeoOverview geo={geoViewOf(GEO)} renewal />);
+    expect(regionStates(renewal).length).toBeGreaterThan(0);
+    expect(new Set(regionStates(renewal))).toEqual(new Set(["false"]));
+    expect(renewal).not.toMatch(countryRow);
+    const original = render(<GeoOverview geo={geoViewOf(GEO)} />);
+    expect(new Set(regionStates(original))).toEqual(new Set(["true"]));
+    expect(original).toMatch(countryRow);
+  });
+  it("a newly picked country opens its region; all, unpicking and the 'all' start open none", () => {
+    const regionOf = new Map([["DE", "EU"], ["FR", "EU"], ["KR", "KR"], ["CO", ""]]);
+    const none = new Set(["__none__"]);
+    expect([...regionsOpenedByPick(new Set(), none, new Set(["DE"]), regionOf)]).toEqual(["EU"]);
+    expect([...regionsOpenedByPick(new Set(["EU"]), new Set(["DE"]), new Set(["DE", "CO"]), regionOf)]).toEqual(["EU", ""]);
+    // from 'all' (empty) unchecking one leaves the rest picked — none of them is newly picked
+    expect(regionsOpenedByPick(new Set(), new Set(), new Set(["DE", "FR"]), regionOf).size).toBe(0);
+    // back to 'all', or unpicking
+    expect(regionsOpenedByPick(new Set(), new Set(["DE"]), new Set(), regionOf).size).toBe(0);
+    expect(regionsOpenedByPick(new Set(), new Set(["DE", "KR"]), new Set(["DE"]), regionOf).size).toBe(0);
   });
 });
