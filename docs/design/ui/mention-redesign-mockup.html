@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mention 개편안 — 목업</title>
+<style>
+  @font-face {
+    font-family: "Pretendard";
+    src: url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2-variations"),
+         url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2");
+    font-weight: 100 900; font-style: normal; font-display: swap;
+  }
+  /* Global Mention 개편안 (2026-11-05): 지표 탭 넷 + 브랜드 상세를 한 페이지로. 틀(사이드바 · 머리 · 필터 패널 · 조작 바)은
+     리뉴얼 구현과 design-rules.html을 따르고, 색은 서비스 팔레트(Chart - Own · Chart - Other 15색 · System)다.
+     값은 Gold 2026-10-05 회차(로컬 BFF 응답, 엔진별 우호도 · 우선 노출도는 Gold 직접 조회). 설계하는 동안만 쓰고 구현하면 지운다. */
+  :root {
+    --navy: #1e38fa; --navy-900: #111f8a; --navy-ink: #0b1458; --navy-500: #172abc; --navy-300: #6274fc; --navy-50: #d2d7fe; --navy-25: #edefff;
+    --ink: #101012; --ink-2: #222326; --muted: #6c6d70; --faint: #d5d5d6; --line: #e5e6e9; --line-2: #d5d5d6;
+    --page: #f8f8f9; --surface: #ffffff; --inset: #e5e6e9;
+    --up: #3df134; --down: #fa1e2a; --warn: #faf600; --up-ink: #278323; --down-ink: #d01b26; --warn-ink: #77750a;
+    --ctx: #d5d5d6;
+    --font: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    --shadow-card: 0 1px 2px rgba(16,16,18,.04), 0 0 0 1px var(--line);
+    --shadow-bar: 0 1px 2px rgba(16,16,18,.05), 0 0 0 1px var(--line), 0 8px 24px -18px rgba(16,16,18,.35);
+    --shadow-pop: 0 24px 56px -16px rgba(16,16,18,.30), 0 6px 16px rgba(16,16,18,.08);
+    --r-card: 16px; --side-w: 232px; --filter-w: 296px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--page); color: var(--ink); font: 13px/1.5 var(--font); -webkit-font-smoothing: antialiased; word-break: keep-all; overflow: hidden; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i.s14 { width: 14px; height: 14px; } svg.i.s12 { width: 12px; height: 12px; }
+
+  /* ── 목업 바 ── */
+  .mk { position: relative; z-index: 200; background: #16171a; color: #e7e8ea; font-size: 12px; }
+  .mk-row { display: flex; align-items: center; gap: 10px 14px; padding: 8px 16px; flex-wrap: wrap; }
+  .mk-tag { background: #ffbe42; color: #16171a; font-weight: 800; padding: 1px 8px; border-radius: 4px; }
+  .mk-title { font-weight: 700; color: #fff; }
+  .mk-btn { border: 1px solid #3a3d44; background: transparent; color: #d4d6da; font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
+  .mk-btn[aria-expanded="true"] { background: #e7e8ea; color: #16171a; border-color: #e7e8ea; font-weight: 700; }
+  .mk-note { color: #9a9ca3; margin-left: auto; }
+  .mk-cap { display: none; border-top: 1px solid #2a2c31; padding: 10px 16px 12px; line-height: 1.65; color: #d4d6da; grid-template-columns: 1.1fr 1fr 1fr; gap: 24px; }
+  .mk-cap.on { display: grid; }
+  .mk-cap b { color: #fff; }
+  .mk-cap h4 { margin: 0 0 4px; font-size: 12px; color: #ffbe42; }
+  .mk-cap ul { margin: 0; padding-left: 16px; }
+
+  /* ── 틀 ── */
+  .sx { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: calc(100vh - var(--mk-h, 38px)); }
+  .side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 18px 12px 12px; background: var(--surface); border-right: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 6px; }
+  .brand .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+  .brand b { display: block; font-size: 14px; font-weight: 800; color: var(--navy); line-height: 1.15; }
+  .brand small { font-size: 11px; color: var(--muted); }
+  .nav .sec { display: flex; flex-direction: column; gap: 1px; }
+  .nav .sec + .sec { margin-top: 12px; }
+  .nav .h { display: flex; align-items: center; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+  .nav .h.here { color: var(--ink); }
+  .nav a { display: flex; align-items: center; gap: 10px; min-height: 31px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: none; position: relative; }
+  .nav a .i { color: var(--faint); }
+  .nav a:hover { background: var(--navy-25); color: var(--navy); }
+  .nav .par { display: flex; align-items: center; gap: 10px; min-height: 31px; padding: 0 10px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .nav .par .i { color: var(--faint); }
+  .nav .tree { display: flex; flex-direction: column; gap: 1px; margin: 0 0 2px 17px; padding-left: 6px; border-left: 1px solid var(--line); }
+  .nav .tree a { min-height: 29px; }
+  .nav .tree a.on { background: var(--navy-25); color: var(--navy); font-weight: 700; }
+  .nav .tree a.on::before { content: ""; position: absolute; left: -7px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--navy); }
+  .acct { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 8px 2px; border-top: 1px solid var(--line); }
+  .acct .av { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-50); color: var(--navy); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+  .acct b { display: block; font-size: 12px; } .acct small { color: var(--muted); font-size: 11px; }
+
+  .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .ph { display: flex; align-items: flex-start; gap: 16px; padding: 22px 24px 12px 28px; }
+  .ph h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.03em; display: flex; align-items: center; gap: 8px; }
+  .beta { font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-25); border-radius: 4px; padding: 0 6px; letter-spacing: 0; }
+  .ph .sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--muted); flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; color: var(--ink-2); }
+  .pill b { font-weight: 700; } .pill .sep { width: 1px; height: 12px; background: var(--line-2); }
+  .pill .warn { color: var(--warn-ink); font-weight: 700; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .ph .btn { margin-left: auto; }
+
+  .body { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--filter-w) minmax(0, 1fr); gap: 16px; padding: 0 0 0 28px; }
+  body.fcollapsed .body { grid-template-columns: 52px minmax(0, 1fr); }
+  .filters { min-height: 0; overflow-y: auto; background: var(--surface); border-radius: var(--r-card) var(--r-card) 0 0; box-shadow: var(--shadow-card); align-self: stretch; }
+  .f-h { display: flex; align-items: center; gap: 6px; padding: 14px 12px 10px 18px; border-bottom: 1px solid var(--line); }
+  .f-h b { font-size: 14px; } .f-h small { color: var(--muted); }
+  .icon { all: unset; cursor: pointer; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); }
+  .icon:hover { background: var(--inset); color: var(--ink); }
+  .f-h .icon { margin-left: auto; }
+  .f-saved { margin: 0; padding: 12px 18px; background: var(--navy-25); font-size: 12px; color: var(--muted); }
+  .f-saved b { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 12px; margin-bottom: 4px; }
+  .f-saved b span { margin-left: auto; font-weight: 500; color: var(--ink-2); }
+  .f-grp { padding: 10px 18px 6px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .f-axis { border-top: 1px solid var(--line); padding: 8px 18px 10px; }
+  .f-axis summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; padding: 4px 0; }
+  .f-axis summary::-webkit-details-marker { display: none; }
+  .f-axis label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: var(--ink-2); }
+  .f-axis label i { width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+  .f-search { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; margin: 4px 0; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line-2); color: var(--muted); font-size: 12px; }
+  body.fcollapsed .filters > :not(.f-rail) { display: none; }
+  .f-rail { display: none; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; }
+  body.fcollapsed .f-rail { display: flex; }
+
+  .content { min-width: 0; min-height: 0; overflow-y: auto; padding: 0 24px 72px 0; display: flex; flex-direction: column; gap: 12px; scrollbar-gutter: stable; }
+  .notice { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; color: var(--ink-2); }
+  .notice .muted { margin-left: 4px; }
+  .cbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 16px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-bar); }
+  .cbar .lab { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .cbar .focus { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+  .cbar .focus b { color: var(--navy); }
+  .cbar .right { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; position: relative; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; }
+  .chip small { font-weight: 500; color: var(--muted); }
+  .chip button { all: unset; cursor: pointer; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+  .chip button:hover { background: var(--inset); color: var(--ink); }
+  .add { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px var(--navy-300); color: var(--navy); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .add:hover { background: var(--navy-25); }
+  .pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 280px; padding: 8px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop), 0 0 0 1px var(--line); }
+  .pop[hidden] { display: none; }
+  .pop p { margin: 2px 6px 8px; font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .pop label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .pop label:hover { background: var(--navy-25); }
+  .pop label i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+  .pop label input { margin: 0 0 0 auto; accent-color: var(--navy); }
+  .pop .foot { display: flex; gap: 8px; border-top: 1px solid var(--line); margin-top: 6px; padding: 8px 6px 2px; }
+  .tbtn { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--navy); }
+  .tbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* section head (RnSectionHead) */
+  .sh { display: flex; align-items: baseline; gap: 12px; margin: 10px 0 -2px; }
+  .sh h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+  .sh p { margin: 0; font-size: 12px; color: var(--muted); }
+  .card { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-card); position: relative; }
+  .ch { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px 22px; flex-wrap: wrap; }
+  .ch h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+  .ch .acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .bchip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--page); font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .info { display: inline-grid; place-items: center; color: var(--muted); cursor: help; }
+  .seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--inset); }
+  .seg button { border: 0; background: none; padding: 3px 10px; border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(16,16,18,.08); }
+
+  /* ── KPI 줄: 기준 지표 고르기 ── */
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .kpi { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; gap: 2px 12px; padding: 14px 16px 12px 18px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); position: relative; transition: box-shadow .12s; }
+  .kpi:hover { box-shadow: 0 0 0 1px var(--navy-300), 0 6px 18px -12px rgba(30,56,250,.45); }
+  .kpi[aria-checked="true"] { box-shadow: 0 0 0 2px var(--navy), 0 8px 22px -14px rgba(30,56,250,.55); }
+  .kpi .fxtag { display: none; margin-left: 6px; font-size: 10px; font-weight: 800; color: var(--navy); background: var(--navy-25); border-radius: 4px; padding: 0 6px; line-height: 18px; }
+  .kpi[aria-checked="true"] .fxtag { display: inline-block; }
+  .kpi .lab { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .kpi .val { font-size: 34px; font-weight: 700; letter-spacing: -.035em; color: var(--ink); line-height: 1.15; }
+  .kpi[aria-checked="true"] .val { color: var(--navy); }
+  .kpi .val small { font-size: 16px; font-weight: 600; margin-left: 2px; letter-spacing: 0; }
+  .kpi .sp { align-self: end; }
+  .kpi .meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+  .kpi .meta .sub2 { margin-left: auto; }
+  .kpi .neg { color: var(--down-ink); font-weight: 700; }
+
+  /* Δ chip */
+  .d { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .d.good { background: rgba(61,241,52,.16); color: var(--up-ink); }
+  .d.bad { background: rgba(250,30,42,.12); color: var(--down-ink); }
+  .d.flat, .d.neu { background: var(--page); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+  .d.na { background: none; color: var(--faint); box-shadow: none; padding: 0; }
+
+  /* trend */
+  .trend { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0 18px 14px 22px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); padding: 0 0 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 2px; border-radius: 2px; }
+  .legend .own { color: var(--navy); font-weight: 700; }
+  .own-tag { font-size: 10px; font-weight: 800; color: var(--navy); background: var(--navy-25); border-radius: 4px; padding: 0 5px; }
+  .chart { position: relative; height: 250px; }
+  .chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .ax { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .grid line { stroke: var(--line); }
+  .endl { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cross { stroke: var(--line-2); stroke-dasharray: 3 3; }
+
+  /* tooltip */
+  .tip { position: fixed; z-index: 300; pointer-events: none; min-width: 180px; max-width: 280px; padding: 10px 12px; border-radius: 10px; background: var(--ink); color: #f7f7f7; font-size: 12px; line-height: 1.55; box-shadow: var(--shadow-pop); }
+  .tip[hidden] { display: none; }
+  .tip b { display: block; color: #00cfff; font-size: 11px; margin-bottom: 4px; }
+  .tip .r { display: flex; align-items: center; gap: 8px; }
+  .tip .r i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tip .r span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .tip .r.own span:first-of-type { color: #a5affd; font-weight: 700; }
+
+  /* board */
+  .tools { display: flex; align-items: center; gap: 10px; padding: 0 22px 10px; }
+  .search { display: inline-flex; align-items: center; gap: 6px; width: 220px; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--page); color: var(--muted); }
+  .search input { border: 0; background: none; outline: none; min-width: 0; flex: 1; font-size: 12px; color: var(--ink); }
+  .tools .muted { font-size: 12px; }
+  .bt { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  .bt th { position: sticky; top: 52px; z-index: 5; height: 36px; background: var(--surface); border-block: 1px solid var(--line); padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); text-align: right; white-space: nowrap; }
+  .bt th:first-child { padding-left: 22px; }
+  .bt th.l, .bt td.l { text-align: left; }
+  .bt th button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+  .bt th button:hover { color: var(--ink); }
+  .bt th.sorted button { color: var(--ink); }
+  .bt th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
+  .bt th.fx button { color: var(--navy); font-weight: 800; }
+  .bt td { height: 42px; border-bottom: 1px solid var(--line); padding: 0 10px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); }
+  .bt td:first-child { padding-left: 22px; color: var(--muted); font-size: 12px; }
+  .bt td.fx { background: rgba(237,239,255,.55); }
+  .bt tr { cursor: pointer; }
+  .bt tbody tr:hover td { background: var(--navy-25); }
+  .bt tr.own td { background: rgba(237,239,255,.5); }
+  .bt tr.lit td { background: var(--navy-25); }
+  .bt tr.lit td:first-child { box-shadow: inset 3px 0 0 var(--navy); }
+  .bname { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .bname .dot { all: unset; cursor: pointer; width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+  .bname .dot:hover { box-shadow: inset 0 0 0 2px var(--navy-300); }
+  .bname b { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+  .bname b.own { color: var(--navy); }
+  .bname small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .vb { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; }
+  .vb .bar { flex: 0 0 64px; height: 6px; border-radius: 3px; background: var(--page); overflow: hidden; }
+  .vb .bar i { display: block; height: 100%; border-radius: 3px; }
+  .vb b { font-weight: 700; color: var(--ink); min-width: 44px; }
+  .ptrack { position: relative; flex: 0 0 64px; height: 6px; border-radius: 3px; background: var(--page); }
+  .ptrack i { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
+  .sent { display: inline-flex; width: 64px; height: 6px; border-radius: 3px; overflow: hidden; gap: 1px; }
+  .more { padding: 10px 22px 14px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); }
+  .map { position: relative; height: 380px; margin: 0 22px 18px; }
+  .map .t { position: absolute; border-radius: 8px; padding: 8px 10px; overflow: hidden; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.9); transition: filter .12s; }
+  .map .t:hover { filter: brightness(.96); }
+  .map .t b { display: block; font-size: 13px; font-weight: 800; }
+  .map .t span { font-size: 12px; font-variant-numeric: tabular-nums; }
+  .map .t small { display: block; font-size: 11px; opacity: .75; }
+  .maplegend { display: flex; align-items: center; gap: 10px; padding: 0 22px 16px; font-size: 11px; color: var(--muted); }
+  .maplegend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .bump { position: relative; height: 380px; margin: 0 22px 18px; }
+  .bump svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+  /* engines × KPIs */
+  .row2 { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 12px; }
+  .et { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  .et th { height: 32px; border-block: 1px solid var(--line); background: var(--surface); font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 12px; }
+  .et th:first-child { padding-left: 22px; width: 104px; }
+  .et th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
+  .et td { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .et td:first-child { padding-left: 22px; font-weight: 700; }
+  .et tr:last-child td { border-bottom: 0; }
+  .et td.fx { background: rgba(237,239,255,.55); }
+  .ev { display: flex; align-items: baseline; gap: 6px; }
+  .ev b { font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ev b small { font-size: 12px; font-weight: 600; }
+  .et .sp { margin-top: 4px; display: block; }
+  .ef { padding: 10px 22px 16px; font-size: 11px; color: var(--muted); }
+
+  .dist { padding: 0 22px 18px; }
+  .dist .bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 0 14px; }
+  .dist .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dist .tile { padding: 10px 12px; border-radius: 10px; background: var(--page); }
+  .dist .tile .k { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .dist .tile .k i { width: 8px; height: 8px; border-radius: 2px; }
+  .dist .tile b { display: block; font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .dist .tile small { color: var(--muted); font-size: 11px; }
+  .dist .tile a { display: inline-block; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--navy); text-decoration: none; }
+
+  /* types */
+  .tt { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  .tt th { height: 34px; border-block: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 12px; white-space: nowrap; }
+  .tt th:first-child { padding-left: 22px; width: 120px; }
+  .tt td { height: 52px; border-bottom: 1px solid var(--line); padding: 0 12px; font-variant-numeric: tabular-nums; }
+  .tt td:first-child { padding-left: 22px; font-weight: 700; color: var(--ink); }
+  .tt tr:last-child td { border-bottom: 0; }
+  .tt th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
+  .tt td.fx { background: rgba(237,239,255,.55); }
+  .tv { display: grid; grid-template-columns: minmax(40px, 1fr) 52px 70px 72px; align-items: center; gap: 10px; }
+  .tv .bar { height: 6px; border-radius: 3px; background: var(--page); overflow: hidden; }
+  .tv .bar i { display: block; height: 100%; border-radius: 3px; background: var(--navy); }
+  .tv b { text-align: right; font-weight: 700; color: var(--ink); }
+  .dots { position: relative; height: 26px; }
+  .dots .ax { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+  .dots .rg { position: absolute; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 3px; background: rgba(61,241,52,.25); }
+  .dots .rg.bad { background: rgba(250,30,42,.18); }
+  .dots i { position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
+  .dots i.own { width: 13px; height: 13px; background: var(--navy); z-index: 2; }
+  .cmpv { display: grid; grid-template-columns: minmax(80px, 1fr) 132px; gap: 10px; align-items: center; }
+  .cmpv span { text-align: right; font-size: 12px; font-weight: 700; }
+  .cmpv span small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); }
+  .sv { display: grid; grid-template-columns: minmax(60px, 1fr) 46px; gap: 10px; align-items: center; }
+  .sv .sent { width: 100%; height: 8px; }
+  .sv b { text-align: right; font-weight: 700; }
+  .tf { padding: 10px 22px 16px; font-size: 11px; color: var(--muted); }
+
+  /* drawer */
+  .scrim { position: fixed; inset: 0; z-index: 240; background: rgba(16,16,18,.35); }
+  .scrim[hidden], .drawer[hidden] { display: none; }
+  .drawer { position: fixed; z-index: 250; top: 0; right: 0; bottom: 0; width: 720px; max-width: 100vw; background: var(--surface); box-shadow: var(--shadow-pop); display: flex; flex-direction: column; }
+  .dh { display: flex; align-items: flex-start; gap: 10px; padding: 22px 24px 14px; border-bottom: 1px solid var(--line); }
+  .dh h3 { margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .dh p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .dh .icon { margin-left: auto; }
+  .db { padding: 16px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+  .db h4 { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .db .sent { width: 100%; height: 10px; }
+  .db .sl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .db .sl i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+  .tchips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tchips span { display: inline-flex; gap: 6px; height: 26px; align-items: center; padding: 0 10px; border-radius: 999px; background: var(--page); font-size: 12px; color: var(--ink-2); }
+  .tchips b { font-variant-numeric: tabular-nums; }
+  .dtabs { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--inset); }
+  .dtabs button { border: 0; background: none; padding: 5px 14px; border-radius: 8px; font-size: 13px; color: var(--muted); }
+  .dtabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; }
+  .ph-note { padding: 26px; border-radius: 12px; border: 1.5px dashed var(--line-2); color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7M17 12H7"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M10 2v7.3L4.6 18.5A2 2 0 0 0 6.3 21.5h11.4a2 2 0 0 0 1.7-3L14 9.3V2"/><path d="M8.5 2h7M7 16h10"/></symbol>
+  <symbol id="i-case" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
+</svg>
+
+<div class="mk" id="mk">
+  <div class="mk-row">
+    <span class="mk-tag">목업</span>
+    <span class="mk-title">Global Mention 개편안 — 지표 탭 없이 한 페이지</span>
+    <button class="mk-btn" id="mkCap" aria-expanded="false" type="button">무엇이 바뀌었나</button>
+    <span class="mk-note">Gold 2026-10-05 회차 실데이터 · 1920 × 915 · 화면 동작: KPI 칸 · 비교 브랜드 · 표 정렬 · 보기 전환 · 행 서랍</span>
+  </div>
+  <div class="mk-cap" id="mkCapBody">
+    <div><h4>구성</h4><ul>
+      <li><b>지표 탭 4개 + 브랜드 상세 → 한 페이지.</b> 맨 위 KPI 4칸이 <b>기준 지표</b>를 고릅니다(페이지 탭이 아님): 추이 차트 · 표의 강조 열과 정렬 · 추이 열 · 엔진/유형 표의 강조 열이 그 지표로 바뀝니다.</li>
+      <li>구역: 현황(KPI) → 추이 → 경쟁 구도(표 · 트리맵 · 순위 변화) → 엔진 · 감정 → 멘션 유형.</li></ul></div>
+    <div><h4>합친 것 (값은 모두 남음)</h4><ul>
+      <li>경쟁사 분석(노출률) · (점유율) · 우선 노출도 순위표 · 브랜드 언급 순위 → <b>브랜드 비교 표 하나</b>(노출률 · 점유율 · 우선 노출도 · 우호도 · 언급 수 · 프롬프트, 각 Δ · 추이).</li>
+      <li>히어로 3개의 추이 → 추이 차트 하나. 엔진 카드(노출 · 점유) → <b>엔진 × 지표 표</b>. 유형 카드 셋(노출 · 점유 · 감정) → <b>유형 × 지표 표</b>.</li></ul></div>
+    <div><h4>새로 보이는 Gold 값 · 그대로인 것</h4><ul>
+      <li>브랜드별 우호도(지금은 서랍에만), 엔진별 우호도 · 우선 노출도(Gold에 있음, 구현 때 BFF에 더함).</li>
+      <li>그대로: 비교 브랜드 제한 없음(타사 15색), 서랍, 원문, HUB가 만든 기준선 · 문턱 없음, 측정 변화로 값을 숨기지 않음(7월 우호도 그대로).</li></ul></div>
+  </div>
+</div>
+
+<div class="sx">
+  <aside class="side" aria-label="메뉴">
+    <div class="brand"><span class="mark">G</span><div><b>HMG GEO</b><small>AI 답변 모니터링</small></div></div>
+    <nav class="nav">
+      <div class="sec"><div class="h here">GLOBAL</div>
+        <a><svg class="i"><use href="#i-grid"/></svg>Overview</a>
+        <a><svg class="i"><use href="#i-list"/></svg>Global prompts</a>
+        <div class="par"><svg class="i"><use href="#i-msg"/></svg>Answer analysis</div>
+        <div class="tree"><a class="on">Mention</a><a>Citation</a></div>
+        <div class="par"><svg class="i"><use href="#i-flask"/></svg>AI Agent Funnel</div>
+        <div class="tree"><a>ACR</a><a>AI Conversion</a></div>
+      </div>
+      <div class="sec"><div class="h">WEBSITE</div>
+        <a><svg class="i"><use href="#i-grid"/></svg>Overview</a>
+        <a><svg class="i"><use href="#i-list"/></svg>Prompts</a>
+        <div class="par"><svg class="i"><use href="#i-msg"/></svg>Answer analysis</div>
+        <div class="tree"><a>Mention</a><a>Citation</a></div>
+      </div>
+      <div class="sec"><div class="h">PROJECT</div><a><svg class="i"><use href="#i-case"/></svg>Project list</a></div>
+      <div class="sec"><div class="h">ADMIN</div>
+        <a><svg class="i"><use href="#i-shield"/></svg>User management</a>
+        <a><svg class="i"><use href="#i-file"/></svg>Global config</a>
+        <a><svg class="i"><use href="#i-key"/></svg>GA4 연동</a>
+      </div>
+    </nav>
+    <div class="acct"><span class="av">T</span><div><b>test-admin</b><small>시스템 관리자</small></div></div>
+  </aside>
+
+  <div class="main">
+    <header class="ph">
+      <div>
+        <h1>언급 분석 <span class="beta">베타</span></h1>
+        <div class="sub">AI 답변에 어떤 브랜드가 얼마나 등장하는지 확인합니다.
+          <span class="pill"><svg class="i s12"><use href="#i-cal"/></svg>주 1회 측정<span class="sep"></span><b>측정 회차 2026-10-05 기준</b></span>
+          <span class="pill"><svg class="i s12"><use href="#i-cal"/></svg><b>10월 2주차</b> · 10/5~10/11<span class="sep"></span><span class="warn">⚠ 발행 지연 25일</span></span>
+        </div>
+      </div>
+      <button class="btn" type="button"><svg class="i s14"><use href="#i-link"/></svg>링크 복사</button>
+    </header>
+
+    <div class="body">
+      <aside class="filters" aria-label="필터">
+        <div class="f-rail"><button class="icon" id="fOpen" title="필터 패널 펼치기" type="button"><svg class="i"><use href="#i-panel"/></svg></button><button class="icon" type="button" title="저장한 필터"><svg class="i"><use href="#i-bookmark"/></svg></button></div>
+        <div class="f-h"><b>필터</b><small>선택 없음</small><button class="icon" id="fClose" title="필터 패널 접기" type="button"><svg class="i"><use href="#i-left"/></svg></button></div>
+        <div class="f-saved"><b><svg class="i s14"><use href="#i-bookmark"/></svg>저장한 필터<span>+ 현재 조건 저장</span></b>자주 보는 조건을 저장해 두면 한 번에 불러옵니다.</div>
+        <div class="f-grp">디멘션</div>
+        <details class="f-axis" open><summary><svg class="i s14"><use href="#i-down"/></svg>브랜드</summary><label><i></i>Genesis</label><label><i></i>Hyundai</label><label><i></i>Kia</label></details>
+        <details class="f-axis" open><summary><svg class="i s14"><use href="#i-down"/></svg>국가</summary><div class="f-search"><svg class="i s14"><use href="#i-search"/></svg>검색...</div><label><i></i>대한민국</label><label><i></i>미국</label><label><i></i>독일</label><label><i></i>영국</label><label><i></i>일본</label><label class="muted">… 51개국</label></details>
+        <details class="f-axis"><summary><svg class="i s14"><use href="#i-down"/></svg>언어</summary></details>
+        <details class="f-axis" open><summary><svg class="i s14"><use href="#i-down"/></svg>AI 엔진</summary><label><i></i>ChatGPT</label><label><i></i>Gemini</label></details>
+        <details class="f-axis"><summary><svg class="i s14"><use href="#i-down"/></svg>기간</summary></details>
+        <details class="f-axis"><summary><svg class="i s14"><use href="#i-down"/></svg>프롬프트 맥락 · 브랜드 포함 여부 · 리스트 유형</summary></details>
+      </aside>
+
+      <div class="content" id="content">
+        <div class="notice"><svg class="i s14" style="color:var(--warn-ink)"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">(Gold 마지막 확인 2026-11-03 17:33)</span></div>
+
+        <div class="cbar" role="toolbar" aria-label="페이지 조작">
+          <span class="focus">기준 지표 <b id="focusName">AI 노출률</b></span>
+          <div class="right">
+            <span class="lab">비교 브랜드</span>
+            <span id="chips" style="display:contents"></span>
+            <button class="add" id="addBtn" type="button" aria-expanded="false"><svg class="i s12"><use href="#i-down"/></svg>바꾸기</button>
+            <div class="pop" id="pop" hidden role="dialog" aria-label="비교 브랜드 선택">
+              <p>추이가 있는 상위 브랜드에서 몇 개든 고를 수 있습니다 · 고른 순서대로 타사 색(주황 · 분홍 · 보라 · 노랑, 그다음 옅은 색)이 붙고, 페이지의 모든 차트에 같은 색으로 나옵니다.</p>
+              <div id="popList"></div>
+              <div class="foot"><button class="tbtn" id="popReset" type="button">기본 (점유율 1위 경쟁사)</button><button class="tbtn" id="popClose" type="button" style="margin-left:auto">닫기</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sh"><h2>현황</h2><p>칸을 누르면 아래 추이 · 표 · 엔진 · 유형이 그 지표를 기준으로 바뀝니다.</p></div>
+        <div class="kpis" id="kpis" role="radiogroup" aria-label="기준 지표"></div>
+
+        <div class="sh"><h2>추이</h2><p>당사와 비교 브랜드의 회차별 값입니다.</p></div>
+        <section class="card">
+          <div class="ch"><h3 id="trendTitle">브랜드별 노출률 추이</h3><span class="info" title="회차마다 Gold가 집계한 값입니다. 측정 범위가 회차마다 달라 값이 튈 수 있습니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="trendChip">14회차 · 07-06 ~ 10-05</span>
+            <div class="acts"><button class="icon" type="button" title="표로 보기"><svg class="i s14"><use href="#i-table"/></svg></button><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
+          <div class="trend"><div class="legend" id="legend"></div><div class="chart" id="chart"></div></div>
+        </section>
+
+        <div class="sh"><h2>경쟁 구도</h2><p>브랜드마다 네 지표를 한 줄에 둡니다. 행을 누르면 그 브랜드의 프롬프트와 답변을 봅니다.</p></div>
+        <section class="card" id="boardCard">
+          <div class="ch"><h3>브랜드 비교</h3><span class="info" title="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">측정 기준일 스냅샷</span><span class="bchip" id="brandCount">브랜드 752개</span>
+            <div class="acts"><div class="seg" id="viewSeg"><button type="button" data-v="table" aria-pressed="true">표</button><button type="button" data-v="map" aria-pressed="false">트리맵</button><button type="button" data-v="bump" aria-pressed="false">순위 변화</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
+          <div id="boardBody"></div>
+        </section>
+
+        <div class="sh"><h2>엔진 · 감정</h2><p>AI 엔진마다 네 지표, 그리고 당사 언급의 감정 구성입니다.</p></div>
+        <div class="row2">
+          <section class="card"><div class="ch"><h3>AI 엔진별</h3><span class="info" title="엔진마다 같은 정의로 센 당사 값입니다. 작은 차트는 지표마다 같은 눈금입니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">당사</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="engines"></div></section>
+          <section class="card"><div class="ch"><h3>감정 분포</h3><span class="info" title="당사 언급마다 붙은 감정 신호의 구성입니다(언급 단위)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="distChip"></span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="dist" id="dist"></div></section>
+        </div>
+
+        <div class="sh"><h2>멘션 유형</h2><p>AI가 당사를 어떤 식으로 언급하는지(최종 선택 · 추천 · 비교 · 정의 · 단순 언급), 유형마다 세 지표입니다.</p></div>
+        <section class="card"><div class="ch"><h3>유형별 노출 · 점유 · 감정</h3><span class="info" title="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">유형 신호 기준</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="types"></div></section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="브랜드 서랍"></aside>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const D = {"x":["2026-07-06","2026-07-13","2026-07-20","2026-07-27","2026-08-03","2026-08-10","2026-08-17","2026-08-24","2026-08-31","2026-09-07","2026-09-14","2026-09-21","2026-09-28","2026-10-05"],"covered":["Toyota","BMW","Tesla","Mercedes-Benz","Porsche","Lexus","Honda","Volkswagen","Volvo","BYD"],"asOf":"2026-10-05","kpi":{"exposure":{"v":76.6,"d":-0.2,"num":34452,"den":44979},"sov":{"v":38.7,"d":-1.7,"num":325173,"den":839792},"favorability":{"v":54.1,"d":1.8,"neg":1.9,"negD":0.3,"pos":175995,"total":325173},"first-rank":{"v":2.4,"d":0.1}},"trend":{"exposure":{"own":[73.5,75.6,77.6,76.5,77.3,80.4,76.8,75.4,69.0,73.6,76.5,76.3,76.8,76.6],"num":[2166,3014,1981,1367,1925,1936,1755,12427,24514,29014,38419,28717,34939,34452],"den":[2946,3988,2552,1787,2491,2409,2286,16482,35506,39438,50235,37638,45500,44979],"brands":{"Toyota":[20.6,23.2,21.2,15.7,19.7,26.9,18.2,29.9,23.2,25.8,26.4,25.6,27.6,28.1],"BMW":[56.9,54.3,58.3,60.9,53.6,46.3,49.2,33.2,25.2,28.9,30.1,28.4,30.6,31.4],"Tesla":[19.2,21.1,19.4,16.7,17.5,24.2,17.2,21.9,24.2,27.6,27.0,26.9,27.3,26.8],"Mercedes-Benz":[50.8,48.0,52.3,55.5,49.7,38.9,44.4,27.3,20.7,23.5,24.0,23.8,25.3,25.7],"Porsche":[40.4,39.5,42.8,47.7,38.4,31.3,35.5,18.4,12.3,14.0,14.2,13.2,14.4,14.1],"Lexus":[40.7,38.3,40.9,43.9,38.3,29.0,31.8,20.7,11.4,12.7,13.0,12.5,13.7,14.4],"Volkswagen":[4.8,5.5,5.4,2.7,4.6,9.0,6.0,12.0,14.8,17.0,17.5,17.4,17.4,16.7],"Honda":[11.1,13.6,12.1,7.8,10.6,14.7,8.0,18.4,11.6,12.4,12.4,12.2,14.0,14.5],"Volvo":[18.1,18.3,19.5,16.5,16.4,17.5,14.0,13.6,12.4,13.7,14.7,14.0,13.9,14.4],"BYD":[3.5,4.4,4.0,2.7,3.5,6.9,4.1,6.7,8.1,9.3,9.3,9.3,10.0,10.1]}},"sov":{"own":[32.1,31.0,29.0,28.5,32.8,35.1,34.2,39.6,43.0,38.6,40.3,41.5,40.4,38.7],"num":[20556,29359,17076,11186,16858,18900,18417,147883,223674,220393,331667,240764,315562,325173],"den":[64002,94729,58831,39290,51430,53792,53868,373593,519808,570484,822507,580698,780862,839792],"brands":{"Toyota":[3.1,3.7,3.2,2.6,3.3,5.2,3.6,8.0,6.7,7.2,7.0,6.7,7.0,7.3],"BMW":[10.8,10.5,10.8,12.2,10.8,9.3,10.0,5.9,5.6,6.2,6.3,6.0,6.1,6.4],"Tesla":[3.1,3.5,3.0,3.0,2.9,4.8,3.4,4.9,6.4,7.3,6.7,6.5,6.3,6.4],"Mercedes-Benz":[8.0,7.2,8.0,9.1,8.6,6.5,7.3,4.1,4.0,4.3,4.3,4.3,4.3,4.4],"Porsche":[9.4,9.3,9.9,11.3,9.2,7.7,9.3,3.9,3.1,3.4,3.3,3.1,3.2,3.1],"Lexus":[8.8,8.9,9.2,10.0,8.0,6.7,7.8,3.8,2.5,2.6,2.6,2.5,2.7,2.8],"Volkswagen":[0.4,0.5,0.5,0.2,0.4,0.8,0.7,1.5,2.7,3.0,3.0,2.9,2.7,2.5],"Honda":[1.3,1.9,1.7,1.1,1.6,2.2,1.2,3.3,2.4,2.5,2.3,2.4,2.7,2.7],"Volvo":[2.7,2.7,2.8,2.5,2.6,2.5,2.2,2.2,2.5,2.5,2.6,2.4,2.3,2.4],"BYD":[0.5,0.6,0.6,0.5,0.5,1.2,0.9,1.4,1.7,2.0,2.0,1.8,1.9,2.1]}},"first-rank":{"own":[2.7,2.7,2.6,2.6,2.5,2.5,2.4,2.4,2.2,2.3,2.2,2.2,2.3,2.4],"brands":{"Toyota":[4.0,3.9,3.9,3.8,3.9,4.0,4.1,4.3,3.7,3.6,3.7,3.6,3.7,3.9],"BMW":[3.7,3.9,3.9,3.7,3.8,4.1,3.8,4.7,4.6,4.5,4.5,4.4,4.5,4.6],"Tesla":[4.4,4.6,4.8,4.4,4.7,4.1,3.8,4.2,3.5,3.3,3.4,3.3,3.5,3.7],"Mercedes-Benz":[3.8,4.0,4.1,3.8,3.9,4.2,3.9,4.8,4.8,4.7,4.7,4.6,4.7,4.8],"Porsche":[3.7,3.7,3.7,3.6,3.6,3.8,3.5,4.5,4.3,4.1,4.1,4.1,4.3,4.4],"Lexus":[3.6,3.7,3.6,3.8,3.9,3.9,3.6,4.4,3.9,3.7,3.8,3.7,3.9,4.1],"Honda":[4.8,4.8,4.7,4.9,4.9,4.5,4.4,4.8,4.4,4.2,4.4,4.2,4.3,4.5],"Volkswagen":[5.9,5.8,6.5,5.1,6.0,5.2,5.7,6.0,5.1,4.9,5.0,5.0,5.1,5.3],"Volvo":[4.5,4.6,4.6,4.5,4.5,4.6,4.4,5.1,4.7,4.7,4.6,4.6,4.7,4.9],"BYD":[5.9,6.3,6.5,6.0,5.8,4.9,5.6,5.2,4.9,4.8,4.8,4.5,4.7,5.0]}},"favorability":{"own":[5.8,5.8,6.3,10.9,48.4,60.1,55.5,52.6,49.9,55.6,54.3,50.6,52.4,54.1],"neg":[0.7,0.5,0.6,0.6,2.6,1.8,1.8,2.3,2.0,1.7,1.7,1.6,1.6,1.9]}},"rows":[{"brand":"HMG","own":true,"sibling":false,"group":"HMG","grouped":false,"rank":1,"mentions":325173,"prompts":9814,"share":38.7,"shareD":-1.7,"exp":76.6,"expD":-0.2,"expS":[73.5,75.6,77.6,76.5,77.3,80.4,76.8,75.4,69.0,73.6,76.5,76.3,76.8,76.6],"shareS":[32.1,31.0,29.0,28.5,32.8,35.1,34.2,39.6,43.0,38.6,40.3,41.5,40.4,38.7],"pos":2.4,"posD":0.1,"posS":[2.7,2.7,2.6,2.6,2.5,2.5,2.4,2.4,2.2,2.3,2.2,2.2,2.3,2.4],"fav":54.1,"neg":1.9,"sent":{"positive":175995,"neutral":135993,"mixed":7057,"negative":6128},"types":{"mention":192008,"recommendation":76546,"comparison":47764,"definition":2969,"final_choice":5886}},{"brand":"Toyota","own":false,"sibling":false,"group":"Toyota","grouped":false,"rank":2,"mentions":61535,"prompts":4248,"share":7.3,"shareD":0.3,"exp":28.1,"expD":0.5,"expS":[20.6,23.2,21.2,15.7,19.7,26.9,18.2,29.9,23.2,25.8,26.4,25.6,27.6,28.1],"shareS":[3.1,3.7,3.2,2.6,3.3,5.2,3.6,8.0,6.7,7.2,7.0,6.7,7.0,7.3],"pos":3.9,"posD":0.3,"posS":[4.0,3.9,3.9,3.8,3.9,4.0,4.1,4.3,3.7,3.6,3.7,3.6,3.7,3.9],"fav":72.5,"neg":2.4,"sent":{"positive":44585,"neutral":14170,"mixed":1277,"negative":1503},"types":{"mention":12977,"recommendation":25796,"comparison":18014,"definition":241,"final_choice":4507}},{"brand":"BMW","own":false,"sibling":false,"group":"BMW","grouped":false,"rank":3,"mentions":54088,"prompts":4945,"share":6.4,"shareD":0.4,"exp":31.4,"expD":0.7,"expS":[56.9,54.3,58.3,60.9,53.6,46.3,49.2,33.2,25.2,28.9,30.1,28.4,30.6,31.4],"shareS":[10.8,10.5,10.8,12.2,10.8,9.3,10.0,5.9,5.6,6.2,6.3,6.0,6.1,6.4],"pos":4.6,"posD":0.1,"posS":[3.7,3.9,3.9,3.7,3.8,4.1,3.8,4.7,4.6,4.5,4.5,4.4,4.5,4.6],"fav":67.9,"neg":1.5,"sent":{"positive":36725,"neutral":14967,"mixed":1568,"negative":828},"types":{"mention":12018,"recommendation":20628,"comparison":19195,"definition":345,"final_choice":1902}},{"brand":"Tesla","own":false,"sibling":false,"group":"Tesla","grouped":false,"rank":4,"mentions":53779,"prompts":4227,"share":6.4,"shareD":0.1,"exp":26.8,"expD":-0.5,"expS":[19.2,21.1,19.4,16.7,17.5,24.2,17.2,21.9,24.2,27.6,27.0,26.9,27.3,26.8],"shareS":[3.1,3.5,3.0,3.0,2.9,4.8,3.4,4.9,6.4,7.3,6.7,6.5,6.3,6.4],"pos":3.7,"posD":0.2,"posS":[4.4,4.6,4.8,4.4,4.7,4.1,3.8,4.2,3.5,3.3,3.4,3.3,3.5,3.7],"fav":70.2,"neg":2.3,"sent":{"positive":37744,"neutral":11587,"mixed":3228,"negative":1220},"types":{"mention":9948,"recommendation":21157,"comparison":19635,"definition":121,"final_choice":2918}},{"brand":"Mercedes-Benz","own":false,"sibling":false,"group":"Mercedes-Benz","grouped":false,"rank":5,"mentions":36954,"prompts":4286,"share":4.4,"shareD":0.1,"exp":25.7,"expD":0.5,"expS":[50.8,48.0,52.3,55.5,49.7,38.9,44.4,27.3,20.7,23.5,24.0,23.8,25.3,25.7],"shareS":[8.0,7.2,8.0,9.1,8.6,6.5,7.3,4.1,4.0,4.3,4.3,4.3,4.3,4.4],"pos":4.8,"posD":0.1,"posS":[3.8,4.0,4.1,3.8,3.9,4.2,3.9,4.8,4.8,4.7,4.7,4.6,4.7,4.8],"fav":62.7,"neg":2.4,"sent":{"positive":23173,"neutral":11491,"mixed":1400,"negative":890},"types":{"mention":6540,"recommendation":12782,"comparison":16374,"definition":137,"final_choice":1121}},{"brand":"Porsche","own":false,"sibling":false,"group":"VW","grouped":true,"rank":6,"mentions":26176,"prompts":2277,"share":3.1,"shareD":-0.1,"exp":14.1,"expD":-0.3,"expS":[40.4,39.5,42.8,47.7,38.4,31.3,35.5,18.4,12.3,14.0,14.2,13.2,14.4,14.1],"shareS":[9.4,9.3,9.9,11.3,9.2,7.7,9.3,3.9,3.1,3.4,3.3,3.1,3.2,3.1],"pos":4.4,"posD":0.1,"posS":[3.7,3.7,3.7,3.6,3.6,3.8,3.5,4.5,4.3,4.1,4.1,4.1,4.3,4.4],"fav":83.5,"neg":0.7,"sent":{"positive":21858,"neutral":3658,"mixed":486,"negative":174},"types":{"mention":6895,"recommendation":11767,"comparison":5397,"definition":74,"final_choice":2043}},{"brand":"Lexus","own":false,"sibling":false,"group":"Toyota","grouped":true,"rank":7,"mentions":23566,"prompts":2113,"share":2.8,"shareD":0.1,"exp":14.4,"expD":0.7,"expS":[40.7,38.3,40.9,43.9,38.3,29.0,31.8,20.7,11.4,12.7,13.0,12.5,13.7,14.4],"shareS":[8.8,8.9,9.2,10.0,8.0,6.7,7.8,3.8,2.5,2.6,2.6,2.5,2.7,2.8],"pos":4.1,"posD":0.2,"posS":[3.6,3.7,3.6,3.8,3.9,3.9,3.6,4.4,3.9,3.7,3.8,3.7,3.9,4.1],"fav":83.1,"neg":0.6,"sent":{"positive":19573,"neutral":3541,"mixed":302,"negative":150},"types":{"mention":3569,"recommendation":12185,"comparison":6052,"definition":84,"final_choice":1676}},{"brand":"Honda","own":false,"sibling":false,"group":"Honda","grouped":false,"rank":8,"mentions":22285,"prompts":2168,"share":2.7,"shareD":0.0,"exp":14.5,"expD":0.5,"expS":[11.1,13.6,12.1,7.8,10.6,14.7,8.0,18.4,11.6,12.4,12.4,12.2,14.0,14.5],"shareS":[1.3,1.9,1.7,1.1,1.6,2.2,1.2,3.3,2.4,2.5,2.3,2.4,2.7,2.7],"pos":4.5,"posD":0.2,"posS":[4.8,4.8,4.7,4.9,4.9,4.5,4.4,4.8,4.4,4.2,4.4,4.2,4.3,4.5],"fav":70.4,"neg":1.0,"sent":{"positive":15690,"neutral":6214,"mixed":157,"negative":224},"types":{"mention":4238,"recommendation":10176,"comparison":7053,"definition":148,"final_choice":670}},{"brand":"Volkswagen","own":false,"sibling":false,"group":"VW","grouped":true,"rank":9,"mentions":20940,"prompts":3454,"share":2.5,"shareD":-0.2,"exp":16.7,"expD":-0.7,"expS":[4.8,5.5,5.4,2.7,4.6,9.0,6.0,12.0,14.8,17.0,17.5,17.4,17.4,16.7],"shareS":[0.4,0.5,0.5,0.2,0.4,0.8,0.7,1.5,2.7,3.0,3.0,2.9,2.7,2.5],"pos":5.3,"posD":0.2,"posS":[5.9,5.8,6.5,5.1,6.0,5.2,5.7,6.0,5.1,4.9,5.0,5.0,5.1,5.3],"fav":48.7,"neg":4.3,"sent":{"positive":10201,"neutral":8958,"mixed":872,"negative":909},"types":{"mention":4491,"recommendation":6316,"comparison":9676,"definition":87,"final_choice":370}},{"brand":"Volvo","own":false,"sibling":false,"group":"Geely","grouped":true,"rank":10,"mentions":20343,"prompts":2871,"share":2.4,"shareD":0.2,"exp":14.4,"expD":0.6,"expS":[18.1,18.3,19.5,16.5,16.4,17.5,14.0,13.6,12.4,13.7,14.7,14.0,13.9,14.4],"shareS":[2.7,2.7,2.8,2.5,2.6,2.5,2.2,2.2,2.5,2.5,2.6,2.4,2.3,2.4],"pos":4.9,"posD":0.2,"posS":[4.5,4.6,4.6,4.5,4.5,4.6,4.4,5.1,4.7,4.7,4.6,4.6,4.7,4.9],"fav":78.7,"neg":0.6,"sent":{"positive":16010,"neutral":3727,"mixed":486,"negative":120},"types":{"mention":4494,"recommendation":10265,"comparison":4565,"definition":82,"final_choice":937}},{"brand":"BYD","own":false,"sibling":false,"group":"BYD","grouped":false,"rank":11,"mentions":17499,"prompts":1920,"share":2.1,"shareD":0.2,"exp":10.1,"expD":0.1,"expS":[3.5,4.4,4.0,2.7,3.5,6.9,4.1,6.7,8.1,9.3,9.3,9.3,10.0,10.1],"shareS":[0.5,0.6,0.6,0.5,0.5,1.2,0.9,1.4,1.7,2.0,2.0,1.8,1.9,2.1],"pos":5.0,"posD":0.3,"posS":[5.9,6.3,6.5,6.0,5.8,4.9,5.6,5.2,4.9,4.8,4.8,4.5,4.7,5.0],"fav":76.9,"neg":1.1,"sent":{"positive":13450,"neutral":3404,"mixed":451,"negative":194},"types":{"mention":4859,"recommendation":6603,"comparison":5003,"definition":68,"final_choice":966}},{"brand":"Mazda","own":false,"sibling":false,"group":"Mazda","grouped":false,"rank":12,"mentions":15295,"prompts":1638,"share":1.8,"shareD":0.0,"exp":9.6,"expD":0.2,"expS":[5.0,6.6,6.1,4.1,4.9,6.6,3.9,10.5,7.3,8.5,8.8,8.3,9.4,9.6],"shareS":[0.7,1.0,1.0,0.6,0.6,1.1,0.9,2.0,1.5,1.8,1.8,1.7,1.8,1.8],"pos":5.1,"posD":null,"posS":null,"fav":80.4,"neg":2.0,"sent":{"positive":12291,"neutral":2415,"mixed":284,"negative":305},"types":{"mention":3242,"recommendation":7478,"comparison":3694,"definition":12,"final_choice":869}},{"brand":"Audi","own":false,"sibling":false,"group":"VW","grouped":true,"rank":13,"mentions":13164,"prompts":2641,"share":1.6,"shareD":0.0,"exp":13.3,"expD":0.7,"expS":[28.3,26.0,28.4,32.6,28.0,18.6,22.9,14.3,10.4,11.9,12.7,12.1,12.6,13.3],"shareS":[3.4,2.8,3.1,3.8,3.4,2.1,2.6,1.5,1.4,1.6,1.6,1.6,1.5,1.6],"pos":5.3,"posD":null,"posS":null,"fav":51.5,"neg":3.8,"sent":{"positive":6783,"neutral":5521,"mixed":360,"negative":500},"types":{"mention":2758,"recommendation":4139,"comparison":6006,"definition":56,"final_choice":205}},{"brand":"Ford","own":false,"sibling":false,"group":"Ford","grouped":false,"rank":14,"mentions":13144,"prompts":1679,"share":1.6,"shareD":0.1,"exp":9.4,"expD":null,"expS":null,"shareS":null,"pos":5.0,"posD":null,"posS":null,"fav":61.3,"neg":1.5,"sent":{"positive":8052,"neutral":4637,"mixed":264,"negative":191},"types":{"mention":3577,"recommendation":4320,"comparison":4755,"definition":222,"final_choice":270}},{"brand":"Lucid","own":false,"sibling":false,"group":"Lucid","grouped":false,"rank":15,"mentions":9221,"prompts":983,"share":1.1,"shareD":-0.1,"exp":5.7,"expD":null,"expS":null,"shareS":null,"pos":3.9,"posD":null,"posS":null,"fav":82.8,"neg":1.2,"sent":{"positive":7639,"neutral":1159,"mixed":311,"negative":112},"types":{"mention":1730,"recommendation":4909,"comparison":1900,"definition":37,"final_choice":645}},{"brand":"Renault","own":false,"sibling":false,"group":"Renault","grouped":false,"rank":16,"mentions":8701,"prompts":1570,"share":1.0,"shareD":0.0,"exp":6.2,"expD":null,"expS":null,"shareS":null,"pos":5.2,"posD":null,"posS":null,"fav":80.9,"neg":0.4,"sent":{"positive":7042,"neutral":1572,"mixed":52,"negative":35},"types":{"mention":2413,"recommendation":4127,"comparison":1823,"definition":29,"final_choice":309}},{"brand":"Subaru","own":false,"sibling":false,"group":"Subaru","grouped":false,"rank":17,"mentions":8649,"prompts":988,"share":1.0,"shareD":0.1,"exp":6.4,"expD":null,"expS":null,"shareS":null,"pos":4.4,"posD":null,"posS":null,"fav":86.9,"neg":0.9,"sent":{"positive":7519,"neutral":934,"mixed":122,"negative":74},"types":{"mention":1454,"recommendation":5176,"comparison":1683,"definition":55,"final_choice":281}},{"brand":"Škoda","own":false,"sibling":false,"group":"VW","grouped":true,"rank":18,"mentions":6644,"prompts":1627,"share":0.8,"shareD":0.0,"exp":5.6,"expD":null,"expS":null,"shareS":null,"pos":5.1,"posD":null,"posS":null,"fav":70.9,"neg":0.7,"sent":{"positive":4711,"neutral":1799,"mixed":87,"negative":47},"types":{"mention":1048,"recommendation":3403,"comparison":1822,"definition":6,"final_choice":365}},{"brand":"Polestar","own":false,"sibling":false,"group":"Geely","grouped":true,"rank":19,"mentions":6592,"prompts":1217,"share":0.8,"shareD":0.1,"exp":5.4,"expD":null,"expS":null,"shareS":null,"pos":4.9,"posD":null,"posS":null,"fav":85.1,"neg":0.4,"sent":{"positive":5608,"neutral":882,"mixed":78,"negative":24},"types":{"mention":1517,"recommendation":3689,"comparison":1043,"definition":9,"final_choice":334}},{"brand":"Ferrari","own":false,"sibling":false,"group":"Ferrari","grouped":false,"rank":20,"mentions":6040,"prompts":579,"share":0.7,"shareD":0.0,"exp":3.4,"expD":null,"expS":null,"shareS":null,"pos":4.8,"posD":null,"posS":null,"fav":80.0,"neg":1.1,"sent":{"positive":4831,"neutral":1065,"mixed":75,"negative":69},"types":{"mention":1797,"recommendation":2182,"comparison":1663,"definition":18,"final_choice":380}},{"brand":"Rivian","own":false,"sibling":false,"group":"Rivian","grouped":false,"rank":21,"mentions":5600,"prompts":758,"share":0.7,"shareD":0.0,"exp":4.3,"expD":null,"expS":null,"shareS":null,"pos":5.1,"posD":null,"posS":null,"fav":74.3,"neg":4.0,"sent":{"positive":4160,"neutral":940,"mixed":274,"negative":226},"types":{"mention":1371,"recommendation":2488,"comparison":1644,"definition":4,"final_choice":93}},{"brand":"Rolls-Royce","own":false,"sibling":false,"group":"BMW","grouped":true,"rank":22,"mentions":4677,"prompts":395,"share":0.6,"shareD":0.0,"exp":2.8,"expD":null,"expS":null,"shareS":null,"pos":3.7,"posD":null,"posS":null,"fav":82.4,"neg":0.8,"sent":{"positive":3854,"neutral":750,"mixed":37,"negative":36},"types":{"mention":1194,"recommendation":1724,"comparison":1035,"definition":47,"final_choice":677}},{"brand":"General Motors","own":false,"sibling":false,"group":"GM","grouped":true,"rank":23,"mentions":4367,"prompts":640,"share":0.5,"shareD":0.0,"exp":3.7,"expD":null,"expS":null,"shareS":null,"pos":6.1,"posD":null,"posS":null,"fav":60.0,"neg":4.4,"sent":{"positive":2621,"neutral":1429,"mixed":123,"negative":194},"types":{"mention":1110,"recommendation":1502,"comparison":1687,"definition":11,"final_choice":57}},{"brand":"Geely","own":false,"sibling":false,"group":"Geely","grouped":false,"rank":24,"mentions":4221,"prompts":685,"share":0.5,"shareD":0.1,"exp":3.4,"expD":null,"expS":null,"shareS":null,"pos":6.0,"posD":null,"posS":null,"fav":74.2,"neg":0.5,"sent":{"positive":3133,"neutral":1038,"mixed":31,"negative":19},"types":{"mention":1786,"recommendation":1294,"comparison":1051,"definition":20,"final_choice":70}},{"brand":"Nissan","own":false,"sibling":false,"group":"Nissan","grouped":false,"rank":25,"mentions":3427,"prompts":880,"share":0.4,"shareD":0.0,"exp":3.7,"expD":null,"expS":null,"shareS":null,"pos":5.6,"posD":null,"posS":null,"fav":52.6,"neg":4.0,"sent":{"positive":1803,"neutral":1418,"mixed":69,"negative":137},"types":{"mention":726,"recommendation":1121,"comparison":1534,"definition":3,"final_choice":43}},{"brand":"Chevrolet","own":false,"sibling":false,"group":"GM","grouped":true,"rank":26,"mentions":3308,"prompts":518,"share":0.4,"shareD":0.0,"exp":2.9,"expD":null,"expS":null,"shareS":null,"pos":5.3,"posD":null,"posS":null,"fav":69.3,"neg":1.9,"sent":{"positive":2291,"neutral":881,"mixed":73,"negative":63},"types":{"mention":753,"recommendation":1616,"comparison":804,"definition":23,"final_choice":112}},{"brand":"Bentley","own":false,"sibling":false,"group":"VW","grouped":true,"rank":27,"mentions":3301,"prompts":460,"share":0.4,"shareD":0.0,"exp":3.1,"expD":null,"expS":null,"shareS":null,"pos":4.4,"posD":null,"posS":null,"fav":70.3,"neg":1.0,"sent":{"positive":2322,"neutral":880,"mixed":67,"negative":32},"types":{"mention":664,"recommendation":1047,"comparison":1403,"definition":33,"final_choice":154}},{"brand":"XPeng","own":false,"sibling":false,"group":"XPeng","grouped":false,"rank":28,"mentions":3224,"prompts":677,"share":0.4,"shareD":0.1,"exp":2.9,"expD":null,"expS":null,"shareS":null,"pos":6.7,"posD":null,"posS":null,"fav":79.5,"neg":0.3,"sent":{"positive":2564,"neutral":623,"mixed":27,"negative":10},"types":{"mention":855,"recommendation":1429,"comparison":878,"definition":2,"final_choice":60}},{"brand":"NIO","own":false,"sibling":false,"group":"NIO","grouped":false,"rank":29,"mentions":2791,"prompts":637,"share":0.3,"shareD":0.0,"exp":2.7,"expD":null,"expS":null,"shareS":null,"pos":6.4,"posD":null,"posS":null,"fav":79.8,"neg":0.3,"sent":{"positive":2228,"neutral":511,"mixed":45,"negative":7},"types":{"mention":732,"recommendation":1238,"comparison":752,"definition":5,"final_choice":64}},{"brand":"Aston Martin","own":false,"sibling":false,"group":"Aston Martin","grouped":false,"rank":30,"mentions":2673,"prompts":335,"share":0.3,"shareD":0.0,"exp":2.1,"expD":null,"expS":null,"shareS":null,"pos":4.7,"posD":null,"posS":null,"fav":82.4,"neg":0.9,"sent":{"positive":2203,"neutral":387,"mixed":60,"negative":23},"types":{"mention":643,"recommendation":1095,"comparison":680,"definition":19,"final_choice":236}},{"brand":"Stellantis","own":false,"sibling":false,"group":"Stellantis","grouped":false,"rank":31,"mentions":2544,"prompts":587,"share":0.3,"shareD":0.0,"exp":2.4,"expD":null,"expS":null,"shareS":null,"pos":6.9,"posD":null,"posS":null,"fav":58.3,"neg":8.1,"sent":{"positive":1482,"neutral":769,"mixed":86,"negative":207},"types":{"mention":775,"recommendation":677,"comparison":1053,"definition":4,"final_choice":35}},{"brand":"Peugeot","own":false,"sibling":false,"group":"Stellantis","grouped":true,"rank":32,"mentions":2541,"prompts":748,"share":0.3,"shareD":0.0,"exp":2.6,"expD":null,"expS":null,"shareS":null,"pos":6.0,"posD":null,"posS":null,"fav":61.9,"neg":1.5,"sent":{"positive":1573,"neutral":892,"mixed":38,"negative":38},"types":{"mention":671,"recommendation":991,"comparison":846,"definition":5,"final_choice":28}},{"brand":"Lamborghini","own":false,"sibling":false,"group":"VW","grouped":true,"rank":33,"mentions":2432,"prompts":401,"share":0.3,"shareD":0.0,"exp":2.0,"expD":null,"expS":null,"shareS":null,"pos":6.1,"posD":null,"posS":null,"fav":69.2,"neg":2.2,"sent":{"positive":1682,"neutral":662,"mixed":34,"negative":54},"types":{"mention":908,"recommendation":788,"comparison":662,"definition":9,"final_choice":65}},{"brand":"Dacia","own":false,"sibling":false,"group":"Renault","grouped":true,"rank":34,"mentions":2398,"prompts":422,"share":0.3,"shareD":0.0,"exp":1.5,"expD":null,"expS":null,"shareS":null,"pos":5.0,"posD":null,"posS":null,"fav":88.2,"neg":0.6,"sent":{"positive":2115,"neutral":239,"mixed":29,"negative":15},"types":{"mention":273,"recommendation":1658,"comparison":318,"definition":1,"final_choice":148}},{"brand":"MG","own":false,"sibling":false,"group":"SAIC","grouped":true,"rank":35,"mentions":2097,"prompts":475,"share":0.2,"shareD":0.0,"exp":2.1,"expD":null,"expS":null,"shareS":null,"pos":7.1,"posD":null,"posS":null,"fav":63.2,"neg":6.9,"sent":{"positive":1325,"neutral":545,"mixed":82,"negative":145},"types":{"mention":794,"recommendation":838,"comparison":441,"definition":1,"final_choice":23}},{"brand":"Suzuki","own":false,"sibling":false,"group":"Suzuki","grouped":false,"rank":36,"mentions":1779,"prompts":405,"share":0.2,"shareD":0.0,"exp":1.5,"expD":null,"expS":null,"shareS":null,"pos":5.1,"posD":null,"posS":null,"fav":89.1,"neg":0.3,"sent":{"positive":1585,"neutral":178,"mixed":11,"negative":5},"types":{"mention":248,"recommendation":1090,"comparison":356,"definition":3,"final_choice":82}},{"brand":"Zeekr","own":false,"sibling":false,"group":"Geely","grouped":true,"rank":37,"mentions":1681,"prompts":546,"share":0.2,"shareD":0.0,"exp":2.0,"expD":null,"expS":null,"shareS":null,"pos":6.8,"posD":null,"posS":null,"fav":69.9,"neg":0.3,"sent":{"positive":1175,"neutral":485,"mixed":16,"negative":5},"types":{"mention":716,"recommendation":618,"comparison":319,"definition":2,"final_choice":26}},{"brand":"Chery","own":false,"sibling":false,"group":"Chery","grouped":false,"rank":38,"mentions":1622,"prompts":229,"share":0.2,"shareD":-0.1,"exp":1.4,"expD":null,"expS":null,"shareS":null,"pos":6.5,"posD":null,"posS":null,"fav":71.7,"neg":0.3,"sent":{"positive":1163,"neutral":430,"mixed":24,"negative":5},"types":{"mention":882,"recommendation":437,"comparison":299,"definition":1,"final_choice":3}},{"brand":"Edge Products","own":false,"sibling":false,"group":"Edge Products","grouped":false,"rank":39,"mentions":1499,"prompts":323,"share":0.2,"shareD":0.2,"exp":2.8,"expD":null,"expS":null,"shareS":null,"pos":4.5,"posD":null,"posS":null,"fav":25.1,"neg":1.1,"sent":{"positive":376,"neutral":1105,"mixed":2,"negative":16},"types":{"mention":1252,"recommendation":8,"comparison":16,"definition":223,"final_choice":0}},{"brand":"Cadillac","own":false,"sibling":false,"group":"GM","grouped":true,"rank":40,"mentions":1465,"prompts":319,"share":0.2,"shareD":0.0,"exp":1.5,"expD":null,"expS":null,"shareS":null,"pos":5.7,"posD":null,"posS":null,"fav":71.8,"neg":2.3,"sent":{"positive":1052,"neutral":356,"mixed":24,"negative":33},"types":{"mention":408,"recommendation":729,"comparison":301,"definition":3,"final_choice":24}}],"brandCount":752,"treemap":[{"key":"HMG","members":[{"brand":"HMG","value":325173,"share":38.7,"delta":-1.7,"own":true,"sibling":false}],"value":325173,"share":38.7,"delta":-1.7,"partial":false,"own":true},{"key":"Toyota","members":[{"brand":"Toyota","value":61535,"share":7.3,"delta":0.3,"own":false,"sibling":false},{"brand":"Lexus","value":23566,"share":2.8,"delta":0.1,"own":false,"sibling":false}],"value":85101,"share":10.1,"delta":0.4,"partial":false,"own":false},{"key":"VW","members":[{"brand":"Porsche","value":26176,"share":3.1,"delta":-0.1,"own":false,"sibling":false},{"brand":"Volkswagen","value":20940,"share":2.5,"delta":-0.2,"own":false,"sibling":false},{"brand":"Audi","value":13164,"share":1.6,"delta":0.0,"own":false,"sibling":false},{"brand":"Škoda","value":6644,"share":0.8,"delta":0.0,"own":false,"sibling":false},{"brand":"Bentley","value":3301,"share":0.4,"delta":0.0,"own":false,"sibling":false},{"brand":"Lamborghini","value":2432,"share":0.3,"delta":0.0,"own":false,"sibling":false},{"brand":"SEAT","value":222,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"CUPRA","value":147,"share":0.0,"delta":0.0,"own":false,"sibling":false}],"value":73026,"share":8.7,"delta":-0.3,"partial":false,"own":false},{"key":"BMW","members":[{"brand":"BMW","value":54088,"share":6.4,"delta":0.4,"own":false,"sibling":false},{"brand":"Rolls-Royce","value":4677,"share":0.6,"delta":0.0,"own":false,"sibling":false},{"brand":"MINI","value":226,"share":0.0,"delta":0.0,"own":false,"sibling":false}],"value":58991,"share":7.0,"delta":0.3,"partial":false,"own":false},{"key":"Tesla","members":[{"brand":"Tesla","value":53779,"share":6.4,"delta":0.1,"own":false,"sibling":false}],"value":53779,"share":6.4,"delta":0.1,"partial":false,"own":false},{"key":"Mercedes-Benz","members":[{"brand":"Mercedes-Benz","value":36954,"share":4.4,"delta":0.1,"own":false,"sibling":false},{"brand":"Daimler","value":409,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Maybach","value":288,"share":0.0,"delta":0.0,"own":false,"sibling":false}],"value":37651,"share":4.5,"delta":0.1,"partial":false,"own":false},{"key":"Geely","members":[{"brand":"Volvo","value":20343,"share":2.4,"delta":0.2,"own":false,"sibling":false},{"brand":"Polestar","value":6592,"share":0.8,"delta":0.1,"own":false,"sibling":false},{"brand":"Geely","value":4221,"share":0.5,"delta":0.1,"own":false,"sibling":false},{"brand":"Zeekr","value":1681,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Lotus","value":747,"share":0.1,"delta":0.0,"own":false,"sibling":false}],"value":33584,"share":4.0,"delta":0.4,"partial":false,"own":false},{"key":"Honda","members":[{"brand":"Honda","value":22285,"share":2.7,"delta":0.0,"own":false,"sibling":false},{"brand":"Acura","value":967,"share":0.1,"delta":0.0,"own":false,"sibling":false}],"value":23252,"share":2.8,"delta":0.0,"partial":false,"own":false},{"key":"BYD","members":[{"brand":"BYD","value":17499,"share":2.1,"delta":0.2,"own":false,"sibling":false},{"brand":"Denza","value":150,"share":0.0,"delta":0.0,"own":false,"sibling":false}],"value":17649,"share":2.1,"delta":0.2,"partial":false,"own":false},{"key":"Mazda","members":[{"brand":"Mazda","value":15295,"share":1.8,"delta":0.0,"own":false,"sibling":false}],"value":15295,"share":1.8,"delta":0.0,"partial":false,"own":false},{"key":"Ford","members":[{"brand":"Ford","value":13144,"share":1.6,"delta":0.1,"own":false,"sibling":false},{"brand":"Lincoln","value":215,"share":0.0,"delta":0.0,"own":false,"sibling":false}],"value":13359,"share":1.6,"delta":0.1,"partial":false,"own":false},{"key":"__rest","members":[{"brand":"Lucid","value":9221,"share":1.1,"delta":-0.1,"own":false,"sibling":false},{"brand":"Renault","value":8701,"share":1.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Subaru","value":8649,"share":1.0,"delta":0.1,"own":false,"sibling":false},{"brand":"Ferrari","value":6040,"share":0.7,"delta":0.0,"own":false,"sibling":false},{"brand":"Rivian","value":5600,"share":0.7,"delta":0.0,"own":false,"sibling":false},{"brand":"General Motors","value":4367,"share":0.5,"delta":0.0,"own":false,"sibling":false},{"brand":"Nissan","value":3427,"share":0.4,"delta":0.0,"own":false,"sibling":false},{"brand":"Chevrolet","value":3308,"share":0.4,"delta":0.0,"own":false,"sibling":false},{"brand":"XPeng","value":3224,"share":0.4,"delta":0.1,"own":false,"sibling":false},{"brand":"NIO","value":2791,"share":0.3,"delta":0.0,"own":false,"sibling":false},{"brand":"Aston Martin","value":2673,"share":0.3,"delta":0.0,"own":false,"sibling":false},{"brand":"Stellantis","value":2544,"share":0.3,"delta":0.0,"own":false,"sibling":false},{"brand":"Peugeot","value":2541,"share":0.3,"delta":0.0,"own":false,"sibling":false},{"brand":"Dacia","value":2398,"share":0.3,"delta":0.0,"own":false,"sibling":false},{"brand":"MG","value":2097,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Suzuki","value":1779,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Chery","value":1622,"share":0.2,"delta":-0.1,"own":false,"sibling":false},{"brand":"Edge Products","value":1499,"share":0.2,"delta":0.2,"own":false,"sibling":false},{"brand":"Cadillac","value":1465,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Jeep","value":1434,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Xiaomi","value":1401,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Fiat","value":1389,"share":0.2,"delta":0.0,"own":false,"sibling":false},{"brand":"Alfa Romeo","value":1238,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Citroën","value":975,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Land Rover","value":918,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Maserati","value":825,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"GWM","value":780,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"McLaren","value":777,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Vibe Audio","value":734,"share":0.1,"delta":0.1,"own":false,"sibling":false},{"brand":"Tata","value":733,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Jaguar","value":728,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Bugatti","value":698,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Buick","value":594,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Rimac","value":566,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"SAIC","value":546,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Huawei","value":542,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Li Auto","value":526,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"GMC","value":522,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Mitsubishi","value":502,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"GAC","value":450,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Changan","value":430,"share":0.1,"delta":0.0,"own":false,"sibling":false},{"brand":"Opel","value":375,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Mahindra","value":370,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Alpine","value":330,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Alexa","value":314,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Leapmotor","value":302,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Chrysler","value":244,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"VinFast","value":230,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"La Segunda","value":226,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Alphabet","value":221,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Isuzu","value":221,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Maruti","value":208,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Apollo","value":202,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Formula 1","value":199,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Ram","value":195,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Giorgio Armani","value":193,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Proton","value":192,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"STA-BIL","value":191,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Battery Manufacturer","value":190,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Togg","value":177,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Infiniti","value":170,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Dodge","value":165,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"DS Automobiles","value":164,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"LG전자","value":159,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Aito","value":158,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Haval","value":154,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Waze","value":140,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"G2","value":127,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"Air Liquide","value":127,"share":0.0,"delta":0.0,"own":false,"sibling":false},{"brand":"BrightDrop","value":118,"share":0.0,"delta":0.0,"own":false,"sibling":false}],"value":97316,"share":11.6,"delta":0.4,"partial":false,"own":false}],"bump":{"x":["2026-07-06","2026-07-13","2026-07-20","2026-07-27","2026-08-03","2026-08-10","2026-08-17","2026-08-24","2026-08-31","2026-09-07","2026-09-14","2026-09-21","2026-09-28","2026-10-05"],"series":[{"key":"__own","own":true,"mentions":[20556,29359,17076,11186,16858,18900,18417,147883,223674,220393,331667,240764,315562,325173],"shares":[32.1,31.0,29.0,28.5,32.8,35.1,34.2,39.6,43.0,38.6,40.3,41.5,40.4,38.7],"ranks":[1,1,1,1,1,1,1,1,1,1,1,1,1,1],"move":0},{"key":"Toyota","own":false,"mentions":[1961,3525,1899,1033,1675,2818,1939,29710,34899,40958,57472,38876,55033,61535],"shares":[3.1,3.7,3.2,2.6,3.3,5.2,3.6,8.0,6.7,7.2,7.0,6.7,7.0,7.3],"ranks":[7,6,6,7,6,6,6,2,2,3,2,2,2,2],"move":5},{"key":"BMW","own":false,"mentions":[6938,9922,6330,4783,5578,4989,5403,22089,29086,35442,51719,34636,47456,54088],"shares":[10.8,10.5,10.8,12.2,10.8,9.3,10.0,5.9,5.6,6.2,6.3,6.0,6.1,6.4],"ranks":[2,2,2,2,2,2,2,3,4,4,4,4,4,3],"move":-1},{"key":"Tesla","own":false,"mentions":[1987,3355,1791,1183,1485,2607,1837,18299,33390,41876,55177,37538,49276,53779],"shares":[3.1,3.5,3.0,3.0,2.9,4.8,3.4,4.9,6.4,7.3,6.7,6.5,6.3,6.4],"ranks":[6,7,7,6,7,7,7,4,3,2,3,3,3,4],"move":2},{"key":"Mercedes-Benz","own":false,"mentions":[5119,6854,4711,3587,4398,3514,3919,15346,20778,24604,35212,24891,33545,36954],"shares":[8.0,7.2,8.0,9.1,8.6,6.5,7.3,4.1,4.0,4.3,4.3,4.3,4.3,4.4],"ranks":[5,5,5,5,4,5,5,5,5,5,5,5,5,5],"move":0},{"key":"Porsche","own":false,"mentions":[6037,8792,5795,4442,4752,4146,5029,14592,16317,19286,26951,17885,25318,26176],"shares":[9.4,9.3,9.9,11.3,9.2,7.7,9.3,3.9,3.1,3.4,3.3,3.1,3.2,3.1],"ranks":[3,3,3,3,3,3,3,6,6,6,6,6,6,6],"move":-3},{"key":"Lexus","own":false,"mentions":[5639,8434,5430,3936,4117,3600,4224,14072,12836,14898,21532,14526,20831,23566],"shares":[8.8,8.9,9.2,10.0,8.0,6.7,7.8,3.8,2.5,2.6,2.6,2.5,2.7,2.8],"ranks":[4,4,4,4,5,4,4,7,9,8,8,8,8,7],"move":-3},{"key":"Volkswagen","own":false,"mentions":[231,429,285,95,191,449,378,5771,13945,17288,24526,17068,20869,20940],"shares":[0.4,0.5,0.5,0.2,0.4,0.8,0.7,1.5,2.7,3.0,3.0,2.9,2.7,2.5],"ranks":[11,11,11,11,11,11,11,10,7,7,7,7,7,9],"move":2},{"key":"Honda","own":false,"mentions":[853,1769,985,414,808,1173,657,12353,12525,14019,19018,13900,20753,22285],"shares":[1.3,1.9,1.7,1.1,1.6,2.2,1.2,3.3,2.4,2.5,2.3,2.4,2.7,2.7],"ranks":[9,9,9,9,9,9,9,8,10,10,10,9,9,8],"move":1},{"key":"Volvo","own":false,"mentions":[1716,2528,1638,964,1337,1355,1185,8303,13102,14227,21193,13898,17595,20343],"shares":[2.7,2.7,2.8,2.5,2.6,2.5,2.2,2.2,2.5,2.5,2.6,2.4,2.3,2.4],"ranks":[8,8,8,8,8,8,8,9,8,9,9,10,10,10],"move":-2},{"key":"BYD","own":false,"mentions":[341,605,340,189,282,631,486,5376,9087,11587,16226,10345,14764,17499],"shares":[0.5,0.6,0.6,0.5,0.5,1.2,0.9,1.4,1.7,2.0,2.0,1.8,1.9,2.1],"ranks":[10,10,10,10,10,10,10,11,11,11,11,11,11,11],"move":-1}],"first":0,"last":13},"engines":{"chatgpt":{"exp":[74.8,77.3,77.4,77.9,78.9,79.6,73.3,76.4,69.7,76.3,78.4,78.6,78.9,78.2],"sh":[30.2,27.3,28.0,27.9,31.6,35.2,33.9,38.8,42.9,38.7,40.0,42.2,40.4,37.6],"pos":[10.2,9.6,9.2,13.5,47.2,55.1,52.9,48.3,43.2,50.7,50.7,43.6,46.2,50.0],"neg":[0.3,0.2,0.3,0.3,1.8,1.9,2.0,2.4,2.1,2.0,1.9,1.7,1.5,2.0],"rk":[2.87,3.02,2.8,2.75,2.73,2.66,2.6,2.68,2.29,2.32,2.3,2.24,2.34,2.44]},"gemini":{"exp":[72.5,74.3,77.9,74.5,75.8,81.2,80.4,74.4,68.4,71.1,74.6,74.0,74.7,75.0],"sh":[33.4,33.8,30.2,29.4,34.0,35.1,34.6,40.9,43.3,38.5,40.8,40.5,40.4,40.3],"pos":[3.0,3.4,3.4,7.2,49.6,66.5,59.3,59.5,60.0,62.2,60.1,60.1,60.3,59.6],"neg":[1.0,0.6,0.9,1.0,3.3,1.8,1.4,2.1,2.0,1.3,1.4,1.4,1.7,1.7],"rk":[2.65,2.48,2.47,2.45,2.37,2.34,2.22,2.2,2.12,2.22,2.18,2.13,2.26,2.26]}},"types":{"own":[{"type":"final_choice","pct":7.0,"signals":5886,"spark":[0.0,2.7,1.6,1.8,7.0,9.7,10.2,7.5,5.2,6.3,6.4,4.1,4.7,7.0],"delta":2.3,"hasSpark":true,"counts":[0,109,42,32,174,234,234,1233,1862,2491,3220,1530,2137,3128]},{"type":"recommendation","pct":36.7,"signals":76546,"spark":[38.6,38.9,38.7,34.4,40.3,42.4,39.6,38.8,32.3,35.0,36.2,32.9,34.9,36.7],"delta":1.8,"hasSpark":true,"counts":[1136,1553,988,614,1004,1021,905,6403,11481,13817,18167,12370,15891,16516]},{"type":"comparison","pct":29.2,"signals":47764,"spark":[71.1,70.6,71.7,67.4,30.3,30.8,30.1,31.2,23.1,24.9,29.0,28.9,28.4,29.2],"delta":0.8,"hasSpark":true,"counts":[2096,2816,1830,1204,756,742,687,5141,8200,9803,14582,10865,12922,13114]},{"type":"definition","pct":4.3,"signals":2969,"spark":[0.0,0.0,0.0,0.7,10.0,6.2,4.9,3.1,2.1,2.4,4.4,3.8,3.8,4.3],"delta":0.5,"hasSpark":true,"counts":[0,0,0,12,248,149,111,504,756,955,2193,1434,1731,1953]},{"type":"mention","pct":59.3,"signals":192008,"spark":[63.6,65.6,66.6,64.7,58.0,60.1,60.9,61.1,54.3,54.8,58.3,58.5,59.6,59.3],"delta":-0.2,"hasSpark":true,"counts":[1875,2615,1699,1157,1445,1449,1393,10073,19279,21613,29283,22036,27097,26677]}],"answers":[2946,3988,2552,1787,2491,2409,2286,16482,35506,39438,50235,37638,45500,44979],"cmp":[{"type":"final_choice","own":20.1},{"type":"recommendation","own":26.6},{"type":"comparison","own":23.3},{"type":"definition","own":49.1},{"type":"mention","own":61.5}],"dots":{"Toyota":[15.4,9.0,8.8,4.0,4.2],"BMW":[6.5,7.2,9.4,5.7,3.8],"Tesla":[9.9,7.4,9.6,2.0,3.2],"Mercedes-Benz":[3.8,4.4,8.0,2.3,2.1],"Porsche":[7.0,4.1,2.6,1.2,2.2],"Lexus":[5.7,4.2,3.0,1.4,1.1],"Honda":[2.3,3.5,3.4,2.4,1.4],"Volkswagen":[1.3,2.2,4.7,1.4,1.4],"Volvo":[3.2,3.6,2.2,1.4,1.4],"BYD":[3.3,2.3,2.4,1.1,1.6]},"fav":[{"type":"all","positive":175995,"neutral":135993,"mixed":7057,"negative":6128,"total":325173,"positivePct":54.1,"segments":[{"key":"positive","count":175995,"pct":54.1},{"key":"neutral","count":135993,"pct":41.8},{"key":"mixed","count":7057,"pct":2.2},{"key":"negative","count":6128,"pct":1.9}]},{"type":"final_choice","positive":29825,"neutral":4962,"mixed":414,"negative":309,"total":35510,"positivePct":84.0,"segments":[{"key":"positive","count":29825,"pct":84.0},{"key":"neutral","count":4962,"pct":14.0},{"key":"mixed","count":414,"pct":1.2},{"key":"negative","count":309,"pct":0.9}]},{"type":"recommendation","positive":120178,"neutral":38416,"mixed":2911,"negative":2216,"total":163721,"positivePct":73.4,"segments":[{"key":"positive","count":120178,"pct":73.4},{"key":"neutral","count":38416,"pct":23.5},{"key":"mixed","count":2911,"pct":1.8},{"key":"negative","count":2216,"pct":1.4}]},{"type":"comparison","positive":82056,"neutral":60951,"mixed":4237,"negative":3342,"total":150586,"positivePct":54.5,"segments":[{"key":"positive","count":82056,"pct":54.5},{"key":"neutral","count":60951,"pct":40.5},{"key":"mixed","count":4237,"pct":2.8},{"key":"negative","count":3342,"pct":2.2}]},{"type":"definition","positive":5578,"neutral":8013,"mixed":276,"negative":257,"total":14124,"positivePct":39.5,"segments":[{"key":"positive","count":5578,"pct":39.5},{"key":"neutral","count":8013,"pct":56.7},{"key":"mixed","count":276,"pct":2.0},{"key":"negative","count":257,"pct":1.8}]},{"type":"mention","positive":130709,"neutral":127035,"mixed":6243,"negative":5858,"total":269845,"positivePct":48.4,"segments":[{"key":"positive","count":130709,"pct":48.4},{"key":"neutral","count":127035,"pct":47.1},{"key":"mixed","count":6243,"pct":2.3},{"key":"negative","count":5858,"pct":2.2}]}]},"dist":{"segments":[{"key":"positive","count":175995,"pct":54.1},{"key":"neutral","count":135993,"pct":41.8},{"key":"mixed","count":7057,"pct":2.2},{"key":"negative","count":6128,"pct":1.9}],"total":325173}};
+const NAVY = "#1e38fa", CTX = "#d5d5d6";
+const COMPARE = ["#ff7651","#ff0082","#c00ced","#ffbe42","#ff9174","#ff59ae","#d355f3","#ffce71","#ffb49f","#ff99cd","#ecb6fa","#ffdfa0","#ffbfe0","#f2cefb","#ffebc6"];
+const SENT = { positive: ["긍정", "#3df134"], neutral: ["중립", "#d5d5d6"], mixed: ["혼합", "#faf600"], negative: ["부정", "#fa1e2a"] };
+const TYPES = { final_choice: "최종 선택", recommendation: "추천", comparison: "비교", definition: "정의", mention: "단순 언급" };
+const M = {
+  exposure: { label: "AI 노출률", short: "노출률", unit: "%", better: "up", dUnit: "pp", row: "exp", d: "expD" },
+  sov: { label: "AI 점유율", short: "점유율", unit: "%", better: "up", dUnit: "pp", row: "share", d: "shareD" },
+  favorability: { label: "AI 우호도", short: "우호도", unit: "%", better: "up", dUnit: "pp", row: "fav", d: null },
+  "first-rank": { label: "AI 우선 노출도", short: "우선 노출도", unit: "번째", better: "down", dUnit: "", row: "pos", d: "posD" },
+};
+const st = { focus: "exposure", compare: ["Toyota"], auto: true, view: "table", sort: null, all: false, q: "", lit: null };
+
+const $ = (s, el = document) => el.querySelector(s);
+const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+const nf = new Intl.NumberFormat("ko-KR");
+const n0 = (v) => (v == null ? "—" : nf.format(v));
+const p1 = (v) => (v == null ? "—" : `${v.toFixed(1)}%`);
+const r1 = (v) => (v == null ? "—" : v.toFixed(1));
+const md = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
+const colorOf = (b) => (b === "HMG" || b === "__own" ? NAVY : st.compare.includes(b) ? COMPARE[st.compare.indexOf(b) % COMPARE.length] : CTX);
+const fmtV = (m, v) => (v == null ? "—" : m === "first-rank" ? `${v.toFixed(1)}번째` : `${v.toFixed(1)}%`);
+
+/** Δ chip: colour for 당사 only (rivals neutral); 0.0 reads 변화 없음 */
+function dchip(v, { unit = "pp", better = "up", own = true } = {}) {
+  if (v == null) return `<span class="d na">—</span>`;
+  const r = Math.round(v * 10) / 10;
+  if (r === 0) return `<span class="d flat">— 변화 없음</span>`;
+  const up = r > 0, good = better === "up" ? up : !up;
+  const cls = own ? (good ? "good" : "bad") : "neu";
+  return `<span class="d ${cls}">${up ? "↑" : "↓"} ${Math.abs(r).toFixed(1)}${unit}</span>`;
+}
+function spark(vals, color, { w = 84, h = 26, invert = false, lo, hi } = {}) {
+  const v = (vals || []).filter((x) => x != null);
+  if (v.length < 2) return `<span class="muted" style="font-size:11px">—</span>`;
+  const a = lo ?? Math.min(...v), b = hi ?? Math.max(...v), span = b - a || 1;
+  const pts = vals.map((x, i) => (x == null ? null : [(i / (vals.length - 1)) * w, invert ? 2 + ((x - a) / span) * (h - 4) : h - 2 - ((x - a) / span) * (h - 4)]));
+  const d = pts.filter(Boolean).map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
+  const last = pts.filter(Boolean).pop();
+  return `<svg class="sp" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="2.4" fill="${color}"/></svg>`;
+}
+const tip = $("#tip");
+function showTip(html, e) { tip.innerHTML = html; tip.hidden = false; const r = tip.getBoundingClientRect(); let x = e.clientX + 14, y = e.clientY + 14; if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14; if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14; tip.style.left = `${x}px`; tip.style.top = `${y}px`; }
+const hideTip = () => (tip.hidden = true);
+
+// ── KPI 줄 ─────────────────────────────────────────────────────────────
+function renderKpis() {
+  const k = D.kpi, T = D.trend;
+  const tiles = [
+    ["exposure", `${k.exposure.v.toFixed(1)}<small>%</small>`, dchip(k.exposure.d), `${n0(k.exposure.num)} / ${n0(k.exposure.den)} 답변`, T.exposure.own, false, "당사 브랜드를 1회 이상 언급한 답변 ÷ 측정 답변"],
+    ["sov", `${k.sov.v.toFixed(1)}<small>%</small>`, dchip(k.sov.d), `${n0(k.sov.num)} / ${n0(k.sov.den)} 언급`, T.sov.own, false, "전체 브랜드 언급 중 당사 언급 비중"],
+    ["favorability", `${k.favorability.v.toFixed(1)}<small>%</small>`, dchip(k.favorability.d), `부정 <span class="neg">${k.favorability.neg.toFixed(1)}%</span> ${dchip(k.favorability.negD, { better: "down" })}`, T.favorability.own, false, "당사 언급 감정 신호 중 긍정 비율"],
+    ["first-rank", `${k["first-rank"].v.toFixed(1)}<small>번째</small>`, dchip(k["first-rank"].d, { unit: "", better: "down" }), `작을수록 먼저 언급`, T["first-rank"].own, true, "답변 안 경쟁 브랜드 중 당사가 나온 순서의 평균"],
+  ];
+  $("#kpis").innerHTML = tiles.map(([m, val, d, sub, s, inv, def]) => `
+    <button class="kpi" role="radio" aria-checked="${st.focus === m}" data-m="${m}">
+      <span class="lab">${M[m].label}<span class="info" title="${def}"><svg class="i s12"><use href="#i-info"/></svg></span><span class="fxtag">기준 지표</span></span>
+      <span class="val num">${val}</span>
+      <span class="sp">${spark(s, NAVY, { w: 96, h: 34, invert: inv })}</span>
+      <span class="meta">${d}<span>직전 회차(09-28) 대비</span><span class="sub2 num">${sub}</span></span>
+    </button>`).join("");
+  $("#kpis").querySelectorAll(".kpi").forEach((b) => b.addEventListener("click", () => { st.focus = b.dataset.m; st.sort = null; renderAll(); }));
+}
+
+// ── 추이 ───────────────────────────────────────────────────────────────
+function trendSeries() {
+  const m = st.focus, T = D.trend[m];
+  if (m === "favorability") return [
+    { key: "neg", name: "부정 신호 비율", color: "#fa1e2a", values: T.neg },
+    { key: "__own", name: "긍정 신호 비율", color: NAVY, values: T.own, own: true },
+  ];
+  const s = st.compare.filter((b) => T.brands[b]).map((b) => ({ key: b, name: b, color: colorOf(b), values: T.brands[b] }));
+  return [...s, { key: "__own", name: "HMG", color: NAVY, values: T.own, own: true }];
+}
+function renderTrend() {
+  const m = st.focus, x = D.x, series = trendSeries();
+  $("#trendTitle").textContent = m === "favorability" ? "긍정 · 부정 신호 비율 추이" : `브랜드별 ${M[m].short} 추이`;
+  $("#legend").innerHTML = [...series].reverse().map((s) => `<span class="${s.own ? "own" : ""}"><i style="background:${s.color}"></i>${s.name}${s.own && m !== "favorability" ? ' <span class="own-tag">당사</span>' : ""}</span>`).join("") + (m === "favorability" ? '<span class="muted">· 경쟁사 감정 추이는 아래 표의 우호도 열(스냅샷)</span>' : "");
+  const el = $("#chart"); const W = el.clientWidth, H = el.clientHeight, L = 40, R = 118, Tp = 10, B = 24;
+  const all = series.flatMap((s) => s.values).filter((v) => v != null);
+  const inv = m === "first-rank";
+  let lo = Math.min(...all), hi = Math.max(...all);
+  let ticks;
+  if (m === "first-rank") { lo = 1; hi = Math.max(5, Math.ceil(hi)); ticks = Array.from({ length: hi }, (_, i) => i + 1); }
+  else {
+    const raw = (hi - Math.max(0, lo - (hi - lo) * 0.15)) / 4, mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((k) => k >= raw) || 10 * mag;
+    lo = Math.max(0, Math.floor((lo - (hi - lo) * 0.15) / step) * step); hi = Math.min(100, Math.ceil(hi / step) * step + (hi % step === 0 ? step : 0));
+    ticks = []; for (let t = lo; t <= hi + 1e-9; t += step) ticks.push(t);
+  }
+  const X = (i) => L + (i / (x.length - 1)) * (W - L - R);
+  const Y = (v) => (inv ? Tp + ((v - lo) / (hi - lo)) * (H - Tp - B) : H - B - ((v - lo) / (hi - lo)) * (H - Tp - B));
+  let svg = `<svg viewBox="0 0 ${W} ${H}"><g class="grid">${ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text class="ax" x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${m === "first-rank" ? t : `${+t.toFixed(1)}%`}</text>`).join("")}</g>`;
+  svg += x.map((d, i) => (i % 2 === (x.length - 1) % 2 ? `<text class="ax" x="${X(i)}" y="${H - 6}" text-anchor="middle">${md(d)}</text>` : "")).join("");
+  const labels = [];
+  for (const s of series) {
+    const pts = s.values.map((v, i) => (v == null ? null : [X(i), Y(v)]));
+    const d = pts.filter(Boolean).map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
+    if (s.own && m !== "favorability") svg += `<path d="${d}L${X(x.length - 1)},${H - B}L${X(0)},${H - B}Z" fill="${NAVY}" opacity=".06"/>`;
+    svg += `<path data-k="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.own ? 2.4 : 1.8}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last = pts[pts.length - 1];
+    if (last) { svg += `<circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>`; labels.push({ y: last[1], s, v: s.values[s.values.length - 1] }); }
+  }
+  labels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 14) labels[i].y = labels[i - 1].y + 14;
+  const bottom = H - B - 4; if (labels.length && labels[labels.length - 1].y > bottom) { labels[labels.length - 1].y = bottom; for (let i = labels.length - 2; i >= 0; i--) if (labels[i + 1].y - labels[i].y < 14) labels[i].y = labels[i + 1].y - 14; }
+  svg += labels.map((l) => `<text class="endl" x="${W - R + 10}" y="${l.y + 4}" fill="${l.s.own ? NAVY : "#222326"}">${l.s.name} ${fmtV(m === "favorability" ? "exposure" : m, l.v)}</text>`).join("");
+  svg += `<line class="cross" id="cross" y1="${Tp}" y2="${H - B}" x1="-10" x2="-10"/><rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" id="hit"/></svg>`;
+  el.innerHTML = svg;
+  const hit = $("#hit", el), cross = $("#cross", el);
+  hit.addEventListener("mousemove", (e) => {
+    const r = el.getBoundingClientRect(); const i = Math.max(0, Math.min(x.length - 1, Math.round(((e.clientX - r.left - L) / (W - L - R)) * (x.length - 1))));
+    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i));
+    const rows = [...series].sort((a, b) => (inv ? (a.values[i] ?? 99) - (b.values[i] ?? 99) : (b.values[i] ?? -1) - (a.values[i] ?? -1)));
+    showTip(`<b>${x[i]} 회차</b>${rows.map((s) => `<div class="r ${s.own ? "own" : ""}"><i style="background:${s.color}"></i><span>${s.name}</span><span>${fmtV(m === "favorability" ? "exposure" : m, s.values[i])}</span></div>`).join("")}`, e);
+  });
+  hit.addEventListener("mouseleave", () => { hideTip(); cross.setAttribute("x1", -10); cross.setAttribute("x2", -10); });
+}
+
+// ── 경쟁 구도 ─────────────────────────────────────────────────────────
+const COLS = [
+  ["exposure", "AI 노출률", "exp", "desc"], ["sov", "AI 점유율", "share", "desc"], ["first-rank", "AI 우선 노출도", "pos", "asc"], ["favorability", "AI 우호도", "fav", "desc"],
+  [null, "언급 수", "mentions", "desc"], [null, "프롬프트", "prompts", "desc"],
+];
+function sentBar(s) {
+  if (!s) return "";
+  const t = s.positive + s.neutral + s.mixed + s.negative || 1;
+  return `<span class="sent">${Object.keys(SENT).map((k) => `<i style="width:${(s[k] / t) * 100}%;background:${SENT[k][1]}"></i>`).join("")}</span>`;
+}
+function renderBoard() {
+  $("#viewSeg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === st.view)));
+  const body = $("#boardBody");
+  if (st.view === "map") return renderMap(body);
+  if (st.view === "bump") return renderBump(body);
+  const fcol = COLS.find((c) => c[0] === st.focus);
+  const sort = st.sort || { key: fcol[2], dir: fcol[3] };
+  const own = D.rows.find((r) => r.own);
+  let rows = D.rows.filter((r) => !r.own);
+  if (st.q.trim()) rows = rows.filter((r) => r.brand.toLowerCase().includes(st.q.trim().toLowerCase()));
+  rows.sort((a, b) => { const va = a[sort.key], vb = b[sort.key]; if (va == null) return 1; if (vb == null) return -1; return sort.dir === "asc" ? va - vb : vb - va; });
+  const shown = st.all ? rows : rows.filter((r, i) => i < 12 || st.compare.includes(r.brand));
+  const list = [own, ...shown];
+  const maxExp = Math.max(...D.rows.map((r) => r.exp || 0)), posMax = 6;
+  const sparkKey = { exposure: "expS", sov: "shareS", "first-rank": "posS", favorability: null }[st.focus];
+  const head = `<tr><th class="l" style="width:52px">#</th><th class="l" style="width:22%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${m === st.focus ? "fx" : ""} ${sort.key === key ? "sorted" : ""}" style="width:${m ? "13%" : "8.5%"}"><button type="button" data-sort="${key}">${lab}${sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : ""}</button></th>`).join("")}<th class="fx" style="width:110px">추이 · ${M[st.focus].short}</th></tr>`;
+  const tr = (r, i) => {
+    const isOwn = r.own, c = colorOf(r.brand), on = st.compare.includes(r.brand);
+    const name = isOwn ? `<b class="own">HMG</b><span class="own-tag">당사</span>` : `<b>${r.brand}</b>${r.grouped ? `<small>${r.group} 그룹</small>` : ""}`;
+    const dot = isOwn ? `<span class="dot" style="background:${NAVY};box-shadow:none;cursor:default"></span>` : `<button class="dot" type="button" data-cmp="${r.brand}" title="${on ? "비교 브랜드에서 빼기" : "비교 브랜드로 넣기"}" style="${on ? `background:${c};box-shadow:none` : ""}"></button>`;
+    const fx = (m) => (m === st.focus ? "fx" : "");
+    const sv = sparkKey ? r[sparkKey] : null;
+    return `<tr class="${isOwn ? "own" : ""} ${st.lit === r.brand ? "lit" : ""}" data-b="${r.brand}">
+      <td>${isOwn ? 1 : r.rank}</td>
+      <td class="l"><span class="bname">${dot}${name}</span></td>
+      <td class="${fx("exposure")}"><span class="vb"><span class="bar"><i style="width:${((r.exp || 0) / maxExp) * 100}%;background:${isOwn ? NAVY : on ? c : "#b9bbbf"}"></i></span><b>${p1(r.exp)}</b>${dchip(r.expD, { own: isOwn })}</span></td>
+      <td class="${fx("sov")}"><span class="vb"><b>${p1(r.share)}</b>${dchip(r.shareD, { own: isOwn })}</span></td>
+      <td class="${fx("first-rank")}"><span class="vb"><span class="ptrack"><i style="left:${(((r.pos || 1) - 1) / (posMax - 1)) * 100}%;background:${isOwn ? NAVY : on ? c : "#b9bbbf"}"></i></span><b>${r1(r.pos)}</b>${dchip(r.posD, { unit: "", better: "down", own: isOwn })}</span></td>
+      <td class="${fx("favorability")}"><span class="vb">${sentBar(r.sent)}<b>${p1(r.fav)}</b></span></td>
+      <td>${n0(r.mentions)}</td><td>${n0(r.prompts)}</td>
+      <td class="fx">${st.focus === "favorability" ? '<span class="muted" style="font-size:11px">스냅샷</span>' : spark(sv, isOwn ? NAVY : on ? c : "#9fa1a6", { invert: st.focus === "first-rank" })}</td></tr>`;
+  };
+  body.innerHTML = `
+    <div class="tools"><label class="search"><svg class="i s14"><use href="#i-search"/></svg><input id="q" placeholder="예: Hyundai" value="${st.q}"></label><span class="muted">순위 = 언급 수 순 · 열 머리를 누르면 그 값으로 정렬 · 왼쪽 점을 누르면 비교 브랜드로 넣고 뺍니다</span></div>
+    <table class="bt"><thead>${head}</thead><tbody>${list.map(tr).join("")}</tbody></table>
+    <div class="more"><button class="tbtn" id="moreBtn" type="button">${st.all ? "상위 12개 + 비교 브랜드만 보기" : `나머지 브랜드 더 보기 (전체 ${n0(D.brandCount)}개)`}</button><span>목업은 언급 상위 40개까지 담았습니다</span></div>`;
+  body.querySelectorAll("th button").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.sort; const c = COLS.find((x) => x[2] === k); st.sort = sort.key === k ? { key: k, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: k, dir: c[3] }; renderBoard(); }));
+  body.querySelectorAll("[data-cmp]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); toggleCompare(b.dataset.cmp); }));
+  body.querySelectorAll("tbody tr").forEach((t) => {
+    t.addEventListener("click", () => openDrawer(t.dataset.b));
+    t.addEventListener("mouseenter", () => litLine(t.dataset.b === "HMG" ? "__own" : t.dataset.b));
+    t.addEventListener("mouseleave", () => litLine(null));
+  });
+  const q = $("#q"); q.addEventListener("input", () => { st.q = q.value; renderBoard(); const n = $("#q"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+  $("#moreBtn").addEventListener("click", () => { st.all = !st.all; renderBoard(); });
+}
+function litLine(key) {
+  document.querySelectorAll("#chart path[data-k]").forEach((p) => { p.style.opacity = key && p.dataset.k !== key ? ".25" : "1"; });
+}
+
+function squarify(items, x, y, w, hh) {
+  const out = []; const total = items.reduce((s, i) => s + i.value, 0); const scale = (w * hh) / total;
+  let rest = items.map((i) => ({ ...i, area: i.value * scale })), rx = x, ry = y, rw = w, rh = hh;
+  while (rest.length) {
+    const short = Math.min(rw, rh); let row = [], best = Infinity;
+    for (const it of rest) { const tr = [...row, it]; const s = tr.reduce((a, b) => a + b.area, 0); const worst = Math.max(...tr.map((t) => Math.max((short * short * t.area) / (s * s), (s * s) / (short * short * t.area)))); if (worst > best) break; best = worst; row = tr; }
+    const s = row.reduce((a, b) => a + b.area, 0);
+    if (rw >= rh) { const cw = s / rh; let cy = ry; for (const it of row) { const ch = it.area / cw; out.push({ ...it, x: rx, y: cy, w: cw, h: ch }); cy += ch; } rx += cw; rw -= cw; }
+    else { const chh = s / rw; let cx = rx; for (const it of row) { const cw = it.area / chh; out.push({ ...it, x: cx, y: ry, w: cw, h: chh }); cx += cw; } ry += chh; rh -= chh; }
+    rest = rest.slice(row.length);
+  }
+  return out;
+}
+function tileColor(g) {
+  if (g.own) return [NAVY, "#fff"];
+  const d = g.delta; if (d == null || Math.round(d * 10) === 0) return ["#eef0f3", "#222326"];
+  const a = Math.min(1, Math.abs(d) / 1.5);
+  return d > 0 ? [`rgba(61,241,52,${0.18 + a * 0.32})`, "#14420f"] : [`rgba(250,30,42,${0.12 + a * 0.28})`, "#5c0a0f"];
+}
+function renderMap(body) {
+  body.innerHTML = `<div class="map" id="map"></div><div class="maplegend"><span>크기 = 언급 점유율 · 색 = 직전 회차 대비 점유율 증감(모그룹)</span><span><i style="background:rgba(61,241,52,.45)"></i>늘어남</span><span><i style="background:#eef0f3"></i>변화 없음</span><span><i style="background:rgba(250,30,42,.35)"></i>줄어듦</span><span><i style="background:${NAVY}"></i>당사</span></div>`;
+  const el = $("#map"); const W = el.clientWidth, H = el.clientHeight;
+  const items = D.treemap.map((g) => ({ ...g, value: g.value }));
+  el.innerHTML = squarify(items, 0, 0, W, H).map((t) => {
+    const [bg, fg] = tileColor(t); const name = t.key === "__rest" ? "그 외" : t.members.length > 1 ? `${t.key} 그룹` : t.key;
+    const mem = t.members && t.members.length > 1 ? `<small>${t.members.slice(0, 3).map((m) => m.brand).join(" · ")}${t.members.length > 3 ? " …" : ""}</small>` : "";
+    const big = t.w > 90 && t.h > 46;
+    return `<div class="t" style="left:${t.x + 2}px;top:${t.y + 2}px;width:${t.w - 4}px;height:${t.h - 4}px;background:${bg};color:${fg}" title="${name} · 점유율 ${p1(t.share)} · 증감 ${t.delta == null ? "—" : (t.delta > 0 ? "+" : "") + t.delta.toFixed(1) + "pp"}">${big ? `<b>${name}</b><span>${p1(t.share)} · ${t.delta == null ? "—" : (t.delta > 0 ? "+" : t.delta < 0 ? "−" : "") + Math.abs(t.delta).toFixed(1) + "pp"}</span>${mem}` : ""}</div>`;
+  }).join("");
+}
+function renderBump(body) {
+  body.innerHTML = `<div class="bump" id="bump"></div><div class="maplegend"><span>회차별 언급 수 순위 (당사 + 상위 10) · 점 크기 = 그 회차 점유율 · 비교 브랜드는 그 색, 나머지는 회색</span></div>`;
+  const el = $("#bump"); const W = el.clientWidth, H = el.clientHeight, L = 28, R = 170, Tp = 12, B = 26;
+  const x = D.bump.x, S = D.bump.series, n = S.length;
+  const X = (i) => L + (i / (x.length - 1)) * (W - L - R), Y = (r) => Tp + ((r - 1) / (n - 1)) * (H - Tp - B);
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  for (let r = 1; r <= n; r++) svg += `<text class="ax" x="${L - 10}" y="${Y(r) + 4}" text-anchor="end">${r}</text><line x1="${L}" x2="${W - R}" y1="${Y(r)}" y2="${Y(r)}" stroke="#f0f1f3"/>`;
+  svg += x.map((d, i) => (i % 2 === 1 ? `<text class="ax" x="${X(i)}" y="${H - 6}" text-anchor="middle">${md(d)}</text>` : "")).join("");
+  const ord = [...S].sort((a, b) => (colorOf(a.key) === CTX) - (colorOf(b.key) === CTX)).reverse();
+  for (const s of ord) {
+    const c = s.own ? NAVY : colorOf(s.key), ctx = c === CTX;
+    const pts = s.ranks.map((r, i) => (r == null ? null : [X(i), Y(r)]));
+    let d = ""; pts.forEach((p, i) => { if (!p) return; const q = pts[i - 1]; d += q ? `C${(q[0] + p[0]) / 2},${q[1]} ${(q[0] + p[0]) / 2},${p[1]} ${p[0]},${p[1]}` : `M${p[0]},${p[1]}`; });
+    svg += `<path d="${d}" fill="none" stroke="${ctx ? "#e1e2e5" : c}" stroke-width="${s.own ? 3 : ctx ? 1.6 : 2.4}"/>`;
+    svg += pts.map((p, i) => (p ? `<circle cx="${p[0]}" cy="${p[1]}" r="${3 + Math.sqrt(s.shares[i] || 0) * 1.1}" fill="${ctx ? "#e1e2e5" : c}" stroke="#fff" stroke-width="1.5"><title>${s.own ? "HMG" : s.key} · ${x[i]} · ${s.ranks[i]}위 · 점유율 ${p1(s.shares[i])} · 언급 ${n0(s.mentions[i])}</title></circle>` : "")).join("");
+    const lr = s.ranks[s.ranks.length - 1];
+    svg += `<text x="${W - R + 16}" y="${Y(lr) + 4}" font-size="12" font-weight="${ctx ? 500 : 700}" fill="${s.own ? NAVY : ctx ? "#6c6d70" : "#222326"}">${lr} ${s.own ? "HMG" : s.key} <tspan fill="#6c6d70" font-weight="500">${p1(s.shares[s.shares.length - 1])}</tspan></text>`;
+  }
+  el.innerHTML = svg + "</svg>";
+}
+
+// ── 엔진 × 지표 ───────────────────────────────────────────────────────
+function renderEngines() {
+  const E = D.engines, names = { chatgpt: "ChatGPT", gemini: "Gemini" };
+  const metr = [["exposure", "exp", "%"], ["sov", "sh", "%"], ["favorability", "pos", "%"], ["first-rank", "rk", "번째"]];
+  const range = Object.fromEntries(metr.map(([m, k]) => { const v = Object.values(E).flatMap((e) => e[k]); return [m, [Math.min(...v), Math.max(...v)]]; }));
+  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th class="${m === st.focus ? "fx" : ""}">${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td>${names[en] || en}</td>${metr.map(([m, k, u]) => {
+    const s = e[k], v = s[s.length - 1], d = v - s[s.length - 2];
+    const val = m === "first-rank" ? `${v.toFixed(1)}<small>번째</small>` : `${v.toFixed(1)}<small>%</small>`;
+    return `<td class="${m === st.focus ? "fx" : ""}"><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 30, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
+  }).join("")}</tr>`).join("")}</tbody></table><div class="ef">작은 차트는 지표마다 같은 눈금 · 14회차(07-06 ~ 10-05) · 우호도의 7월 값이 낮은 것은 측정 그대로입니다</div>`;
+}
+function renderDist() {
+  const d = D.dist; $("#distChip").textContent = `신호 ${n0(d.total)}건`;
+  $("#dist").innerHTML = `<div class="bar">${d.segments.map((s) => `<i style="width:${s.pct}%;background:${SENT[s.key][1]}" title="${SENT[s.key][0]} ${s.pct}%"></i>`).join("")}</div>
+    <div class="tiles">${d.segments.map((s) => `<div class="tile"><span class="k"><i style="background:${SENT[s.key][1]}"></i>${SENT[s.key][0]}</span><b>${s.pct.toFixed(1)}%</b><small>신호 ${n0(s.count)}건</small><br><a href="#" onclick="return false">프롬프트 보기 ›</a></div>`).join("")}</div>`;
+}
+
+// ── 멘션 유형 × 지표 ─────────────────────────────────────────────────
+function renderTypes() {
+  const T = D.types, own = Object.fromEntries(T.own.map((r) => [r.type, r])), cmp = Object.fromEntries(T.cmp.map((r, i) => [r.type, { ...r, i }])), fav = Object.fromEntries(T.fav.map((r) => [r.type, r]));
+  const maxPct = Math.max(...T.own.map((r) => r.pct || 0));
+  const picks = st.compare.filter((b) => T.dots[b]);
+  const top = Math.ceil(Math.max(...T.cmp.map((r) => r.own), ...picks.flatMap((b) => T.dots[b])) / 10) * 10 + 10;
+  const at = (v) => `${(v / top) * 100}%`;
+  const fx = (m) => (m === st.focus ? "fx" : "");
+  const rows = Object.keys(TYPES).map((t) => {
+    const o = own[t], c = cmp[t], f = fav[t];
+    const vals = picks.map((b) => ({ b, v: T.dots[b][c.i] }));
+    const ref = vals.filter((x) => x.v != null).sort((a, b) => b.v - a.v)[0];
+    const gap = ref ? c.own - ref.v : null;
+    const lo = ref ? Math.min(ref.v, c.own) : null, hi = ref ? Math.max(ref.v, c.own) : null;
+    return `<tr><td>${TYPES[t]} <span class="muted" style="font-weight:500">›</span></td>
+      <td class="${fx("exposure")}"><span class="tv"><span class="bar"><i style="width:${(o.pct / maxPct) * 100}%"></i></span><b>${p1(o.pct)}</b>${dchip(o.delta)}${spark(o.spark, NAVY, { w: 72, h: 22 })}</span></td>
+      <td class="${fx("sov")}"><span class="cmpv"><span class="dots"><span class="ax"></span>${ref ? `<span class="rg ${gap < 0 ? "bad" : ""}" style="left:${at(lo)};width:calc(${at(hi)} - ${at(lo)})"></span>` : ""}${vals.map((x) => (x.v == null ? "" : `<i style="left:${at(x.v)};background:${colorOf(x.b)}" title="${TYPES[t]} · ${x.b} 유형 안 점유율 ${p1(x.v)}"></i>`)).join("")}<i class="own" style="left:${at(c.own)}" title="${TYPES[t]} · HMG 유형 안 점유율 ${p1(c.own)}"></i></span><span style="color:${gap == null ? "var(--muted)" : gap >= 0 ? "var(--up-ink)" : "var(--down-ink)"}">${gap == null ? "—" : `${gap >= 0 ? "+" : "−"}${Math.abs(gap).toFixed(1)}pp`}<small>${ref ? `${p1(c.own)} vs ${ref.b} ${p1(ref.v)}` : `HMG ${p1(c.own)}`}</small></span></span></td>
+      <td class="${fx("favorability")}"><span class="sv">${sentBar(f ? { positive: f.positive, neutral: f.neutral, mixed: f.mixed, negative: f.negative } : null)}<b>${p1(f?.positivePct)}</b></span></td>
+      <td style="text-align:right">${n0(o.signals)}</td></tr>`;
+  }).join("");
+  const all = fav.all;
+  $("#types").innerHTML = `<table class="tt"><thead><tr><th>유형</th><th class="${fx("exposure")}" style="width:34%">당사 노출률 · 증감 · 추이</th><th class="${fx("sov")}" style="width:30%">유형 안 점유율 (당사 vs 비교 브랜드)</th><th class="${fx("favorability")}" style="width:18%">당사 긍정 비율</th><th style="width:10%;text-align:right">당사 유형 신호</th></tr></thead><tbody>${rows}
+    <tr><td class="muted" style="font-weight:600">전체 언급</td><td></td><td></td><td class="${fx("favorability")}"><span class="sv">${sentBar({ positive: all.positive, neutral: all.neutral, mixed: all.mixed, negative: all.negative })}<b>${p1(all.positivePct)}</b></span></td><td style="text-align:right">${n0(all.total)}</td></tr></tbody></table>
+    <div class="tf">노출률 분모 = 전체 답변 수 · 유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫(막대 = 당사와 가장 앞선 비교 브랜드의 차이) · 유형 이름을 누르면 그 신호가 붙은 프롬프트를 봅니다 · 우선 노출도는 유형별 값이 없습니다</div>`;
+}
+
+// ── 비교 브랜드 ───────────────────────────────────────────────────────
+function toggleCompare(b) { st.auto = false; st.compare = st.compare.includes(b) ? st.compare.filter((x) => x !== b) : [...st.compare, b]; renderAll(); }
+function renderChips() {
+  $("#chips").innerHTML = st.compare.map((b, i) => `<span class="chip"><i style="background:${COMPARE[i % COMPARE.length]}"></i>${b}${st.auto ? "<small>· 자동</small>" : ""}<button type="button" data-rm="${b}" aria-label="${b} 비교 해제"><svg class="i s12"><use href="#i-x"/></svg></button></span>`).join("");
+  $("#chips").querySelectorAll("[data-rm]").forEach((x) => x.addEventListener("click", () => toggleCompare(x.dataset.rm)));
+  $("#popList").innerHTML = D.covered.map((b) => `<label><i style="${st.compare.includes(b) ? `background:${colorOf(b)};box-shadow:none` : ""}"></i>${b}<input type="checkbox" ${st.compare.includes(b) ? "checked" : ""} data-pk="${b}"></label>`).join("");
+  $("#popList").querySelectorAll("[data-pk]").forEach((x) => x.addEventListener("change", () => toggleCompare(x.dataset.pk)));
+}
+$("#addBtn").addEventListener("click", () => { const p = $("#pop"); p.hidden = !p.hidden; $("#addBtn").setAttribute("aria-expanded", String(!p.hidden)); });
+$("#popClose").addEventListener("click", () => { $("#pop").hidden = true; });
+$("#popReset").addEventListener("click", () => { st.auto = true; st.compare = [D.covered[0]]; renderAll(); });
+
+// ── 서랍 ─────────────────────────────────────────────────────────────
+function openDrawer(b) {
+  const r = D.rows.find((x) => x.brand === b); if (!r) return;
+  const s = r.sent, t = s ? s.positive + s.neutral + s.mixed + s.negative : 0;
+  $("#drawer").innerHTML = `<div class="dh"><div><h3>${r.own ? "HMG" : r.brand}${r.own ? ' <span class="own-tag">당사</span>' : ""}</h3><p>언급 수 ${r.own ? 1 : r.rank}위 · 언급 ${n0(r.mentions)}회 · 점유율 ${p1(r.share)} · 평균 위치 ${r1(r.pos)} · 언급률 ${p1(r.exp)} · 현재 필터 기준</p></div><button class="icon" id="dClose" type="button" aria-label="닫기"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="db">
+      ${s ? `<div><h4>감정 분포</h4>${sentBar(s)}<div class="sl">${Object.keys(SENT).map((k) => `<span><i style="background:${SENT[k][1]}"></i>${SENT[k][0]} ${((s[k] / t) * 100).toFixed(0)}%</span>`).join("")}</div></div>` : ""}
+      ${r.types ? `<div><h4>멘션 유형</h4><div class="tchips">${Object.keys(TYPES).reverse().map((k) => `<span>${TYPES[k]} <b>${n0(r.types[k])}</b></span>`).join("")}</div></div>` : ""}
+      <div><span class="dtabs"><button type="button" aria-pressed="true">프롬프트 ${n0(Math.min(1000, r.prompts))}</button><button type="button" aria-pressed="false">인용 출처</button></span></div>
+      <div class="ph-note">프롬프트 목록 · 정렬 6종 · 답변 원문은 지금 구현된 서랍과 같습니다(목업에서는 생략)</div>
+    </div>`;
+  $("#drawer").hidden = false; $("#scrim").hidden = false;
+  $("#dClose").addEventListener("click", closeDrawer);
+}
+function closeDrawer() { $("#drawer").hidden = true; $("#scrim").hidden = true; }
+$("#scrim").addEventListener("click", closeDrawer);
+addEventListener("keydown", (e) => { if (e.key === "Escape") { closeDrawer(); $("#pop").hidden = true; } });
+
+// ── 틀 동작 ───────────────────────────────────────────────────────────
+$("#viewSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { st.view = b.dataset.v; renderBoard(); }));
+$("#fClose").addEventListener("click", () => { document.body.classList.add("fcollapsed"); renderAll(); });
+$("#fOpen").addEventListener("click", () => { document.body.classList.remove("fcollapsed"); renderAll(); });
+$("#mkCap").addEventListener("click", () => { const on = $("#mkCapBody").classList.toggle("on"); $("#mkCap").setAttribute("aria-expanded", String(on)); setMk(); });
+function setMk() { document.documentElement.style.setProperty("--mk-h", `${$("#mk").offsetHeight}px`); }
+
+function renderAll() {
+  $("#focusName").textContent = M[st.focus].label;
+  renderChips(); renderKpis(); renderTrend(); renderBoard(); renderEngines(); renderDist(); renderTypes();
+}
+setMk(); renderAll();
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { setMk(); renderAll(); }, 120); });
+</script>
+</body>
+</html>
