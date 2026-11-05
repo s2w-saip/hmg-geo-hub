@@ -5838,9 +5838,9 @@
         "distGo": "See prompts",
         "distAria": "Sentiment mix",
         "matrixAria": "Sentiment by mention type",
-        "matrixAll": "All mentions",
+        "matrixAll": "All",
         "matrixNoteTitle": "All and the types",
-        "matrixNote": "All mentions is the sentiment of every own mention, the same as the sentiment distribution card above. A type row counts every sentiment signal our brand got in the answers that mention it with that type — an answer that names it in several types counts in each of those rows, so the type rows add up to more than all mentions.",
+        "matrixNote": "All is the type rows added up. A type row counts every sentiment signal our brand got in the answers that mention it with that type — an answer that names it in several types counts in each of those rows, so All can differ from the sentiment distribution card above, which counts each own mention once.",
         "matrixHint": "By mention type: the sentiment mix we got in the answers that mention us with that type. The figure on the right is the row's positive share."
       },
       "rank": {

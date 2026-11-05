@@ -22,6 +22,7 @@ try:
     from bff import screens
     from bff.screens import mention_renewal as rn
     from bff.screens._convert import Exact
+    from bff.screens.mention_view import type_sentiment_rows
 except ModuleNotFoundError as exc:  # pragma: no cover - outside the API image
     raise unittest.SkipTest("Run inside the BFF image") from exc
 
@@ -183,21 +184,23 @@ class FavorTrend(unittest.TestCase):
 
 
 class FavorMatrixTotal(unittest.TestCase):
-    """유형별 감정's 전체 row is every 당사 mention, as the page's headline and 감정 분포 card. A mention can carry several
-    types, so the type rows overlap; their sum (633,786 signals, 58.1 % positive on 2026-10-05) read as a second,
-    contradicting 우호도 next to the page's 54.1 % (325,173 mentions)."""
+    """유형별 감정's 전체 row is the type rows summed, as the original Global Mention screen (`mention/favor-matrix`):
+    58.1 % on 2026-10-05 on both screens. A mention can carry several types, so it differs from the 감정 분포 card's
+    every-mention 54.1 %. The renewal showed that 54.1 % from 2026-10-29 (927bb1f) until the user asked to match the
+    original (2026-11-05: renewal values of kept metrics equal the legacy screens')."""
 
     KPI = {"sentimentMatrix": {"own": [
         {"type": "mention", "rows": 3, "positive": 5, "neutral": 4, "mixed": 0, "negative": 1},
         {"type": "recommendation", "rows": 2, "positive": 4, "neutral": 1, "mixed": 0, "negative": 0}]}}
 
-    def test_the_total_row_is_the_mention_totals(self):
-        rows = rn.favor_matrix_payload(self.KPI, {"positive": 6, "neutral": 3, "mixed": 0, "negative": 1})["rows"]
+    def test_the_total_row_is_the_type_rows_summed(self):
+        rows = rn.favor_matrix_payload(self.KPI)["rows"]
         self.assertEqual([r["type"] for r in rows], ["all", "recommendation", "mention"])
-        self.assertEqual((rows[0]["positive"], rows[0]["total"], rows[0]["positivePct"]), (6, 10, 60.0))
+        self.assertEqual((rows[0]["positive"], rows[0]["total"], rows[0]["positivePct"]), (9, 15, 60.0))
 
-    def test_without_the_totals_there_is_no_total_row(self):
-        self.assertEqual([r["type"] for r in rn.favor_matrix_payload(self.KPI, None)["rows"]], ["recommendation", "mention"])
+    def test_the_total_row_equals_the_original_screen(self):
+        legacy = next(r for r in type_sentiment_rows(self.KPI, "own") if r["type"] == "all")
+        self.assertEqual(rn.favor_matrix_payload(self.KPI)["rows"][0], legacy)
 
 
 class OwnTypeTrend(unittest.TestCase):

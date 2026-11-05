@@ -449,6 +449,11 @@ lists in order.
   are two answer types, not a before and after, so neither side is the better one (`warn` / `good` → `info`, the sentence
   and its values stay): `citation/fn-rn-findings` 17 calls and `rn-fix-all-owned` · `-degraded` · `-picks-source` · `-rounds` ·
   `rn-live`. A rival's Overview brand table Δ is `tone: neutral` (`delta_mark`); no golden holds a rival Δ.
+- 2026-11-05 유형별 감정 `rows[0]` (전체) is the type rows summed again, the original screen's value (the user: renewal
+  values of kept metrics equal the legacy screens'; the parity check found 58.1 % on the original against 54.1 % on the
+  renewal). This undoes the 2026-10-29 entry's 전체 bullet: `rn-favor-matrix` no longer reads the sentiment totals. In
+  the 20 changed cases (`rn-fix-*` 7, `rn-live-*` 11, `rn-fn-favor-matrix(-model)`) only `rn-favor-matrix` moves, and
+  each output equals its pre-927bb1f golden.
 
 | Folder | Cases | Covers |
 |---|---|---|

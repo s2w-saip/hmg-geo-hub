@@ -515,19 +515,17 @@ def favor_distribution(totals: Any) -> list[dict]:
     return _mv().sentiment_segments(totals)
 
 
-def favor_matrix(kpi: Any, totals: Any = None) -> list[dict]:
-    """전체 first, then the types strongest endorsement first. 전체 is every 당사 mention (`totals`, the 감정 분포
-    card's counts), not the type rows summed: a mention can carry several types, so the sum counted it once a type
-    and showed another 우호도 (58.1 % against the page's 54.1 %, 2026-10-29). No totals, no 전체 row."""
+def favor_matrix(kpi: Any) -> list[dict]:
+    """전체 first, then the types strongest endorsement first. 전체 is the type rows summed, as the original screen's
+    (`mention/favor-matrix`): a mention can carry several types, so it differs from the 감정 분포 card's every-mention
+    count (58.1 % against 54.1 % on 2026-10-05). The renewal used that every-mention count from 2026-10-29 until the
+    user asked for the original's value (2026-11-05)."""
     rows = _mv().type_sentiment_rows(kpi, "own")
-    if not rows:
+    all_row = next((r for r in rows if r["type"] == "all"), None)
+    if not all_row:
         return []
     picked = [next((r for r in rows if r["type"] == t), None) for t in TYPE_STRENGTH]
-    segs = favor_distribution(totals)
-    total = _js_sum(x["count"] for x in segs)
-    all_row = {"type": "all", **{x["key"]: x["count"] for x in segs}, "total": total,
-               "positivePct": pct_or_null(totals["positive"], total), "segments": segs} if segs else None
-    return [*([all_row] if all_row else []), *[r for r in picked if r]]
+    return [all_row, *[r for r in picked if r]]
 
 
 # ── 우선 노출도 ───────────────────────────────────────────────────────────────
@@ -1163,8 +1161,8 @@ def favor_dist_payload(totals: Any) -> dict:
     return {"segments": segs, "total": _js_sum(s["count"] for s in segs)}
 
 
-def favor_matrix_payload(kpi: Any, totals: Any = None) -> dict:
-    return {"rows": favor_matrix(kpi, totals)}
+def favor_matrix_payload(kpi: Any) -> dict:
+    return {"rows": favor_matrix(kpi)}
 
 
 def rank_standing(rows: list[dict], hero: dict) -> dict | None:
@@ -1477,9 +1475,7 @@ async def rn_favor_dist(q) -> dict:
 @screen("mention/rn-favor-matrix")
 async def rn_favor_matrix(q) -> dict:
     _, filters, ctx = _begin(q)
-    md = _md()
-    kpi, totals = await asyncio.gather(md.load_type_kpi(filters, ctx), md.load_sentiment_totals(filters, ctx))
-    return favor_matrix_payload(kpi, totals)
+    return favor_matrix_payload(await _md().load_type_kpi(filters, ctx))
 
 
 @screen("mention/rn-rank")
