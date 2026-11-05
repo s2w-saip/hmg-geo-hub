@@ -23,14 +23,15 @@ export function useRnSplit() {
 // While the beta notice card floats at the bottom right (2026-11-05), the bottom is at least the height it covers + 12px
 // (--rn-toast-space, _shell/beta-toast.tsx), so the last row (a list's pager) scrolls clear of the card.
 
-const FRAME = "@container/rnframe flex flex-col pt-6 max-xl:pt-5";
-const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden px-[var(--rn-edge)] pb-3 [scrollbar-gutter:stable]";
+// 새 외형 (2026-11-05): the header sits on a hairline over the filter column | content row, inside the shell's white panel.
+const FRAME = "@container/rnframe flex flex-col pt-[18px]";
+const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden border-b border-rn-line px-[var(--rn-edge)] pb-4 [scrollbar-gutter:stable]";
 // Every renewal page is dense (2026-10-29, the user: "기본적으로 UI는 모두 촘촘모드로"): the content column
 // carries .rn-dense — the tight rhythm, no helper copy — and no page has a density toggle.
 // The service week's notes (2026-11-02: a late next week, a week Gold left sites out of) head that column, inside the
 // frame: a strip above the frame would make the window scroll.
 const DENSE = "rn-dense flex min-w-0 flex-col gap-2.5";
-const FRAME_SCROLL = "min-h-0 min-w-0 overflow-y-auto overscroll-contain pt-1 pr-[var(--rn-edge)] pb-[max(4.5rem,var(--rn-toast-space,0px)_+_0.75rem)] max-xl:pb-[max(4rem,var(--rn-toast-space,0px)_+_0.75rem)] [scrollbar-gutter:stable]";
+const FRAME_SCROLL = "min-h-0 min-w-0 overflow-y-auto overscroll-contain pt-4 pr-[var(--rn-edge)] pb-[max(4.5rem,var(--rn-toast-space,0px)_+_0.75rem)] max-xl:pb-[max(4rem,var(--rn-toast-space,0px)_+_0.75rem)] [scrollbar-gutter:stable]";
 
 /** Page layout without a filter panel: the page header on top, the content scrolling below it. */
 export function RnPageFrame({ header, children }: { header: ReactNode; children: ReactNode }) {
@@ -75,9 +76,9 @@ export function RnFilterSplit({ header, top, panel, rail, notesPeriod, children 
   }, [isOpenNow]);
   const auto = open === null;
   const split = useMemo(() => ({ collapse: () => setOpen(false), expand: () => setOpen(true) }), []);
-  // pl-5 = the panel | content gap, inside the scroller so card shadows are not clipped
+  // the content's left gutter sits inside the scroller so card shadows are not clipped
   const scroll = (
-    <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-5", top ? "flex-1" : "")}>
+    <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-[var(--rn-edge)]", top ? "flex-1" : "")}>
       <div className={cx("@container/rncontent", DENSE)}>
         <RnServiceWeekNotices period={notesPeriod} />
         {children}
@@ -91,17 +92,17 @@ export function RnFilterSplit({ header, top, panel, rail, notesPeriod, children 
         <div
           data-rn-split={auto ? "auto" : open ? "open" : "closed"}
           className={cx(
-            "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] pl-[var(--rn-edge)]",
+            "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)]",
             auto ? "grid-cols-[52px_minmax(0,1fr)] min-[1360px]:grid-cols-[296px_minmax(0,1fr)]" : open ? "grid-cols-[296px_minmax(0,1fr)]" : "grid-cols-[52px_minmax(0,1fr)]",
           )}
         >
-          {/* the panel card is max-h-full: it scrolls inside the column, apart from the content */}
-          <div className={cx("min-h-0 pt-1 pb-4", auto ? "hidden min-[1360px]:block" : open ? "block" : "hidden")}>{panel}</div>
-          <div className={cx("pt-1", auto ? "min-[1360px]:hidden" : open ? "hidden" : "block")}>{rail}</div>
+          {/* the filter column is flush with the panel's left edge, a hairline on its right; the panel scrolls inside it, apart from the content */}
+          <div className={cx("min-h-0 border-r border-rn-line", auto ? "hidden min-[1360px]:block" : open ? "block" : "hidden")}>{panel}</div>
+          <div className={cx("min-h-0 border-r border-rn-line", auto ? "min-[1360px]:hidden" : open ? "hidden" : "block")}>{rail}</div>
           {top ? (
             <div className="flex min-h-0 min-w-0 flex-col">
               {/* top edge = the panel card's (pt-1); the scrollbar gutter lines its right end up with the content */}
-              <div data-rn-split-top="" className="rn-dense min-w-0 shrink-0 overflow-hidden pt-1 pr-[var(--rn-edge)] pb-3 pl-5 [scrollbar-gutter:stable]">
+              <div data-rn-split-top="" className="rn-dense min-w-0 shrink-0 overflow-hidden pt-4 pr-[var(--rn-edge)] pb-3 pl-[var(--rn-edge)] [scrollbar-gutter:stable]">
                 {top}
               </div>
               {scroll}

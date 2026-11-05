@@ -121,7 +121,7 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
           aria-label={tNav("openSidebar")}
           aria-expanded={drawer}
           onClick={() => setDrawer(true)}
-          className="grid size-9 cursor-pointer place-items-center rounded-lg text-rn-ink-2 hover:bg-rn-page focus-visible:outline-2 focus-visible:outline-rn-navy"
+          className="grid size-9 cursor-pointer place-items-center rounded-lg text-rn-ink-2 hover:bg-rn-ink/4 focus-visible:outline-2 focus-visible:outline-rn-navy"
         >
           <Menu className="size-5" aria-hidden />
         </button>
@@ -132,7 +132,7 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
         aria-label={t("sideLabel")}
         data-rn-shell-side=""
         className={cx(
-          "flex min-h-0 flex-col gap-3.5 overflow-y-auto border-r border-rn-line bg-rn-surface px-3 pt-[18px] pb-3.5",
+          "flex min-h-0 flex-col gap-3.5 overflow-y-auto bg-rn-canvas px-3 pt-5 pb-3.5 max-lg:bg-rn-surface",
           "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-[280px] max-lg:shadow-rn-3 max-lg:transition-transform",
           drawer ? "max-lg:translate-x-0" : "max-lg:-translate-x-full",
         )}
@@ -143,7 +143,7 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
             type="button"
             aria-label={t("closeMenu")}
             onClick={() => setDrawer(false)}
-            className="grid size-8 cursor-pointer place-items-center rounded-lg text-rn-muted hover:bg-rn-page lg:hidden"
+            className="grid size-8 cursor-pointer place-items-center rounded-lg text-rn-muted hover:bg-rn-ink/4 lg:hidden"
           >
             <X className="size-4" aria-hidden />
           </button>
@@ -176,11 +176,11 @@ function Brand() {
   const t = useTranslations("renewal.shell");
   return (
     <span className="flex items-center gap-2.5 px-2 pt-0.5 pb-1">
-      <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-lg bg-rn-navy text-rn-12 font-extrabold tracking-[-0.02em] text-rn-on-dark">
+      <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-rn-navy text-rn-13 font-bold tracking-[-0.02em] text-rn-on-dark">
         G
       </span>
       <span className="flex flex-col leading-[1.15]">
-        <b className="text-[14px] font-extrabold tracking-[-0.01em] text-rn-navy">{t("brand")}</b>
+        <b className="text-[15px] font-bold tracking-[-0.01em] text-rn-ink">{t("brand")}</b>
         <small className="text-rn-11 text-rn-muted">{t("brandSub")}</small>
       </span>
     </span>
@@ -246,9 +246,9 @@ function ProjectListLink() {
       target={MAIN_TAB}
       title={t("listHint")}
       data-rn-project-list-link=""
-      className="group/link flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-rn-13 font-medium text-rn-ink-2 no-underline hover:bg-rn-navy/6 hover:text-rn-navy focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy"
+      className="group/link flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-rn-13 font-medium text-rn-ink-2 no-underline hover:bg-rn-ink/4 hover:text-rn-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy"
     >
-      <Briefcase aria-hidden className="size-4 shrink-0 text-rn-muted group-hover/link:text-rn-navy" />
+      <Briefcase aria-hidden className="size-4 shrink-0 text-rn-muted group-hover/link:text-rn-ink-2" />
       <span className="min-w-0 truncate">{t("list")}</span>
       <ExternalLink aria-label={t("listHint")} className="ml-auto size-3.5 shrink-0 text-rn-muted" />
     </Link>
@@ -264,8 +264,8 @@ function Section({ id, title, items, current, lead }: { id: SectionId; title: st
       <summary
         data-rn-sec-here={here ? "" : undefined}
         className={cx(
-          "flex cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 py-1.5 text-rn-11 font-bold tracking-[0.08em] uppercase hover:bg-rn-page hover:text-rn-ink-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [&::-webkit-details-marker]:hidden",
-          here ? "text-rn-ink" : "text-rn-muted",
+          "flex cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 py-1.5 text-rn-11 tracking-[0.06em] uppercase hover:bg-rn-ink/4 hover:text-rn-ink-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [&::-webkit-details-marker]:hidden",
+          here ? "font-semibold text-rn-ink-2" : "font-medium text-rn-muted",
         )}
       >
         {title}
@@ -328,12 +328,13 @@ function NavLink({ leaf, active, icon: Icon, kid = false }: { leaf: NavLeaf; act
       className={cx(
         "group/link relative flex items-center gap-2.5 rounded-lg px-2.5 text-rn-13 no-underline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy",
         kid ? "min-h-[30px]" : "min-h-8",
-        active ? "bg-rn-navy/8 font-semibold text-rn-navy" : "font-medium text-rn-ink-2 hover:bg-rn-navy/6 hover:text-rn-navy",
+        // 새 외형 (2026-11-05): the current item is a white chip on the grey shell
+        active ? "bg-rn-surface font-semibold text-rn-navy shadow-rn-card" : "font-medium text-rn-ink-2 hover:bg-rn-ink/4 hover:text-rn-ink",
         // the current sub-item lights its stretch of the tree line (the line sits pl-1.5 + 1px to the left)
         kid && active && "before:absolute before:inset-y-1.5 before:-left-[7px] before:w-0.5 before:rounded-full before:bg-rn-navy",
       )}
     >
-      {Icon ? <Icon aria-hidden className={cx("size-4 shrink-0", active ? "text-rn-navy" : "text-rn-muted group-hover/link:text-rn-navy")} /> : null}
+      {Icon ? <Icon aria-hidden className={cx("size-4 shrink-0", active ? "text-rn-navy" : "text-rn-muted group-hover/link:text-rn-ink-2")} /> : null}
       <span className="min-w-0 truncate">{leaf.label}</span>
       {pending ? <Loader2 aria-hidden className="ml-auto size-3.5 shrink-0 animate-spin" /> : null}
       {leaf.unimplemented ? (
@@ -415,7 +416,7 @@ function ShellIconButton({ label, onClick, type = "button", children }: { label:
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="grid h-7 min-w-7 cursor-pointer place-items-center rounded-md px-1 text-rn-muted hover:bg-rn-page hover:text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy"
+      className="grid h-7 min-w-7 cursor-pointer place-items-center rounded-md px-1 text-rn-muted hover:bg-rn-ink/4 hover:text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy"
     >
       {children}
     </button>

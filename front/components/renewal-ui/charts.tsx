@@ -13,7 +13,7 @@ import {
   YAxis,
   usePlotArea,
 } from "recharts";
-import { RN_OWN, RN_OWN_ON_DARK } from "./palette";
+import { RN_OWN } from "./palette";
 
 // Recharts wrapped in the renewal look (rn tokens): recessive grid and axes, 2px lines,
 // direct end labels (text in ink, the line carries the colour; labels that would touch are
@@ -98,17 +98,17 @@ export function TrendTooltip({
   const at = payload[0]?.payload?.[ROW_INDEX];
   const lines = note && typeof at === "number" ? note(at) : null;
   return (
-    <div className="min-w-[160px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-rn-on-dark shadow-rn-3">
-      <b className="mb-1 block text-rn-11 font-semibold text-rn-sky">{title(String(label))}</b>
+    <div className="min-w-[180px] rounded-[12px] bg-rn-surface px-3.5 py-3 text-rn-12 text-rn-ink-2 shadow-[0_14px_36px_-12px_rgba(16,16,18,0.26),0_0_0_1px_var(--color-rn-line)]">
+      <b className="mb-1.5 block text-rn-12 font-medium text-rn-muted">{title(String(label))}</b>
       {rows.map(({ s, v }) => (
         <div key={s.key} className="flex items-center gap-2 py-px">
-          <i aria-hidden className="inline-block h-0.5 w-2.5 rounded" style={{ background: s.color === RN_OWN ? RN_OWN_ON_DARK : s.color }} />
+          <i aria-hidden className="inline-block h-0.5 w-2.5 rounded" style={{ background: s.color }} />
           <b className={s.own ? "font-bold" : "font-semibold"}>{value(v)}</b>
-          <span className="text-rn-on-dark/80">{s.name}</span>
+          <span className={s.color === RN_OWN ? "font-semibold text-rn-navy" : "text-rn-muted"}>{s.name}</span>
         </div>
       ))}
       {lines?.length ? (
-        <div data-rn-tip-note="" className="mt-1 border-t border-white/15 pt-1 text-rn-11 text-rn-on-dark/80 tabular-nums">
+        <div data-rn-tip-note="" className="mt-1.5 border-t border-rn-line pt-1.5 text-rn-11 text-rn-muted tabular-nums">
           {lines.map((l) => (
             <div key={l}>{l}</div>
           ))}

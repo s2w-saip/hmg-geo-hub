@@ -256,8 +256,9 @@ export function RnSavedFiltersSection({
     }
   };
   return (
-    <section className="border-b border-rn-line bg-rn-navy-25 pb-2.5">
-      <div className="flex items-center gap-2 pt-3 pr-3.5 pb-2 pl-4.5 text-rn-13 font-bold text-rn-ink">
+    // 새 외형 (2026-11-05): a quiet grey box inside the flat filter column
+    <section className="mx-3.5 mt-3.5 mb-1 rounded-[12px] bg-rn-page pb-2.5">
+      <div className="flex items-center gap-2 pt-3 pr-3.5 pb-2 pl-4 text-rn-13 font-semibold text-rn-ink-2">
         <Bookmark className="size-3.5" aria-hidden />
         {t("title")}
         <RnTextButton className="ml-auto" aria-disabled={!canSave || undefined} onClick={startSave}>

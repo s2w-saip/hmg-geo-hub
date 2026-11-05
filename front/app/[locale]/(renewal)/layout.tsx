@@ -60,7 +60,8 @@ export default async function RenewalLayout({ children, params }: { children: Re
 
   return (
     <>
-      {/* sidebar 232px (208px up to 1279px, design-rules.html '틀'); below lg a slim menu bar on top */}
+      {/* sidebar 232px (208px up to 1279px, design-rules.html '틀') on the grey shell, the pages in a white panel beside it
+          (2026-11-05 새 외형); below lg a slim menu bar on top */}
       <RnServiceWeekProvider week={week} notes>
         <RnNavPendingProvider>
           <div className="grid h-screen grid-cols-1 grid-rows-[auto_minmax(0,1fr)] bg-rn-canvas text-rn-ink lg:grid-cols-[208px_minmax(0,1fr)] lg:grid-rows-1 xl:grid-cols-[232px_minmax(0,1fr)]">

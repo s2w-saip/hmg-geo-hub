@@ -18,7 +18,7 @@ export function RnTabs<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className={cx("inline-flex rounded-[9px] bg-rn-inset p-[3px]", className)}>
+    <div role="tablist" aria-label={label} className={cx("inline-flex gap-0.5 rounded-[10px] bg-rn-track p-[3px]", className)}>
       {items.map((it, i) => {
         const on = it.value === value;
         return (
@@ -39,7 +39,7 @@ export function RnTabs<T extends string>({
             }}
             className={cx(
               "inline-flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[7px] px-3.5 text-rn-13 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-rn-navy",
-              on ? "bg-rn-surface font-bold text-rn-ink shadow-rn-1" : "font-medium text-rn-muted hover:text-rn-ink",
+              on ? "bg-rn-surface font-semibold text-rn-ink shadow-rn-1" : "font-medium text-rn-muted hover:text-rn-ink",
             )}
           >
             {it.label}

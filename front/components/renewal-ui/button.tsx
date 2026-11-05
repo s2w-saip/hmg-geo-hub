@@ -5,12 +5,12 @@ const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 
 const VARIANT = {
   primary: "border-rn-navy bg-rn-navy text-rn-on-dark hover:bg-rn-navy-900",
-  secondary: "border-rn-line-2 bg-rn-surface text-rn-ink hover:border-rn-faint",
-  ghost: "border-transparent bg-transparent text-rn-muted hover:bg-rn-inset hover:text-rn-ink",
+  secondary: "border-rn-line bg-rn-surface text-rn-ink-2 shadow-[0_1px_2px_rgba(16,16,18,0.05)] hover:bg-rn-page",
+  ghost: "border-transparent bg-transparent text-rn-muted hover:bg-rn-track hover:text-rn-ink",
 } as const;
 
 const SIZE = {
-  md: "h-9 px-3 text-rn-13",
+  md: "h-[38px] px-3.5 text-rn-13",
   sm: "h-[30px] px-2.5 text-rn-12",
 } as const;
 
@@ -24,7 +24,7 @@ export function RnButton({ variant = "secondary", size = "md", className, type =
     <button
       type={type}
       className={cx(
-        "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-rn-control border font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-[10px] border font-[550] whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         FOCUS,
         VARIANT[variant],
         SIZE[size],
@@ -48,7 +48,7 @@ export function RnIconButton({
       aria-label={label}
       title={label}
       className={cx(
-        "relative inline-grid size-[30px] shrink-0 cursor-pointer place-items-center rounded-md text-rn-muted transition-colors hover:bg-rn-inset hover:text-rn-ink disabled:cursor-default disabled:opacity-35",
+        "relative inline-grid size-8 shrink-0 cursor-pointer place-items-center rounded-[9px] text-rn-muted transition-colors hover:bg-rn-track hover:text-rn-ink disabled:cursor-default disabled:opacity-35",
         FOCUS,
         className,
       )}

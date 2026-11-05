@@ -52,11 +52,11 @@ export function RnNavPendingProvider({ children }: { children: ReactNode }) {
   return <NavPendingContext.Provider value={value}>{children}</NavPendingContext.Provider>;
 }
 
-/** The shell's content area: progress bar + dim while a menu navigation is pending. */
+/** The shell's content area — from lg a white panel on the grey shell (2026-11-05 새 외형) — with a progress bar + dim while a menu navigation is pending. */
 export function RnNavMain({ children }: { children: ReactNode }) {
   const { target } = useRnNavPending();
   return (
-    <main data-rn-nav-pending={target ? "" : undefined} aria-busy={target ? true : undefined} className="relative min-h-0 min-w-0 overflow-y-auto">
+    <main data-rn-nav-pending={target ? "" : undefined} aria-busy={target ? true : undefined} className="relative min-h-0 min-w-0 overflow-y-auto bg-rn-surface lg:my-2.5 lg:mr-2.5 lg:rounded-[18px] lg:shadow-[0_0_0_1px_var(--color-rn-line),0_2px_6px_rgba(16,16,18,0.04)]">
       {target ? (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-40 h-[3px] overflow-hidden bg-rn-navy-25">
           <span className="absolute inset-y-0 w-[35%] animate-rn-progress bg-rn-navy" />

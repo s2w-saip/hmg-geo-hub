@@ -32,6 +32,8 @@
   --color-rn-canvas: #f8f8f9;
   --color-rn-head: #f8f8f9;
   --color-rn-inset: #e5e6e9;
+  /* quiet track (2026-11-05 새 외형): segmented controls, bar tracks, hover fills */
+  --color-rn-track: #f1f2f4;
   --color-rn-sand: #e5e6e9;
   --color-rn-surface: #ffffff;
   /* Text 1–4 (rn-faint = no value, disabled: never a value someone reads) */
@@ -122,15 +124,19 @@
  * scrolls, never the whole window; the filters and the content scroll apart.
  *
  * RnPageFrame / RnFilterSplit mark their root [data-rn-frame]. The renewal
- * shell (app/[locale]/(renewal)/layout.tsx) has no top bar, so the frame takes
- * the full viewport height next to the sidebar (below lg: under the 3rem menu
- * bar). --rn-edge = the S급 page gutter (32px, 24px up to 1279px, 16px below
- * lg) around a 1480px column (100cqw = the frame's width).
+ * shell (app/[locale]/(renewal)/layout.tsx) has no top bar; from lg the frame sits in the
+ * shell's white panel (10px off the window's top, right and bottom edges, 2026-11-05 새 외형),
+ * below lg it takes the viewport under the 3rem menu bar. --rn-edge = the page gutter (32px,
+ * 24px up to 1279px, 16px below lg); the content spans the panel (no 1480px column: the filter
+ * column sits flush with the panel's left edge).
  * ------------------------------------------------------------------------- */
 [data-rn-frame] {
   --rn-gutter: 1.5rem;
-  --rn-edge: max(var(--rn-gutter), (100cqw - 1480px) / 2);
+  --rn-edge: var(--rn-gutter);
   height: 100vh;
+}
+@media (width >= 64rem) {
+  [data-rn-frame] { height: calc(100vh - 1.25rem); }
 }
 @media (width >= 80rem) {
   [data-rn-frame] { --rn-gutter: 2rem; }

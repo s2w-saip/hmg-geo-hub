@@ -13,7 +13,7 @@ import { cx } from "./cx";
 export function RnSectionHead({ id, title, chip, desc }: { id: string; title: ReactNode; chip?: ReactNode; desc?: ReactNode }) {
   return (
     <div id={id} data-rn-sec="" className="mt-4 -mb-1 flex flex-wrap items-baseline gap-x-3 gap-y-1.5 [.rn-dense_&]:mt-2">
-      <h2 className="m-0 text-rn-20 font-bold tracking-[-0.02em] text-rn-ink">{title}</h2>
+      <h2 className="m-0 text-[17px] leading-[1.35] font-[650] tracking-[-0.02em] text-rn-ink">{title}</h2>
       {chip}
       {desc ? <p className="m-0 text-rn-12 break-keep text-rn-muted [.rn-dense_&]:hidden">{desc}</p> : null}
     </div>
@@ -38,7 +38,7 @@ export function RnControlBar({
       role="region"
       aria-label={label}
       data-rn-cbar=""
-      className="sticky -top-1 z-20 flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2 rounded-[14px] bg-rn-surface py-2 pr-2.5 pl-2 shadow-rn-bar"
+      className="sticky -top-1 z-20 flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2 rounded-[14px] bg-rn-surface py-2 pr-2.5 pl-2 shadow-rn-card"
     >
       {children}
     </div>
@@ -85,18 +85,19 @@ export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
   );
 }
 
-/** Basis chip on a card head ("측정 기준일 …", "추이 12회차"). */
+/** Basis note on a card head ("측정 기준일 …", "추이 12회차"): quiet text (새 외형 2026-11-05), notes in a row joined by " · ". */
 export function RnBasisChip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [.rn-hero_&]:bg-white/12 [.rn-hero_&]:text-rn-on-dark/90 [.rn-hero_&_svg]:text-rn-sky">
+    <span data-rn-basis="" className="inline-flex items-center gap-1 text-rn-12 whitespace-nowrap text-rn-muted [[data-rn-basis]+&]:-ml-2 [[data-rn-basis]+&]:before:mr-1 [[data-rn-basis]+&]:before:content-['·'] [.rn-hero_&]:text-rn-on-dark/90 [.rn-hero_&_svg]:text-rn-sky">
       {icon}
       {children}
     </span>
   );
 }
 
-/** Card head: title · ⓘ · basis chips, then controls and the card actions on the right. */
+/** Card head: (icon) title · ⓘ · basis notes, then controls and the card actions on the right. */
 export function RnCardHead({
+  icon,
   title,
   info,
   chips,
@@ -104,6 +105,8 @@ export function RnCardHead({
   actions,
   sub,
 }: {
+  /** a 16px line icon before the title (새 외형 2026-11-05) */
+  icon?: ReactNode;
   title: ReactNode;
   info?: ReactNode;
   chips?: ReactNode;
@@ -113,7 +116,8 @@ export function RnCardHead({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-[18px] pr-[22px] pb-3 pl-6 [.rn-dense_&]:pt-2.5 [.rn-dense_&]:pb-2 [.rn-dense_&]:pl-4.5">
-      <h2 className="m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink [.rn-hero_&]:text-rn-on-dark">{title}</h2>
+      {icon ? <span aria-hidden className="-mr-1.5 inline-grid place-items-center text-rn-muted [&_svg]:size-4">{icon}</span> : null}
+      <h2 className="m-0 text-rn-15 font-semibold tracking-[-0.015em] text-rn-ink [.rn-hero_&]:text-rn-on-dark">{title}</h2>
       {info}
       {chips}
       {controls || actions ? (
@@ -142,7 +146,7 @@ export function RnSegmented<T extends string>({
   className?: string;
 }) {
   return (
-    <span role="radiogroup" aria-label={label} className={cx("inline-flex rounded-lg bg-rn-inset p-0.5", className)}>
+    <span role="radiogroup" aria-label={label} className={cx("inline-flex gap-0.5 rounded-[9px] bg-rn-track p-[3px]", className)}>
       {items.map((it) => {
         const on = it.value === value;
         return (
@@ -154,8 +158,8 @@ export function RnSegmented<T extends string>({
             data-rn-seg={it.value}
             onClick={() => onChange(it.value)}
             className={cx(
-              "h-[26px] cursor-pointer rounded-md px-2.5 text-rn-12 whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-rn-navy",
-              on ? "bg-rn-surface font-bold text-rn-ink shadow-rn-1" : "font-medium text-rn-muted hover:text-rn-ink",
+              "h-7 cursor-pointer rounded-[7px] px-3 text-rn-12 whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-rn-navy",
+              on ? "bg-rn-surface font-semibold text-rn-ink shadow-rn-1" : "font-medium text-rn-muted hover:text-rn-ink",
             )}
           >
             {it.label}

@@ -155,7 +155,7 @@ describe("RnServiceWeekChip in the renewal page header", () => {
     const plain = renderToStaticMarkup(<RnPageHeader title="Mention" meta={<span>desc</span>} />);
     expect(chipOf(plain)).toBeNull();
     expect(renderToStaticMarkup(<RnPageHeader title="Entity" />)).toBe(
-      '<header class="flex flex-wrap items-center justify-between gap-x-5 gap-y-2.5"><div class="min-w-0 flex-1"><h1 class="m-0 text-rn-26 font-bold tracking-[-0.025em] text-balance text-rn-ink [&amp;_span]:tracking-normal">Entity</h1></div></header>',
+      '<header class="flex flex-wrap items-center justify-between gap-x-5 gap-y-2.5"><div class="min-w-0 flex-1"><h1 class="m-0 text-rn-24 leading-[1.25] font-[650] tracking-[-0.025em] text-balance text-rn-ink [&amp;_span]:tracking-normal">Entity</h1></div></header>',
     );
   });
 

@@ -78,7 +78,7 @@ export function useRnTruncTip(): { bind: RnTruncTipBind; tip: ReactNode } {
     tip: tip ? (
       <div
         role="tooltip"
-        className="pointer-events-none fixed z-[120] w-max rounded-[10px] bg-rn-ink px-3 py-2 text-rn-12 leading-relaxed break-words whitespace-pre-line text-rn-on-dark shadow-rn-3"
+        className="pointer-events-none fixed z-[120] w-max rounded-[12px] bg-rn-surface px-3 py-2 text-rn-12 leading-relaxed break-words whitespace-pre-line text-rn-ink-2 shadow-[0_14px_36px_-12px_rgba(16,16,18,0.26),0_0_0_1px_var(--color-rn-line)]"
         style={{ left: tip.left, top: tip.top, maxWidth: MAX_W, transform: tip.above ? "translateY(-100%)" : undefined }}
       >
         {tip.text}

@@ -325,8 +325,9 @@ describe("renewal Overview period chip arrow", () => {
     );
   const arrow = (out: string, k: string) => {
     const html = card(out, k);
-    const svg = html.match(/<svg[^>]*class="([^"]*lucide-arrow-(?:up|down)[^"]*)"/)?.[1] ?? "";
-    return { tone: html.match(/data-tone="(\w+)"/)?.[1], dir: svg.match(/lucide-arrow-(up|down)\b/)?.[1], ink: svg.match(/text-rn-(up|danger)-ink/)?.[1] };
+    // 새 외형 (2026-11-05): a solid triangle (data-rn-dir) and the chip's ink on the chip itself
+    const chip = html.match(/<span[^>]*data-tone="\w+"[^>]*class="([^"]*)"/)?.[1] ?? "";
+    return { tone: html.match(/data-tone="(\w+)"/)?.[1], dir: html.match(/data-rn-dir="(up|down)"/)?.[1], ink: chip.match(/text-rn-(up|danger)-ink/)?.[1] };
   };
 
   it("a rank that fell (better) points down in green", () => {

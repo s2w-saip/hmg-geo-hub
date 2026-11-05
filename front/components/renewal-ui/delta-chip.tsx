@@ -1,13 +1,22 @@
 import type { ReactNode } from "react";
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { Minus } from "lucide-react";
 import { cx } from "./cx";
 
 /** up = better, down = worse, flat = unchanged, none = not measurable. */
 export type RnTone = "up" | "down" | "flat" | "none";
 
+/** Solid direction triangle (▲ ▼) of the change chip (새 외형 2026-11-05). */
+function Tri({ up, className }: { up: boolean; className?: string }) {
+  return (
+    <svg aria-hidden data-rn-dir={up ? "up" : "down"} viewBox="0 0 10 10" className={className}>
+      <path d={up ? "M5 1.5 9 8.5H1z" : "M5 8.5 1 1.5h8z"} fill="currentColor" />
+    </svg>
+  );
+}
+
 /**
- * Change chip. Direction colour lives on the icon and the tint only — the number
- * stays ink so it keeps AA contrast on every tint.
+ * Change chip: a soft tint, the direction colour on the triangle and the number (새 외형 2026-11-05; the
+ * up / down ink tones keep AA contrast on white and on their tints).
  */
 export function RnToneChip({
   tone,
@@ -26,22 +35,20 @@ export function RnToneChip({
   children: ReactNode;
 }) {
   const dir = icon === undefined ? (tone === "up" ? "up" : tone === "down" ? "down" : tone === "flat" ? "flat" : null) : icon;
-  const Icon = dir === "up" ? ArrowUp : dir === "down" ? ArrowDown : dir === "flat" ? Minus : null;
+
   const tint = onDark ? "bg-rn-surface" : tone === "up" ? "bg-rn-up/12" : tone === "down" ? "bg-rn-down/10" : "bg-rn-inset";
   return (
     <span
       title={title}
       data-tone={tone}
       className={cx(
-        "inline-flex h-6 items-center gap-1 rounded-md px-2 text-rn-12 font-bold whitespace-nowrap tabular-nums",
-        tone === "none" ? "text-rn-muted" : "text-rn-ink-2",
+        "inline-flex h-6 items-center gap-1 rounded-[7px] px-2 text-rn-12 font-semibold whitespace-nowrap tabular-nums",
+        tone === "up" ? "text-rn-up-ink" : tone === "down" ? "text-rn-danger-ink" : "text-rn-muted",
         tint,
         className,
       )}
     >
-      {Icon ? (
-        <Icon aria-hidden strokeWidth={2.5} className={cx("size-3", tone === "up" ? "text-rn-up-ink" : tone === "down" ? "text-rn-danger-ink" : "text-rn-muted")} />
-      ) : null}
+      {dir === "up" || dir === "down" ? <Tri up={dir === "up"} className="size-2.5" /> : dir === "flat" ? <Minus aria-hidden strokeWidth={2.5} className="size-3" /> : null}
       {children}
     </span>
   );

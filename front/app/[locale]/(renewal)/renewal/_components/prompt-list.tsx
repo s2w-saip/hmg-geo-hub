@@ -41,8 +41,8 @@ export function RnFilterPanel({ count, onReset, saved, children }: { count: numb
   const tr = useTranslations("renewal.filters");
   const { collapse } = useRnSplit();
   return (
-    <aside id="rn-filter-panel" aria-label={tr("title")} className="max-h-full overflow-auto overscroll-contain rounded-rn-card bg-rn-surface shadow-rn-card">
-      <div className="sticky top-0 z-[2] rounded-t-rn-card flex items-center gap-2 border-b border-rn-line bg-rn-surface py-3 pr-2.5 pl-4.5">
+    <aside id="rn-filter-panel" aria-label={tr("title")} className="h-full overflow-auto overscroll-contain bg-rn-surface">
+      <div className="sticky top-0 z-[2] flex items-center gap-2 border-b border-rn-line bg-rn-surface py-3 pr-2.5 pl-5">
         <b className="text-rn-15 text-rn-ink">{tr("title")}</b>
         <span className="text-rn-12 text-rn-muted">{count ? tr("selectedAxes", { count }) : tr("noneSelected")}</span>
         {count ? (
@@ -68,7 +68,7 @@ export function RnFilterRail({ count }: { count: number }) {
   const tr = useTranslations("renewal.filters");
   const { expand } = useRnSplit();
   return (
-    <aside aria-label={tr("title")} className="flex flex-col items-center gap-1.5 rounded-rn-card bg-rn-surface py-2 shadow-rn-card">
+    <aside aria-label={tr("title")} className="flex h-full flex-col items-center gap-1.5 bg-rn-surface py-3">
       <RnIconButton label={tr("expand")} className="size-9" onClick={expand}>
         <PanelLeft className="size-[18px]" aria-hidden />
         {count ? <RnCountBadge className="absolute -top-0.5 -right-1">{count}</RnCountBadge> : null}
