@@ -62,6 +62,7 @@ import { SparkLine } from "./spark-line";
 import { useAwaited, type Awaitable } from "./mention-kpi-tab";
 import { RankTrendChart } from "./rank-trend-chart";
 import { PeriodDeltaSlot, type PeriodSlots } from "@/components/dash/period-delta-slot";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** 경쟁사 복수 선택 상한(2026-09-20). 넘으면 미선택 항목이 비활성되고 안내 문구가 뜬다. */
 export const COMPETITOR_LIMIT = 5;
@@ -265,7 +266,7 @@ function RankHero({
         </div>
         {!available ? (
           <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border px-4 py-10 text-xs text-muted-foreground">
-            {t("degraded")}
+            {t("degraded", SUPPORT)}
           </div>
         ) : (
           <Suspense fallback={<KpiChartSlotSkeleton className="h-52" />}>
@@ -276,7 +277,7 @@ function RankHero({
       {/* 히어로 집계 일부가 일시 실패했으면 "측정 없음"·빈 Δ 로 읽히지 않게 기존 degraded 문구를 히어로
           아래 캡션 자리에 한 줄 둔다(mention-kpi-tab 과 같은 마크업). 원천 전체가 실패(fp null)면
           차트 자리가 이미 같은 문구를 내므로 한 번만. 정상 경로에서는 아무것도 없다. */}
-      {degraded && available ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
+      {degraded && available ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded", SUPPORT)}</p> : null}
       <p className="-mt-4 text-[11px] text-muted-foreground">
         {t("firstRank.deltaBasis")}
       </p>

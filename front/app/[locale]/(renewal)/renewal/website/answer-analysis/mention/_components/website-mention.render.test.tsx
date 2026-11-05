@@ -7,6 +7,7 @@ import en from "@/messages/en.json";
 import type { RnSiteCardsVM } from "./site-cards";
 import type { RnMarketRow, RnMarketsVM } from "./site-markets";
 import type { RnWebsiteMentionReads } from "./website-mention-body";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // The renewal Website Mention (2026-11-02, docs/handoff/website-mention-redesign.md):
 // - the market table keeps Gold's values, leads with the prompts where another brand was named (not with the falls,
@@ -117,7 +118,7 @@ describe("website mention market table", () => {
 
   it("no market: the empty line, or the degraded one", () => {
     expect(render(<RnSiteMarkets vm={{ ...VM, rows: [] }} />)).toContain(T.markets.empty);
-    expect(render(<RnSiteMarkets vm={{ ...VM, rows: [], degraded: true }} />)).toContain(ko.renewal.mention.degraded.all);
+    expect(render(<RnSiteMarkets vm={{ ...VM, rows: [], degraded: true }} />)).toContain(ko.renewal.mention.degraded.all.replace("{contact}", FEEDBACK_EMAIL_TEXT));
   });
 });
 

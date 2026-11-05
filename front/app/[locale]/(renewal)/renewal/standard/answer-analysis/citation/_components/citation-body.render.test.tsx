@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { CitationDomainLive, CitationsLive } from "@/lib/scope/result-adapter";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // ════════════════════════════════════════════════════════════════════════════
 // Renewal Citation body — static render of the states the local api demo cannot show
@@ -216,7 +217,7 @@ describe("renewal Citation body", () => {
     expect(render(input({ data: null }))).toContain(ko.answerAnalysis.empty);
     expect(render(input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
     // a failed read says it could not load (the shared copy said every failure "timed out")
-    expect(render(input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all);
+    expect(render(input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all.replace("{contact}", FEEDBACK_EMAIL_TEXT));
   });
   it("a snapshot of a surface the service week holds no round of: 측정 없음 and the week, not zeros or the filter advice", () => {
     // review r1-19 (2026-11-03): under the week of 07-27 (no Website round on live Gold) citation/website answered
@@ -244,7 +245,7 @@ describe("renewal Citation body", () => {
     expect(at(false, "time=2026-07-01..2026-07-31")).toContain('data-rn-cmeta=""');
     expect(at(false, "time=2026-07-01..2026-07-31", input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
     // a failed read still says so
-    expect(at(false, "", input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all);
+    expect(at(false, "", input({ data: null, dataDegraded: true }))).toContain(ko.renewal.mention.degraded.all.replace("{contact}", FEEDBACK_EMAIL_TEXT));
   });
   it("a period that starts after the service week: the week names it, not zeros under a source-filter headline (review r3-12)", () => {
     // review r3-12 (2026-11-03): time=2026-10-12..2026-10-18 under the week of 10-05 read no round (the BFF's cap), and

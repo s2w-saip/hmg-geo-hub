@@ -57,6 +57,7 @@ import {
 } from "./citations-view";
 import { useActiveCitationCategories } from "./citation-url-axes";
 import { TypeCategoryChart } from "./type-category-chart";
+import { SUPPORT } from "@/lib/support-contact";
 
 type Props = {
   data: Awaitable<CitationsLive | null>;
@@ -164,7 +165,7 @@ function StatusBlock({ data, vm, dataDegraded }: Pick<Props, "data" | "vm" | "da
     return (
       <>
         {degraded ? (
-          <PendingCard title={t("title")} label={tKpi("degraded")} />
+          <PendingCard title={t("title")} label={tKpi("degraded", SUPPORT)} />
         ) : (
           <EmptyState label={tRoot("empty")} />
         )}
@@ -201,7 +202,7 @@ function StatusBlock({ data, vm, dataDegraded }: Pick<Props, "data" | "vm" | "da
           </div>
           <div className="flex flex-col gap-2">
             {s.splitDegraded ? (
-              <p className="py-4 text-center text-xs text-muted-foreground">{tKpi("degraded")}</p>
+              <p className="py-4 text-center text-xs text-muted-foreground">{tKpi("degraded", SUPPORT)}</p>
             ) : (
               <>
                 <LinkTile
@@ -405,7 +406,7 @@ function CategoryBlock({ data, vm, sectionDegraded }: Pick<Props, "data" | "vm" 
         </>
       ) : sections?.categoryTrend ? (
         // 구성 추이 조회가 일시 실패(P6 B041) — 숨기지 않고 기존 지연 안내.
-        <PendingCard title={tCit("categoryTrend.title")} label={tKpi("degraded")} />
+        <PendingCard title={tCit("categoryTrend.title")} label={tKpi("degraded", SUPPORT)} />
       ) : null}
       <SectionDoneMarker id="standard-citation:category" />
     </section>
@@ -448,7 +449,7 @@ function TypeBlock({ typeChart }: Pick<Props, "typeChart">) {
   if (chart == null)
     return (
       <>
-        <PendingCard title={t("title")} label={tKpi("degraded")} />
+        <PendingCard title={t("title")} label={tKpi("degraded", SUPPORT)} />
         {done}
       </>
     );
@@ -473,7 +474,7 @@ function ToneBlock({ toneSummary }: Pick<Props, "toneSummary">) {
         <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </header>
       {sum == null ? (
-        <p className="py-4 text-center text-xs text-muted-foreground">{tKpi("degraded")}</p>
+        <p className="py-4 text-center text-xs text-muted-foreground">{tKpi("degraded", SUPPORT)}</p>
       ) : (
         <div className="flex flex-col gap-2">
           <LinkTile label={t("positive")} count={sum.positive.urls} href={href("tone-urls", { tone: "positive" })} disabled={sum.positive.urls === 0} disabledHint="" tone="good" size="lg" />
@@ -553,7 +554,7 @@ function DomainsBlock({
       {live.trend ? (
         <CitationTrendChart title={t("trend.title")} trend={live.trend} />
       ) : (
-        <PendingCard title={t("trend.title")} label={sections?.trend ? tKpi("degraded") : tRoot("pending")} />
+        <PendingCard title={t("trend.title")} label={sections?.trend ? tKpi("degraded", SUPPORT) : tRoot("pending")} />
       )}
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">

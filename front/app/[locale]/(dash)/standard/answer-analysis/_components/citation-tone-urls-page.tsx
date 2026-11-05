@@ -23,6 +23,7 @@ import { displayCitationUrl } from "@/lib/url-display";
 import { cn } from "@/lib/utils";
 import { categoryColor } from "./citations-view";
 import { Pager, SubpageSearchBox, TabLink, useCursorPaging, useSubpageNav, type CursorAware } from "./citation-prompts-page";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** 두 톤 탭의 카운트. 값 null = 일시 실패("—"). */
 export type ToneCounts = { positive: number | null; negative: number | null };
@@ -154,7 +155,7 @@ function ToneUrlsView({ tone, page, q, byDomain, counts: served, weekEnd }: Tone
         <FilterContentDim>
           <div className="flex flex-col gap-3">
         {page == null ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">{tKpi("degraded")}</p>
+          <p className="py-8 text-center text-xs text-muted-foreground">{tKpi("degraded", SUPPORT)}</p>
         ) : page.rows.length === 0 ? (
           <p className="py-8 text-center text-xs text-muted-foreground">{t("empty")}</p>
         ) : (

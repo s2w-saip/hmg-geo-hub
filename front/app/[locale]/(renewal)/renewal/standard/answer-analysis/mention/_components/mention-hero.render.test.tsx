@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { RnFavorHeroVM, RnRankVM, RnRateHeroVM, RnRateTypesVM, RnRateValueVM, RnSummaryVM } from "../_data/screen-types";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // The renewal Mention heroes as the 2026-10-29 metric review read them (display items, Mention #18 #26 #42 #47 #69):
 // - a read that failed or was suppressed has no numerator / denominator (it showed "—%" over "0 / 0");
@@ -146,7 +147,7 @@ describe("renewal Mention heroes", () => {
   it("a failed rate hero shows no numerator and denominator, and says it could not load", () => {
     const html = render(<HeroValue metric="exposure" />);
     expect(dd(html)).toEqual(["—", "—"]);
-    expect(html).toContain(ko.renewal.mention.degraded.all);
+    expect(html).toContain(ko.renewal.mention.degraded.all.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).not.toContain("시간 안에 끝나지 않아");
   });
 

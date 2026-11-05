@@ -13,6 +13,7 @@ import { standardVmFor, typeChartFor } from "./citation-vm.fixture";
 
 // next/navigation 훅은 라우터 없는 정적 렌더에서 null 을 준다 — 최소 mock.
 import { vi } from "vitest";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 vi.mock("next/navigation", () => ({
   usePathname: () => "/ko/standard/answer-analysis/citation",
   useSearchParams: () => new URLSearchParams(""),
@@ -82,7 +83,7 @@ describe("CitationsStandardView", () => {
   it("shows degrade notices when the side aggregates are null and the empty state for a null live", () => {
     const html = render(<CitationsStandardView data={LIVE} vm={standardVmFor(LIVE)} typeChart={null} toneSummary={null} />);
     // 문구에 괄호가 있어 RegExp 대신 split 으로 센다.
-    expect(html.split(ko.answerAnalysis.mentions.kpi.degraded).length - 1).toBe(2);
+    expect(html.split(ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT)).length - 1).toBe(2);
     expect(render(<CitationsStandardView data={null} vm={null} typeChart={null} toneSummary={null} />)).toContain(ko.answerAnalysis.empty);
   });
 });

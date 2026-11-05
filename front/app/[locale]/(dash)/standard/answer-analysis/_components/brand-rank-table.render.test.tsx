@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import ko from "@/messages/ko.json";
 import en from "@/messages/en.json";
 import type { MentionsLive } from "@/lib/scope/result-adapter";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // 공통 하단(2026-09-02) 렌더 스모크 — 표 추출이 종전 마크업을 유지하는지, 토글 seam 이
 // 복수 언급 값으로 바꾸는지, 상위 N 컷·i18n 키 누락 여부.
@@ -86,7 +87,7 @@ describe("MentionsPromptsSection", () => {
   });
   it("B034: a null aggregate from a transient failure says degraded, not 'no data'", () => {
     const html = render(<MentionsPromptsSection data={null} degraded />);
-    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded);
+    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).toContain(ko.answerAnalysis.mentions.prompts.title);
     expect(html).not.toContain(ko.answerAnalysis.empty);
     // the flag never changes a section that has data

@@ -836,7 +836,7 @@
           "first-rank": "AI First-Rank Exposure"
         },
         "pending": "This KPI view is not available yet — coming in a later step",
-        "degraded": "This section's aggregation did not finish in time and is hidden (other figures are unaffected)",
+        "degraded": "This section failed to aggregate (time limit exceeded). The other figures are fine. Reopen the page in a moment; if it keeps failing, contact: {contact}",
         "metric": {
           "exposure": "AI Exposure",
           "sov": "AI Share of Voice"
@@ -1042,7 +1042,7 @@
           "ladderCard": "By rank",
           "formulaTitle": "Formula"
         },
-        "degradedTrend": "Only the trend aggregation for this section timed out — the figures on the left are unaffected",
+        "degradedTrend": "This section's trend failed to aggregate (time limit exceeded). The figures on the left are fine. Reopen the page in a moment; if it keeps failing, contact: {contact}",
         "metricShort": {
           "exposure": "Exposure",
           "sov": "SOV"
@@ -3198,7 +3198,7 @@
   },
   "dashError": {
     "title": "Failed to load data",
-    "description": "This may be a transient error, or the selected filter combination took too long to aggregate. Please retry — your current filters are preserved.",
+    "description": "The data failed to aggregate. It may be a temporary error, or this filter combination did not finish within the time limit. Please try again — your filters are kept. If it keeps failing, contact: {contact}",
     "digest": "Error code: {digest}",
     "retry": "Retry",
     "retrying": "Retrying…"
@@ -5530,8 +5530,8 @@
       "beta": "Beta",
       "periodRange": "Period total {from} ~ {to}",
       "degraded": {
-        "all": "This section's figures could not be loaded (a timeout or another temporary error) — the other figures are unaffected",
-        "trend": "This section's trend could not be loaded (a timeout or another temporary error) — the other figures are unaffected"
+        "all": "This section failed to aggregate (a timeout or another temporary error). The other figures are fine. Reopen the page in a moment; if it keeps failing, contact: {contact}",
+        "trend": "This section's trend failed to aggregate (a timeout or another temporary error). The other figures are fine. Reopen the page in a moment; if it keeps failing, contact: {contact}"
       },
       "bar": {
         "label": "Page controls"

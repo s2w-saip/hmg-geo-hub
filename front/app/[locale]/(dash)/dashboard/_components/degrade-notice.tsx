@@ -1,5 +1,6 @@
 import { Clock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { SUPPORT } from "@/lib/support-contact";
 
 // ⚠️ `PendingCard` 를 `standard/answer-analysis/_components/mentions-view.tsx` 에서
 // import 하지 않는다 — 그 모듈은 `"use client"`(1,165줄, 표·차트·상태 전부 포함)라
@@ -27,5 +28,5 @@ function PendingCard({ title, label }: { title: string; label: string }) {
  */
 export async function PendingNotice({ title }: { title: string }) {
   const tKpi = await getTranslations("answerAnalysis.mentions.kpi");
-  return <PendingCard title={title} label={tKpi("degraded")} />;
+  return <PendingCard title={title} label={tKpi("degraded", SUPPORT)} />;
 }

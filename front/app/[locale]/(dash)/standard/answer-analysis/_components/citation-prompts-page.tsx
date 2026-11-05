@@ -28,6 +28,7 @@ import {
   type SearchEventDeps,
 } from "../_data/subpage-search";
 import { AnswerModal } from "./answer-modal";
+import { SUPPORT } from "@/lib/support-contact";
 
 /**
  * API 원천(unit U7, D5)의 페이지: 오프셋 대신 키셋 커서다. `nextCursor` 가 실려 있으면 이 페이지는
@@ -92,7 +93,7 @@ function PromptsView({
         <FilterContentDim>
           <div className="flex flex-col gap-3">
         {page == null ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">{tKpi("degraded")}</p>
+          <p className="py-8 text-center text-xs text-muted-foreground">{tKpi("degraded", SUPPORT)}</p>
         ) : page.rows.length === 0 ? (
           <p className="py-8 text-center text-xs text-muted-foreground">{t("empty")}</p>
         ) : (

@@ -23,6 +23,7 @@ import type { WebsiteEnginesView } from "../../website/_overview/website-format"
 import { RnProjectDashboardBody, type ProjectStatusView } from "../_components/project-dashboard";
 import { projectFilterProps, projectPageSession, projectQuery } from "../_components/project-filters-server";
 import { shortId } from "../_components/project-model";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Renewal Project › Dashboard (2026-11-03, P2): the project tab's first page. The original project Dashboard's KPIs,
 // trend and source composition on Gold surface 3 (back/bff/screens/project_dashboard.py projects/dash-*), the website
@@ -157,7 +158,7 @@ async function Body({ id, reads, locale, qs }: { id: string; reads: BodyReads; l
   if (view.state !== "ok") {
     return (
       <RnCard className="p-6">
-        <RnEmpty>{view.state === "degraded" ? tKpi("degraded") : t("empty")}</RnEmpty>
+        <RnEmpty>{view.state === "degraded" ? tKpi("degraded", SUPPORT) : t("empty")}</RnEmpty>
       </RnCard>
     );
   }

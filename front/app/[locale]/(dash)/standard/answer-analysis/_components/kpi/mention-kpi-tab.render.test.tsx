@@ -12,6 +12,7 @@ import type {
 import type { MentionsBrandLive, MentionTypesByBrand } from "@/lib/scope/result-adapter";
 import { MentionKpiTabFromLegacy as MentionKpiTab } from "../../_data/mention-screen.test-utils";
 import type { KpiMetric } from "../../_data/mention-screen";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // 탭 본문 전체가 실제로 **렌더된다**는 것을 확인하는 스모크. 순수 함수 테스트는
 // 값이 맞는지만 보는데, 이 화면의 실패 양상은 대개 "렌더 중 throw" 라서(차트
@@ -202,7 +203,7 @@ describe("MentionKpiTab", () => {
     const html = render("exposure", {
       engineTrend: null, brandTrend: null, typeKpi: null, typesByBrand: null,
     });
-    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded);
+    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).toContain(ko.answerAnalysis.mentions.kpi.engine.empty);
     expect(html).toContain(ko.answerAnalysis.mentions.kpi.type.empty);
     // 스칼라는 스냅샷에서 오므로 추이가 죽어도 그대로 서빙된다.
@@ -212,7 +213,7 @@ describe("MentionKpiTab", () => {
   // B034 — 히어로·유형 집계의 **일시 실패**는 "측정 없음"과 구분한다(요청 스코프 표식을 페이지가
   // 넘긴다). 정상 경로(표식 false·미전달)의 마크업은 종전과 바이트 단위로 같아야 한다.
   describe("B034 degraded notices (hero, type bars)", () => {
-    const degraded = ko.answerAnalysis.mentions.kpi.degraded;
+    const degraded = ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT);
     const heroCaption = `<p class="-mt-4 text-[11px] text-muted-foreground">${degraded}</p>`;
 
     it.each(["exposure", "sov"] as const)("keeps the normal markup identical when nothing failed (%s)", (metric) => {
@@ -241,7 +242,7 @@ describe("MentionKpiTab", () => {
 
     it("shows degradedTrend on the type combo when the engine payload is marked trendDegraded (B034 brands·type)", () => {
       const html = render("exposure", { engineTrend: { ...ENGINE_TREND, trendDegraded: true } });
-      expect(html).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend);
+      expect(html).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     });
   });
 
@@ -481,7 +482,7 @@ describe("MentionKpiTab — regression C2 (부분 degrade 입도)", () => {
     expect(html).toContain("chatgpt");
     expect(html).toContain("80.0%");
     // 우측 시계열만 대체 문구.
-    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend);
+    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     // 섹션이 통째로 "데이터 없음"이 되지는 않는다.
     expect(html).not.toContain(ko.answerAnalysis.mentions.kpi.engine.empty);
   });
@@ -503,7 +504,7 @@ describe("MentionKpiTab — regression C2 (부분 degrade 입도)", () => {
       ...degradedTrend,
       overviewSlots: [slot("2026-09-14", 30, 40), slot("2026-09-21", 33, 40)],
     } as unknown as EngineKpiTrend;
-    const heroDegraded = ko.answerAnalysis.mentions.kpi.degraded;
+    const heroDegraded = ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT);
     expect(render("exposure", { engineTrend: degradedTrend })).toContain(heroDegraded);
     expect(render("exposure", { engineTrend: withSlots })).not.toContain(heroDegraded);
   });

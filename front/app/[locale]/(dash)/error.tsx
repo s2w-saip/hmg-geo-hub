@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SUPPORT } from "@/lib/support-contact";
 
 // (dash) 세그먼트 에러 바운더리 (2026-08-12 피드백 ① 하드닝).
 //
@@ -32,7 +33,7 @@ export default function DashError({
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="flex flex-col gap-1.5">
         <h2 className="text-lg font-semibold text-foreground">{t("title")}</h2>
-        <p className="max-w-md text-sm text-muted-foreground">{t("description")}</p>
+        <p className="max-w-md text-sm text-muted-foreground">{t("description", SUPPORT)}</p>
         {error.digest ? (
           <p className="text-xs text-muted-foreground/70">{t("digest", { digest: error.digest })}</p>
         ) : null}

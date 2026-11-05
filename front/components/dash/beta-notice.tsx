@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, Download, Info, Mail } from "lucide-react";
 import { NoticeDialogFrame, useSessionNotice } from "@/components/dash/notice-dialog";
+import { FEEDBACK_EMAILS, FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // Beta-period operational notice (2026-08 Figma GGMD 1차 고도화, node 267:2).
 // Two surfaces, both shown to every authenticated user for the beta period:
@@ -12,10 +13,11 @@ import { NoticeDialogFrame, useSessionNotice } from "@/components/dash/notice-di
 //    "hide for today" option persisted in localStorage (per browser, resets
 //    at local midnight — server-side persistence deliberately not used).
 //    틀·표시 규칙은 notice-dialog.tsx 공용 템플릿(페이지별 안내 팝업과 공유).
-export const FEEDBACK_EMAILS = ["feedback-hmg@example.com", "feedback-partner@example.com"] as const;
+// The addresses live in lib/support-contact.ts (2026-11-05: the failure notices name them too); re-exported here for
+// the existing importers.
 // 2026-08-28 고객 요청: 메일 클릭 = 아웃룩 연결(mailto) → **클립보드 복사**.
 // 두 주소를 모두 포함해 보내달라는 안내문과 짝이 맞도록 둘을 한 번에 복사한다.
-export const FEEDBACK_EMAIL_TEXT = FEEDBACK_EMAILS.join(", ");
+export { FEEDBACK_EMAILS, FEEDBACK_EMAIL_TEXT };
 const MANUAL_HREF = "/manual/GGMD_beta_manual_v0.2_260713.pdf";
 const MANUAL_FILENAME = "GGMD(beta) manual_v0.2_260713.pdf";
 const MANUAL_DISPLAY = "GGMD(beta) manual_v0.2_260713";

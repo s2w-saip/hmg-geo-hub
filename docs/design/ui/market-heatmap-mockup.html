@@ -204,7 +204,7 @@ function render() {
   for (const [id, key] of [["dataset", "data"], ["view", "view"], ["state", "status"]]) for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === state[key]);
   const body = document.getElementById("body");
   if (state.status === "empty") { body.innerHTML = `<div class="state">권역별 현황은 브랜드를 하나 선택하면 표시됩니다.</div>`; return syncHash(); }
-  const delay = state.status === "delay" ? `<div class="state delay"><b>시장별 현황</b> 이 구간의 집계가 시간 안에 끝나지 않아 표시하지 않습니다 (다른 수치는 정상입니다)</div>` : "";
+  const delay = state.status === "delay" ? `<div class="state delay"><b>시장별 현황</b> 이 구간의 집계에 실패했습니다(제한 시간 초과). 다른 수치는 정상입니다. 잠시 뒤 다시 열어 주시고, 계속되면 담당자에게 알려 주세요: feedback-hmg@example.com, feedback-partner@example.com</div>` : "";
   if (state.status === "delay") { body.innerHTML = delay; return syncHash(); }
   const loading = state.status === "loading";
   body.innerHTML = `<div class="grid"><div class="mapbox"><svg id="map" role="img" aria-label="국가별 지도 — ${NAME[state.metric]}"></svg><div class="legend"><span id="lo"></span><i></i><span id="hi"></span><span>· ${NAME[state.metric]}</span></div></div>` +

@@ -34,6 +34,7 @@ import { useAwaited, type Awaitable } from "./mention-kpi-tab";
 import { FavorabilityTrendChart } from "./favorability-trend-chart";
 import { SignalPromptsDialog } from "../signal-prompts-dialog";
 import { PeriodDeltaSlot, type PeriodSlots } from "@/components/dash/period-delta-slot";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** 감정 4분류 색 — 기존 감정 분포 카드(mentions-view.tsx)와 동일. */
 // 2026-09-02 피그마 327:981 감정 4색 — globals.css 의 --color-sentiment-* 토큰(제품 결정).
@@ -189,7 +190,7 @@ function FavorabilityHero({
       </div>
       {/* 비율 집계가 일시 실패했으면 "—" 가 "측정 없음"으로 읽히지 않게 기존 degraded 문구를 히어로
           아래 캡션 자리에 한 줄 둔다(mention-kpi-tab 과 같은 마크업). 정상 경로에서는 아무것도 없다. */}
-      {degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
+      {degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded", SUPPORT)}</p> : null}
       <Suspense fallback={null}>
         <DeltaBasis delta={delta} />
       <Suspense fallback={null}>
@@ -297,7 +298,7 @@ function HeroTrend({ trend }: Pick<TabProps, "trend">) {
   if (vm.unavailable) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border px-4 py-10 text-xs text-muted-foreground">
-        {t("degraded")}
+        {t("degraded", SUPPORT)}
       </div>
     );
   }

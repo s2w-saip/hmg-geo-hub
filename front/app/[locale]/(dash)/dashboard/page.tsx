@@ -37,6 +37,7 @@ import {
   isTransientScreenError,
   onTransient,
 } from "./_data/screen-fallbacks";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 통합 대시보드 Overview (디자인 611:135): 헤더 측정 기준일 pill · 필터바 · 5-KPI 카드 · 국가별 GEO 현황.
 //
@@ -178,7 +179,7 @@ async function KpiCardsSection({ sp, locale, qs }: { sp: SP; locale: string; qs:
       ) : (
         // 카드가 비는 이유 둘 — "이 필터에 데이터가 없다"(empty) 와 "읽기가 일시 실패했다"(degraded).
         <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-card px-4 py-16 text-sm text-muted-foreground">
-          {view.state === "degraded" ? tKpi("degraded") : t("empty")}
+          {view.state === "degraded" ? tKpi("degraded", SUPPORT) : t("empty")}
         </div>
       )}
       <SectionDoneMarker id="dashboard:kpi-cards" />

@@ -63,6 +63,7 @@ import { useServiceWeekRead, useServiceWeekReadState } from "@/components/servic
 import { composeGroups } from "./filter-groups";
 import { BrandRankTable } from "./brand-rank-table";
 import { SignalPromptsDialog } from "./signal-prompts-dialog";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 표준 > 답변 분석 > 언급 분석 (Brand Mentions) — LIVE only.
 //
@@ -170,7 +171,7 @@ export function MentionsView({
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={vm.degraded.data ? t("kpi.degraded") : tRoot("empty")} />
+        <EmptyState label={vm.degraded.data ? t("kpi.degraded", SUPPORT) : tRoot("empty")} />
       </div>
     );
   }
@@ -307,7 +308,7 @@ export function MentionsSummarySection({
     return (
       <div className="flex flex-col gap-6">
         <p className="text-sm text-muted-foreground">{t("description")}</p>
-        <EmptyState label={degraded.data ? t("kpi.degraded") : tRoot("empty")} />
+        <EmptyState label={degraded.data ? t("kpi.degraded", SUPPORT) : tRoot("empty")} />
       </div>
     );
   }
@@ -412,7 +413,7 @@ export function MentionsSummarySection({
       {/* Sub KPI·직전 Sub KPI(Δ)·측정 프롬프트 수 조회가 일시 실패했으면(B035) 빠진 카드·배지·"—" 가
           "측정 없음"으로 읽히지 않게 같은 캡션 자리에 기존 degraded 문구를 둔다. */}
       {degraded.subKpis ? (
-        <p className="-mt-3 text-[11px] text-muted-foreground">{t("kpi.degraded")}</p>
+        <p className="-mt-3 text-[11px] text-muted-foreground">{t("kpi.degraded", SUPPORT)}</p>
       ) : null}
 
       {/* (b-1) 당사 vs 경쟁사 헤드투헤드 — comparison is null when there's no
@@ -448,7 +449,7 @@ export function MentionsSummarySection({
           />
         ) : (
           // 유형 조회가 일시 실패했으면(B035) '준비 중' 대신 기존 degraded 문구.
-          <PendingCard title={t("breakdown.typesTitle")} label={degraded.types ? t("kpi.degraded") : tRoot("pending")} />
+          <PendingCard title={t("breakdown.typesTitle")} label={degraded.types ? t("kpi.degraded", SUPPORT) : tRoot("pending")} />
         )}
       </div>
       <SignalPromptsDialog
@@ -486,7 +487,7 @@ export function MentionsTrendSection({
         // 표준 공통 하단(mentions-prompts-section.tsx)과 같은 판정·같은 문구다(B035).
         <PendingCard
           title={t("trend.title")}
-          label={data.trendDegraded ? t("kpi.degradedTrend") : tRoot("pending")}
+          label={data.trendDegraded ? t("kpi.degradedTrend", SUPPORT) : tRoot("pending")}
         />
       )}
     </>

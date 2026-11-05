@@ -38,6 +38,7 @@ import type {
   WebsiteTrendView,
 } from "../dashboard/_data/screen-types";
 import { handled, isTransientScreenError } from "../dashboard/_data/screen-fallbacks";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 웹사이트 Overview — 권역별 공식 사이트 인용 현황. 표준 대시보드와 같은 카드·추이·구성·GEO 구성을
 // WebsiteFilters(geography 1차 축 + admin 전용 brand 축)로 구동한다.
@@ -200,7 +201,7 @@ async function WebsiteSummarySection({
       <>
         {/* 카드가 비는 이유 둘 — "이 필터에 데이터가 없다"(empty) 와 "읽기가 일시 실패했다"(degraded). */}
         <div className="flex items-center justify-center rounded-lg border border-dashed border-border bg-card px-4 py-16 text-sm text-muted-foreground">
-          {view.state === "degraded" ? tKpi("degraded") : t("empty")}
+          {view.state === "degraded" ? tKpi("degraded", SUPPORT) : t("empty")}
         </div>
         <SectionDoneMarker id="website:summary" />
       </>

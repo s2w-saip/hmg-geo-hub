@@ -28,9 +28,10 @@ function namespaceOf(src: string, name: string): string | null {
   return m?.[1] ?? null;
 }
 
-/** `<x>.state === "degraded" ? <t>("<key>") : <t2>("<key2>")` 삼항을 뜯는다. */
+/** `<x>.state === "degraded" ? <t>("<key>"[, values]) : <t2>("<key2>")` 삼항을 뜯는다. */
 function degradeTernary(src: string) {
-  const m = src.match(/\.state === "degraded"\s*\?\s*(\w+)\("([^"]+)"\)\s*:\s*(\w+)\("([^"]+)"\)/);
+  // the degraded call may carry its values (2026-11-05: `tKpi("degraded", SUPPORT)`, the contact)
+  const m = src.match(/\.state === "degraded"\s*\?\s*(\w+)\("([^"]+)"(?:,\s*\w+)?\)\s*:\s*(\w+)\("([^"]+)"\)/);
   if (!m) return null;
   return { hotVar: m[1], hotKey: m[2], coldVar: m[3], coldKey: m[4] };
 }

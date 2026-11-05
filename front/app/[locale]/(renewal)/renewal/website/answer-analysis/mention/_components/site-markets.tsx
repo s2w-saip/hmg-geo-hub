@@ -11,6 +11,7 @@ import { MentionCardActions, pctTxt, posTxt, useMention } from "../../../../stan
 import { DeltaChip, InfoTip } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
 import { useMentionPage } from "../../../../standard/answer-analysis/mention/_components/mention-tabs";
 import { RnMissingPrompts } from "./missing-prompts";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 시장별 지표 (2026-11-02, docs/handoff/website-mention-redesign.md): where the page's KPI stands market by market, this
 // window beside the one before, a column per brand, the 미언급 prompts and who appears instead. Values from
@@ -106,7 +107,7 @@ export function RnSiteMarkets({ vm }: { vm: RnMarketsVM }) {
     return (
       <>
         {head}
-        <RnEmpty className="mx-6 mb-5">{vm.degraded ? dg("all") : t("empty")}</RnEmpty>
+        <RnEmpty className="mx-6 mb-5">{vm.degraded ? dg("all", SUPPORT) : t("empty")}</RnEmpty>
       </>
     );
   }

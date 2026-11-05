@@ -41,6 +41,7 @@ import { pctText } from "./kpi-bits";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";
 import { AUTO_PCT_DOMAIN, BandedGrid, ChartBox, PILL_BAR_RADIUS } from "./chart-box";
 import { seriesColor } from "./series-colors";
+import { SUPPORT } from "@/lib/support-contact";
 
 const ALL_COMPETITORS = "__all__";
 
@@ -158,7 +159,7 @@ export function TypeKpiSection({
 
       {bars.length === 0 ? (
         <p className="px-2 py-8 text-center text-xs text-muted-foreground">
-          {degraded ? t("degraded") : t("type.empty")}
+          {degraded ? t("degraded", SUPPORT) : t("type.empty")}
         </p>
       ) : (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
@@ -302,7 +303,7 @@ export function TypeKpiTrend({
     <>
       {trendUnavailable ? (
         <div className="flex h-56 items-center justify-center rounded-md border border-dashed border-border px-4 text-xs text-muted-foreground">
-          {t("degradedTrend")}
+          {t("degradedTrend", SUPPORT)}
         </div>
       ) : (
       <div className="h-56 min-w-0">

@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import ko from "@/messages/ko.json";
 import type { ServiceWeekView } from "@/lib/service-week";
 import type { RnShellVM } from "../_data/screen-types";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // The renewal Mention body's empty states (MentionShell: the body aggregate mention/rn-shell decides the page), the
 // Global and the Website page alike. Review r1-19 (2026-11-03): under a service week with no Website round (the week of
@@ -96,7 +97,7 @@ describe("renewal Mention body: nothing measured", () => {
 
   it("a failed read still says it could not load", () => {
     const html = render({ filtered: false, view: week(false), shell: { ...UNMEASURED, degraded: true } as RnShellVM });
-    expect(html).toContain(ko.renewal.mention.degraded.all);
+    expect(html).toContain(ko.renewal.mention.degraded.all.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).not.toContain("측정 없음");
   });
 });

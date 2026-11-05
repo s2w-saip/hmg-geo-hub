@@ -49,6 +49,7 @@ import { EngineKpiSection } from "./engine-kpi-section";
 import { TypeKpiSection, TypeKpiTrend } from "./type-kpi-section";
 import { PeriodDeltaSlot, type PeriodSlots } from "@/components/dash/period-delta-slot";
 import { compareMetricForKpiTab } from "@/components/dash/period-delta-metrics";
+import { SUPPORT } from "@/lib/support-contact";
 
 /** 값 또는 프로미스. 프로미스면 그 섹션만 자기 경계에서 늦게 채워진다. */
 export type Awaitable<T> = T | Promise<T>;
@@ -220,7 +221,7 @@ function HeroBlock({
       />
       {/* 스칼라 집계가 일시 실패했으면(B034) "—" 가 "측정 없음"으로 읽히지 않게 기존 degraded
           문구를 히어로 아래 캡션 자리에 한 줄 둔다. 정상 경로에서는 아무것도 그리지 않는다. */}
-      {vm.degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded")}</p> : null}
+      {vm.degraded ? <p className="-mt-4 text-[11px] text-muted-foreground">{t("degraded", SUPPORT)}</p> : null}
       <Suspense fallback={null}>
         <HeroDeltaBasis heroDelta={heroDelta} />
       </Suspense>
@@ -302,7 +303,7 @@ function HeroTrend({ metric, heroTrend }: Pick<TabProps, "metric" | "heroTrend">
     return (
       <>
         <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-border px-4 py-10 text-xs text-muted-foreground">
-          {t("degraded")}
+          {t("degraded", SUPPORT)}
         </div>
         {done}
       </>

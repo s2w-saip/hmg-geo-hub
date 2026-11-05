@@ -19,6 +19,7 @@ import {
   MentionsTrendSectionFromLegacy as MentionsTrendSection,
   MentionsViewFromLegacy as MentionsView,
 } from "../_data/mention-screen.test-utils";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // 2026-09-03 구획 분할의 **렌더 실측**. 정적 검사가 아니라 실제 렌더러
 // (react-dom/server)로 마크업을 뽑아 확인한다.
@@ -117,7 +118,11 @@ describe("언급 본문 구획 — 단독 렌더", () => {
 // 페이지가 요청 스코프 표식(mentionsDegraded)을 읽어 `degraded` 로 넘긴다. 참인 자리만 기존
 // `kpi.degraded`(추이는 `kpi.degradedTrend`) 문구로 바뀌고, 정상 경로 마크업은 그대로다.
 describe("B035 일시 실패 고지", () => {
-  const kpi = ko.answerAnalysis.mentions.kpi;
+  // the notices as the screen formats them, with the contact (2026-11-05)
+  const kpi = {
+    degraded: ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT),
+    degradedTrend: ko.answerAnalysis.mentions.kpi.degradedTrend.replace("{contact}", FEEDBACK_EMAIL_TEXT),
+  };
   const ALL_FALSE = { data: false, types: false, subKpis: false };
 
   it("정상 경로(표식 전부 false)는 표식 미전달과 바이트 단위로 같다", () => {

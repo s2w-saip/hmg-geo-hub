@@ -35,6 +35,7 @@ import {
   type OverviewFilterProps,
 } from "../_components/overview-filters";
 import { RnOverviewBody, type RnBrandMatrixRead } from "./_components/overview-body";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Renewal Overview (2026-10-20) — the redesigned /dashboard, served side by side with the original.
 // Data: the SAME overview screens as /dashboard/page.tsx (back/bff/screens/overview.py), plus the
@@ -193,7 +194,7 @@ async function OverviewSection({ reads, locale, qs }: { reads: BodyReads; locale
     // no data: the service week's '측정 없음' instead when the week holds no Global round (review r1-19)
     return (
       <RnCard className="p-6">
-        <RnEmpty>{view.state === "degraded" ? tKpi("degraded") : <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>}</RnEmpty>
+        <RnEmpty>{view.state === "degraded" ? tKpi("degraded", SUPPORT) : <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>}</RnEmpty>
       </RnCard>
     );
   }
@@ -226,7 +227,7 @@ async function DegradeNote({ wait, title }: { wait: Promise<boolean>; title: str
   return (
     <RnNote>
       <b className="font-semibold">{title}</b>
-      <span>{tKpi("degraded")}</span>
+      <span>{tKpi("degraded", SUPPORT)}</span>
     </RnNote>
   );
 }

@@ -6,6 +6,7 @@ import ko from "@/messages/ko.json";
 import type { RnSiteCardsVM } from "./site-cards";
 import type { RnWeeklyVM } from "./weekly-mentions";
 import type { MissingPromptRow } from "./missing-prompts";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // The legacy website Mention's values on the renewal page (2026-10-30, the user: a legacy KPI is reshaped, never
 // dropped; no value is made up):
@@ -134,7 +135,7 @@ describe("website mention KPI breakdown", () => {
   it("without Sub KPI the counts read — with the degraded line; nothing without data; no list without a missing prompt", () => {
     const html = render(<RnSiteCards cards={settled({ ...VM, subKpis: null, deltas: { total: VM.deltas!.total, totalPrompts: VM.deltas!.totalPrompts }, prevBasisDate: null, degraded: { data: false, types: false, subKpis: true } })} period={false} pageAsOf={settled("2026-10-09")} />);
     expect(groups(html).exposure).toEqual([`${S.totalPrompts} 10,009 120`, `${S.missingPrompts} —`]);
-    expect(html).toContain(ko.renewal.mention.degraded.all);
+    expect(html).toContain(ko.renewal.mention.degraded.all.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).not.toContain(W.cards.openMissing.replace("{count}", "0"));
     expect(render(<RnSiteCards cards={settled({ ...VM, summary: null })} period={false} pageAsOf={null} />)).not.toContain("data-rn-kgroup");
   });
@@ -167,7 +168,7 @@ describe("website mention weekly brand mentions", () => {
 
   it("without a trend: pending, or the degraded line", () => {
     expect(render(<RnWeeklyMentions weekly={settled({ ...WEEKLY, rows: [], weeks: [], gaps: [] })} />)).toContain(ko.answerAnalysis.pending);
-    expect(render(<RnWeeklyMentions weekly={settled({ weeks: [], gaps: [], rows: [], degraded: true })} />)).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend);
+    expect(render(<RnWeeklyMentions weekly={settled({ weeks: [], gaps: [], rows: [], degraded: true })} />)).toContain(ko.answerAnalysis.mentions.kpi.degradedTrend.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(weekLabel("2026-07-06")).toBe("7/6");
   });
 });

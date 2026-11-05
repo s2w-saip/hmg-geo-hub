@@ -7,6 +7,7 @@ import { RnDeltaChip, RnInfoTip, RnInfoTipItem, RnSkeleton, RnTag, cx, rnHighlig
 import { RnServiceWeekEmpty } from "@/components/service-week/no-round";
 import type { RnDelta } from "../_data/screen-types";
 import { useMention } from "./mention-context";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Small building blocks shared by the renewal Mention cards.
 
@@ -54,7 +55,7 @@ export function DegradedNote({ children }: { children: ReactNode }) {
  * The shared answerAnalysis copy says every such read "timed out"; the renewal Mention and Citation say what is known. */
 export function useDegradedText(): { all: string; trend: string } {
   const t = useTranslations("renewal.mention.degraded");
-  return { all: t("all"), trend: t("trend") };
+  return { all: t("all", SUPPORT), trend: t("trend", SUPPORT) };
 }
 
 /** `neutral`: a rival's move (direction only; better/worse is 당사's). */

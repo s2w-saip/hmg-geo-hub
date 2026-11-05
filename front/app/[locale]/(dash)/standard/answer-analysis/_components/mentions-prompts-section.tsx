@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { EmptyState, MentionTrendChart, PendingCard, type MentionsViewData } from "./mentions-view";
 import { BrandRankTable } from "./brand-rank-table";
 import type { BrandTableView, TrendSeriesSplit } from "../_data/mention-screen";
+import { SUPPORT } from "@/lib/support-contact";
 
 export const BRAND_RANK_LIMIT = 100;
 
@@ -38,7 +39,7 @@ export function MentionsPromptsSection({
   const tRoot = useTranslations("answerAnalysis");
   if (!data || !table) {
     return degraded ? (
-      <PendingCard title={t("prompts.title")} label={t("kpi.degraded")} />
+      <PendingCard title={t("prompts.title")} label={t("kpi.degraded", SUPPORT)} />
     ) : (
       <EmptyState label={tRoot("empty")} />
     );
@@ -55,7 +56,7 @@ export function MentionsPromptsSection({
           // null 의 두 사유를 구분한다 — 시간 초과(degrade)와 "2주 미만"(측정 대기).
           <PendingCard
             title={t("trend.title")}
-            label={data.trendDegraded ? t("kpi.degradedTrend") : tRoot("pending")}
+            label={data.trendDegraded ? t("kpi.degradedTrend", SUPPORT) : tRoot("pending")}
           />
         )}
         <BrandRankTable

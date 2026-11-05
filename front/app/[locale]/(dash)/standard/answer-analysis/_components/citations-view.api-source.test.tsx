@@ -22,6 +22,7 @@ import {
   isDefaultDomainQuery,
   type PageWindow,
 } from "../_data/citation-view";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // API source of the citation screens (unit U7), component side: the table reads its rows' '#'
 // from the backend ranks (BG-21), shows "더 보기" while a next cursor exists (D5), rows carry the
@@ -115,7 +116,7 @@ describe("CitationsView (website / project) with an API table source", () => {
 });
 
 describe("CitationsView (website / project): a backend outage shows the existing 'delayed' notice (P6 B042)", () => {
-  const DEGRADED = ko.answerAnalysis.mentions.kpi.degraded;
+  const DEGRADED = ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT);
   const EMPTY = ko.answerAnalysis.empty;
   const PENDING = ko.answerAnalysis.pending;
   const c = ko.answerAnalysis.citations;

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { RnBasisChip, RnCard, RnCardHead, RnSkeleton, RnTag, RnToneChip, cx } from "@/components/renewal-ui";
 import { MentionCardActions } from "../../../../standard/answer-analysis/mention/_components/mention-context";
 import { InfoTip } from "../../../../standard/answer-analysis/mention/_components/mention-kit";
+import { SUPPORT } from "@/lib/support-contact";
 
 // 주별 브랜드 언급 수 (2026-10-30): the legacy website Mention's weekly chart (당사 + the top 10 by share, mention
 // counts per week) kept on the renewal page's 브랜드 상세, as a table of every week's count and the change from the week
@@ -77,7 +78,7 @@ function Weekly({ weekly }: { weekly: Promise<RnWeeklyVM> }) {
     return (
       <>
         {head}
-        <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted">{vm.degraded ? tK("degradedTrend") : tA("pending")}</p>
+        <p className="m-0 px-6 pb-5 text-rn-12 text-rn-muted">{vm.degraded ? tK("degradedTrend", SUPPORT) : tA("pending")}</p>
       </>
     );
   }

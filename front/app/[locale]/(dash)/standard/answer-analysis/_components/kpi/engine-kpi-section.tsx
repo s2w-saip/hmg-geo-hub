@@ -36,6 +36,7 @@ import { seriesColor } from "./series-colors";
 import { pctText, ValueBar } from "./kpi-bits";
 import { bucketMD, CoverageLabel } from "./kpi-trend-chart";
 import { AUTO_PCT_DOMAIN, BandedGrid, ChartBox } from "./chart-box";
+import { SUPPORT } from "@/lib/support-contact";
 
 const ALL = "__all__";
 
@@ -147,7 +148,7 @@ export function EngineKpiSection({
           <ChartBox className="flex-1">
             {trendUnavailable ? (
               <div className="flex h-56 items-center justify-center rounded-md border border-dashed border-border px-4 text-xs text-muted-foreground">
-                {t("degradedTrend")}
+                {t("degradedTrend", SUPPORT)}
               </div>
             ) : (
             <div className="h-56 min-w-0">

@@ -6,6 +6,7 @@ import type { CitationsLive } from "@/lib/scope/result-adapter";
 import type { CitationSectionDegraded } from "../_data/citation-view";
 import { CitationsStandardView } from "./citations-standard-view";
 import { standardVmFor } from "./citation-vm.fixture";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // 인용 집계가 `null` 일 때 화면이 두 사실을 구분하는가 (E-2 degrade-registry 연계).
 //
@@ -23,7 +24,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const EMPTY = ko.answerAnalysis.empty;
-const DEGRADED = ko.answerAnalysis.mentions.kpi.degraded;
+const DEGRADED = ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT);
 
 /**
  * 인용 **현황** 블록만 잘라 본다 — 같은 화면의 유형별 구성·우호도 블록도 입력이

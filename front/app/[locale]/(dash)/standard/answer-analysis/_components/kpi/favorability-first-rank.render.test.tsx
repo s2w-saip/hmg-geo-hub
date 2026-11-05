@@ -11,6 +11,7 @@ import type {
 } from "@/lib/db/repositories/scope-aggregates";
 import { FavorabilityKpiTabFromLegacy as FavorabilityKpiTab, FirstRankKpiTabFromLegacy as FirstRankKpiTab } from "../../_data/mention-screen.test-utils";
 import { FAVORABILITY_LINES } from "./favorability-trend-chart";
+import { FEEDBACK_EMAIL_TEXT } from "@/lib/support-contact";
 
 // PR ③ 탭 두 개의 렌더 스모크 — mention-kpi-tab.render.test 와 같은 취지(렌더 중
 // throw · i18n 키 누락을 정적 검사로는 못 잡는다). 값은 프로미스가 아니라 **값**으로
@@ -112,7 +113,7 @@ describe("FavorabilityKpiTab", () => {
     const html = render(
       <FavorabilityKpiTab subKpis={SUB} prevSubKpis={null} prevBasisDate={null} engineTrend={null}
         sentimentTotals={null} stanceDist={null} typeKpi={null} />);
-    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded);
+    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).toContain("55.2%"); // 스칼라는 살아 있다
   });
   // ── 답변 축 스탠스 카드 (0072 · WU8) ──────────────────────────────────────
@@ -199,7 +200,7 @@ describe("FirstRankKpiTab", () => {
   });
   it("shows the degrade notice for a null aggregate instead of zeros", () => {
     const html = render(<FirstRankKpiTab firstPosition={null} />);
-    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded);
+    expect(html).toContain(ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT));
     expect(html).toContain(ko.answerAnalysis.mentions.kpi.firstRank.table.empty);
   });
 });
@@ -208,7 +209,7 @@ describe("FirstRankKpiTab", () => {
 // the existing kpi.degraded line under the hero, instead of reading as "no measurement". The flag
 // is the page's request-scope mark (wasKpiTabDegraded), handed in as a value or a promise.
 describe("hero degraded line (favorability / first rank)", () => {
-  const degraded = ko.answerAnalysis.mentions.kpi.degraded;
+  const degraded = ko.answerAnalysis.mentions.kpi.degraded.replace("{contact}", FEEDBACK_EMAIL_TEXT);
   const heroCaption = `<p class="-mt-4 text-[11px] text-muted-foreground">${degraded}</p>`;
   const count = (html: string, s: string) => html.split(s).length - 1;
   const fav = (extra: { heroDegraded?: boolean; subKpis?: StandardSubKpis }) => (

@@ -106,6 +106,7 @@ import { useServiceWeekRead } from "@/components/service-week/provider";
 import { PendingCard, EmptyState, weekStartMD } from "./mentions-view";
 import { AnswerModal } from "./answer-modal";
 import { TRUNCATED_ROW_CLASS, TruncatedNote } from "./citation-domain-table";
+import { SUPPORT } from "@/lib/support-contact";
 
 const PIE_COLORS = [
   "var(--color-brand-700)", "var(--color-series-1)", "var(--color-series-2)", "var(--color-series-3)", "var(--color-series-4)",
@@ -742,7 +743,7 @@ export function CitationsView({
         <p className="text-sm text-muted-foreground">{t("description")}</p>
         {/* 일시 실패면 '데이터 없음'이 아니라 기존 지연 안내(P6 B042, 표준 화면 StatusBlock 과 같은 카드). */}
         {dataDegraded ? (
-          <PendingCard title={tRoot("tabs.citations")} label={tKpi("degraded")} />
+          <PendingCard title={tRoot("tabs.citations")} label={tKpi("degraded", SUPPORT)} />
         ) : (
           <EmptyState label={tRoot("empty")} />
         )}
@@ -867,7 +868,7 @@ export function CitationsView({
         />
       ) : degradedSections?.split ? (
         // 일시 실패(P6 B042) — '자사 인용 없음'(섹션 숨김)과 구분해 기존 지연 안내.
-        <PendingCard title={t("baseSplit.title")} label={tKpi("degraded")} />
+        <PendingCard title={t("baseSplit.title")} label={tKpi("degraded", SUPPORT)} />
       ) : null}
 
       {/* (c) Trend chart — weekly Top-10 domain citation lines. Needs ≥2 dated
@@ -875,7 +876,7 @@ export function CitationsView({
       {data.trend ? (
         <CitationTrendChart title={t("trend.title")} trend={data.trend} />
       ) : (
-        <PendingCard title={t("trend.title")} label={degradedSections?.trend ? tKpi("degraded") : tRoot("pending")} />
+        <PendingCard title={t("trend.title")} label={degradedSections?.trend ? tKpi("degraded", SUPPORT) : tRoot("pending")} />
       )}
 
       {/* (c′) Category composition trend — weekly 100% stacked area over the
@@ -890,7 +891,7 @@ export function CitationsView({
           label={catLabel}
         />
       ) : degradedSections?.categoryTrend ? (
-        <PendingCard title={t("categoryTrend.title")} label={tKpi("degraded")} />
+        <PendingCard title={t("categoryTrend.title")} label={tKpi("degraded", SUPPORT)} />
       ) : null}
 
       {/* (d) Category donut (클릭 = ?source= 필터 토글) + 엔진별 카테고리 구성.

@@ -36,6 +36,7 @@ import { websiteFindings } from "./_overview/website-findings";
 import { WebsiteFindingList } from "./_overview/website-findings-view";
 import type { WebsiteBrandsView, WebsiteEnginesView } from "./_overview/website-format";
 import { engineLabel } from "./_overview/engine-label";
+import { SUPPORT } from "@/lib/support-contact";
 
 // Renewal Website Overview (2026-10-30, W1) — the redesigned /website, served side by side with the original.
 // Data: the SAME screens as /website/page.tsx (back/bff/screens/overview.py), ctx.surface=website on the
@@ -240,7 +241,7 @@ async function OverviewSection({ reads, locale, qs, isAdmin }: { reads: BodyRead
     // no data: the service week's '측정 없음' instead when the week holds no Website round (review r1-19)
     return (
       <RnCard className="p-6">
-        <RnEmpty>{view.state === "degraded" ? tKpi("degraded") : <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>}</RnEmpty>
+        <RnEmpty>{view.state === "degraded" ? tKpi("degraded", SUPPORT) : <RnServiceWeekEmptyLine>{t("empty")}</RnServiceWeekEmptyLine>}</RnEmpty>
       </RnCard>
     );
   }
