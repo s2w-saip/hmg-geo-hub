@@ -8,530 +8,352 @@
          url("../../../front/public/fonts/PretendardVariable.woff2") format("woff2");
     font-weight: 100 900; font-style: normal; font-display: swap;
   }
-  /* Global Mention 개편안 (2026-11-05): 지표 탭 넷 + 브랜드 상세를 한 페이지로. 틀(사이드바 · 머리 · 필터 패널 · 조작 바)은
-     리뉴얼 구현과 design-rules.html을 따르고, 색은 서비스 팔레트(Chart - Own · Chart - Other 15색 · System)다.
-     값은 Gold 2026-10-05 회차(로컬 BFF 응답, 엔진별 우호도 · 우선 노출도는 Gold 직접 조회). 설계하는 동안만 쓰고 구현하면 지운다. */
+  /* Global Mention 개편안 (2026-11-05): 지표 탭 넷 + 브랜드 상세를 한 페이지로. 색은 서비스 팔레트(Chart - Own · Chart - Other 15색 · System).
+     외형은 클라이언트 참고 화면의 문법: 회색 셸 위 흰 판 하나, 카드 = 옅은 띠(제목) + 흰 타일(내용), 무채색 + 강조색 하나(당사 파랑),
+     가벼운 글자 무게, 얇은 선 · 점선 눈금, 증감은 색 글자. 값은 Gold 2026-10-05 회차(로컬 BFF 응답, 엔진별 우호도 · 우선 노출도는 Gold 직접 조회).
+     설계하는 동안만 쓰고 구현하면 지운다. */
   :root {
-    --navy: #1e38fa; --navy-900: #111f8a; --navy-ink: #0b1458; --navy-500: #172abc; --navy-300: #6274fc; --navy-50: #d2d7fe; --navy-25: #edefff;
-    --ink: #101012; --ink-2: #222326; --muted: #6c6d70; --faint: #d5d5d6; --line: #e5e6e9; --line-2: #d5d5d6;
-    --page: #f8f8f9; --surface: #ffffff; --inset: #e5e6e9;
-    --up: #3df134; --down: #fa1e2a; --warn: #faf600; --up-ink: #278323; --down-ink: #d01b26; --warn-ink: #77750a;
-    --ctx: #d5d5d6;
+    --navy: #1e38fa; --navy-900: #111f8a; --navy-500: #172abc; --navy-300: #6274fc; --navy-50: #d2d7fe; --navy-25: #edefff;
+    --ink: #101012; --ink-2: #222326; --muted: #6c6d70; --soft: #9a9ca1; --faint: #d5d5d6;
+    --line: #e5e6e9; --hair: #efeff1; --page: #f8f8f9; --track: #eff0f2; --surface: #ffffff;
+    --up-ink: #278323; --down-ink: #d01b26; --warn-ink: #77750a;
     --font: Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
-    --shadow-card: 0 1px 2px rgba(16,16,18,.04), 0 0 0 1px var(--line);
-    --shadow-bar: 0 1px 2px rgba(16,16,18,.05), 0 0 0 1px var(--line), 0 8px 24px -18px rgba(16,16,18,.35);
-    --shadow-pop: 0 24px 56px -16px rgba(16,16,18,.30), 0 6px 16px rgba(16,16,18,.08);
-    --r-card: 16px; --side-w: 232px; --filter-w: 296px;
+    --r-panel: 16px; --r-card: 14px; --r-tile: 10px;
+    --shadow-tile: 0 0 0 1px var(--line), 0 1px 2px rgba(16,16,18,.04);
+    --shadow-pop: 0 20px 48px -16px rgba(16,16,18,.24), 0 0 0 1px var(--line);
+    --side-w: 232px; --filter-w: 296px; --cbar-h: 52px;
+    --ease: cubic-bezier(.2, .7, .2, 1);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
-  body { background: var(--page); color: var(--ink); font: 13px/1.5 var(--font); -webkit-font-smoothing: antialiased; word-break: keep-all; overflow: hidden; }
-  button, input, select { font: inherit; color: inherit; }
-  :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  body { background: var(--page); color: var(--ink); font: 13px/1.5 var(--font); letter-spacing: -.005em; -webkit-font-smoothing: antialiased; word-break: keep-all; overflow: hidden; }
+  button, input { font: inherit; color: inherit; letter-spacing: inherit; }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; border-radius: 6px; }
   .num { font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
-  svg.i { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
   svg.i.s14 { width: 14px; height: 14px; } svg.i.s12 { width: 12px; height: 12px; }
 
-  /* ── 목업 바 ── */
-  .mk { position: relative; z-index: 200; background: #16171a; color: #e7e8ea; font-size: 12px; }
-  .mk-row { display: flex; align-items: center; gap: 10px 14px; padding: 8px 16px; flex-wrap: wrap; }
-  .mk-tag { background: #ffbe42; color: #16171a; font-weight: 800; padding: 1px 8px; border-radius: 4px; }
-  .mk-title { font-weight: 700; color: #fff; }
-  .mk-btn { border: 1px solid #3a3d44; background: transparent; color: #d4d6da; font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
-  .mk-btn[aria-expanded="true"] { background: #e7e8ea; color: #16171a; border-color: #e7e8ea; font-weight: 700; }
-  .mk-note { color: #9a9ca3; margin-left: auto; }
-  .mk-cap { display: none; border-top: 1px solid #2a2c31; padding: 10px 16px 12px; line-height: 1.65; color: #d4d6da; grid-template-columns: 1.1fr 1fr 1fr; gap: 24px; }
-  .mk-cap.on { display: grid; }
-  .mk-cap b { color: #fff; }
-  .mk-cap h4 { margin: 0 0 4px; font-size: 12px; color: #ffbe42; }
-  .mk-cap ul { margin: 0; padding-left: 16px; }
-
-  /* ── 틀 ── */
-  .sx { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: calc(100vh - var(--mk-h, 38px)); }
-  .side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 18px 12px 12px; background: var(--surface); border-right: 1px solid var(--line); }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 6px; }
-  .brand .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
-  .brand b { display: block; font-size: 14px; font-weight: 800; color: var(--navy); line-height: 1.15; }
-  .brand small { font-size: 11px; color: var(--muted); }
+  /* ── 셸: 회색 바탕 위 사이드바, 오른쪽에 흰 판 하나 ── */
+  .sx { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: 100vh; }
+  .side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding: 20px 12px 14px 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+  .brand .mark { width: 30px; height: 30px; border-radius: 9px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .brand b { display: block; font-size: 14px; font-weight: 650; color: var(--ink); line-height: 1.2; letter-spacing: -.01em; }
+  .brand small { font-size: 11.5px; color: var(--muted); }
+  .nav { display: flex; flex-direction: column; gap: 16px; }
   .nav .sec { display: flex; flex-direction: column; gap: 1px; }
-  .nav .sec + .sec { margin-top: 12px; }
-  .nav .h { display: flex; align-items: center; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
-  .nav .h.here { color: var(--ink); }
-  .nav a { display: flex; align-items: center; gap: 10px; min-height: 31px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: none; position: relative; }
-  .nav a .i { color: var(--faint); }
-  .nav a:hover { background: var(--navy-25); color: var(--navy); }
-  .nav .par { display: flex; align-items: center; gap: 10px; min-height: 31px; padding: 0 10px; font-size: 12px; font-weight: 700; color: var(--muted); }
-  .nav .par .i { color: var(--faint); }
-  .nav .tree { display: flex; flex-direction: column; gap: 1px; margin: 0 0 2px 17px; padding-left: 6px; border-left: 1px solid var(--line); }
-  .nav .tree a { min-height: 29px; }
-  .nav .tree a.on { background: var(--navy-25); color: var(--navy); font-weight: 700; }
-  .nav .tree a.on::before { content: ""; position: absolute; left: -7px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--navy); }
-  .acct { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 8px 2px; border-top: 1px solid var(--line); }
-  .acct .av { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-50); color: var(--navy); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
-  .acct b { display: block; font-size: 12px; } .acct small { color: var(--muted); font-size: 11px; }
+  .nav .h { padding: 0 10px 4px; font-size: 11px; font-weight: 500; letter-spacing: .06em; color: var(--soft); }
+  .nav .h.here { color: var(--ink-2); font-weight: 600; }
+  .nav a { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: none; position: relative; cursor: pointer; transition: background-color .15s; }
+  .nav a .i, .nav .par .i { color: var(--soft); }
+  .nav a:hover { background: rgba(16,16,18,.04); }
+  .nav .par { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; font-size: 13px; font-weight: 500; color: var(--muted); }
+  .nav .tree { display: flex; flex-direction: column; gap: 1px; margin: 0 0 2px 17px; padding-left: 8px; border-left: 1px solid var(--line); }
+  .nav .tree a { height: 30px; }
+  .nav .tree a.on { background: var(--surface); color: var(--navy); font-weight: 600; box-shadow: var(--shadow-tile); }
+  .mkcard { margin-top: auto; padding: 12px 12px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-tile); font-size: 12px; color: var(--muted); }
+  .mk-top { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 12.5px; }
+  .mk-top b { font-weight: 600; }
+  .mk-tag { background: #ffbe42; color: var(--ink); font-weight: 700; font-size: 10.5px; padding: 1px 7px; border-radius: 999px; }
+  .mkcard p { margin: 6px 0 10px; line-height: 1.5; }
+  .mk-btn { width: 100%; height: 30px; border: 0; border-radius: 8px; background: var(--page); box-shadow: inset 0 0 0 1px var(--line); font-size: 12px; font-weight: 550; color: var(--ink-2); cursor: pointer; }
+  .mk-btn:hover, .mk-btn[aria-expanded="true"] { background: var(--track); }
+  .mk-cap { display: none; position: fixed; left: 248px; bottom: 16px; z-index: 400; width: 940px; padding: 18px 22px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-pop); grid-template-columns: 1.1fr 1fr 1fr; gap: 24px; font-size: 12px; line-height: 1.65; color: var(--ink-2); }
+  .mk-cap.on { display: grid; }
+  .mk-cap h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--navy); }
+  .mk-cap ul { margin: 0; padding-left: 16px; }
+  .mk-cap b { font-weight: 600; color: var(--ink); }
+  .acct { display: flex; align-items: center; gap: 10px; padding: 4px 8px 0; }
+  .acct .av { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-25); color: var(--navy); display: grid; place-items: center; font-size: 12px; font-weight: 650; }
+  .acct b { display: block; font-size: 12.5px; font-weight: 600; } .acct small { color: var(--muted); font-size: 11.5px; }
 
-  .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-  .ph { display: flex; align-items: flex-start; gap: 16px; padding: 22px 24px 12px 28px; }
-  .ph h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.03em; display: flex; align-items: center; gap: 8px; }
-  .beta { font-size: 11px; font-weight: 700; color: var(--navy); background: var(--navy-25); border-radius: 4px; padding: 0 6px; letter-spacing: 0; }
-  .ph .sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; color: var(--muted); flex-wrap: wrap; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; color: var(--ink-2); }
-  .pill b { font-weight: 700; } .pill .sep { width: 1px; height: 12px; background: var(--line-2); }
-  .pill .warn { color: var(--warn-ink); font-weight: 700; }
-  .btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; font-weight: 700; cursor: pointer; }
-  .ph .btn { margin-left: auto; }
+  .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; margin: 8px 8px 8px 0; background: var(--surface); border-radius: var(--r-panel); box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(16,16,18,.04); overflow: hidden; }
+  .ph { display: flex; align-items: center; gap: 16px; padding: 16px 24px 16px 28px; border-bottom: 1px solid var(--line); }
+  .ph h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.02em; line-height: 1.3; display: flex; align-items: center; gap: 8px; }
+  .beta { font-size: 10.5px; font-weight: 600; color: var(--navy); background: var(--navy-25); border-radius: 5px; padding: 1px 6px; letter-spacing: 0; }
+  .ph .sub { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+  .hacts { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .basis { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-radius: 9px; background: var(--page); font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+  .basis .i { color: var(--muted); }
+  .basis b { font-weight: 600; }
+  .basis .sep { width: 1px; height: 12px; background: var(--line); }
+  .basis .warn { color: var(--warn-ink); font-weight: 600; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border-radius: 9px; border: 0; background: var(--surface); box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(16,16,18,.05); font-size: 12.5px; font-weight: 550; color: var(--ink-2); cursor: pointer; transition: background-color .15s; }
+  .btn:hover { background: var(--page); }
+  .btn .i { color: var(--muted); }
+  .btn.pri { background: var(--navy); color: #fff; box-shadow: 0 1px 2px rgba(30,56,250,.3); }
+  .btn.pri .i { color: #fff; }
+  .btn.pri:hover { background: var(--navy-500); }
 
-  .body { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--filter-w) minmax(0, 1fr); gap: 16px; padding: 0 0 0 28px; }
+  /* ── 필터 열: 판 안의 왼쪽 칸(카드 아님), 본문과 따로 스크롤 ── */
+  .body { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--filter-w) minmax(0, 1fr); }
   body.fcollapsed .body { grid-template-columns: 52px minmax(0, 1fr); }
-  .filters { min-height: 0; overflow-y: auto; background: var(--surface); border-radius: var(--r-card) var(--r-card) 0 0; box-shadow: var(--shadow-card); align-self: stretch; }
-  .f-h { display: flex; align-items: center; gap: 6px; padding: 14px 12px 10px 18px; border-bottom: 1px solid var(--line); }
-  .f-h b { font-size: 14px; } .f-h small { color: var(--muted); }
-  .icon { all: unset; cursor: pointer; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); }
-  .icon:hover { background: var(--inset); color: var(--ink); }
+  .filters { min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); }
+  .f-h { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 10px 0 20px; }
+  .f-h b { font-size: 13.5px; font-weight: 600; } .f-h small { color: var(--muted); font-size: 12px; }
+  .icon { all: unset; cursor: pointer; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); transition: background-color .15s, color .15s; }
+  .icon:hover { background: var(--track); color: var(--ink); }
+  .icon[aria-pressed="true"] { background: var(--navy-25); color: var(--navy); }
   .f-h .icon { margin-left: auto; }
-  .f-saved { margin: 0; padding: 12px 18px; background: var(--navy-25); font-size: 12px; color: var(--muted); }
-  .f-saved b { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 12px; margin-bottom: 4px; }
-  .f-saved b span { margin-left: auto; font-weight: 500; color: var(--ink-2); }
-  .f-grp { padding: 10px 18px 6px; font-size: 11px; color: var(--muted); font-weight: 600; }
-  .f-axis { border-top: 1px solid var(--line); padding: 8px 18px 10px; }
-  .f-axis summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; padding: 4px 0; }
+  .f-saved { margin: 0 14px 4px; padding: 11px 13px; border-radius: 10px; background: var(--page); font-size: 12px; color: var(--muted); }
+  .f-saved b { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12.5px; font-weight: 600; margin-bottom: 2px; }
+  .f-saved b span { margin-left: auto; font-weight: 550; color: var(--navy); }
+  .f-grp { padding: 14px 20px 2px; font-size: 11px; font-weight: 500; letter-spacing: .04em; color: var(--soft); }
+  .f-axis { padding: 0 20px; }
+  .f-axis + .f-axis { border-top: 1px solid var(--hair); }
+  .f-axis[open] { padding-bottom: 8px; }
+  .f-axis summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; font-weight: 550; color: var(--ink-2); }
+  .f-axis summary .i { color: var(--soft); transition: transform .15s; }
+  .f-axis:not([open]) summary .i { transform: rotate(-90deg); }
   .f-axis summary::-webkit-details-marker { display: none; }
-  .f-axis label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: var(--ink-2); }
-  .f-axis label i { width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--line-2); }
-  .f-search { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; margin: 4px 0; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line-2); color: var(--muted); font-size: 12px; }
+  .f-axis label { display: flex; align-items: center; gap: 10px; height: 30px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+  .f-axis label i { width: 16px; height: 16px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--faint); }
+  .f-search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; margin: 0 0 4px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line); color: var(--soft); font-size: 12.5px; }
   body.fcollapsed .filters > :not(.f-rail) { display: none; }
-  .f-rail { display: none; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; }
+  .f-rail { display: none; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0; }
   body.fcollapsed .f-rail { display: flex; }
 
-  .content { min-width: 0; min-height: 0; overflow-y: auto; padding: 0 24px 72px 0; display: flex; flex-direction: column; gap: 12px; scrollbar-gutter: stable; }
-  .notice { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; color: var(--ink-2); }
-  .notice .muted { margin-left: 4px; }
-  .cbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 16px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-bar); }
-  .cbar .lab { font-size: 12px; font-weight: 600; color: var(--muted); }
-  .cbar .focus { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
-  .cbar .focus b { color: var(--navy); }
+  /* ── 본문 ── */
+  .content { min-width: 0; min-height: 0; overflow-y: auto; padding: 0 24px 64px; display: flex; flex-direction: column; gap: 14px; scrollbar-gutter: stable; }
+  .content > * { flex-shrink: 0; }
+  .notice { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 10px 14px; border-radius: 10px; background: color-mix(in srgb, #faf600 6%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, #faf600 30%, var(--line)); font-size: 12.5px; color: var(--ink-2); }
+  .notice .i { color: var(--warn-ink); }
+  .notice .muted { margin-left: auto; font-size: 12px; }
+  .cbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; height: var(--cbar-h); margin: -6px -24px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid transparent; transition: border-color .15s; }
+  .cbar.stuck { border-bottom-color: var(--line); }
+  .cbar .lab { font-size: 12.5px; color: var(--muted); }
   .cbar .right { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; position: relative; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; }
+  .legend .own { font-weight: 600; color: var(--ink); }
+  .own-tag { font-size: 10.5px; font-weight: 600; color: var(--navy); background: var(--navy-25); border-radius: 5px; padding: 1px 6px; letter-spacing: 0; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 4px 0 11px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 12.5px; font-weight: 550; color: var(--ink-2); }
   .chip i { width: 8px; height: 8px; border-radius: 50%; }
-  .chip small { font-weight: 500; color: var(--muted); }
-  .chip button { all: unset; cursor: pointer; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
-  .chip button:hover { background: var(--inset); color: var(--ink); }
-  .add { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; box-shadow: inset 0 0 0 1px var(--navy-300); color: var(--navy); font-size: 12px; font-weight: 700; cursor: pointer; }
-  .add:hover { background: var(--navy-25); }
-  .pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 280px; padding: 8px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop), 0 0 0 1px var(--line); }
+  .chip small { font-weight: 450; color: var(--muted); font-size: 11.5px; }
+  .chip button { all: unset; cursor: pointer; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: var(--soft); }
+  .chip button:hover { background: var(--track); color: var(--ink); }
+  .add { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--ink-2); font-size: 12.5px; font-weight: 550; cursor: pointer; transition: background-color .15s; }
+  .add .i { color: var(--muted); }
+  .add:hover, .add[aria-expanded="true"] { background: var(--page); }
+  .pop { position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 300px; padding: 8px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-pop); }
   .pop[hidden] { display: none; }
-  .pop p { margin: 2px 6px 8px; font-size: 11px; color: var(--muted); line-height: 1.5; }
-  .pop label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
-  .pop label:hover { background: var(--navy-25); }
-  .pop label i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-2); }
+  .pop p { margin: 4px 8px 8px; font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+  .pop label { display: flex; align-items: center; gap: 9px; height: 34px; padding: 0 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .pop label:hover { background: var(--page); }
+  .pop label i { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--faint); }
   .pop label input { margin: 0 0 0 auto; accent-color: var(--navy); }
-  .pop .foot { display: flex; gap: 8px; border-top: 1px solid var(--line); margin-top: 6px; padding: 8px 6px 2px; }
-  .tbtn { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--navy); }
+  .pop .foot { display: flex; gap: 8px; border-top: 1px solid var(--hair); margin-top: 6px; padding: 10px 8px 4px; }
+  .tbtn { all: unset; cursor: pointer; font-size: 12.5px; font-weight: 550; color: var(--navy); }
   .tbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-  /* section head (RnSectionHead) */
-  .sh { display: flex; align-items: baseline; gap: 12px; margin: 10px 0 -2px; }
-  .sh h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
-  .sh p { margin: 0; font-size: 12px; color: var(--muted); }
-  .card { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-card); position: relative; }
-  .ch { display: flex; align-items: center; gap: 10px; padding: 16px 18px 10px 22px; flex-wrap: wrap; }
-  .ch h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
-  .ch .acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-  .bchip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--page); font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; }
-  .info { display: inline-grid; place-items: center; color: var(--muted); cursor: help; }
-  .seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--inset); }
-  .seg button { border: 0; background: none; padding: 3px 10px; border-radius: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 1px 2px rgba(16,16,18,.08); }
+  /* ── 카드 = 옅은 띠(아이콘 · 제목 · 동작) + 흰 타일(내용) ── */
+  .card { background: var(--page); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--line); padding: 0 5px 5px; display: flex; flex-direction: column; position: relative; }
+  .card > .tile { flex: 1; }
+  .tile { background: var(--surface); border-radius: var(--r-tile); box-shadow: var(--shadow-tile); }
+  .ch, .tcard .th { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 8px 0 13px; flex-wrap: wrap; }
+  .ch h3 { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ink); letter-spacing: -.01em; }
+  .ic { display: inline-grid; place-items: center; color: var(--muted); }
+  .ch .note { font-size: 12px; color: var(--muted); }
+  .ch .acts, .tcard .th .acts { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .info { display: inline-grid; place-items: center; color: var(--soft); cursor: help; }
+  .info:hover { color: var(--ink-2); }
+  .seg, .dtabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--track); }
+  .seg button, .dtabs button { border: 0; background: none; height: 26px; padding: 0 11px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: background-color .15s, color .15s; }
+  .seg button:hover, .dtabs button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"], .dtabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(16,16,18,.1); }
 
-  /* ── 추이 2×2 (작은 다중 차트: 네 지표를 한 화면에, 회차 맞춤 가리키기) ── */
-  .sh .legend { margin-left: auto; padding: 0; }
-  .tgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .tcard { padding: 14px 18px 10px 22px; }
-  .tcard .th { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
-  .tcard .th .acts { margin-left: auto; display: flex; gap: 2px; }
-  .tcard .tv { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 2px 0 4px; }
-  .tcard .tv b { font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.2; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .tcard .tv b small { font-size: 13px; font-weight: 600; margin-left: 1px; letter-spacing: 0; }
-  .tcard .tv .meta { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .tcard .tv .neg { color: var(--down-ink); font-weight: 700; }
-  .tcard .mini { display: flex; gap: 12px; font-size: 11px; color: var(--ink-2); margin-left: auto; }
-  .tcard .mini span { display: inline-flex; align-items: center; gap: 5px; }
-  .tcard .mini i { width: 12px; height: 2px; border-radius: 2px; }
-  .tcard .chart { height: 196px; }
-  .tcard .chart:focus-visible { outline: 2px solid var(--navy); outline-offset: 4px; border-radius: 6px; }
-  .split { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 6px; padding: 5px 10px; border-radius: 8px; background: var(--page); font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .split .k { font-weight: 700; color: var(--muted); }
-  .split b { font-weight: 700; color: var(--navy); }
-  .split .sep { width: 1px; height: 11px; background: var(--line-2); margin: 0 2px; }
-  .twin { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; margin: 4px 0 6px; }
-  .twin th, .twin td { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
-  .twin th:first-child, .twin td:first-child { text-align: left; color: var(--ink-2); font-weight: 600; }
-  .twin th { color: var(--muted); font-weight: 600; }
-  .twinwrap { overflow-x: auto; height: 196px; }
-  .icon[aria-pressed="true"] { background: var(--navy-25); color: var(--navy); }
-  .dt { font-size: 11px; font-weight: 700; margin-left: 4px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  /* 증감: 색 글자 + ▲▼(경쟁사는 회색), 추이 카드 머리만 옅은 칠 */
+  .d { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .d .a { font-size: 8.5px; }
+  .d.good { color: var(--up-ink); } .d.bad { color: var(--down-ink); }
+  .d.neu, .d.flat { color: var(--muted); font-weight: 500; }
+  .d.na { color: var(--faint); }
+  .d.pill { height: 22px; padding: 0 7px; border-radius: 6px; }
+  .d.pill.good { background: color-mix(in srgb, #3df134 12%, #fff); }
+  .d.pill.bad { background: color-mix(in srgb, #fa1e2a 8%, #fff); }
+  .d.pill.flat { background: var(--page); }
+  .dt { font-size: 11px; font-weight: 500; margin-left: 6px; color: var(--soft); font-variant-numeric: tabular-nums; }
+  .dt .a { font-size: 7.5px; margin-right: 1px; vertical-align: 1px; }
   .dt.good { color: var(--up-ink); } .dt.bad { color: var(--down-ink); }
-  .chk { all: unset; cursor: pointer; width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--line-2); display: inline-grid; place-items: center; }
-  .chk:hover { box-shadow: inset 0 0 0 2px var(--navy-300); }
-  .chk[aria-checked="true"] { box-shadow: none; }
-  .chk[aria-checked="true"]::after { content: ""; width: 8px; height: 4px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px, -1px); }
-  .bt td.go { color: var(--faint); text-align: center; padding: 0; }
-  .bt tbody tr:hover td.go { color: var(--navy); }
-  .bt tr.sub td { height: 34px; background: rgba(237,239,255,.25); font-size: 12.5px; }
-  .bt tr.sub { cursor: default; }
-  .bt tr.sub .bname { padding-left: 22px; }
-  .bt tr.sub .bname b { font-weight: 600; color: var(--ink-2); }
-  .tg { font-size: 10px; font-weight: 700; color: var(--navy-900); background: var(--navy-25); border-radius: 4px; padding: 0 5px; }
-  .chev { all: unset; cursor: pointer; width: 18px; height: 18px; display: inline-grid; place-items: center; border-radius: 4px; color: var(--muted); transition: transform .12s; }
-  .chev:hover { background: var(--navy-50); color: var(--navy); }
-  .chev[aria-expanded="true"] { transform: rotate(90deg); }
-  /* ── (지난 안) 추이 카드 안의 지표 탭 (Search Console 성과 카드처럼: 탭이 바꾸는 것은 이 카드의 차트뿐) ── */
-  .mtabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); border-radius: var(--r-card) var(--r-card) 0 0; overflow: hidden; }
-  .mtab { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 12px 20px 11px 22px; background: var(--page); box-shadow: inset 0 -1px 0 var(--line); position: relative; }
-  .mtab + .mtab { box-shadow: inset 1px 0 0 var(--line), inset 0 -1px 0 var(--line); }
-  .mtab:hover { background: #f1f2f4; }
-  .mtab[aria-selected="true"] { background: var(--surface); box-shadow: inset 0 3px 0 var(--navy); }
-  .mtab + .mtab[aria-selected="true"] { box-shadow: inset 0 3px 0 var(--navy), inset 1px 0 0 var(--line); }
-  .mtab .lab { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
-  .mtab[aria-selected="true"] .lab { color: var(--navy); }
-  .mtab .row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-  .mtab .val { font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.2; color: var(--ink); }
-  .mtab .val small { font-size: 13px; font-weight: 600; margin-left: 1px; letter-spacing: 0; }
-  .mtab .meta { font-size: 11px; color: var(--muted); }
-  .mtab .neg { color: var(--down-ink); font-weight: 700; }
-  .ch2 { padding-top: 14px; }
-  .ch2 .legend { padding: 0; margin-left: 8px; }
-  /* (old KPI tiles, unused) */
-  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .kpi { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; gap: 2px 12px; padding: 14px 16px 12px 18px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card); position: relative; transition: box-shadow .12s; }
-  .kpi:hover { box-shadow: 0 0 0 1px var(--navy-300), 0 6px 18px -12px rgba(30,56,250,.45); }
-  .kpi[aria-checked="true"] { box-shadow: 0 0 0 2px var(--navy), 0 8px 22px -14px rgba(30,56,250,.55); }
-  .kpi .fxtag { display: none; margin-left: 6px; font-size: 10px; font-weight: 800; color: var(--navy); background: var(--navy-25); border-radius: 4px; padding: 0 6px; line-height: 18px; }
-  .kpi[aria-checked="true"] .fxtag { display: inline-block; }
-  .kpi .lab { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
-  .kpi .val { font-size: 34px; font-weight: 700; letter-spacing: -.035em; color: var(--ink); line-height: 1.15; }
-  .kpi[aria-checked="true"] .val { color: var(--navy); }
-  .kpi .val small { font-size: 16px; font-weight: 600; margin-left: 2px; letter-spacing: 0; }
-  .kpi .sp { align-self: end; }
-  .kpi .meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
-  .kpi .meta .sub2 { margin-left: auto; }
-  .kpi .neg { color: var(--down-ink); font-weight: 700; }
 
-  /* Δ chip */
-  .d { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .d.good { background: rgba(61,241,52,.16); color: var(--up-ink); }
-  .d.bad { background: rgba(250,30,42,.12); color: var(--down-ink); }
-  .d.flat, .d.neu { background: var(--page); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
-  .d.na { background: none; color: var(--faint); box-shadow: none; padding: 0; }
-
-  /* trend */
-  .trend { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0 18px 14px 22px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); padding: 0 0 6px; }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend i { width: 14px; height: 2px; border-radius: 2px; }
-  .legend .own { color: var(--navy); font-weight: 700; }
-  .own-tag { font-size: 10px; font-weight: 800; color: var(--navy); background: var(--navy-25); border-radius: 4px; padding: 0 5px; }
-  .chart { position: relative; height: 250px; }
+  /* ── 추이 2 × 2 ── */
+  .tgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .tcard .th { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .tcard .tile { padding: 16px 18px 8px 20px; }
+  .tcard .tv { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tcard .tv b { font-size: 30px; font-weight: 550; letter-spacing: -.03em; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .tcard .tv b small { font-size: 15px; font-weight: 500; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+  .tcard .tv .vs { font-size: 12px; color: var(--muted); }
+  .tcard .meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tcard .meta .neg { color: var(--ink-2); font-weight: 600; }
+  .tcard .mini { display: flex; gap: 14px; font-size: 12px; font-weight: 500; color: var(--ink-2); margin-left: 12px; }
+  .tcard .mini span { display: inline-flex; align-items: center; gap: 6px; }
+  .tcard .mini i { width: 8px; height: 8px; border-radius: 50%; }
+  .split { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 2px; padding-top: 10px; border-top: 1px solid var(--hair); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .split b { font-weight: 600; color: var(--ink-2); }
+  .split .k { color: var(--soft); }
+  .split .sep { width: 1px; height: 11px; background: var(--line); margin: 0 4px; }
+  .split .tbtn { margin-left: auto; font-size: 12px; }
+  .chart { position: relative; height: 150px; }
+  .tcard .chart { margin-top: 6px; }
+  .tcard .chart:focus-visible { outline-offset: 4px; }
   .chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .ax { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
-  .grid line { stroke: var(--line); }
-  .endl { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .cross { stroke: var(--line-2); stroke-dasharray: 3 3; }
+  .ax { font-size: 11px; fill: var(--soft); font-variant-numeric: tabular-nums; }
+  .grid line { stroke: var(--hair); stroke-dasharray: 3 4; }
+  .cross { stroke: var(--faint); opacity: 0; transition: opacity .12s; }
+  .cross.on { opacity: 1; }
+  .twinwrap { overflow-x: auto; height: 150px; margin-top: 6px; }
+  .twin { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .twin th, .twin td { padding: 4px 6px; border-bottom: 1px solid var(--hair); text-align: right; white-space: nowrap; }
+  .twin th:first-child, .twin td:first-child { text-align: left; color: var(--ink-2); font-weight: 550; }
+  .twin th { color: var(--muted); font-weight: 500; }
 
-  /* tooltip */
-  .tip { position: fixed; z-index: 300; pointer-events: none; min-width: 180px; max-width: 280px; padding: 10px 12px; border-radius: 10px; background: var(--ink); color: #f7f7f7; font-size: 12px; line-height: 1.55; box-shadow: var(--shadow-pop); }
-  .tip[hidden] { display: none; }
-  .tip b { display: block; color: #00cfff; font-size: 11px; margin-bottom: 4px; }
-  .tip .r { display: flex; align-items: center; gap: 8px; }
+  /* tooltip: 흰 카드 */
+  .tip { position: fixed; z-index: 300; left: 0; top: 0; pointer-events: none; min-width: 190px; max-width: 300px; padding: 10px 12px; border-radius: 10px; background: var(--surface); color: var(--ink); font-size: 12px; line-height: 1.55; box-shadow: 0 14px 36px -12px rgba(16,16,18,.26), 0 0 0 1px var(--line); opacity: 0; transform: translateY(3px); transition: opacity .12s var(--ease), transform .12s var(--ease); }
+  .tip.on { opacity: 1; transform: none; }
+  .tip b { display: block; color: var(--muted); font-size: 11.5px; font-weight: 500; margin-bottom: 5px; }
+  .tip .r { display: flex; align-items: center; gap: 8px; padding: 1px 0; }
   .tip .r i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .tip .r span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; }
-  .tip .r.own span:first-of-type { color: #a5affd; font-weight: 700; }
-  .tip .n { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,.14); color: #b9bbbf; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .bt th .info, .tt th .info { margin-left: 2px; vertical-align: -2px; }
-  .ladder { position: relative; height: 420px; margin: 0 22px 18px; }
-  .ladder svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .tip .r span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tip .r.own span:first-of-type { color: var(--navy); font-weight: 600; }
+  .tip .n { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--hair); color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 
-  /* board */
-  .tools { display: flex; align-items: center; gap: 10px; padding: 0 22px 10px; }
-  .search { display: inline-flex; align-items: center; gap: 6px; width: 220px; height: 32px; padding: 0 10px; border-radius: 8px; background: var(--page); color: var(--muted); }
-  .search input { border: 0; background: none; outline: none; min-width: 0; flex: 1; font-size: 12px; color: var(--ink); }
-  .tools .muted { font-size: 12px; }
+  /* ── 브랜드 비교 표 ── */
+  .tools { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .search { display: inline-flex; align-items: center; gap: 8px; width: 260px; height: 34px; padding: 0 11px; border-radius: 9px; box-shadow: inset 0 0 0 1px var(--line); color: var(--soft); transition: box-shadow .15s; }
+  .search:focus-within { box-shadow: inset 0 0 0 1.5px var(--navy-300); }
+  .search input { border: 0; background: none; outline: none; min-width: 0; flex: 1; font-size: 12.5px; color: var(--ink); }
+  .search input::placeholder { color: var(--soft); }
   .bt { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-  .bt th { position: sticky; top: 52px; z-index: 5; height: 36px; background: var(--surface); border-block: 1px solid var(--line); padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); text-align: right; white-space: nowrap; }
-  .bt th:first-child { padding-left: 22px; }
+  .bt th { position: sticky; top: var(--cbar-h); z-index: 5; height: 38px; background: var(--page); border-block: 1px solid var(--line); padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--muted); text-align: right; white-space: nowrap; }
+  .bt th:first-child { padding-left: 16px; }
   .bt th.l, .bt td.l { text-align: left; }
   .bt th button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
   .bt th button:hover { color: var(--ink); }
-  .bt th.sorted button { color: var(--ink); }
-  .bt th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
-  .bt th.fx button { color: var(--navy); font-weight: 800; }
-  .bt td { height: 42px; border-bottom: 1px solid var(--line); padding: 0 10px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); }
-  .bt td:first-child { padding-left: 22px; color: var(--muted); font-size: 12px; }
-  .bt td.fx { background: rgba(237,239,255,.55); }
-  .bt tr { cursor: pointer; }
-  .bt tbody tr:hover td { background: var(--navy-25); }
-  .bt tr.own td { background: rgba(237,239,255,.5); }
+  .bt th.fx button, .bt th.sorted button { color: var(--ink); font-weight: 600; }
+  .bt th .info { margin-left: 3px; vertical-align: -2px; }
+  .bt td { height: 44px; border-bottom: 1px solid var(--hair); padding: 0 10px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); transition: background-color .12s; }
+  .bt td:first-child { padding-left: 16px; }
+  .bt td.rk { color: var(--soft); font-size: 12px; }
+  .bt td.fx { color: var(--ink); }
+  .bt tbody tr { cursor: pointer; }
+  .bt tbody tr:hover td { background: #fafafb; }
+  .bt tr.own td { background: color-mix(in srgb, var(--navy) 3%, #fff); }
   .bt tr.lit td { background: var(--navy-25); }
-  .bt tr.lit td:first-child { box-shadow: inset 3px 0 0 var(--navy); }
+  .bt tr.sub { cursor: default; }
+  .bt tr.sub td { height: 36px; background: #fcfcfd; font-size: 12.5px; }
+  .bt tr.sub .bname { position: relative; padding-left: 30px; }
+  .bt tr.sub .bname::before { content: ""; position: absolute; left: 9px; top: -18px; height: 26px; width: 12px; border-left: 1px solid var(--faint); border-bottom: 1px solid var(--faint); border-bottom-left-radius: 5px; }
+  .bt tr.sub .bname b { font-weight: 500; color: var(--ink-2); }
+  .bt td.go { color: var(--faint); text-align: center; padding: 0; }
+  .bt tbody tr:hover td.go { color: var(--ink-2); }
   .bname { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .bname .dot { all: unset; cursor: pointer; width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1.5px var(--line-2); }
-  .bname .dot:hover { box-shadow: inset 0 0 0 2px var(--navy-300); }
-  .bname b { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
-  .bname b.own { color: var(--navy); }
-  .bname small { color: var(--muted); font-size: 11px; white-space: nowrap; }
-  .vb { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; }
-  .vb .bar { flex: 0 0 64px; height: 6px; border-radius: 3px; background: var(--page); overflow: hidden; }
-  .vb .bar i { display: block; height: 100%; border-radius: 3px; }
-  .vb b { font-weight: 700; color: var(--ink); min-width: 44px; }
-  .ptrack { position: relative; flex: 0 0 64px; height: 6px; border-radius: 3px; background: var(--page); }
-  .ptrack i { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
-  .sent { display: inline-flex; width: 64px; height: 6px; border-radius: 3px; overflow: hidden; gap: 1px; }
-  .more { padding: 10px 22px 14px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); }
-  .map { position: relative; height: 380px; margin: 0 22px 18px; }
-  .map .t { position: absolute; border-radius: 8px; padding: 8px 10px; overflow: hidden; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255,255,255,.9); transition: filter .12s; }
-  .map .t:hover { filter: brightness(.96); }
-  .map .t b { display: block; font-size: 13px; font-weight: 800; }
+  .bname .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .bname b { font-weight: 550; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+  .bname b.own { color: var(--navy); font-weight: 600; }
+  .bname small { color: var(--soft); font-size: 11.5px; white-space: nowrap; }
+  .chk { all: unset; cursor: pointer; width: 16px; height: 16px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--faint); display: inline-grid; place-items: center; vertical-align: middle; }
+  .chk:hover { box-shadow: inset 0 0 0 1.5px var(--navy-300); }
+  .chk[aria-checked="true"] { box-shadow: none; }
+  .chk[aria-checked="true"]::after { content: ""; width: 8px; height: 4px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px, -1px); }
+  .chev { all: unset; cursor: pointer; width: 18px; height: 18px; display: inline-grid; place-items: center; border-radius: 5px; color: var(--soft); transition: transform .15s; }
+  .chev:hover { background: var(--track); color: var(--ink); }
+  .chev[aria-expanded="true"] { transform: rotate(90deg); }
+  .vb { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; }
+  .vb .bar { flex: 0 0 60px; height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+  .vb .bar i { display: block; height: 100%; border-radius: 2px; }
+  .vb b { font-weight: 600; color: var(--ink); min-width: 42px; }
+  .ptrack { position: relative; flex: 0 0 60px; height: 4px; border-radius: 2px; background: var(--track); }
+  .ptrack i { position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
+  .sent { display: inline-flex; width: 60px; height: 5px; border-radius: 3px; overflow: hidden; gap: 1.5px; }
+  .more { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-top: 1px solid var(--hair); font-size: 12px; color: var(--muted); }
+  .map { position: relative; height: 380px; margin: 14px 16px 12px; }
+  .map .t { position: absolute; border-radius: 8px; padding: 9px 11px; overflow: hidden; cursor: pointer; transition: filter .12s; }
+  .map .t:hover { filter: brightness(.97); }
+  .map .t b { display: block; font-size: 13px; font-weight: 600; }
   .map .t span { font-size: 12px; font-variant-numeric: tabular-nums; }
   .map .t small { display: block; font-size: 11px; opacity: .75; }
-  .maplegend { display: flex; align-items: center; gap: 10px; padding: 0 22px 16px; font-size: 11px; color: var(--muted); }
-  .maplegend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
-  .bump { position: relative; height: 380px; margin: 0 22px 18px; }
-  .bump svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .maplegend { display: flex; align-items: center; gap: 12px; padding: 0 16px 14px; font-size: 11.5px; color: var(--muted); }
+  .maplegend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+  .bump, .ladder { position: relative; height: 400px; margin: 16px 16px 12px; }
+  .bump svg, .ladder svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 
-  /* engines × KPIs */
-  .row2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; }
-  .et { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-  .et th { height: 32px; border-block: 1px solid var(--line); background: var(--surface); font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 12px; }
-  .et th:first-child { padding-left: 22px; width: 104px; }
-  .et th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
-  .et td { padding: 8px 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  .et td:first-child { padding-left: 22px; font-weight: 700; }
-  .et tr:last-child td { border-bottom: 0; }
-  .et td.fx { background: rgba(237,239,255,.55); }
-  .ev { display: flex; align-items: baseline; gap: 6px; }
-  .ev b { font-size: 20px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
-  .ev b small { font-size: 12px; font-weight: 600; }
-  .et .sp { margin-top: 4px; display: block; }
-  .ef { padding: 10px 22px 16px; font-size: 11px; color: var(--muted); }
-
-  .dist { padding: 0 22px 18px; }
-  .dist .bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 0 14px; }
-  .dist .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .dist .tile { padding: 8px 10px; border-radius: 10px; background: var(--page); }
-  .dist .tile .k { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
-  .dist .tile .k i { width: 8px; height: 8px; border-radius: 2px; }
-  .dist .tile b { display: block; font-size: 18px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-  .dist .tile small { color: var(--muted); font-size: 11px; }
-  .dist .tile a { display: inline-block; margin-top: 2px; font-size: 11px; font-weight: 700; color: var(--navy); text-decoration: none; }
-
-  /* types */
-  .tt { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-  .tt th { height: 34px; border-block: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 12px; white-space: nowrap; }
-  .tt th:first-child { padding-left: 22px; width: 120px; }
-  .tt td { height: 44px; border-bottom: 1px solid var(--line); padding: 0 12px; font-variant-numeric: tabular-nums; }
-  .tt td:first-child { padding-left: 22px; font-weight: 700; color: var(--ink); }
-  .tt tr:last-child td { border-bottom: 0; }
-  .tt th.fx { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); background: linear-gradient(var(--navy-25), var(--navy-25)); }
-  .tt td.fx { background: rgba(237,239,255,.55); }
-  .tv { display: grid; grid-template-columns: minmax(40px, 1fr) 52px 70px 72px; align-items: center; gap: 10px; }
-  .tv .bar { height: 6px; border-radius: 3px; background: var(--page); overflow: hidden; }
-  .tv .bar i { display: block; height: 100%; border-radius: 3px; background: var(--navy); }
-  .tv b { text-align: right; font-weight: 700; color: var(--ink); }
-  .dots { position: relative; height: 26px; }
-  .dots .ax { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
-  .dots .rg { position: absolute; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 3px; background: rgba(61,241,52,.25); }
-  .dots .rg.bad { background: rgba(250,30,42,.18); }
-  .dots i { position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
-  .dots i.own { width: 13px; height: 13px; background: var(--navy); z-index: 2; }
-  .cmpv { display: grid; grid-template-columns: minmax(80px, 1fr) 132px; gap: 10px; align-items: center; }
-  .cmpv span { text-align: right; font-size: 12px; font-weight: 700; }
-  .cmpv span small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); }
-  .sv { display: grid; grid-template-columns: minmax(60px, 1fr) 46px; gap: 10px; align-items: center; }
-  .sv .sent { width: 100%; height: 8px; }
-  .sv b { text-align: right; font-weight: 700; }
-  .tf { padding: 10px 22px 16px; font-size: 11px; color: var(--muted); }
-
-  /* drawer */
-  .scrim { position: fixed; inset: 0; z-index: 240; background: rgba(16,16,18,.35); }
-  .scrim[hidden], .drawer[hidden] { display: none; }
-  .drawer { position: fixed; z-index: 250; top: 0; right: 0; bottom: 0; width: 720px; max-width: 100vw; background: var(--surface); box-shadow: var(--shadow-pop); display: flex; flex-direction: column; }
-  .dh { display: flex; align-items: flex-start; gap: 10px; padding: 22px 24px 14px; border-bottom: 1px solid var(--line); }
-  .dh h3 { margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  .dh p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .dh .icon { margin-left: auto; }
-  .db { padding: 16px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-  .db h4 { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
-  .db .sent { width: 100%; height: 10px; }
-  .db .sl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); margin-top: 6px; }
-  .db .sl i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
-  .tchips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tchips span { display: inline-flex; gap: 6px; height: 26px; align-items: center; padding: 0 10px; border-radius: 999px; background: var(--page); font-size: 12px; color: var(--ink-2); }
-  .tchips b { font-variant-numeric: tabular-nums; }
-  .dtabs { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--inset); }
-  .dtabs button { border: 0; background: none; padding: 5px 14px; border-radius: 8px; font-size: 13px; color: var(--muted); }
-  .dtabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; }
-  .ph-note { padding: 26px; border-radius: 12px; border: 1.5px dashed var(--line-2); color: var(--muted); font-size: 12px; text-align: center; }
-
-  /* ═══ 2차 외형 (클라이언트 참고 화면의 문법: 넉넉한 카드, 아이콘 칩 + 제목, 큰 값 + 조용한 증감, 부드러운 곡선, 흰 툴팁) ═══ */
-  :root { --page: #f5f6f8; --line: #eceef1; --line-2: #dfe1e6; --shadow-card: 0 1px 2px rgba(16,16,18,.04), 0 0 0 1px var(--line); --r-card: 18px; }
-  body { background: var(--page); font-size: 13px; }
-  .ph { padding: 24px 28px 14px 32px; align-items: center; }
-  .ph h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
-  .ph .sub { margin-top: 6px; font-size: 13px; }
-  .pill { height: 26px; box-shadow: inset 0 0 0 1px var(--line); font-weight: 500; }
-  .hacts { margin-left: auto; display: flex; gap: 8px; }
-  .btn { height: 36px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--line-2); font-weight: 600; color: var(--ink-2); }
-  .btn.pri { background: var(--navy); color: #fff; box-shadow: none; }
-  .body { gap: 20px; padding-left: 32px; }
-  .filters { border-radius: var(--r-card) var(--r-card) 0 0; box-shadow: 0 0 0 1px var(--line); }
-  .f-saved { background: var(--surface); border-bottom: 1px solid var(--line); }
-  .f-axis label i { border-radius: 5px; }
-  .content { gap: 16px; padding-right: 32px; }
-  .notice { border-radius: 12px; box-shadow: none; background: #fffbe6; color: #5c5a08; font-size: 12px; padding: 10px 16px; }
-  .cbar { border-radius: 14px; box-shadow: 0 0 0 1px var(--line); padding: 10px 12px 10px 18px; }
-  .chip { height: 30px; box-shadow: inset 0 0 0 1px var(--line-2); font-weight: 600; }
-  .add { height: 30px; }
-  .sh:not(:has(.legend)) { display: none; }
-  .sh { margin: 2px 2px -4px; justify-content: flex-end; }
-  .sh h2, .sh > p { display: none; }
-  .card { border-radius: var(--r-card); box-shadow: var(--shadow-card); }
-  .ch { padding: 20px 22px 12px 24px; gap: 10px; }
-  .ch h3 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
-  .ic { width: 28px; height: 28px; border-radius: 8px; display: inline-grid; place-items: center; background: var(--navy-25); color: var(--navy); flex-shrink: 0; }
-  .bchip { height: 22px; background: var(--page); color: var(--muted); font-weight: 500; }
-  .icon { width: 32px; height: 32px; border-radius: 8px; }
-  .seg { background: var(--page); box-shadow: inset 0 0 0 1px var(--line); border-radius: 10px; padding: 3px; }
-  .seg button { padding: 4px 12px; border-radius: 7px; font-weight: 500; }
-  .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(16,16,18,.1), 0 0 0 1px var(--line); font-weight: 600; }
-  /* quiet deltas: colour on the text, a faint tint, no box */
-  .d { height: 20px; padding: 0 7px; border-radius: 999px; font-weight: 600; font-size: 11.5px; }
-  .d.good { background: rgba(39,131,35,.08); }
-  .d.bad { background: rgba(208,27,38,.07); }
-  .d.flat, .d.neu { background: transparent; box-shadow: none; padding: 0; color: var(--muted); }
-  /* trend cards */
-  .tgrid { gap: 16px; }
-  .tcard { padding: 20px 22px 14px 24px; }
-  .tcard .th { font-size: 14px; font-weight: 600; color: var(--ink-2); gap: 10px; }
-  .tcard .tv { margin: 14px 0 2px; gap: 10px; }
-  .tcard .tv b { font-size: 32px; font-weight: 600; letter-spacing: -.025em; }
-  .tcard .tv b small { font-size: 15px; font-weight: 500; color: var(--muted); }
-  .tcard .tv .meta { font-size: 12px; }
-  .split { background: none; padding: 0; margin: 2px 0 12px; font-size: 12px; color: var(--muted); gap: 8px; }
-  .split .k { font-weight: 500; }
-  .split b { font-weight: 600; }
-  .tcard .chart { height: 148px; }
-  .twinwrap { height: 148px; }
-  .ph { padding: 18px 28px 10px 32px; }
-  .content { gap: 12px; }
-  .cbar .legend { padding: 0; }
-  .tcard { padding: 16px 22px 10px 24px; }
-  .tcard .tv { margin: 10px 0 0; }
-  .tcard .tv b { font-size: 30px; }
-  .grid line { stroke: #eef0f3; stroke-dasharray: 3 4; }
-  .ax { fill: #9a9ca3; font-size: 11px; }
-  .cross { stroke: #c9ccd3; stroke-dasharray: none; }
-  .legend { gap: 6px 16px; font-size: 12px; }
-  .legend i { width: 8px; height: 8px; border-radius: 50%; }
-  /* white tooltip card */
-  .tip { background: #fff; color: var(--ink); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(16,16,18,.28), 0 0 0 1px var(--line); padding: 12px 14px; min-width: 200px; }
-  .tip b { color: var(--muted); font-weight: 600; }
-  .tip .r { padding: 2px 0; }
-  .tip .r.own span:first-of-type { color: var(--navy); }
-  .tip .n { color: var(--muted); border-top-color: var(--line); }
-  /* brand table */
-  .tools { padding: 0 24px 12px; }
-  .search { height: 36px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); width: 240px; }
-  .tools .muted { font-size: 12px; color: #9a9ca3; }
-  .bt th { height: 40px; background: #fafbfc; font-weight: 500; color: var(--muted); border-block: 1px solid var(--line); }
-  .bt th.fx { background: #fafbfc; box-shadow: inset 0 -2px 0 var(--navy); }
-  .bt td { height: 52px; border-bottom: 1px solid #f1f2f4; color: var(--ink-2); }
-  .bt td.fx, .tt td.fx, .et td.fx { background: transparent; }
-  .bt tr.own td { background: #f8f9ff; }
-  .bt tbody tr:hover td { background: #f7f8fa; }
-  .bt tr.sub td { height: 40px; background: #fbfbfd; }
-  .av { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; flex-shrink: 0; background: #f1f2f4; color: #6c6d70; }
-  .bname { gap: 10px; }
-  .bname b { font-weight: 600; }
-  .vb .bar { flex: 0 0 56px; height: 4px; }
-  .ptrack { height: 4px; } .ptrack i { width: 8px; height: 8px; }
-  .vb b { font-weight: 600; }
-  .sent { height: 5px; border-radius: 3px; gap: 2px; }
-  .chk { border-radius: 5px; }
-  .more { padding: 14px 24px 18px; }
-  /* engines */
-  .et th { background: #fafbfc; font-weight: 500; border-block: 1px solid var(--line); height: 38px; }
-  .et th.fx, .tt th.fx { background: #fafbfc; box-shadow: none; color: var(--muted); }
-  .et td { padding: 14px 12px; border-bottom: 1px solid #f1f2f4; }
-  .et td:first-child { font-weight: 600; }
-  .ev b { font-size: 20px; font-weight: 600; }
-  .eng { display: inline-flex; align-items: center; gap: 10px; }
-  .ef { padding: 12px 24px 18px; }
-  /* sentiment donut */
-  .dist { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 20px; align-items: center; padding: 4px 24px 20px; }
-  .donut { position: relative; width: 168px; height: 168px; }
+  /* ── 엔진 × 지표 · 감정 분포 ── */
+  .row2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 14px; }
+  .et, .tt { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  .et th, .tt th { height: 36px; background: var(--page); border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 500; color: var(--muted); text-align: left; padding: 0 14px; white-space: nowrap; }
+  .et th:first-child, .tt th:first-child { padding-left: 16px; border-top-left-radius: var(--r-tile); }
+  .et th:last-child, .tt th:last-child { border-top-right-radius: var(--r-tile); }
+  .et th:first-child { width: 108px; }
+  .et td { padding: 14px 14px 12px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  .et td:first-child { padding: 18px 14px 12px 16px; font-weight: 550; color: var(--ink); }
+  .et tr:last-child td, .tt tr:last-child td { border-bottom: 0; }
+  .ev { display: flex; align-items: baseline; gap: 8px; }
+  .ev b { font-size: 20px; font-weight: 550; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ev b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 1px; }
+  .et .sp { margin-top: 8px; display: block; }
+  .dist { display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 28px; align-items: center; padding: 20px 22px; }
+  .donut { position: relative; width: 148px; height: 148px; }
   .donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
   .donut .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
-  .donut .c b { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
-  .donut .c small { color: var(--muted); font-size: 12px; }
+  .donut .c b { font-size: 24px; font-weight: 550; letter-spacing: -.02em; line-height: 1.2; }
+  .donut .c small { color: var(--muted); font-size: 11.5px; }
   .dl { display: flex; flex-direction: column; }
-  .dl .row { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f2f4; font-size: 13px; }
-  .dl .row:last-child { border-bottom: 0; }
-  .dl .row i { width: 4px; height: 18px; border-radius: 2px; }
-  .dl .row b { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .dl .row small { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
-  .dl .row a { color: var(--navy); font-size: 12px; font-weight: 600; text-decoration: none; }
-  /* types */
-  .tt th { background: #fafbfc; font-weight: 500; color: var(--muted); border-block: 1px solid var(--line); height: 38px; }
-  .tt td { height: 50px; border-bottom: 1px solid #f1f2f4; }
-  .tt td:first-child { font-weight: 600; }
-  .ty { display: inline-flex; align-items: center; gap: 10px; }
-  .tv .bar { height: 4px; }
-  .tf { padding: 12px 24px 18px; color: #9a9ca3; }
-  .dots .ax { background: #eef0f3; }
+  .dl .row { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto 52px; gap: 10px; align-items: center; height: 38px; border-bottom: 1px solid var(--hair); font-size: 13px; color: var(--ink-2); }
+  .dl .row:last-of-type { border-bottom: 0; }
+  .dl .row i { width: 8px; height: 8px; border-radius: 50%; }
+  .dl .row small { color: var(--soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .dl .row b { text-align: right; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dl .tbtn { margin-top: 8px; font-size: 12px; }
 
-  /* ═══ 모션 층 (유려함): 짧고(120–320ms) 감속하는 곡선, 위치 · 투명도만 움직임, 동작 줄이기 설정이면 모두 끔 ═══ */
-  :root { --ease: cubic-bezier(.2, .7, .2, 1); --ease-io: cubic-bezier(.45, 0, .2, 1); }
-  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
-  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes shimmer { from { background-position: -400px 0; } to { background-position: 400px 0; } }
-  .card, .btn, .chip, .add, .icon, .seg button, .chk, .tbtn, .mtab, .kpi, .bt td, .search, .av { transition: box-shadow .2s var(--ease), background-color .16s var(--ease), color .16s var(--ease), transform .16s var(--ease); }
-  .card:hover { box-shadow: 0 10px 28px -18px rgba(16,16,18,.28), 0 0 0 1px var(--line); }
-  .btn:active, .add:active, .icon:active, .chk:active { transform: scale(.97); }
-  .btn.pri:hover { background: var(--navy-500); }
-  .search:focus-within { box-shadow: inset 0 0 0 1.5px var(--navy-300), 0 0 0 4px rgba(30,56,250,.08); }
-  /* tooltip: fade and settle, follows the pointer on a frame */
-  .tip { display: block; opacity: 0; transform: translateY(4px); transition: opacity .12s var(--ease), transform .12s var(--ease), left .06s linear, top .06s linear; left: 0; top: 0; pointer-events: none; }
-  .tip.on { opacity: 1; transform: none; }
-  .cross { transition: transform .09s var(--ease), opacity .12s; opacity: 0; }
-  .cross.on { opacity: 1; }
-  .mk circle { animation: pop .14s var(--ease); transform-box: fill-box; transform-origin: center; }
-  .area { animation: fade .6s var(--ease) both; }
-  /* bars grow from their start, the donut and views rise in */
-  .vb .bar i, .tv .bar i, .sent, .dist .bar i { transform-origin: left center; animation: grow .55s var(--ease) both; }
-  .donut svg { animation: pop .5s var(--ease) both; }
-  .enter { animation: rise .24s var(--ease) both; }
-  .chip.new { animation: pop .18s var(--ease) both; }
-  .pop:not([hidden]) { animation: pop .16s var(--ease) both; transform-origin: top right; }
-  /* segmented control with a sliding thumb */
-  .seg { position: relative; isolation: isolate; }
-  .seg .thumb { position: absolute; top: 3px; bottom: 3px; left: 0; width: 0; border-radius: 7px; background: var(--surface); box-shadow: 0 1px 2px rgba(16,16,18,.1), 0 0 0 1px var(--line); transition: left .24s var(--ease), width .24s var(--ease); z-index: -1; }
-  .seg button[aria-pressed="true"] { background: transparent; box-shadow: none; }
-  /* drawer slides in over a fading scrim */
-  .scrim { opacity: 0; transition: opacity .2s var(--ease); }
+  /* ── 멘션 유형 × 지표 ── */
+  .tt th:first-child { width: 130px; }
+  .tt td { height: 46px; border-bottom: 1px solid var(--hair); padding: 0 14px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .tt td:first-child { padding-left: 16px; font-weight: 550; color: var(--ink); }
+  .ty { display: inline-flex; align-items: center; gap: 9px; }
+  .ty .i { color: var(--soft); }
+  .tyv { display: grid; grid-template-columns: minmax(40px, 1fr) 52px 66px 72px; align-items: center; gap: 10px; }
+  .tyv .bar { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+  .tyv .bar i { display: block; height: 100%; border-radius: 2px; background: var(--navy); }
+  .tyv b { text-align: right; font-weight: 600; color: var(--ink); }
+  .dots { position: relative; height: 26px; }
+  .dots .ax { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--hair); }
+  .dots .rg { position: absolute; top: 50%; height: 4px; transform: translateY(-50%); border-radius: 2px; background: color-mix(in srgb, #3df134 22%, #fff); }
+  .dots .rg.bad { background: color-mix(in srgb, #fa1e2a 16%, #fff); }
+  .dots i { position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
+  .dots i.own { width: 11px; height: 11px; background: var(--navy); z-index: 2; }
+  .cmpv { display: grid; grid-template-columns: minmax(80px, 1fr) 132px; gap: 12px; align-items: center; }
+  .cmpv > span:last-child { text-align: right; font-size: 12px; font-weight: 600; }
+  .sv { display: grid; grid-template-columns: minmax(60px, 1fr) 48px; gap: 10px; align-items: center; }
+  .sv .sent { width: 100%; }
+  .sv b { text-align: right; font-weight: 600; color: var(--ink); }
+  .tt tr.all td { background: var(--page); color: var(--muted); }
+  .tt tr.all td:first-child { border-bottom-left-radius: var(--r-tile); font-weight: 550; color: var(--muted); }
+  .tt tr.all td:last-child { border-bottom-right-radius: var(--r-tile); }
+
+  /* ── 서랍: 판처럼 띄운 패널 ── */
+  .scrim { position: fixed; inset: 0; z-index: 240; background: rgba(16,16,18,.24); opacity: 0; transition: opacity .2s var(--ease); }
   .scrim.open { opacity: 1; }
-  .drawer { transform: translateX(32px); opacity: 0; transition: transform .28s var(--ease), opacity .2s var(--ease); }
-  .drawer.open { transform: none; opacity: 1; }
-  /* control bar lifts when the body scrolls under it */
-  .cbar { transition: box-shadow .2s var(--ease); }
-  .cbar.stuck { box-shadow: 0 0 0 1px var(--line), 0 10px 24px -16px rgba(16,16,18,.35); }
-  /* first load: skeleton shimmer in each card */
-  body.loading .card { overflow: hidden; }
-  body.loading .card > :not(.ch):not(.th) { visibility: hidden; }
-  body.loading .card::after { content: ""; position: absolute; inset: 60px 24px 20px; border-radius: 12px; background: linear-gradient(90deg, #f1f2f4 0, #f7f8f9 40px, #f1f2f4 80px) #f1f2f4; background-size: 800px 100%; animation: shimmer 1.1s linear infinite; }
-  .bt tbody tr { will-change: transform; }
+  .scrim[hidden], .drawer[hidden] { display: none; }
+  .drawer { position: fixed; z-index: 250; top: 8px; right: 8px; bottom: 8px; width: 720px; max-width: calc(100vw - 16px); background: var(--surface); border-radius: var(--r-panel); box-shadow: var(--shadow-pop); display: flex; flex-direction: column; opacity: 0; transform: translateX(16px); transition: transform .24s var(--ease), opacity .18s var(--ease); }
+  .drawer.open { opacity: 1; transform: none; }
+  .dh { display: flex; align-items: flex-start; gap: 10px; padding: 20px 18px 16px 24px; border-bottom: 1px solid var(--line); }
+  .dh h3 { margin: 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; letter-spacing: -.01em; }
+  .dh p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .dh .icon { margin-left: auto; }
+  .db { padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 22px; }
+  .db h4 { margin: 0 0 8px; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .db .sent { width: 100%; height: 8px; }
+  .db .sl { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .db .sl i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .tchips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tchips span { display: inline-flex; gap: 7px; height: 30px; align-items: center; padding: 0 12px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line); font-size: 12.5px; color: var(--muted); }
+  .tchips b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ph-note { padding: 28px; border-radius: 12px; background: var(--page); color: var(--muted); font-size: 12px; text-align: center; }
+  #toast { position: fixed; right: 24px; bottom: 24px; z-index: 320; max-width: 420px; padding: 12px 16px; border-radius: 12px; background: var(--surface); color: var(--ink-2); font-size: 12.5px; box-shadow: var(--shadow-pop); }
+  #toast[hidden] { display: none; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -567,27 +389,20 @@
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
 </svg>
 
-<div class="mk" id="mk">
-  <div class="mk-row">
-    <span class="mk-tag">목업</span>
-    <span class="mk-title">Global Mention 개편안 — 지표 탭 없이 한 페이지</span>
-    <button class="mk-btn" id="mkCap" aria-expanded="false" type="button">무엇이 바뀌었나</button>
-    <span class="mk-note">Gold 2026-10-05 회차 실데이터 · 1920 × 915 · 화면 동작: 추이 회차 맞춤 · 비교 브랜드 · 표 정렬 · 보기 전환 · 행 서랍</span>
-  </div>
-  <div class="mk-cap" id="mkCapBody">
-    <div><h4>구성</h4><ul>
-      <li><b>지표 탭 4개 + 브랜드 상세 → 한 페이지.</b> 네 지표는 <b>추이 카드 넷(2 × 2)</b>로 한 화면에 둡니다: 값 · 증감 · 분자/분모와 당사 + 비교 브랜드 선. 고르는 동작이 없고, 한 차트에 올리면 네 차트가 같은 회차를 가리킵니다.</li>
-      <li>브랜드 표는 열 머리로 정렬하고(기본 = 점유율 = 언급 수 순), 정렬한 열만 막대 · 증감 칩으로 강조하며 추이 열이 그 지표를 따릅니다. 왼쪽 '비교' 칸으로 비교 브랜드를 넣고 빼고, 행(›)은 서랍을 엽니다.</li>
-      <li>HMG 행 아래 <b>Hyundai · Kia · Genesis</b> 각각의 값(3사 합 대 단일 브랜드 비교를 풀어 봄). 추이 카드마다 <b>브랜드 미포함 · 포함 질문</b> 값(Gold 카탈로그 라벨, 정의는 업스트림 확인 중).</li>
-      <li>키보드: 차트는 Tab으로 들어가 ← → 로 회차, ⓘ · 툴팁은 Tab으로 열림. 차트마다 '표로 보기'(회차별 값 · 건수).</li>
-      <li>구역: 현황과 추이 → 경쟁 구도(표 · 트리맵 · 순위 변화) → 엔진 · 감정 → 멘션 유형.</li></ul></div>
-    <div><h4>합친 것 (값은 모두 남음)</h4><ul>
-      <li>경쟁사 분석(노출률) · (점유율) · 우선 노출도 순위표 · 브랜드 언급 순위 → <b>브랜드 비교 표 하나</b>(노출률 · 점유율 · 우선 노출도 · 우호도 · 언급 수 · 프롬프트, 각 Δ · 추이).</li>
-      <li>히어로 3개의 추이 → 추이 차트 하나. 엔진 카드(노출 · 점유) → <b>엔진 × 지표 표</b>. 유형 카드 셋(노출 · 점유 · 감정) → <b>유형 × 지표 표</b>.</li></ul></div>
-    <div><h4>새로 보이는 Gold 값 · 그대로인 것</h4><ul>
-      <li>브랜드별 우호도(지금은 서랍에만), 엔진별 우호도 · 우선 노출도(Gold에 있음, 구현 때 BFF에 더함).</li>
-      <li>그대로: 비교 브랜드 제한 없음(타사 15색), 서랍, 원문, HUB가 만든 기준선 · 문턱 없음, 측정 변화로 값을 숨기지 않음(7월 우호도 그대로).</li></ul></div>
-  </div>
+<div class="mk-cap" id="mkCapBody" role="dialog" aria-label="무엇이 바뀌었나">
+  <div><h4>구성</h4><ul>
+    <li><b>지표 탭 4개 + 브랜드 상세 → 한 페이지.</b> 네 지표는 <b>추이 카드 넷(2 × 2)</b>로 한 화면에 둡니다: 값 · 증감 · 분자/분모와 당사 + 비교 브랜드 선. 고르는 동작이 없고, 한 차트에 올리면 네 차트가 같은 회차를 가리킵니다.</li>
+    <li>브랜드 표는 열 머리로 정렬하고(기본 = 점유율 = 언급 수 순), 정렬한 열만 막대 · 증감으로 강조하며 추이 열이 그 지표를 따릅니다. 왼쪽 '비교' 칸으로 비교 브랜드를 넣고 빼고, 행(›)은 서랍을 엽니다.</li>
+    <li>HMG 행 아래 <b>Hyundai · Kia · Genesis</b> 각각의 값(3사 합 대 단일 브랜드 비교를 풀어 봄). 추이 카드마다 <b>브랜드 미포함 · 포함 질문</b> 값(Gold 카탈로그 라벨, 정의는 업스트림 확인 중).</li>
+    <li>키보드: 차트는 Tab으로 들어가 ← → 로 회차, ⓘ · 툴팁은 Tab으로 열림. 차트마다 '표로 보기'(회차별 값 · 건수).</li>
+    <li>외형: 회색 셸 위 흰 판 하나, 카드 = 옅은 띠(제목) + 흰 타일(내용), 무채색 + 당사 파랑 하나, 증감은 색 글자.</li></ul></div>
+  <div><h4>합친 것 (값은 모두 남음)</h4><ul>
+    <li>경쟁사 분석(노출률) · (점유율) · 우선 노출도 순위표 · 브랜드 언급 순위 → <b>브랜드 비교 표 하나</b>(노출률 · 점유율 · 우선 노출도 · 우호도 · 언급 수 · 프롬프트, 각 Δ · 추이).</li>
+    <li>히어로 3개의 추이 → 추이 차트 하나. 엔진 카드(노출 · 점유) → <b>엔진 × 지표 표</b>. 유형 카드 셋(노출 · 점유 · 감정) → <b>유형 × 지표 표</b>.</li></ul></div>
+  <div><h4>새로 보이는 Gold 값 · 그대로인 것</h4><ul>
+    <li>브랜드별 우호도(지금은 서랍에만), 엔진별 우호도 · 우선 노출도(Gold에 있음, 구현 때 BFF에 더함).</li>
+    <li>그대로: 비교 브랜드 제한 없음(타사 15색), 서랍, 원문, HUB가 만든 기준선 · 문턱 없음, 측정 변화로 값을 숨기지 않음(7월 우호도 그대로).</li>
+    <li>목업 표는 언급 상위 40개 브랜드까지 담았습니다.</li></ul></div>
 </div>
 
 <div class="sx">
@@ -615,6 +430,11 @@
         <a><svg class="i"><use href="#i-key"/></svg>GA4 연동</a>
       </div>
     </nav>
+    <div class="mkcard">
+      <div class="mk-top"><span class="mk-tag">목업</span><b>Mention 개편안</b></div>
+      <p>지표 탭 없이 한 페이지<br>Gold 10-05 회차 실데이터</p>
+      <button class="mk-btn" id="mkCap" aria-expanded="false" type="button">무엇이 바뀌었나</button>
+    </div>
     <div class="acct"><span class="av">T</span><div><b>test-admin</b><small>시스템 관리자</small></div></div>
   </aside>
 
@@ -622,12 +442,14 @@
     <header class="ph">
       <div>
         <h1>언급 분석 <span class="beta">베타</span></h1>
-        <div class="sub">AI 답변에 어떤 브랜드가 얼마나 등장하는지 확인합니다.
-          <span class="pill"><svg class="i s12"><use href="#i-cal"/></svg>주 1회 측정<span class="sep"></span><b>측정 회차 2026-10-05 기준</b></span>
-          <span class="pill"><svg class="i s12"><use href="#i-cal"/></svg><b>10월 2주차</b> · 10/5~10/11<span class="sep"></span><span class="warn">⚠ 발행 지연 25일</span></span>
-        </div>
+        <div class="sub">AI 답변에 어떤 브랜드가 얼마나 등장하는지 확인합니다.</div>
       </div>
-      <div class="hacts"><button class="btn" type="button"><svg class="i s14"><use href="#i-link"/></svg>링크 복사</button><button class="btn pri" type="button"><svg class="i s14"><use href="#i-dl"/></svg>CSV 내보내기</button></div>
+      <div class="hacts">
+        <span class="basis"><svg class="i s14"><use href="#i-cal"/></svg>주 1회 측정<span class="sep"></span><b>측정 회차 2026-10-05 기준</b></span>
+        <span class="basis"><b>10월 2주차</b>10/5~10/11<span class="sep"></span><span class="warn">발행 지연 25일</span></span>
+        <button class="btn" type="button"><svg class="i s14"><use href="#i-link"/></svg>링크 복사</button>
+        <button class="btn pri" type="button"><svg class="i s14"><use href="#i-dl"/></svg>CSV 내보내기</button>
+      </div>
     </header>
 
     <div class="body">
@@ -645,14 +467,14 @@
       </aside>
 
       <div class="content" id="content">
-        <div class="notice"><svg class="i s14" style="color:var(--warn-ink)"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">(Gold 마지막 확인 2026-11-03 17:33)</span></div>
+        <div class="notice"><svg class="i s14"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">Gold 마지막 확인 2026-11-03 17:33</span></div>
 
         <div class="cbar" role="toolbar" aria-label="페이지 조작">
           <div class="legend" id="legend"></div>
           <div class="right">
             <span class="lab">비교 브랜드</span>
             <span id="chips" style="display:contents"></span>
-            <button class="add" id="addBtn" type="button" aria-expanded="false"><svg class="i s12"><use href="#i-down"/></svg>바꾸기</button>
+            <button class="add" id="addBtn" type="button" aria-expanded="false"><svg class="i s12"><use href="#i-down"/></svg>브랜드 선택</button>
             <div class="pop" id="pop" hidden role="dialog" aria-label="비교 브랜드 선택">
               <p>추이가 있는 상위 브랜드에서 몇 개든 고를 수 있습니다 · 고른 순서대로 타사 색(주황 · 분홍 · 보라 · 노랑, 그다음 옅은 색)이 붙고, 페이지의 모든 차트에 같은 색으로 나옵니다.</p>
               <div id="popList"></div>
@@ -661,24 +483,20 @@
           </div>
         </div>
 
-        <div class="sh"><h2>현황과 추이</h2><p>네 지표의 이번 회차 값과 회차별 추이입니다. 한 차트에 올리면 네 차트가 같은 회차를 가리킵니다.</p></div>
         <div class="tgrid" id="tgrid"></div>
 
-        <div class="sh"><h2>경쟁 구도</h2><p>브랜드마다 네 지표를 한 줄에 둡니다. 열 머리를 누르면 그 값으로 정렬하고, 추이 열도 그 지표로 바뀝니다.</p></div>
         <section class="card" id="boardCard">
-          <div class="ch"><span class="ic"><svg class="i s14"><use href="#i-users"/></svg></span><h3>브랜드 비교</h3><span class="info" title="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">측정 기준일 스냅샷</span><span class="bchip" id="brandCount">브랜드 752개</span><span class="bchip" id="trendCov"></span>
+          <div class="ch"><span class="ic"><svg class="i s14"><use href="#i-users"/></svg></span><h3>브랜드 비교</h3><span class="info" tabindex="0" data-tip="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다.&#10;열 머리를 누르면 그 값으로 정렬하고, 추이 열도 그 지표로 바뀝니다. 행을 누르면 서랍(프롬프트 · 출처 · 원문)이 열립니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note"><span id="brandCount">브랜드 752개</span> · 측정 기준일 스냅샷 · <span id="trendCov"></span></span>
             <div class="acts"><div class="seg" id="viewSeg"><button type="button" data-v="table" aria-pressed="true">표</button><button type="button" data-v="map" aria-pressed="false">트리맵</button><button type="button" data-v="bump" aria-pressed="false">순위 변화</button><button type="button" data-v="ladder" aria-pressed="false">순위별 보기</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
-          <div id="boardBody"></div>
+          <div class="tile" id="boardBody"></div>
         </section>
 
-        <div class="sh"><h2>엔진 · 감정</h2><p>AI 엔진마다 네 지표, 그리고 당사 언급의 감정 구성입니다.</p></div>
         <div class="row2">
-          <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-cpu"/></svg></span><h3>AI 엔진별</h3><span class="info" title="엔진마다 같은 정의로 센 당사 값입니다. 작은 차트는 지표마다 같은 눈금입니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">당사</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="engines"></div></section>
-          <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-smile"/></svg></span><h3>감정 분포</h3><span class="info" title="당사 언급마다 붙은 감정 신호의 구성입니다(언급 단위)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="distChip"></span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="dist" id="dist"></div></section>
+          <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-cpu"/></svg></span><h3>AI 엔진별</h3><span class="info" tabindex="0" data-tip="엔진마다 같은 정의로 센 당사 값입니다.&#10;작은 차트는 지표마다 같은 눈금 · 14회차(07-06 ~ 10-05) · 우호도의 7월 값이 낮은 것은 측정 그대로입니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note">당사</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile" id="engines"></div></section>
+          <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-smile"/></svg></span><h3>감정 분포</h3><span class="info" tabindex="0" data-tip="당사 언급마다 붙은 감정 신호의 구성입니다(언급 단위)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note" id="distChip"></span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile"><div class="dist" id="dist"></div></div></section>
         </div>
 
-        <div class="sh"><h2>멘션 유형</h2><p>AI가 당사를 어떤 식으로 언급하는지(최종 선택 · 추천 · 비교 · 정의 · 단순 언급), 유형마다 세 지표입니다.</p></div>
-        <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-tag"/></svg></span><h3>멘션 유형별 노출 · 점유 · 감정</h3><span class="info" title="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">유형 신호 기준</span><div class="acts"><div class="seg" id="unitSeg" aria-label="감정 단위"><button type="button" data-u="pct" aria-pressed="true">비율</button><button type="button" data-u="count" aria-pressed="false">건수</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="types"></div></section>
+        <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-tag"/></svg></span><h3>멘션 유형별 노출 · 점유 · 감정</h3><span class="info" tabindex="0" data-tip="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다.&#10;노출률 분모 = 전체 답변 수 · 유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫(막대 = 당사와 가장 앞선 비교 브랜드의 차이) · 유형 이름을 누르면 그 신호가 붙은 프롬프트를 봅니다 · 우선 노출도는 유형별 값이 없습니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="note">유형 신호 기준</span><div class="acts"><div class="seg" id="unitSeg" aria-label="감정 단위"><button type="button" data-u="pct" aria-pressed="true">비율</button><button type="button" data-u="count" aria-pressed="false">건수</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="tile" id="types"></div></section>
       </div>
     </div>
   </div>
@@ -713,13 +531,13 @@ const colorOf = (b) => (b === "HMG" || b === "__own" ? NAVY : st.compare.include
 const fmtV = (m, v) => (v == null ? "—" : m === "first-rank" ? `${v.toFixed(1)}번째` : `${v.toFixed(1)}%`);
 
 /** Δ chip: colour for 당사 only (rivals neutral); 0.0 reads 변화 없음 */
-function dchip(v, { unit = "pp", better = "up", own = true } = {}) {
+function dchip(v, { unit = "pp", better = "up", own = true, pill = false } = {}) {
   if (v == null) return `<span class="d na">—</span>`;
   const r = Math.round(v * 10) / 10;
-  if (r === 0) return `<span class="d flat">— 변화 없음</span>`;
+  if (r === 0) return `<span class="d flat${pill ? " pill" : ""}">변화 없음</span>`;
   const up = r > 0, good = better === "up" ? up : !up;
   const cls = own ? (good ? "good" : "bad") : "neu";
-  return `<span class="d ${cls}">${up ? "↑" : "↓"} ${Math.abs(r).toFixed(1)}${unit}</span>`;
+  return `<span class="d ${cls}${pill ? " pill" : ""}"><span class="a">${up ? "▲" : "▼"}</span>${Math.abs(r).toFixed(1)}${unit}</span>`;
 }
 function spark(vals, color, { w = 84, h = 26, invert = false, lo, hi, tips } = {}) {
   const v = (vals || []).filter((x) => x != null);
@@ -759,11 +577,12 @@ function seriesOf(m) {
   return [...s, { key: "__own", name: "HMG", color: NAVY, values: T.own, own: true }];
 }
 function headOf(m) {
-  const k = D.kpi[m];
-  if (m === "exposure") return `<b><span class="cnt" data-v="${k.v}">${k.v.toFixed(1)}</span><small>%</small></b>${dchip(k.d)}<span class="meta">${n0(k.num)} / ${n0(k.den)} 답변 · 직전 회차(09-28) 대비</span>`;
-  if (m === "sov") return `<b><span class="cnt" data-v="${k.v}">${k.v.toFixed(1)}</span><small>%</small></b>${dchip(k.d)}<span class="meta">${n0(k.num)} / ${n0(k.den)} 언급 · 직전 회차(09-28) 대비</span>`;
-  if (m === "favorability") return `<b><span class="cnt" data-v="${k.v}">${k.v.toFixed(1)}</span><small>%</small></b>${dchip(k.d)}<span class="meta">부정 <span class="neg">${k.neg.toFixed(1)}%</span></span>${dchip(k.negD, { better: "down" })}<span class="meta">직전 회차(09-28) 대비</span>`;
-  return `<b><span class="cnt" data-v="${k.v}">${k.v.toFixed(1)}</span><small>번째</small></b>${dchip(k.d, { unit: "", better: "down" })}<span class="meta">작을수록 먼저 언급 · 직전 회차(09-28) 대비</span>`;
+  const k = D.kpi[m], vs = '<span class="vs">직전 회차(09-28) 대비</span>';
+  const big = (v, u) => `<b>${v.toFixed(1)}<small>${u}</small></b>`;
+  if (m === "exposure") return `<div class="tv">${big(k.v, "%")}${dchip(k.d, { pill: true })}${vs}</div><div class="meta">${n0(k.num)} / ${n0(k.den)} 답변</div>`;
+  if (m === "sov") return `<div class="tv">${big(k.v, "%")}${dchip(k.d, { pill: true })}${vs}</div><div class="meta">${n0(k.num)} / ${n0(k.den)} 언급</div>`;
+  if (m === "favorability") return `<div class="tv">${big(k.v, "%")}${dchip(k.d, { pill: true })}${vs}</div><div class="meta">부정 <span class="neg">${k.neg.toFixed(1)}%</span>${dchip(k.negD, { better: "down" })}</div>`;
+  return `<div class="tv">${big(k.v, "번째")}${dchip(k.d, { unit: "", better: "down", pill: true })}${vs}</div><div class="meta">작을수록 먼저 언급</div>`;
 }
 const charts = {};
 /** monotone cubic through the points (Fritsch–Carlson), broken where a round has no value */
@@ -784,17 +603,12 @@ function smoothPath(pts) {
   }).join("");
 }
 const ICON = { exposure: "i-eye", sov: "i-pie", favorability: "i-smile", "first-rank": "i-trophy" };
-const initial = (b) => (b === "HMG" ? "H" : b.replace(/[^A-Za-z0-9가-힣]/g, "").slice(0, 2));
-function avatar(b, own) {
-  const c = own ? NAVY : st.compare.includes(b) ? colorOf(b) : null;
-  return `<span class="av" style="${c ? `background:${c}1f;color:${own ? NAVY : "#222326"};box-shadow:inset 0 0 0 1px ${c}55` : ""}">${initial(b)}</span>`;
-}
 /** 질문 유형별(Gold 카탈로그 brand presence 라벨): 브랜드 미포함 질문에서 당사와 첫 비교 브랜드, 포함 질문의 당사 */
 function splitOf(m) {
   const U = D.split.unb, B = D.split.br, ref = st.compare.find((b) => U[b]);
   const f = (v) => (v == null ? "—" : m === "first-rank" ? `${v.toFixed(1)}번째` : `${v.toFixed(1)}%`);
   const tipTxt = `질문 유형 = Gold 카탈로그의 브랜드 포함 여부 라벨(브랜드 행 값)\n브랜드 미포함 질문 ${n0(D.split.nUnb)}답변 · 포함 질문 ${n0(D.split.nBr)}답변 (이번 회차)\n라벨 정의는 업스트림 확인 중(U1)`;
-  return `<div class="split"><span class="k">브랜드 미포함 질문</span><b>HMG ${f(U.HMG[m])}</b>${ref ? `<span>· ${ref} ${f(U[ref][m])}</span>` : ""}<span class="sep"></span><span class="k">포함 질문</span><span>HMG ${f(B.HMG[m])}</span><span class="info" tabindex="0" data-tip="${esc(tipTxt)}"><svg class="i s12"><use href="#i-info"/></svg></span><button class="tbtn" type="button" data-pres="unbranded" style="margin-left:auto;font-size:11px">미포함 질문만 보기 ›</button></div>`;
+  return `<div class="split"><span class="k">브랜드 미포함 질문</span><b>HMG ${f(U.HMG[m])}</b>${ref ? `<span>${ref} ${f(U[ref][m])}</span>` : ""}<span class="sep"></span><span class="k">포함 질문</span><span>HMG ${f(B.HMG[m])}</span><span class="info" tabindex="0" data-tip="${esc(tipTxt)}"><svg class="i s12"><use href="#i-info"/></svg></span><button class="tbtn" type="button" data-pres="unbranded">미포함 질문만 보기 ›</button></div>`;
 }
 function twinOf(m) {
   const T = D.trend[m], ser = seriesOf(m), x = D.x;
@@ -805,18 +619,13 @@ function twinOf(m) {
 function renderTrends() {
   $("#legend").innerHTML = [{ name: "HMG", color: NAVY, own: true }, ...st.compare.map((b) => ({ name: b, color: colorOf(b) }))].map((s) => `<span class="${s.own ? "own" : ""}"><i style="background:${s.color}"></i>${s.name}${s.own ? ' <span class="own-tag">당사</span>' : ""}</span>`).join("");
   $("#tgrid").innerHTML = CARDS.map(([m, lab, def]) => `<section class="card tcard" data-m="${m}">
-    <div class="th"><span class="ic"><svg class="i s14"><use href="#${ICON[m]}"/></svg></span>${lab}<span class="info" title="${def}"><svg class="i s12"><use href="#i-info"/></svg></span>${m === "favorability" ? '<span class="mini"><span><i style="background:#1e38fa"></i>긍정</span><span><i style="background:#fa1e2a"></i>부정</span></span>' : ""}<span class="acts"><button class="icon" type="button" title="표로 보기" data-tbl="${m}" aria-pressed="${!!st.tbl[m]}"><svg class="i s14"><use href="#i-table"/></svg></button><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></span></div>
-    <div class="tv">${headOf(m)}</div>
+    <div class="th"><span class="ic"><svg class="i s14"><use href="#${ICON[m]}"/></svg></span>${lab}<span class="info" tabindex="0" data-tip="${def}"><svg class="i s14"><use href="#i-info"/></svg></span>${m === "favorability" ? '<span class="mini"><span><i style="background:#1e38fa"></i>긍정</span><span><i style="background:#fa1e2a"></i>부정</span></span>' : ""}<span class="acts"><button class="icon" type="button" title="표로 보기" data-tbl="${m}" aria-pressed="${!!st.tbl[m]}"><svg class="i s14"><use href="#i-table"/></svg></button><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></span></div>
+    <div class="tile">${headOf(m)}
     ${splitOf(m)}
-    ${st.tbl[m] ? twinOf(m) : `<div class="chart" id="ch-${m}" tabindex="0" role="img" aria-label="${lab} 회차별 추이 · 화살표 키로 회차를 옮깁니다"></div>`}</section>`).join("");
+    ${st.tbl[m] ? twinOf(m) : `<div class="chart" id="ch-${m}" tabindex="0" role="img" aria-label="${lab} 회차별 추이 · 화살표 키로 회차를 옮깁니다"></div>`}</div></section>`).join("");
   $("#tgrid").querySelectorAll("[data-pres]").forEach((b) => b.addEventListener("click", () => toast("왼쪽 필터 '브랜드 포함 여부 = 미포함'을 걸고 페이지 전체를 다시 읽습니다 (목업에서는 안내만)")));
   $("#tgrid").querySelectorAll("[data-tbl]").forEach((b) => b.addEventListener("click", () => { st.tbl[b.dataset.tbl] = !st.tbl[b.dataset.tbl]; renderTrends(); }));
   for (const [m] of CARDS) if (!st.tbl[m]) drawChart(m);
-  if (ANIM && !REDUCED) $("#tgrid").querySelectorAll(".cnt").forEach((el) => {
-    const v = +el.dataset.v, t0 = performance.now(), dur = 700;
-    const step = (t) => { const k = Math.min(1, (t - t0) / dur), e = 1 - (1 - k) ** 3; el.textContent = (v * e).toFixed(1); if (k < 1) requestAnimationFrame(step); };
-    requestAnimationFrame(step);
-  });
 }
 function drawChart(m) {
   const x = D.x, series = seriesOf(m), el = $(`#ch-${m}`);
@@ -840,23 +649,15 @@ function drawChart(m) {
     const pts = s.values.map((v, i) => (v == null ? null : [X(i), Y(v)]));
     const d = smoothPath(pts);
     if (s.own && m !== "favorability") svg += `<path class="area" d="${d}L${X(x.length - 1)},${inv ? Tp : H - B}L${X(0)},${inv ? Tp : H - B}Z" fill="${NAVY}" fill-opacity=".045"/>`;
-    svg += `<path data-k="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.own ? 2.4 : 1.8}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    svg += `<path data-k="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.own ? 2.2 : 1.6}" stroke-linejoin="round" stroke-linecap="round"/>`;
     const last = pts[pts.length - 1];
-    if (last) { svg += `<circle cx="${last[0]}" cy="${last[1]}" r="3.2" fill="${s.color}" stroke="#fff" stroke-width="1.6"/>`; labels.push({ y: last[1], s, v: s.values[s.values.length - 1] }); }
+    if (last) { svg += `<circle cx="${last[0]}" cy="${last[1]}" r="3" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>`; labels.push({ y: last[1], s, v: s.values[s.values.length - 1] }); }
   }
   labels.sort((a, b) => a.y - b.y);
   for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 13) labels[i].y = labels[i - 1].y + 13;
   const bottom = H - B - 2; if (labels.length && labels[labels.length - 1].y > bottom) { labels[labels.length - 1].y = bottom; for (let i = labels.length - 2; i >= 0; i--) if (labels[i + 1].y - labels[i].y < 13) labels[i].y = labels[i + 1].y - 13; }
   svg += `<line class="cross" y1="${Tp}" y2="${H - B}" x1="0" x2="0"/><g class="mk"></g><rect class="hit" x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg>`;
   el.innerHTML = svg;
-  const prevKeys = new Set(charts[m]?.series?.map((q) => q.key) || []);
-  if (!REDUCED) el.querySelectorAll("path[data-k]").forEach((pth) => {
-    if (!ANIM && prevKeys.has(pth.dataset.k)) return;
-    const len = pth.getTotalLength(); pth.style.strokeDasharray = `${len}`; pth.style.strokeDashoffset = `${len}`;
-    pth.getBoundingClientRect();
-    pth.style.transition = `stroke-dashoffset ${ANIM ? 0.9 : 0.6}s cubic-bezier(.2,.7,.2,1)`; pth.style.strokeDashoffset = "0";
-    setTimeout(() => { pth.style.strokeDasharray = ""; pth.style.transition = ""; }, 1000);
-  });
   charts[m] = { X, Y, series, fmt, inv, el };
   const hit = $(".hit", el);
   let ki = x.length - 1;
@@ -870,7 +671,7 @@ function drawChart(m) {
     const r = el.getBoundingClientRect(); const i = Math.max(0, Math.min(x.length - 1, Math.round(((e.clientX - r.left - L) / (W - L - R)) * (x.length - 1)))); point(i, e);
   });
   function point(i, e) {
-    for (const c of Object.values(charts)) { const cr = $(".cross", c.el); if (!cr) continue; cr.style.transform = `translateX(${c.X(i)}px)`; cr.classList.add("on"); $(".mk", c.el).innerHTML = c.series.map((q) => (q.values[i] == null ? "" : `<circle cx="${c.X(i)}" cy="${c.Y(q.values[i])}" r="4.5" fill="#fff" stroke="${q.color}" stroke-width="2.2"/>`)).join(""); }
+    for (const c of Object.values(charts)) { const cr = $(".cross", c.el); if (!cr) continue; cr.style.transform = `translateX(${c.X(i)}px)`; cr.classList.add("on"); $(".mk", c.el).innerHTML = c.series.map((q) => (q.values[i] == null ? "" : `<circle cx="${c.X(i)}" cy="${c.Y(q.values[i])}" r="4" fill="#fff" stroke="${q.color}" stroke-width="2"/>`)).join(""); }
     const rows = [...series].sort((a, b) => (inv ? (a.values[i] ?? 99) - (b.values[i] ?? 99) : (b.values[i] ?? -1) - (a.values[i] ?? -1)));
     const T = D.trend[m];
     const note = m === "exposure" ? `브랜드 언급 답변 ${n0(T.num[i])} / 모니터링 답변 ${n0(T.den[i])}` : m === "sov" ? `당사 언급 ${n0(T.num[i])} / 전체 언급 ${n0(T.den[i])}` : m === "favorability" ? `당사 긍정 신호 ${n0(T.pc[i])} / 전체 신호 ${n0(T.tot[i])}` : `순위 답변 ${n0(T.ranked[i])}개`;
@@ -898,16 +699,13 @@ function sentBar(s) {
   const t = s.positive + s.neutral + s.mixed + s.negative || 1;
   return `<span class="sent" data-tip="${Object.keys(SENT).map((k) => `${SENT[k][0]} ${n0(s[k])}건 (${((s[k] / t) * 100).toFixed(1)}%)`).join("\n")}">${Object.keys(SENT).map((k) => `<i style="width:${(s[k] / t) * 100}%;background:${SENT[k][1]}"></i>`).join("")}</span>`;
 }
-let lastView = "table";
-function enterView(body) { if (st.view !== lastView) { body.firstElementChild?.classList.add("enter"); lastView = st.view; } placeThumbs(); }
 function renderBoard() {
   const cv = D.coverage; $("#trendCov").textContent = cv.axis > cv.measured ? `추이 축 ${cv.axis}회차 · 측정 ${cv.measured} · 미측정 ${cv.axis - cv.measured}` : `추이 ${cv.measured}회차`;
   $("#viewSeg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === st.view)));
   const body = $("#boardBody");
-  if (st.view === "map") { renderMap(body); return enterView(body); }
-  if (st.view === "bump") { renderBump(body); return enterView(body); }
-  if (st.view === "ladder") { renderLadder(body); return enterView(body); }
-  const before = new Map([...body.querySelectorAll("tr[data-b]")].map((t) => [t.dataset.b, t.getBoundingClientRect().top]));
+  if (st.view === "map") { renderMap(body); return; }
+  if (st.view === "bump") { renderBump(body); return; }
+  if (st.view === "ladder") { renderLadder(body); return; }
   const sort = st.sort || { key: "share", dir: "desc" };
   const tm = { exp: "exposure", share: "sov", pos: "first-rank", fav: "favorability" }[sort.key] || "sov";
   const own = D.rows.find((r) => r.own);
@@ -919,13 +717,13 @@ function renderBoard() {
   const sparkKey = { exposure: "expS", sov: "shareS", "first-rank": "posS", favorability: null }[tm];
   const arrow = (key) => (sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "");
   const ii = (k) => `<span class="info" tabindex="0" data-tip="${esc(DEF[k])}"><svg class="i s12"><use href="#i-info"/></svg></span>`;
-  const head = `<tr><th class="l" style="width:52px;padding-left:22px">비교</th><th class="l ${sort.key === "rank" ? "sorted" : ""}" style="width:52px"><button type="button" data-sort="rank">#${arrow("rank")}</button>${ii("rank")}</th><th class="l" style="width:22%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${sort.key === key ? "fx" : ""}" style="width:${m ? (sort.key === key ? "16%" : "10%") : "8%"}"><button type="button" data-sort="${key}">${lab}${arrow(key)}</button>${ii(key)}</th>`).join("")}<th style="width:104px">추이 · ${M[tm].short}</th><th style="width:28px"></th></tr>`;
+  const head = `<tr><th class="l" style="width:52px">비교</th><th class="l ${sort.key === "rank" ? "sorted" : ""}" style="width:52px"><button type="button" data-sort="rank">#${arrow("rank")}</button>${ii("rank")}</th><th class="l" style="width:21%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${sort.key === key ? "fx" : ""}" style="width:${m ? (sort.key === key ? "16%" : "10%") : "8%"}"><button type="button" data-sort="${key}">${lab}${arrow(key)}</button>${ii(key)}</th>`).join("")}<th style="width:104px">추이 · ${M[tm].short}</th><th style="width:28px"></th></tr>`;
   /** a value cell: the sorted column carries the bar or dot and its Δ chip; the others the value and a small Δ */
   const dsm = (v, { unit = "pp", better = "up", own = false } = {}) => {
     if (v == null) return "";
     const r = Math.round(v * 10) / 10; if (r === 0) return `<span class="dt">0.0</span>`;
     const good = better === "up" ? r > 0 : r < 0;
-    return `<span class="dt ${own ? (good ? "good" : "bad") : ""}">${r > 0 ? "↑" : "↓"}${Math.abs(r).toFixed(1)}${unit}</span>`;
+    return `<span class="dt ${own ? (good ? "good" : "bad") : ""}"><span class="a">${r > 0 ? "▲" : "▼"}</span>${Math.abs(r).toFixed(1)}${unit}</span>`;
   };
   const cell = (key, r, isOwn, c) => {
     const on = sort.key === key;
@@ -936,24 +734,24 @@ function renderBoard() {
     return n0(r[key]);
   };
   const tr = (r) => {
-    const isOwn = r.own, c = isOwn ? NAVY : st.compare.includes(r.brand) ? colorOf(r.brand) : "#b9bbbf", on = st.compare.includes(r.brand);
-    const name = isOwn ? `<button class="chev" type="button" id="ownChev" aria-expanded="${st.ownOpen}" aria-label="당사 브랜드별 행 ${st.ownOpen ? "접기" : "펼치기"}" style="font-size:11px">▶</button>${avatar("HMG", true)}<b class="own" title="Hyundai + Kia + Genesis 합산">HMG</b><span class="own-tag">당사</span>` : `${avatar(r.brand)}<b>${r.brand}</b>${r.grouped ? `<small>${r.group} 그룹</small>` : ""}`;
-    const chk = isOwn ? `<span class="bname"><span class="dot" style="background:${NAVY};box-shadow:none;cursor:default" title="당사"></span></span>` : `<button class="chk" type="button" role="checkbox" aria-checked="${on}" aria-label="${r.brand} 비교 브랜드" data-cmp="${r.brand}" style="${on ? `background:${colorOf(r.brand)}` : ""}"></button>`;
+    const isOwn = r.own, c = isOwn ? NAVY : st.compare.includes(r.brand) ? colorOf(r.brand) : "#c4c5c9", on = st.compare.includes(r.brand);
+    const name = isOwn ? `<button class="chev" type="button" id="ownChev" aria-expanded="${st.ownOpen}" aria-label="당사 브랜드별 행 ${st.ownOpen ? "접기" : "펼치기"}" style="font-size:9px">▶</button><b class="own" title="Hyundai + Kia + Genesis 합산">HMG</b><span class="own-tag">당사</span>` : `<b>${r.brand}</b>${r.grouped ? `<small>${r.group} 그룹</small>` : ""}`;
+    const chk = isOwn ? `<span class="bname" style="padding-left:4px"><span class="dot" style="background:${NAVY}" title="당사"></span></span>` : `<button class="chk" type="button" role="checkbox" aria-checked="${on}" aria-label="${r.brand} 비교 브랜드" data-cmp="${r.brand}" style="${on ? `background:${colorOf(r.brand)}` : ""}"></button>`;
     const sv = sparkKey ? r[sparkKey] : null;
     return `<tr class="${isOwn ? "own" : ""} ${st.lit === r.brand ? "lit" : ""}" data-b="${r.brand}" tabindex="0">
-      <td class="l">${chk}</td><td>${isOwn ? 1 : r.rank}</td>
+      <td class="l">${chk}</td><td class="l rk">${isOwn ? 1 : r.rank}</td>
       <td class="l"><span class="bname">${name}</span></td>
       ${COLS.map(([m, , key]) => `<td class="${sort.key === key ? "fx" : ""}" ${isOwn && key === "pos" ? `data-tip="HMG · 우선 노출도 표 ${D.rankTable.n}개 브랜드 중 ${D.rankTable.rank}위 · 상위 ${D.rankTable.topPct}%"` : ""}>${cell(key, r, isOwn, c)}</td>`).join("")}
-      <td>${tm === "favorability" ? '<span class="muted" style="font-size:11px">회차 값 없음</span>' : spark(sv, isOwn ? NAVY : on ? colorOf(r.brand) : "#9fa1a6", { invert: tm === "first-rank" })}</td>
+      <td>${tm === "favorability" ? '<span class="muted" style="font-size:11px">회차 값 없음</span>' : spark(sv, isOwn ? NAVY : on ? colorOf(r.brand) : "#b4b5b9", { invert: tm === "first-rank" })}</td>
       <td class="go">›</td></tr>`;
   };
-  const sub = (o) => `<tr class="sub"><td></td><td></td><td class="l"><span class="bname">${avatar(o.brand, true)}<b>${o.brand}</b><span class="tg">당사 브랜드</span></span></td>
+  const sub = (o) => `<tr class="sub"><td></td><td></td><td class="l"><span class="bname"><b>${o.brand}</b></span></td>
       ${COLS.map(([m, , key]) => `<td class="${sort.key === key ? "fx" : ""}">${key === "exp" ? `${p1(o.exp)}${dsm(o.expD, { own: true })}` : key === "share" ? `${p1(o.share)}${dsm(o.shareD, { own: true })}` : key === "pos" ? `${r1(o.pos)}${dsm(o.posD, { unit: "", better: "down", own: true })}` : key === "fav" ? p1(o.fav) : n0(o[key])}</td>`).join("")}
       <td><span class="muted" style="font-size:11px">—</span></td><td></td></tr>`;
   body.innerHTML = `
-    <div class="tools"><label class="search"><svg class="i s14"><use href="#i-search"/></svg><input id="q" placeholder="예: Hyundai" value="${st.q}" aria-label="브랜드 검색"></label><span class="muted">열 머리를 누르면 그 값으로 정렬하고, 추이 열도 그 지표로 바뀝니다 · 행을 누르면 서랍(프롬프트 · 출처 · 원문)</span></div>
+    <div class="tools"><label class="search"><svg class="i s14"><use href="#i-search"/></svg><input id="q" placeholder="브랜드 검색 (예: Hyundai)" value="${st.q}" aria-label="브랜드 검색"></label></div>
     <table class="bt"><thead>${head}</thead><tbody>${tr(own)}${st.ownOpen ? D.ownRows.map(sub).join("") : ""}${shown.map(tr).join("")}</tbody></table>
-    <div class="more"><button class="tbtn" id="moreBtn" type="button">${st.all ? "상위 10개 + 비교 브랜드만 보기" : `나머지 브랜드 더 보기 (전체 ${n0(D.brandCount)}개)`}</button><span>당사 브랜드별 행은 3사 각각의 값입니다(HMG = 3사 합산) · 목업은 언급 상위 40개까지 담았습니다</span></div>`;
+    <div class="more"><button class="tbtn" id="moreBtn" type="button">${st.all ? "상위 10개 + 비교 브랜드만 보기" : `나머지 브랜드 더 보기 (전체 ${n0(D.brandCount)}개)`}</button><span>HMG = Hyundai + Kia + Genesis 합산, 아래 세 줄은 브랜드 각각의 값입니다</span></div>`;
   body.querySelectorAll("th button").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.sort; const c = COLS.find((x) => x[2] === k); const dir0 = c ? c[3] : "asc"; st.sort = sort.key === k ? { key: k, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: k, dir: dir0 }; renderBoard(); }));
   body.querySelectorAll("[data-cmp]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); toggleCompare(b.dataset.cmp); }));
   $("#ownChev").addEventListener("click", (e) => { e.stopPropagation(); st.ownOpen = !st.ownOpen; renderBoard(); });
@@ -963,12 +761,6 @@ function renderBoard() {
     t.addEventListener("mouseenter", () => litLine(t.dataset.b === "HMG" ? "__own" : t.dataset.b));
     t.addEventListener("mouseleave", () => litLine(null));
   });
-  if (!REDUCED && before.size && lastView === "table") body.querySelectorAll("tr[data-b]").forEach((t) => {
-    const was = before.get(t.dataset.b); if (was == null) return; const dy = was - t.getBoundingClientRect().top; if (Math.abs(dy) < 1) return;
-    t.style.transition = "none"; t.style.transform = `translateY(${dy}px)`; t.getBoundingClientRect();
-    t.style.transition = "transform .34s cubic-bezier(.2,.7,.2,1)"; t.style.transform = "";
-  });
-  enterView(body);
   const q = $("#q"); q.addEventListener("input", () => { st.q = q.value; renderBoard(); const n = $("#q"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
   $("#moreBtn").addEventListener("click", () => { st.all = !st.all; renderBoard(); });
 }
@@ -991,12 +783,12 @@ function squarify(items, x, y, w, hh) {
 }
 function tileColor(g) {
   if (g.own) return [NAVY, "#fff"];
-  const d = g.delta; if (d == null || Math.round(d * 10) === 0) return ["#eef0f3", "#222326"];
+  const d = g.delta; if (d == null || Math.round(d * 10) === 0) return ["#f1f2f4", "#222326"];
   const a = Math.min(1, Math.abs(d) / 1.5);
-  return d > 0 ? [`rgba(61,241,52,${0.18 + a * 0.32})`, "#14420f"] : [`rgba(250,30,42,${0.12 + a * 0.28})`, "#5c0a0f"];
+  return d > 0 ? [`rgba(61,241,52,${0.10 + a * 0.22})`, "#14420f"] : [`rgba(250,30,42,${0.07 + a * 0.18})`, "#5c0a0f"];
 }
 function renderMap(body) {
-  body.innerHTML = `<div class="map" id="map"></div><div class="maplegend"><span>크기 = 언급 점유율 · 색 = 직전 회차 대비 점유율 증감(모그룹)</span><span><i style="background:rgba(61,241,52,.45)"></i>늘어남</span><span><i style="background:#eef0f3"></i>변화 없음</span><span><i style="background:rgba(250,30,42,.35)"></i>줄어듦</span><span><i style="background:${NAVY}"></i>당사</span></div>`;
+  body.innerHTML = `<div class="map" id="map"></div><div class="maplegend"><span>크기 = 언급 점유율 · 색 = 직전 회차 대비 점유율 증감(모그룹)</span><span><i style="background:rgba(61,241,52,.32)"></i>늘어남</span><span><i style="background:#f1f2f4"></i>변화 없음</span><span><i style="background:rgba(250,30,42,.25)"></i>줄어듦</span><span><i style="background:${NAVY}"></i>당사</span></div>`;
   const el = $("#map"); const W = el.clientWidth, H = el.clientHeight;
   const items = D.treemap.map((g) => ({ ...g, value: g.value }));
   el.innerHTML = squarify(items, 0, 0, W, H).map((t) => {
@@ -1057,19 +849,19 @@ function renderEngines() {
   const E = D.engines, names = { chatgpt: "ChatGPT", gemini: "Gemini" };
   const metr = [["exposure", "exp", "%"], ["sov", "sh", "%"], ["favorability", "pos", "%"], ["first-rank", "rk", "번째"]];
   const range = Object.fromEntries(metr.map(([m, k]) => { const v = Object.values(E).flatMap((e) => e[k]); return [m, [Math.min(...v), Math.max(...v)]]; }));
-  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th>${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td><span class="eng"><span class="av">${en === "chatgpt" ? "GPT" : "G"}</span>${names[en] || en}</span></td>${metr.map(([m, k, u]) => {
+  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th>${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td>${names[en] || en}</td>${metr.map(([m, k, u]) => {
     const s = e[k], v = s[s.length - 1], d = v - s[s.length - 2];
     const val = m === "first-rank" ? `${v.toFixed(1)}<small>번째</small>` : `${v.toFixed(1)}<small>%</small>`;
     return `<td><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 24, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
-  }).join("")}</tr>`).join("")}</tbody></table><div class="ef">작은 차트는 지표마다 같은 눈금 · 14회차(07-06 ~ 10-05) · 우호도의 7월 값이 낮은 것은 측정 그대로입니다</div>`;
+  }).join("")}</tr>`).join("")}</tbody></table>`;
 }
 function renderDist() {
   const d = D.dist; $("#distChip").textContent = `신호 ${n0(d.total)}건`;
-  const r = 66, C = 2 * Math.PI * r, gap = 3; let off = 0;
-  const arcs = d.segments.map((sg) => { const len = Math.max(0, (sg.pct / 100) * C - gap); const a = `<circle cx="84" cy="84" r="${r}" fill="none" stroke="${SENT[sg.key][1]}" stroke-width="16" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" stroke-linecap="butt"><title>${SENT[sg.key][0]} ${sg.pct}% · ${n0(sg.count)}건</title></circle>`; off += (sg.pct / 100) * C; return a; }).join("");
+  const r = 64, C = 2 * Math.PI * r, gap = 3; let off = 0;
+  const arcs = d.segments.map((sg) => { const len = Math.max(0, (sg.pct / 100) * C - gap); const a = `<circle cx="84" cy="84" r="${r}" fill="none" stroke="${SENT[sg.key][1]}" stroke-width="11" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" stroke-linecap="butt"><title>${SENT[sg.key][0]} ${sg.pct}% · ${n0(sg.count)}건</title></circle>`; off += (sg.pct / 100) * C; return a; }).join("");
   const pos = d.segments.find((x) => x.key === "positive");
   $("#dist").innerHTML = `<div class="donut"><svg viewBox="0 0 168 168">${arcs}</svg><div class="c"><b>${pos.pct.toFixed(1)}%</b><small>긍정 신호</small></div></div>
-    <div class="dl">${d.segments.map((sg) => `<div class="row"><i style="background:${SENT[sg.key][1]}"></i><span>${SENT[sg.key][0]}</span><small>${n0(sg.count)}건</small><b>${sg.pct.toFixed(1)}%</b></div>`).join("")}<a href="#" onclick="return false" style="margin-top:8px;font-size:12px;font-weight:600;color:var(--navy);text-decoration:none">신호별 프롬프트 보기 ›</a></div>`;
+    <div class="dl">${d.segments.map((sg) => `<div class="row"><i style="background:${SENT[sg.key][1]}"></i><span>${SENT[sg.key][0]}</span><small>${n0(sg.count)}건</small><b>${sg.pct.toFixed(1)}%</b></div>`).join("")}<button class="tbtn" type="button">신호별 프롬프트 보기 ›</button></div>`;
 }
 
 // ── 멘션 유형 × 지표 ─────────────────────────────────────────────────
@@ -1086,27 +878,24 @@ function renderTypes() {
     const ref = vals.filter((x) => x.v != null).sort((a, b) => b.v - a.v)[0];
     const gap = ref ? c.own - ref.v : null;
     const lo = ref ? Math.min(ref.v, c.own) : null, hi = ref ? Math.max(ref.v, c.own) : null;
-    return `<tr><td><span class="ty"><span class="ic" style="width:26px;height:26px"><svg class="i s14"><use href="#${{ final_choice: "i-trophy", recommendation: "i-smile", comparison: "i-pie", definition: "i-file", mention: "i-msg" }[t]}"/></svg></span>${TYPES[t]}</span></td>
-      <td class="${fx("exposure")}"><span class="tv"><span class="bar"><i style="width:${(o.pct / maxPct) * 100}%"></i></span><b>${p1(o.pct)}</b>${dchip(o.delta)}${spark(o.spark, NAVY, { w: 72, h: 22, tips: o.spark.map((v, i) => (v == null ? null : `${md(D.x[i])} · ${v.toFixed(1)}%\n당사 ${TYPES[t]} 답변 ${n0(o.counts[i])}개 / 전체 답변 ${n0(T.answers[i])}개`)) })}</span></td>
+    return `<tr><td><span class="ty"><svg class="i s14"><use href="#${{ final_choice: "i-trophy", recommendation: "i-smile", comparison: "i-pie", definition: "i-file", mention: "i-msg" }[t]}"/></svg>${TYPES[t]}</span></td>
+      <td class="${fx("exposure")}"><span class="tyv"><span class="bar"><i style="width:${(o.pct / maxPct) * 100}%"></i></span><b>${p1(o.pct)}</b>${dchip(o.delta)}${spark(o.spark, NAVY, { w: 72, h: 22, tips: o.spark.map((v, i) => (v == null ? null : `${md(D.x[i])} · ${v.toFixed(1)}%\n당사 ${TYPES[t]} 답변 ${n0(o.counts[i])}개 / 전체 답변 ${n0(T.answers[i])}개`)) })}</span></td>
       <td class="${fx("sov")}"><span class="cmpv"><span class="dots"><span class="ax"></span>${ref ? `<span class="rg ${gap < 0 ? "bad" : ""}" style="left:${at(lo)};width:calc(${at(hi)} - ${at(lo)})"></span>` : ""}${vals.map((x) => (x.v == null ? "" : `<i style="left:${at(x.v)};background:${colorOf(x.b)}" title="${TYPES[t]} · ${x.b} 유형 안 점유율 ${p1(x.v)}"></i>`)).join("")}<i class="own" style="left:${at(c.own)}" title="${TYPES[t]} · HMG 유형 안 점유율 ${p1(c.own)}"></i></span><span tabindex="0" data-tip="${esc(ref ? `${TYPES[t]} · 유형 안 점유율\nHMG ${p1(c.own)} · ${ref.b} ${p1(ref.v)}\n차이 = HMG − 가장 앞선 비교 브랜드` : `${TYPES[t]} · HMG ${p1(c.own)}`)}" style="color:${gap == null ? "var(--muted)" : gap >= 0 ? "var(--up-ink)" : "var(--down-ink)"}">${gap == null ? "—" : `${gap >= 0 ? "+" : "−"}${Math.abs(gap).toFixed(1)}pp`} <small style="display:inline;color:var(--muted)">${ref ? `vs ${ref.b}` : ""}</small></span></span></td>
       <td class="${fx("favorability")}"><span class="sv">${sentBar(f ? { positive: f.positive, neutral: f.neutral, mixed: f.mixed, negative: f.negative } : null)}<b>${st.unit === "count" ? `${n0(f?.positive)}` : p1(f?.positivePct)}</b></span></td>
       <td style="text-align:right">${n0(o.signals)}</td></tr>`;
   }).join("");
   const all = fav.all;
   $("#types").innerHTML = `<table class="tt"><thead><tr><th>유형</th><th class="${fx("exposure")}" style="width:34%">당사 노출률 · 증감 · 추이</th><th class="${fx("sov")}" style="width:30%">유형 안 점유율 (당사 vs 비교 브랜드)</th><th class="${fx("favorability")}" style="width:18%">${st.unit === "count" ? "당사 긍정 신호 수" : "당사 긍정 비율"}</th><th style="width:10%;text-align:right">당사 유형 신호</th></tr></thead><tbody>${rows}
-    <tr><td class="muted" style="font-weight:600">전체 언급</td><td></td><td></td><td class="${fx("favorability")}"><span class="sv">${sentBar({ positive: all.positive, neutral: all.neutral, mixed: all.mixed, negative: all.negative })}<b>${st.unit === "count" ? n0(all.positive) : p1(all.positivePct)}</b></span></td><td style="text-align:right">${n0(all.total)}</td></tr></tbody></table>
-    <div class="tf">노출률 분모 = 전체 답변 수 · 유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫(막대 = 당사와 가장 앞선 비교 브랜드의 차이) · 유형 이름을 누르면 그 신호가 붙은 프롬프트를 봅니다 · 우선 노출도는 유형별 값이 없습니다</div>`;
+    <tr class="all"><td>전체 언급</td><td></td><td></td><td class="${fx("favorability")}"><span class="sv">${sentBar({ positive: all.positive, neutral: all.neutral, mixed: all.mixed, negative: all.negative })}<b>${st.unit === "count" ? n0(all.positive) : p1(all.positivePct)}</b></span></td><td style="text-align:right">${n0(all.total)}</td></tr></tbody></table>`;
 }
 
 // ── 비교 브랜드 ───────────────────────────────────────────────────────
 function toggleCompare(b) { st.auto = false; st.compare = st.compare.includes(b) ? st.compare.filter((x) => x !== b) : [...st.compare, b]; renderAll(); }
-let prevChips = [];
 function renderChips() {
-  $("#chips").innerHTML = st.compare.map((b, i) => `<span class="chip ${prevChips.length && !prevChips.includes(b) ? "new" : ""}"><i style="background:${COMPARE[i % COMPARE.length]}"></i>${b}${st.auto ? "<small>· 자동</small>" : ""}<button type="button" data-rm="${b}" aria-label="${b} 비교 해제"><svg class="i s12"><use href="#i-x"/></svg></button></span>`).join("");
+  $("#chips").innerHTML = st.compare.map((b, i) => `<span class="chip"><i style="background:${COMPARE[i % COMPARE.length]}"></i>${b}${st.auto ? "<small>· 자동</small>" : ""}<button type="button" data-rm="${b}" aria-label="${b} 비교 해제"><svg class="i s12"><use href="#i-x"/></svg></button></span>`).join("");
   $("#chips").querySelectorAll("[data-rm]").forEach((x) => x.addEventListener("click", () => toggleCompare(x.dataset.rm)));
   $("#popList").innerHTML = D.covered.map((b) => `<label><i style="${st.compare.includes(b) ? `background:${colorOf(b)};box-shadow:none` : ""}"></i>${b}<input type="checkbox" ${st.compare.includes(b) ? "checked" : ""} data-pk="${b}"></label>`).join("");
   $("#popList").querySelectorAll("[data-pk]").forEach((x) => x.addEventListener("change", () => toggleCompare(x.dataset.pk)));
-  prevChips = [...st.compare];
 }
 $("#addBtn").addEventListener("click", () => { const p = $("#pop"); p.hidden = !p.hidden; $("#addBtn").setAttribute("aria-expanded", String(!p.hidden)); });
 $("#popClose").addEventListener("click", () => { $("#pop").hidden = true; });
@@ -1114,7 +903,7 @@ $("#popReset").addEventListener("click", () => { st.auto = true; st.compare = [D
 
 // ── 서랍 ─────────────────────────────────────────────────────────────
 function toast(msg) {
-  let t = $("#toast"); if (!t) { t = h(`<div id="toast" role="status" style="position:fixed;right:24px;bottom:24px;z-index:320;max-width:420px;padding:12px 16px;border-radius:12px;background:#101012;color:#f7f7f7;font-size:12.5px;box-shadow:var(--shadow-pop)"></div>`); document.body.appendChild(t); }
+  let t = $("#toast"); if (!t) { t = h(`<div id="toast" role="status"></div>`); document.body.appendChild(t); }
   t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => (t.hidden = true), 3200);
 }
 function openDrawer(b) {
@@ -1132,32 +921,22 @@ function openDrawer(b) {
 }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); setTimeout(() => { if (!$("#drawer").classList.contains("open")) { $("#drawer").hidden = true; $("#scrim").hidden = true; } }, REDUCED ? 0 : 280); }
 $("#scrim").addEventListener("click", closeDrawer);
-addEventListener("keydown", (e) => { if (e.key === "Escape") { closeDrawer(); $("#pop").hidden = true; } });
+addEventListener("keydown", (e) => { if (e.key === "Escape") { closeDrawer(); $("#pop").hidden = true; $("#mkCapBody").classList.remove("on"); } });
 
 // ── 틀 동작 ───────────────────────────────────────────────────────────
 $("#viewSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { st.view = b.dataset.v; renderBoard(); }));
-$("#unitSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { st.unit = b.dataset.u; $("#unitSeg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderTypes(); placeThumbs(); }));
+$("#unitSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { st.unit = b.dataset.u; $("#unitSeg").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderTypes(); }));
 $("#fClose").addEventListener("click", () => { document.body.classList.add("fcollapsed"); renderAll(); });
 $("#fOpen").addEventListener("click", () => { document.body.classList.remove("fcollapsed"); renderAll(); });
-$("#mkCap").addEventListener("click", () => { const on = $("#mkCapBody").classList.toggle("on"); $("#mkCap").setAttribute("aria-expanded", String(on)); setMk(); });
-function setMk() { document.documentElement.style.setProperty("--mk-h", `${$("#mk").offsetHeight}px`); }
+$("#mkCap").addEventListener("click", (e) => { e.stopPropagation(); const on = $("#mkCapBody").classList.toggle("on"); $("#mkCap").setAttribute("aria-expanded", String(on)); });
+document.addEventListener("click", (e) => { if (!e.target.closest("#mkCapBody") && $("#mkCapBody").classList.contains("on")) { $("#mkCapBody").classList.remove("on"); $("#mkCap").setAttribute("aria-expanded", "false"); } });
 
-function placeThumbs() {
-  document.querySelectorAll(".seg").forEach((sg) => {
-    let th = sg.querySelector(".thumb"); if (!th) { th = document.createElement("i"); th.className = "thumb"; sg.prepend(th); }
-    const on = sg.querySelector('button[aria-pressed="true"]'); if (!on) return;
-    th.style.left = `${on.offsetLeft}px`; th.style.width = `${on.offsetWidth}px`;
-  });
-}
-let ANIM = false;
 function renderAll() {
-  renderChips(); renderTrends(); renderBoard(); renderEngines(); renderDist(); renderTypes(); placeThumbs();
+  renderChips(); renderTrends(); renderBoard(); renderEngines(); renderDist(); renderTypes();
 }
-setMk();
-if (REDUCED) renderAll();
-else { document.body.classList.add("loading"); renderAll(); setTimeout(() => { document.body.classList.remove("loading"); ANIM = true; renderAll(); ANIM = false; }, 480); }
+renderAll();
 $("#content").addEventListener("scroll", () => $(".cbar").classList.toggle("stuck", $("#content").scrollTop > 8), { passive: true });
-let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { setMk(); renderAll(); }, 120); });
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderAll, 120); });
 </script>
 </body>
 </html>
