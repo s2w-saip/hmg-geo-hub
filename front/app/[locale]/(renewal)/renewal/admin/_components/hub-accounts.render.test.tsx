@@ -57,6 +57,7 @@ describe("account list", () => {
     expect(out).toContain('data-hub-account-state="pending"');
     expect(out).toContain(">로그인 기록 없음<");
     expect(out).toContain("1 / 4개 계정");
+    expect(out).toContain("1–1 / 1"); // the pager under the list
   });
 
   // Admin check (2026-11-02, F12): the state is `must_change`, set on a new account and on every reset, and a sign-in

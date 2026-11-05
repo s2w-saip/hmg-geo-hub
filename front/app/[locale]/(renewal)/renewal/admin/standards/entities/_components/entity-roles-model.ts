@@ -13,9 +13,6 @@ export const ENTITY_SORTS = ["answers", "mentions", "name", "firstSeen", "state"
 export type EntitySort = (typeof ENTITY_SORTS)[number];
 export const DEFAULT_ENTITY_SORT: { key: EntitySort; asc: boolean } = { key: "answers", asc: false };
 
-export const ENTITY_PAGE_SIZES = [25, 50, 100] as const;
-export const DEFAULT_ENTITY_PAGE_SIZE = 50;
-
 export function entityFirstAsc(key: EntitySort): boolean {
   return key === "name" || key === "state";
 }

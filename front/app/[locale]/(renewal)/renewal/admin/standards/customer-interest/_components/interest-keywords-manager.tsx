@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminListPage } from "../../../_components/admin-list-page";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Pause, Pencil, Play, Plus } from "lucide-react";
 import {
@@ -131,6 +132,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
     },
   });
   const shown = useMemo(() => sortKeywords(listing.items.filter((r) => keywordMatches(r, filters, search)), sort.key, sort.asc, locale), [listing.items, filters, search, sort, locale]);
+  const paged = useAdminListPage(shown, [filters, search, sort]);
   const total = keywordCounts(listing.items);
   const head = (key: KeywordSort, className?: string) => (
     <RnSortHead sortKey={key} label={tk(`column.${key}`)} sort={sort} className={className} onSort={(k) => setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: keywordFirstAsc(k) }))} />
@@ -267,7 +269,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((row) => {
+                  {paged.rows.map((row) => {
                     const busy = saving != null;
                     const hub = row.status != null;
                     const labels = row.conditions.map((c) => conditionLabel(c, locale));
@@ -332,6 +334,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
                   })}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}

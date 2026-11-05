@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminListPage } from "../../../_components/admin-list-page";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History } from "lucide-react";
 import {
@@ -31,17 +32,15 @@ import {
 } from "@/components/renewal-ui";
 import { formatAsOfDate } from "@/lib/as-of-date";
 import { RnFilterSplit } from "../../../../_components/filter-split";
-import { LIST_TD as TD, RnFilterPanel, RnFilterRail, RnListPager, RnRadioAxis, RnSortHead } from "../../../../_components/prompt-list";
+import { LIST_TD as TD, RnFilterPanel, RnFilterRail, RnRadioAxis, RnSortHead } from "../../../../_components/prompt-list";
 import { HistorySection, LIST_TH_PLAIN, ListPills } from "../../citation-sources/_components/source-lists-kit";
 import { entityRoleApi, type EntityListing, type EntityRow } from "./entity-roles-api";
 import { EntitySheet, EntityState, useEntityError, useRoleLabel } from "./entity-role-sheet";
 import {
   ALL,
   DEFAULT_ENTITY_FILTER,
-  DEFAULT_ENTITY_PAGE_SIZE,
   DEFAULT_ENTITY_SORT,
   ENTITY_AXES,
-  ENTITY_PAGE_SIZES,
   ENTITY_SORTS,
   entityAxisOptions,
   entityCounts,
@@ -83,19 +82,16 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
   const [filters, setFilters] = useState<EntityFilter>(fromUrl.filters);
   const [search, setSearch] = useState(fromUrl.search);
   const [sort, setSort] = useState(DEFAULT_ENTITY_SORT);
-  const [page, setPage] = useState(1);
-  const [size, setSize] = useState(DEFAULT_ENTITY_PAGE_SIZE);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [open, setOpen] = useState<Partial<Record<EntityAxis, boolean>>>({ role: true, state: true });
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
   const reload = () => entityRoleApi.list().then(setListing, (e) => toast(errorText(e)));
 
-  // URL mirrors the picks (shareable, restorable); shallow — no server round trip. New picks start at page 1.
+  // URL mirrors the picks (shareable, restorable); shallow — no server round trip.
   useEffect(() => {
     const query = entityFilterToQuery(filters, search);
     window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
-    setPage(1);
   }, [filters, search]);
 
   const axisLabel = (a: EntityAxis) => t(`axis.${a}`);
@@ -122,9 +118,7 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
     },
   });
   const matched = useMemo(() => sortEntities(listing.items.filter((r) => entityMatches(r, filters, search)), sort.key, sort.asc, locale), [listing.items, filters, search, sort, locale]);
-  const pages = Math.max(1, Math.ceil(matched.length / size));
-  const current = Math.min(page, pages);
-  const shown = matched.slice((current - 1) * size, current * size);
+  const paged = useAdminListPage(matched, [filters, search, sort]);
   const total = entityCounts(listing.items);
   const names = useMemo(() => new Map(listing.items.map((r) => [r.entityId, r.name] as const)), [listing.items]);
   const head = (key: EntitySort, className?: string) => (
@@ -219,7 +213,7 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
               {t("count", { shown: nf.format(matched.length), total: nf.format(total.total), own: nf.format(total.own), excluded: nf.format(total.excluded), pending: nf.format(total.pending), upstream: nf.format(total.upstream) })}
             </span>
           </div>
-          {shown.length === 0 ? (
+          {matched.length === 0 ? (
             <RnEmpty className="m-5">{listing.items.length ? t("emptyFiltered") : t("empty")}</RnEmpty>
           ) : (
             <div {...tip.bind}>
@@ -249,7 +243,7 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((row) => (
+                  {paged.rows.map((row) => (
                     <tr key={row.entityId} data-hub-entity-row={row.entityId} className="hover:bg-rn-navy-25/60">
                       <td className={cx(TD, "pl-5")}>
                         <span data-rn-tip="" className="block min-w-0 truncate font-semibold text-rn-ink">
@@ -280,23 +274,10 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
                   ))}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}
-          <RnListPager
-            rangeFrom={matched.length ? (current - 1) * size + 1 : 0}
-            rangeTo={Math.min(current * size, matched.length)}
-            total={matched.length}
-            page={current}
-            pages={pages}
-            pageSize={size}
-            pageSizes={ENTITY_PAGE_SIZES}
-            onPageSize={(n) => {
-              setSize(n);
-              setPage(1);
-            }}
-            onPage={setPage}
-          />
           <p className="m-0 border-t border-rn-line px-5 py-2.5 text-rn-11 text-rn-muted">{t("hint")}</p>
         </RnCard>
       </RnFilterSplit>

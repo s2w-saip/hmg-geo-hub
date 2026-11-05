@@ -11,6 +11,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useServedState } from "@/hooks/use-served-state";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminListPage } from "../../../_components/admin-list-page";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Loader2, Plus, RotateCcw, Undo2 } from "lucide-react";
 import {
@@ -119,6 +120,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
     () => sortSeeds(listing.items.filter((r) => seedMatches(r, filters, search)), sort.key, sort.asc, categoryOrder),
     [listing.items, filters, search, sort, categoryOrder],
   );
+  const paged = useAdminListPage(shown, [filters, search, sort]);
   const total = seedCounts(listing.items);
   const head = (key: SeedSort, className?: string) => (
     <RnSortHead sortKey={key} label={ts(`column.${key === "domain" ? "domain" : key}`)} sort={sort} className={className} onSort={(k) => setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: seedFirstAsc(k) }))} />
@@ -260,7 +262,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((row) => {
+                  {paged.rows.map((row) => {
                     const busy = saving != null;
                     const hub = row.status != null;
                     const goldCategory = row.gold?.category ?? null;
@@ -331,6 +333,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
                   })}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}

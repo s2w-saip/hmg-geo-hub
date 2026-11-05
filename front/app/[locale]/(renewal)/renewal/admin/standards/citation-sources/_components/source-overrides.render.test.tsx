@@ -75,6 +75,7 @@ describe("citation source list", () => {
     expect(out).not.toContain('data-hub-source-revert="upstream.example"'); // Gold's own correction: nothing in the HUB to revert
     expect(out).toContain("77,118");
     expect(out).toContain("3 / 5개 · 교정 2 · 미분류 1 · 반영 대기 1");
+    expect(out).toContain("1–3 / 3"); // the pager under the list
     expect(out).toContain(">News &amp; Media</option>".replace("News &amp; Media", ko.citationCategories.newsMedia));
   });
 

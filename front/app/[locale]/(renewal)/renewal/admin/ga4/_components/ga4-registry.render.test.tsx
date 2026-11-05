@@ -60,6 +60,7 @@ describe("GA4 property list", () => {
     expect(out).toContain('data-hub-ga4-result="never"');
     expect(out).toContain("data-hub-ga4-pending"); // the never-collected property waits for the collector
     expect(out).toContain("3 / 4개 속성");
+    expect(out).toContain("1–3 / 3"); // the pager under the list
   });
 
   it("filters by brand, setting, result and the search text, and keeps them in the URL", () => {

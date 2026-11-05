@@ -35,6 +35,7 @@ import { countryName } from "@/lib/geo-catalog/country-name";
 import { RnFilterSplit } from "../../../_components/filter-split";
 import { LIST_TD as TD, RnDetailField, RnFilterPanel, RnFilterRail, RnRadioAxis, RnSortHead, RnTimeline } from "../../../_components/prompt-list";
 import { RnSavedFiltersSection, useSavedFilters, type SavedFilter, type SavedFiltersSource } from "../../../_components/saved-filters";
+import { useAdminListPage } from "../../_components/admin-list-page";
 import { Ga4ErrorNote, Ga4PropertyForm } from "./ga4-registry-form";
 import { Ga4RequestError, ga4Api, type Ga4Action, type Ga4Property, type Ga4PropertyDetail } from "./ga4-registry-api";
 import {
@@ -179,6 +180,7 @@ function Manager({ initial, savedFilters }: Ga4RegistryManagerProps) {
     () => sortProperties(items.filter((p) => matches(p, filters, search, labels.country)), sort.key, sort.asc, labels.country),
     [items, filters, search, sort, labels],
   );
+  const paged = useAdminListPage(shown, [filters, search, sort]);
   const sortLabel = (k: Ga4Sort) => t(`column.${k}`);
   const head = (key: Ga4Sort, className?: string) => (
     <RnSortHead sortKey={key} label={sortLabel(key)} sort={sort} className={className} onSort={(k) => setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: firstAsc(k) }))} />
@@ -341,7 +343,7 @@ function Manager({ initial, savedFilters }: Ga4RegistryManagerProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((p) => (
+                  {paged.rows.map((p) => (
                     <tr
                       key={p.propertyId}
                       data-hub-ga4-row={p.propertyId}
@@ -379,6 +381,7 @@ function Manager({ initial, savedFilters }: Ga4RegistryManagerProps) {
                   ))}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}

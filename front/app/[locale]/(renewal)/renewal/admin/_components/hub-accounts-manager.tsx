@@ -35,6 +35,7 @@ import { rhqLabel } from "@/lib/rhq";
 import { RnFilterSplit } from "../../_components/filter-split";
 import { LIST_TD as TD, RnDetailField, RnFilterPanel, RnFilterRail, RnRadioAxis, RnSortHead, RnTimeline } from "../../_components/prompt-list";
 import { RnSavedFiltersSection, useSavedFilters, type SavedFilter, type SavedFiltersSource } from "../../_components/saved-filters";
+import { useAdminListPage } from "./admin-list-page";
 import { AccountErrorNote, HubAccountForm } from "./hub-account-form";
 import { AccountRequestError, accountsApi, type AccountAction, type HubAccount, type HubAccountDetail, type HubRole } from "./hub-accounts-api";
 import {
@@ -196,6 +197,7 @@ function Manager({ initial, roles, savedFilters }: HubAccountsManagerProps) {
 
   const picked = pickedAxes(filters);
   const shown = useMemo(() => sortAccounts(items.filter((a) => matches(a, filters, search)), sort.key, sort.asc), [items, filters, search, sort]);
+  const paged = useAdminListPage(shown, [filters, search, sort]);
   const sortLabel = (k: AccountSort) => t(`column.${k}`);
   const head = (key: AccountSort, className?: string) => (
     <RnSortHead sortKey={key} label={sortLabel(key)} sort={sort} className={className} onSort={(k) => setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: firstAsc(k) }))} />
@@ -362,7 +364,7 @@ function Manager({ initial, roles, savedFilters }: HubAccountsManagerProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((a) => (
+                  {paged.rows.map((a) => (
                     <tr
                       key={a.id}
                       data-hub-account-row={a.login}
@@ -395,6 +397,7 @@ function Manager({ initial, roles, savedFilters }: HubAccountsManagerProps) {
                   ))}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}

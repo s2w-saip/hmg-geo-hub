@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminListPage } from "../../../_components/admin-list-page";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, History, Pause, Pencil, Play, Plus } from "lucide-react";
 import {
@@ -130,6 +131,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: InterestSourceListi
     },
   });
   const shown = useMemo(() => sortSources(listing.items.filter((r) => sourceMatches(r, filters, search)), sort.key, sort.asc), [listing.items, filters, search, sort]);
+  const paged = useAdminListPage(shown, [filters, search, sort]);
   const total = sourceCounts(listing.items);
   const head = (key: SourceSort, className?: string) => (
     <RnSortHead sortKey={key} label={ts(`column.${key}`)} sort={sort} className={className} onSort={(k) => setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: sourceFirstAsc(k) }))} />
@@ -267,7 +269,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: InterestSourceListi
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((row) => {
+                  {paged.rows.map((row) => {
                     const busy = saving != null;
                     const hub = row.status != null;
                     const suggested = suggestedChannel(row);
@@ -329,6 +331,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: InterestSourceListi
                   })}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}

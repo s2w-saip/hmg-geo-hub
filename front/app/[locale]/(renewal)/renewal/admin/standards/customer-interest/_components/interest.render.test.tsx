@@ -115,6 +115,7 @@ describe("InterestKeywordsManager", () => {
     expect(out).toContain("interest_keyword");
     expect(out).not.toContain("즉시 반영");
     expect(out).toContain("4 / 4개 · 활성 2 · 중지 1 · 반영 대기 1 · 업스트림 1");
+    expect(out).toContain("1–4 / 4"); // the pager under the list
   });
 
   it("shows how many conditions Gold holds, and the state of each kind of row", () => {
@@ -151,6 +152,7 @@ describe("InterestSourcesManager", () => {
     expect(out).not.toContain("반영됨");
     expect(out).not.toContain("반영 대기");
     expect(out).toContain("3 / 3개 · 활성 2 · 중지 0 · HUB 미등록 1");
+    expect(out).toContain("1–3 / 3"); // the pager under the list
   });
 
   it("shows the row kinds", () => {

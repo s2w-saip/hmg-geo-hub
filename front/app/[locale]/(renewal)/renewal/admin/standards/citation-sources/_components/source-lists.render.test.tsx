@@ -125,6 +125,16 @@ describe("seeds tab", () => {
     expect(uncited).toContain(ko.hubSourceLists.seeds.goldNone);
     expect(rowOf(out, "data-hub-seed-row", "carandbike.com")).toContain('data-hub-seed-remove="carandbike.com"');
     expect(out).toContain("6 / 6개 · 적용 중 4 · 제외 1 · 반영 대기 2 · 업스트림 1");
+    expect(out).toContain("1–6 / 6");
+  });
+
+  it("lists 50 seeds a page, the most cited first, and counts every seed", () => {
+    const items = Array.from({ length: 120 }, (_, i) => seed({ skey: `s${i}.example`, gold: { category: "newsMedia", source: "seed", citations: 1000 - i } }));
+    const out = html(<SourceSeedsManager initial={{ ...SEEDS, items }} savedFilters={{ page: "source-seeds", userId: "u", initial: [] }} />);
+    expect(keysOf(out, "data-hub-seed-row")).toEqual(items.slice(0, 50).map((r) => r.skey));
+    expect(out).toContain("1–50 / 120");
+    expect(out).toContain("1 / 3 페이지");
+    expect(out).toContain("120 / 120개");
   });
 
   it("filters, sorts, counts and mirrors the picks in the URL (keeping the tab)", () => {

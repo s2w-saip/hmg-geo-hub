@@ -12,6 +12,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useServedState } from "@/hooks/use-served-state";
 import type { SavedFiltersSource } from "../../../../_components/saved-filters";
+import { useAdminListPage } from "../../../_components/admin-list-page";
 import { useAdminSavedFilters } from "../../../_components/admin-saved-filters";
 import { AlertTriangle, ArrowDownWideNarrow, ArrowUpNarrowWide, Database, History, Loader2, RotateCcw } from "lucide-react";
 import {
@@ -133,6 +134,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
     () => sortRows(listing.items.filter((r) => matches(r, filters, search, otherOnly)), sort.key, sort.asc, categoryOrder),
     [listing.items, filters, search, otherOnly, sort, categoryOrder],
   );
+  const paged = useAdminListPage(shown, [filters, search, otherOnly, sort]);
   const total = counts(listing.items);
   const head = (key: SourceSort, className?: string) => (
     <RnSortHead sortKey={key} label={t(`column.${key}`)} sort={sort} className={className} onSort={(k) => setSort((s) => (s.key === k ? { key: k, asc: !s.asc } : { key: k, asc: firstAsc(k) }))} />
@@ -293,7 +295,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map((row) => {
+                  {paged.rows.map((row) => {
                     const busy = saving != null;
                     const active = row.override?.status === "active";
                     return (
@@ -352,6 +354,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
                   })}
                 </tbody>
               </table>
+              {paged.pager}
               {tip.tip}
             </div>
           )}
