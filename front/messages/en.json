@@ -6528,7 +6528,59 @@
         }
       },
       "setting": {
-        "description": "Gold's identity, measured values and custom tags of this project (read only).",
+        "description": "This project's measurement settings, and what Gold holds of its identity, measured values and custom tags.",
+        "measurement": {
+          "title": "Measurement settings",
+          "hint": "What collection reads through the prompt and reference API. Saving does not change the numbers on this page.",
+          "brands": "Brands to measure",
+          "brandNames": {
+            "hyundai": "Hyundai",
+            "kia": "Kia",
+            "genesis": "Genesis",
+            "hyundai-n": "Hyundai N"
+          },
+          "countries": "Countries to measure",
+          "countriesHint": "Country codes, separated by commas.",
+          "unknownCountries": "Not in the reference values: {codes}",
+          "engines": "AI engines",
+          "cadence": "Cadence",
+          "cadenceNone": "Not set",
+          "cadences": {
+            "weekly": "Weekly",
+            "biweekly": "Every two weeks",
+            "monthly": "Monthly"
+          },
+          "acrRepeats": "ACR repeats",
+          "acrRepeatsHint": "Repeats per cell in ACR measurement (1-100)",
+          "acrRepeatsBad": "Enter a whole number from 1 to 100.",
+          "webUnits": "Website units",
+          "webUnitsHint": "Language · base URL",
+          "none": "No language",
+          "noBase": "No base URL",
+          "ownedUrls": "Owned URLs",
+          "trackedUrls": "Tracked URLs",
+          "urlsHint": "One per line.",
+          "trackedBrands": "Tracked brands",
+          "trackedBrandsHint": "Competitor brands, one per line.",
+          "trackedModels": "Tracked models",
+          "trackedModelsHint": "One per line; write ‘Brand / Model’ to name the brand.",
+          "save": "Save",
+          "saved": "Measurement settings saved",
+          "version": "Version {version} · {origin}",
+          "noVersion": "No saved settings",
+          "origin": {
+            "gold_import": "First value (Gold measurement record)",
+            "hub": "Saved in the service"
+          },
+          "notEditing": "This server has no editing connection for measurement settings, so saving is off.",
+          "unavailable": "The input store has no measurement settings for this project yet.",
+          "errors": {
+            "conflict": "Someone changed these first. Reload, then save again.",
+            "unknown": "Some codes are not in the reference values.",
+            "invalid": "Check the values. A URL cannot contain spaces.",
+            "failed": "Could not save. Try again shortly."
+          }
+        },
         "noData": "No data",
         "none": "None",
         "general": {
@@ -6536,8 +6588,6 @@
           "hint": "Values only the original operations DB holds",
           "name": "Project name",
           "description": "Description",
-          "brand": "Brand",
-          "country": "Country",
           "created": "Created",
           "owner": "Owner"
         },
@@ -6556,16 +6606,13 @@
         "engines": {
           "title": "AI engines",
           "hint": "The measured engines are Gold's answers'",
-          "measured": "Measured engines",
-          "setting": "Engine setting"
+          "measured": "Measured engines"
         },
         "tracked": {
           "title": "Tracked",
           "hint": "Own URLs · target URLs · competitors · models",
-          "owned": "Own URLs",
           "targets": "Target URLs",
-          "targetsValue": "{count} prompts name a target URL",
-          "entities": "Competitors · models"
+          "targetsValue": "{count} prompts name a target URL"
         },
         "tags": {
           "title": "Custom tags",

@@ -14,6 +14,9 @@ try:
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run with back/ on the path and the API requirements installed (ext.tests.test_app)") from exc
 
+from ext import schemas  # noqa: E402
+from ext.export_openapi import TARGET, rendered  # noqa: E402
+
 T0 = datetime(2026, 10, 28, 9, 0, tzinfo=UTC)
 KEY = "hgh_" + "a" * 32 + "_" + "A" * 43
 OTHER = "hgh_" + "b" * 32 + "_" + "B" * 43
@@ -50,10 +53,10 @@ class Store:
                                  for c in ("chatgpt", "deepseek", "gemini")]}
         self.connections, self.hashes, self.readonly = 0, [], []
 
-    def project(self, definition, status="active", seq=10, reset=3):
+    def project(self, definition, status="active", seq=10, reset=3, measurement=None):
         pid = uuid4()
         self.projects[pid] = {"project_id": pid, "origin": "gold", "change_seq": seq, "sha256": "p" * 64, "recorded_at": T0,
-                              "reset_seq": reset, "definition": json.dumps({**definition, "status": status})}
+                              "reset_seq": reset, "definition": json.dumps({**definition, "status": status}), "measurement": measurement}
         return pid
 
     def prompt(self, project, definition, seq, text="질문", origin="gold"):
@@ -190,14 +193,19 @@ class ExternalApi(unittest.TestCase):
     # ── projects ────────────────────────────────────────────────────────────────────────────────────────
     def test_projects_decode_gold_codes_and_removed_is_a_tombstone(self):
         site = self.store.project({"surface": 2, "site_brand_bit": 17, "country": "KR", "regions": ["KR"], "is_root": False,
-                                   "web": {"units": [{"file_seq": 3, "lang_codes": ["ko"], "base": "kia.com/kr", "base_src": "decl"}]}})
+                                   "custom_fields": []}, measurement=json.dumps({"brands": ["kia"], "countries": ["KR"], "engines": ["chatgpt"], "cadence": "weekly",
+                                                                  "acr_repeats": 5, "web_units": [{"file_seq": 3, "lang_codes": ["ko"], "base": "kia.com/kr"}],
+                                                                  "owned_urls": ["kia.com/kr"], "tracked_urls": [], "tracked_targets": [{"kind": "brand", "name": "Toyota"}]}))
         odd = self.store.project({"surface": 9, "site_brand_bit": 34})
         gone = self.store.project({"surface": 3}, status="removed")
         status, body, _ = self.get(f"/ext/v1/projects/{site}")
         self.assertEqual(status, 200, body)
         p = body["data"]
         self.assertEqual((p["surface"], p["site_brands"], p["country"]), ("website", ["hyundai", "hyundai-n"], "KR"))
-        self.assertEqual(p["web"]["units"][0]["base"], "kia.com/kr")
+        self.assertEqual(p["measurement"]["web_units"][0]["base"], "kia.com/kr")
+        self.assertEqual(p["measurement"]["acr_repeats"], 5)
+        self.assertNotIn("web", p)
+        schemas.ProjectResponse.model_validate({"data": p, "meta": {"contract_version": "x", "as_of": None}})
         self.assertTrue(body["meta"]["as_of"].startswith("2026-10-28T09:00"))
         odd_view = self.get(f"/ext/v1/projects/{odd}")[1]["data"]
         self.assertEqual(odd_view["surface"], {"code": None, "raw": 9})
@@ -217,7 +225,7 @@ class ExternalApi(unittest.TestCase):
         second = self.get(f"/ext/v1/projects/{pid}")[1]
         self.assertNotEqual(first["meta"]["contract_version"], second["meta"]["contract_version"])
         self.assertNotEqual(first["data"]["etag"], second["data"]["etag"])
-        self.assertTrue(first["meta"]["contract_version"].startswith("ext-v1+"))
+        self.assertTrue(first["meta"]["contract_version"].startswith("ext-v2+"))
 
     # ── prompts ─────────────────────────────────────────────────────────────────────────────────────────
     def test_prompts_page_by_change_seq(self):
@@ -279,6 +287,27 @@ class ExternalApi(unittest.TestCase):
             status, body, _ = self.get("/ext/healthz", key=None)
         self.assertEqual((status, body), (200, {"ok": True}))
 
+
+
+class OpenApiTest(unittest.TestCase):
+    def test_the_published_document_is_the_running_one(self):
+        self.assertEqual(TARGET.read_text(encoding="utf8"), rendered(), "Run: cd back && python -m ext.export_openapi")
+
+    def test_every_endpoint_of_the_contract_is_documented(self):
+        paths = json.loads(rendered())["paths"]
+        for path in ("/ext/healthz", "/ext/v1/projects", "/ext/v1/projects/{project_id}", "/ext/v1/projects/{project_id}/prompts",
+                     "/ext/v1/reference", "/ext/v1/reference/{family}"):
+            self.assertEqual(list(paths[path]), ["get"], path)
+
+    def test_every_stored_family_shape_validates(self):
+        items = [{"key": "chatgpt", "code": "chatgpt", "is_default": True},
+                 {"key": "1", "bit": 1, "code": "hyundai"},
+                 {"key": "x", "term": "x", "term_norm": "x", "brands": [], "conditions": [{"location_code": 2410, "language_code": "ko"}], "source_types": ["google_keyword"]},
+                 {"key": "category:officialHmg", "ord": 1, "code": "officialHmg", "kind": "category", "number": 1, "name_en": "Official (HMG)", "name_ko": "공식 (HMG)", "description": None},
+                 {"key": "a.b/c", "skey": "a.b/C", "domain": "a.b", "category": "officialHmg", "matchers": [{"prefix": "a.b/c", "boundary": True}]},
+                 {"key": "e", "entity_id": "e", "rep_name": "Hyundai", "role": "own", "brand": "Hyundai"}]
+        schemas.ReferenceResponse.model_validate({"data": {"family": "x", "items": items},
+                                                  "meta": {"contract_version": "x", "as_of": None, "etag": "e", "change_seq": 1, "next_after_key": "", "has_more": False}})
 
 if __name__ == "__main__":
     unittest.main()

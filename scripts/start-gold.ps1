@@ -32,6 +32,12 @@ try {
     if (Test-Path -LiteralPath $operationsEnv -PathType Leaf) {
         $runArgs += @('--env-file', $operationsEnv)
     }
+    # The input and metrics stores (manage.py init writes their connections): the input screens need the first.
+    $inputEnv = Join-Path $repoPath '.env.input.local'
+    $metricsEnv = Join-Path $repoPath '.env.metrics.local'
+    foreach ($storeEnv in @($inputEnv, $metricsEnv)) {
+        if (Test-Path -LiteralPath $storeEnv -PathType Leaf) { $runArgs += @('--env-file', $storeEnv) }
+    }
     # Global prompt editing (manage.py init writes it): the INSERT-only catalog role and the login token secret.
     $editEnv = Join-Path $repoPath '.env.hub-edit.local'
     if ((Test-Path -LiteralPath $editEnv -PathType Leaf) -and (Test-Path -LiteralPath $analyticsEnv -PathType Leaf)) {
@@ -43,6 +49,14 @@ try {
     if (Test-Path -LiteralPath $operationsEnv -PathType Leaf) {
         docker network connect hgh-operations-network hgh-gold-api
         if ($LASTEXITCODE -ne 0) { throw 'Operations network connection failed.' }
+    }
+    if (Test-Path -LiteralPath $inputEnv -PathType Leaf) {
+        docker network connect hgh-input-network hgh-gold-api
+        if ($LASTEXITCODE -ne 0) { throw 'Input network connection failed.' }
+    }
+    if (Test-Path -LiteralPath $metricsEnv -PathType Leaf) {
+        docker network connect hgh-metrics-network hgh-gold-api
+        if ($LASTEXITCODE -ne 0) { throw 'Metrics network connection failed.' }
     }
     $ready = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {

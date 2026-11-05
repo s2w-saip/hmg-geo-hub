@@ -1,16 +1,17 @@
-"""Global prompts in the HUB data catalog, managed by the top-level administrator (2026-10-27).
+"""Global prompts in the input store (hmg_input), managed by the top-level administrator (2026-10-27).
 
-HUB-owned prompts (origin=hub) are created, edited, archived and restored here. Gold-imported ones are
-listed read-only: sync_catalog.py records the Gold definition again over any HUB revision of them.
+Every Global prompt is created, edited, archived and restored here (2026-11-06, T4.2: the service holds the source of the prompts, as
+Project › Prompt has since 2026-11-03). The first HUB revision of a Gold-imported prompt makes it HUB-owned: sync_catalog.py keeps its
+text and HUB keys from then on and still records Gold's own keys (surface, catalog rows). Reaching the measurement waits for 앤써 to read
+the prompt and reference API (docs/handoff/architecture-rebuild.md 2.5).
 Every change is one more catalog.prompt_version row written by the INSERT-only editor role
 (HGH_CATALOG_EDITOR_DB_URL); an archive is a revision with status=archived, so ids and history stay.
 A write names the version it was made against and a stale one is refused with 409 (the revision
 primary key is the last guard). Codes must be Gold's: the taxonomy fields take the codes of the taxonomy the
 last Gold import recorded (catalog.current_reference, family taxon; Gold itself is never called while the
 catalog lock is held), and depth2/depth3 must sit under the depth1/depth2 chosen with them. Language and
-markets take the ones the Global catalog already uses. A Gold prompt that left Gold is `removed` (read-only,
-like every Gold prompt). HUB prompts are not measured until a measurement hand-off exists
-(back/hub_storage/README.md)."""
+markets take the ones the Global catalog already uses. A Gold prompt that left Gold without a HUB revision is
+`removed` and stays read only."""
 from __future__ import annotations
 
 import hashlib
@@ -27,7 +28,7 @@ import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from bff.hub_stores import analytics_db, operations_db
+from bff.hub_stores import input_db, operations_db
 from bff.hub_stores.hub_auth import Principal
 
 log = logging.getLogger("hgh.hub")
@@ -233,7 +234,7 @@ def snapshot(text: str, definition: dict) -> dict:
 
 
 def item_view(row) -> dict:
-    return {"id": str(row["prompt_id"]), "origin": row["origin"], "editable": row["origin"] == "hub",
+    return {"id": str(row["prompt_id"]), "origin": row["origin"], "editable": status_of(definition_of(row)) != "removed",
             "version": row["version"], **snapshot(row["text"], definition_of(row)),
             "recordedAt": row["recorded_at"], "registeredAt": row["registered_at"]}
 
@@ -295,10 +296,10 @@ async def writing():
 @asynccontextmanager
 async def reading():
     try:
-        async with analytics_db.connection() as conn:
+        async with input_db.connection() as conn:
             yield conn
     except ConnectionError:
-        raise HTTPException(503, "HUB data store is not configured") from None
+        raise HTTPException(503, "HUB input store is not configured") from None
 
 
 async def global_project(conn) -> UUID:
@@ -497,8 +498,8 @@ async def editable(conn, prompt_id: UUID, project: UUID, expected: int):
     row = await conn.fetchrow(CURRENT_SQL, prompt_id)
     if row is None or row["project_id"] != project:
         raise HTTPException(404, "Global prompt not found")
-    if row["origin"] != "hub":
-        raise refused(409, "gold_owned", "Gold prompts are read-only here: the Gold import would overwrite the change")
+    if status_of(definition_of(row)) == "removed":
+        raise refused(409, "removed", "This prompt left Gold; it is read only")
     if row["version"] != expected:
         raise version_conflict(row["version"])
     return row
@@ -538,9 +539,12 @@ async def update(prompt_id: UUID, body: PromptWrite, actor: Principal) -> dict:
     async with writing() as conn:
         project = await global_project(conn)
         row = await editable(conn, prompt_id, project, body.expectedVersion)
-        if status_of(definition_of(row)) == "archived":
+        stored = definition_of(row)
+        if status_of(stored) == "archived":
             raise refused(409, "archived", "Restore the prompt before editing it")
-        if digest(text, definition) == row["sha256"]:
+        # What the screen does not edit stays: a Gold-imported prompt's catalog rows and its other Gold keys.
+        definition = {**stored, **definition}
+        if snapshot(text, definition) == snapshot(row["text"], stored):
             return {"item": item_view(row), "changed": False}
         await check_codes(conn, project, definition)
         await refuse_duplicate(conn, project, text, definition, prompt_id)

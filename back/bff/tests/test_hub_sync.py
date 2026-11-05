@@ -36,7 +36,7 @@ def gold(**over):
                     {"id": uuid4(), "project_id": w_project, "text": "EV 충전", "surface": 2, "kind": "single", "lang_key": 1,
                      "language": "ko", "regions": None, "targets": ["kia.com/kr/ev"], "in_root_catalog": False, "in_project_catalog": False,
                      "web_reg": True, "unit_file_seq": 7, "unit_key": 70, **TAXA}],
-        "catalog": [], "catalog_expected": 0, "custom_fields": [], "custom_values": [],
+        "catalog": [], "catalog_expected": 0, "custom_fields": [], "custom_values": [], "measured": [],
         "units": [{"project_id": w_project, "file_seq": 7, "lang_codes": ["ko"], "base": "kia.com/kr", "base_src": "decl"}],
         "targets": [{"project_id": w_project, "lang_key": 1, "url_norm": "kia.com/kr/ev", "url": "https://www.kia.com/kr/ev/"}],
         "release": {"release_id": 1},
@@ -198,16 +198,54 @@ class Recorded:
 
     def __init__(self, projects, prompts):
         self.rows = {sync.CURRENT_PROJECTS_SQL: projects, sync.CURRENT_PROMPTS_SQL: prompts, sync.CURRENT_SETS_SQL: []}
-        self.inserts = {}
+        self.inserts, self.published = {}, []
 
     async def execute(self, *args):
         return None
 
     async def fetch(self, query, *args):
-        return self.rows[query]
+        if "publish_reference_source" in query:
+            self.published.append(args[0])
+            return []
+        return self.rows.get(query, [])
 
     async def executemany(self, query, rows):
         self.inserts[query.split("(")[0].split()[-1]] = list(rows)
+
+
+class InputStore(unittest.TestCase):
+    """2026-11-06 (input-002): Gold gives the first values of the families the store owns and of a project's settings, once."""
+
+    def test_first_values_come_from_gold_once(self):
+        g = gold()
+        conn = Recorded({}, {})
+        asyncio.run(sync.record(conn, g, None, {"expect_mass_change": True}, NOW))
+        families = {row[0] for row in conn.inserts["catalog.reference_source"]}
+        self.assertLessEqual(families, set(sync.SOURCE_FAMILIES))
+        self.assertEqual(conn.published, list(sync.SOURCE_FAMILIES))
+        self.assertTrue(set(r[1] for r in conn.inserts["catalog.reference_set"]).isdisjoint(sync.SOURCE_FAMILIES))
+        held = Recorded({}, {})
+        held.rows["SELECT DISTINCT family FROM catalog.reference_source"] = [{"family": f} for f in sync.SOURCE_FAMILIES]
+        asyncio.run(sync.record(held, g, None, {"expect_mass_change": True}, NOW))
+        self.assertEqual((held.inserts["catalog.reference_source"], held.published), ([], []))
+
+    def test_settings_take_what_gold_holds_and_leave_the_rest_empty(self):
+        site, project = uuid4(), uuid4()
+        g = gold()
+        base = {"scope_project_id": uuid4(), "source_project_id": None, "site_id": None, "is_root": False, "site_geo_key": None, "regions": None}
+        g["projects"] = [{**base, "id": site, "surface": 2, "site_brand_bit": 2, "country": "KR"}, {**base, "id": project, "surface": 3, "site_brand_bit": 0, "country": None}]
+        g["units"] = [{"project_id": site, "file_seq": 7, "lang_codes": ["ko"], "base": "kia.com/kr", "base_src": "decl"},
+                      {"project_id": site, "file_seq": 8, "lang_codes": ["en"], "base": "guess.example", "base_src": "heur"}]
+        g["measured"] = [{"project_id": site, "engines": ["gemini", "chatgpt"], "countries": ["KR"]}]
+        g["reference"]["owned_base"] = [{"kind": "base", "prefix": "kia.com/kr", "host": "kia.com", "brand_code": "Kia", "brand_bit": 2, "geo_code": "KR", "language": "ko"},
+                                        {"kind": "base", "prefix": "kia.com/us", "host": "kia.com", "brand_code": "Kia", "brand_bit": 2, "geo_code": "US", "language": "en"}]
+        settings = sync.measurement_settings(g)
+        self.assertEqual(settings[site]["brands"], ["kia"])
+        self.assertEqual(settings[site]["engines"], ["chatgpt", "gemini"])
+        self.assertEqual(settings[site]["owned_urls"], ["kia.com/kr"])
+        self.assertEqual([u["base"] for u in settings[site]["web_units"]], ["kia.com/kr", None])  # an inferred base is left out
+        self.assertEqual((settings[site]["cadence"], settings[site]["acr_repeats"], settings[site]["tracked_urls"], settings[site]["tracked_targets"]), (None, None, [], []))
+        self.assertEqual((settings[project]["brands"], settings[project]["countries"], settings[project]["engines"]), ([], [], []))
 
 
 class HubOwned(unittest.TestCase):

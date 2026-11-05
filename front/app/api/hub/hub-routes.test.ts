@@ -287,7 +287,9 @@ describe("/api/hub/projects/<pid>/…", () => {
     expect(bff.fetch).toHaveBeenLastCalledWith("POST", `/v1/hub/projects/${PID}/prompts`, { token: "tok", body: { text: "A" } });
     expect((await projects.GET(req("GET", `/api/hub/projects/${PID}/prompts/${ID}/history`, { cookie: "tok", origin: null }), pctx(["prompts", ID, "history"]))).status).toBe(200);
     expect(bff.fetch).toHaveBeenLastCalledWith("GET", `/v1/hub/projects/${PID}/prompts/${ID}/history`, { token: "tok", body: undefined });
-    for (const rest of [["prompts", ID], ["prompts", ID, "pause"], ["prompts", ID, "restore"], ["prompt-tags"], ["prompt-fields"], ["prompt-fields", ID, "archive"]]) {
+    expect((await projects.GET(req("GET", `/api/hub/projects/${PID}/measurement`, { cookie: "tok", origin: null }), pctx(["measurement"]))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", `/v1/hub/projects/${PID}/measurement`, { token: "tok", body: undefined });
+    for (const rest of [["prompts", ID], ["prompts", ID, "pause"], ["prompts", ID, "restore"], ["prompt-tags"], ["prompt-fields"], ["prompt-fields", ID, "archive"], ["measurement"]]) {
       expect((await projects.POST(req("POST", `/api/hub/projects/${PID}/${rest.join("/")}`, { body: {}, cookie: "tok" }), pctx(rest))).status).toBe(200);
       expect(bff.fetch).toHaveBeenLastCalledWith("POST", `/v1/hub/projects/${PID}/${rest.join("/")}`, { token: "tok", body: {} });
     }

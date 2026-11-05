@@ -1,9 +1,10 @@
-"""External API (2026-10-28): the current prompts and the values collecting and processing them need,
-read-only, for callers that hold an API key (back/hub_storage/manage.py ext-key-issue).
+"""The prompt and reference API (2026-10-28; SSOT service/prompt-reference-api.md): what 수집 and 분석 read from the input store,
+read-only, for callers that hold an API key (back/hub_storage/manage.py ext-key-issue). A collecting client reads its projects with their
+measurement settings, their prompts and the collecting reference values; an analysis client reads the analysis reference values.
 
-The process reaches only the HUB data DB, as hmg_ext_api, which can read the ext schema and nothing else.
+The process reaches only the input store (hmg_input), as hmg_ext_api, which can read the ext schema and nothing else.
 Every request is one read-only transaction that first sets hgh.key_hash to the sha256 of the presented key.
-The ext views then answer that caller's granted and approved projects and the approved reference families,
+The ext views then answer that caller's granted and approved projects and its audience's approved reference families,
 and nothing at all for an unknown, expired or revoked key. The scope is enforced by the database; this code
 only shapes the rows. Stored definitions keep Gold's encoding (surface 1/2/3, brand bitmasks); responses
 decode them with the HUB code tables (reference families surface and brand_bit), and an unknown code comes
@@ -12,7 +13,10 @@ out as {"code": null, "raw": n} instead of failing the request.
 Change detection: every project, prompt and reference family carries change_seq (commit order) and etag.
 A consumer keeps one after_seq per project. It reads a project from after_seq=0 when it first sees it, when it
 reappears, or when reset_seq is above its after_seq (a grant or approval changed). It reads everything again
-when meta.contract_version changes."""
+when meta.contract_version changes. A project's change_seq and etag cover its definition and its measurement settings together.
+
+The contract is documented by the models in ext/schemas.py: GET /ext/openapi.json, and docs/ssot-staging/service/openapi.json
+(python -m ext.export_openapi)."""
 from __future__ import annotations
 
 import hashlib
@@ -26,15 +30,18 @@ from collections import deque
 from contextlib import asynccontextmanager
 
 import asyncpg
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Path, Query, Request, Security
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from ext import schemas
 
 log = logging.getLogger("hgh.ext")
 
-CONTRACT = "ext-v1"
+CONTRACT = "ext-v2"
 KEY_RE = re.compile(r"hgh_([0-9a-f]{32})_[A-Za-z0-9_-]{43}")
 RATE_PER_MIN = int(os.environ.get("HGH_EXT_RATE_PER_MIN", "120"))     # per key
 CONCURRENCY = int(os.environ.get("HGH_EXT_CONCURRENCY", "4"))         # per key
@@ -44,7 +51,7 @@ STATUS_CODES = {401: "unauthorized", 404: "not_found", 405: "method_not_allowed"
 NO_STORE = {"Cache-Control": "no-store"}
 
 META_SQL = "SELECT client_id,key_id,as_of,hub_reference FROM ext.meta"
-CODES_SQL = "SELECT family,item_key,definition FROM ext.reference_items WHERE family IN ('surface','brand_bit')"
+CODES_SQL = "SELECT family,item_key,definition FROM ext.codes"
 PROJECTS_SQL = "SELECT * FROM ext.projects ORDER BY project_id LIMIT $1"
 PROJECT_SQL = "SELECT * FROM ext.projects WHERE project_id=$1"
 PROMPTS_SQL = "SELECT * FROM ext.prompts WHERE project_id=$1 AND change_seq>$2 ORDER BY change_seq LIMIT $3"
@@ -195,7 +202,7 @@ def project_view(row, codes: Codes, contract: str) -> dict:
     return {**head, "origin": row["origin"], "name": d.get("name"), "surface": codes.surface(d.get("surface")),
             "is_root": d.get("is_root"), "site_brands": codes.brands(d.get("site_brand_bit")), "country": d.get("country"),
             "regions": d.get("regions") or [], "brands": d.get("brands"), "domain": d.get("domain"),
-            "custom_fields": d.get("custom_fields") or [], "web": d.get("web")}
+            "custom_fields": d.get("custom_fields") or [], "measurement": loaded(row["measurement"])}
 
 
 def in_catalog(origin: str, d: dict) -> bool:
@@ -235,7 +242,35 @@ async def lifespan(app: FastAPI):
         await close_pool()
 
 
-app = FastAPI(title="HMG GEO HUB external API", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+DESCRIPTION = """프롬프트·기준정보 원본(서비스 DB)을 읽는 API다. GET만 있다. 지표, 판정, 답변 원문, 회차 · 측정 작업 기록은 주지 않는다.
+
+**호출자 종류.** 키는 호출자 하나에 묶이고, 호출자는 수집 또는 분석이다.
+
+| 호출자 | 읽는 것 |
+|---|---|
+| 수집 | 허용된 프로젝트와 측정 설정, 프롬프트, 수집 기준정보(`engine` · `country` · `language` · `interest_keyword` · `interest_source`) |
+| 분석 | 분석 기준정보(`taxon` · `brand` · `source_override` · `source_seed` · `source_social` · `source_code` · `entity_role` · `surface` · `brand_bit` · `mention_type`) |
+
+**변경 감지.** 모든 변경은 순번 하나(`change_seq`)를 받고, 순번 순서가 커밋 순서다.
+
+- 프롬프트: 프로젝트마다 `after_seq`를 들고 이어 읽는다. 처음 보는 프로젝트나 `reset_seq`가 기준점보다 큰 프로젝트는 0부터 다시 읽는다.
+- 측정 설정: `/ext/v1/projects`의 etag가 바뀐 프로젝트만 `/ext/v1/projects/{id}`를 다시 읽는다.
+- 기준정보: etag가 바뀐 종류만 다시 읽는다.
+- `meta.contract_version`이 바뀌면 전부 다시 읽는다.
+
+**제한.** 키마다 분당 120회, 동시 4개. 넘으면 429와 `Retry-After`를 준다."""
+bearer = HTTPBearer(auto_error=False, description="API 키. `Authorization: Bearer hgh_<key_id>_<secret>`. 서비스 담당자가 발급한다")
+KEYED = [Security(bearer)]
+
+
+def errors(*statuses: int) -> dict:
+    words = {401: "키가 없거나, 모르는 키이거나, 만료 · 폐기된 키", 404: "없거나 이 키로 볼 수 없음", 422: "파라미터가 잘못됨",
+             429: "요청 한도 초과. Retry-After를 본다", 503: "입력 저장소를 읽지 못함"}
+    return {status: {"model": schemas.ErrorResponse, "description": words[status]} for status in statuses}
+
+
+app = FastAPI(title="HMG GEO HUB 프롬프트·기준정보 API", version=CONTRACT, description=DESCRIPTION, lifespan=lifespan, docs_url=None, redoc_url=None,
+              openapi_url="/ext/openapi.json", servers=[{"url": "https://10.0.20.132:8087", "description": "S2W 내부망(10.x)에서만. 자체 서명 인증서"}])
 
 
 def error_response(status: int, message: str, headers=None) -> JSONResponse:
@@ -280,7 +315,7 @@ async def access_log(request: Request, call_next):
     return response
 
 
-@app.get("/ext/healthz")
+@app.get("/ext/healthz", response_model=schemas.Health, summary="상태 확인", tags=["상태"], responses={503: {"model": schemas.Health, "description": "DB에 닿지 않음"}})
 async def healthz():
     """Liveness without names: no database, role or caller details."""
     if _pool is None:
@@ -293,7 +328,8 @@ async def healthz():
     return JSONResponse({"ok": True}, headers=NO_STORE)
 
 
-@app.get("/ext/v1/projects")
+@app.get("/ext/v1/projects", response_model=schemas.ProjectsResponse, dependencies=KEYED, tags=["수집"], summary="허용된 프로젝트 목록",
+         responses=errors(401, 429, 503))
 async def projects(request: Request):
     async with scoped(request) as (conn, meta):
         codes, contract = Codes(await conn.fetch(CODES_SQL)), contract_version(meta)
@@ -303,7 +339,8 @@ async def projects(request: Request):
     return envelope(meta, {"items": items})
 
 
-@app.get("/ext/v1/projects/{project_id}")
+@app.get("/ext/v1/projects/{project_id}", response_model=schemas.ProjectResponse, dependencies=KEYED, tags=["수집"], summary="프로젝트 정보와 측정 설정",
+         responses=errors(401, 404, 422, 429, 503))
 async def project(project_id: uuid.UUID, request: Request):
     async with scoped(request) as (conn, meta):
         codes = Codes(await conn.fetch(CODES_SQL))
@@ -313,8 +350,9 @@ async def project(project_id: uuid.UUID, request: Request):
     return envelope(meta, project_view(row, codes, contract_version(meta)))
 
 
-@app.get("/ext/v1/projects/{project_id}/prompts")
-async def prompts(project_id: uuid.UUID, request: Request, after_seq: int = Query(0, ge=0),
+@app.get("/ext/v1/projects/{project_id}/prompts", response_model=schemas.PromptsResponse, dependencies=KEYED, tags=["수집"],
+         summary="change_seq 순 프롬프트(삭제 표시 포함)", responses=errors(401, 404, 422, 429, 503))
+async def prompts(project_id: uuid.UUID, request: Request, after_seq: int = Query(0, ge=0, description="이 순번 다음부터 읽는다"),
                   limit: int = Query(PAGE_DEFAULT, ge=1, le=PAGE_MAX)):
     async with scoped(request) as (conn, meta):
         if await conn.fetchrow(PROJECT_SQL, project_id) is None:
@@ -327,17 +365,20 @@ async def prompts(project_id: uuid.UUID, request: Request, after_seq: int = Quer
                     next_after_seq=rows[-1]["change_seq"] if rows else after_seq, has_more=more)
 
 
-@app.get("/ext/v1/reference")
+@app.get("/ext/v1/reference", response_model=schemas.FamiliesResponse, dependencies=KEYED, tags=["수집", "분석"], summary="공개된 기준정보 종류",
+         responses=errors(401, 429, 503))
 async def reference(request: Request):
     async with scoped(request) as (conn, meta):
         rows = await conn.fetch(SETS_SQL)
     contract = contract_version(meta)
-    return envelope(meta, {"families": [{"family": r["family"], "source": r["source"], "item_count": r["item_count"],
-                                         "change_seq": r["change_seq"], "etag": etag(contract, r["sha256"])} for r in rows]})
+    return envelope(meta, {"families": [{"family": r["family"], "item_count": r["item_count"], "change_seq": r["change_seq"],
+                                         "etag": etag(contract, r["sha256"])} for r in rows]})
 
 
-@app.get("/ext/v1/reference/{family}")
-async def reference_family(family: str, request: Request, after_key: str = Query("", max_length=2000),
+@app.get("/ext/v1/reference/{family}", response_model=schemas.ReferenceResponse, dependencies=KEYED, tags=["수집", "분석"], summary="기준정보 항목",
+         responses=errors(401, 404, 422, 429, 503))
+async def reference_family(request: Request, family: str = Path(description="기준정보 종류. 호출자 종류에 없는 값은 404"),
+                           after_key: str = Query("", max_length=2000, description="이 키 다음부터 읽는다"),
                            limit: int = Query(PAGE_DEFAULT, ge=1, le=PAGE_MAX)):
     async with scoped(request) as (conn, meta):
         head = await conn.fetchrow(SET_SQL, family)

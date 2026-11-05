@@ -31,7 +31,7 @@ from starlette.datastructures import QueryParams
 from bff.gold_reader import citations as gold_citations
 from bff.gold_reader import db as gold_db
 from bff.gold_reader.context import SQL, Context
-from bff.hub_stores import analytics_db
+from bff.hub_stores import input_db
 from bff.hub_stores.catalog_editor import actors, refused
 from bff.hub_stores.hub_auth import Principal
 
@@ -197,10 +197,10 @@ async def writing():
 @asynccontextmanager
 async def reading():
     try:
-        async with analytics_db.connection() as conn:
+        async with input_db.connection() as conn:
             yield conn
     except ConnectionError:
-        raise HTTPException(503, "HUB data store is not configured") from None
+        raise HTTPException(503, "HUB input store is not configured") from None
 
 
 # ═══ Gold reads (read-only; never under the catalog lock) ════════════════════════════════════════════════

@@ -7,6 +7,9 @@ What it records (external API, 2026-10-28; docs/architecture/hmg-geo-hub-archite
 - catalog.reference_set / reference_item: one set per family, recorded again only when the family changed.
   Only inputs: values people set or registered. Values Gold derived from answers or rules are left out.
 - catalog.sync_run: one row per run with what was read and recorded, or why the run refused.
+- catalog.reference_source (2026-11-06, input store): the first values of the families the service now owns (SOURCE_FAMILIES), once; after
+  that this import leaves them alone and they change only in the store.
+- catalog.project_measurement_version (2026-11-06): version 1 of the measurement settings of a project that has none, from what Gold holds.
 
 Gold reloads its tables one by one, each in its own transaction, so a read during a reload can mix
 generations. Every run therefore checks the read before writing anything, and refuses (records nothing)
@@ -38,6 +41,8 @@ SOURCE_INPUTS = {1: 'override', 2: 'social', 4: 'seed'}
 # of a project with at least PROJECT_REMOVAL_MIN prompts, or new revisions above CHANGE_SHARE refuse the run.
 REMOVAL_MIN, REMOVAL_SHARE, PROJECT_REMOVAL_MIN, PROJECT_REMOVAL_SHARE, CHANGE_SHARE = 20, 0.01, 5, 0.10, 0.05
 CONFIRM_MINUTES = 30
+# The families the input store owns (catalog.reference_source). Gold only gives their first values.
+SOURCE_FAMILIES = ('surface', 'brand_bit', 'mention_type', 'engine', 'country', 'language', 'taxon', 'brand')
 # What people decide (the HUB's once the HUB edited the item): a prompt's text, measurement kind, language, markets, taxonomy, tag
 # values and status; a project's tag columns and the names Gold does not hold. The rest is Gold's (surface, catalogs, website units,
 # in_project_catalog ...). Project status stays Gold's: a project that left Gold is still removed.
@@ -99,6 +104,11 @@ UNITS_SQL = f'''SELECT {IDENTITY} AS project_id,u.file_seq,u.lang_codes,u.base,u
 # Registered target URLs as entered (dim_url.url), keyed the way dim_prompt.targets spells them (url_norm).
 TARGETS_SQL = f'''SELECT {IDENTITY} AS project_id,w.lang_key,u.url_norm,u.url
     FROM gold.web_target_url w JOIN gold.dim_url u USING(url_key) JOIN gold.dim_project d USING(project_key)'''
+# What a project was measured in: the first value of its measurement settings. '' is Gold's placeholder country.
+MEASURED_SQL = f"""SELECT {IDENTITY} AS project_id,array_agg(DISTINCT e.code) FILTER (WHERE coalesce(e.code,'')<>'') AS engines,
+    array_agg(DISTINCT c.code) FILTER (WHERE coalesce(c.code,'')<>'') AS countries
+    FROM gold.job_index j JOIN gold.dim_project d USING(project_key) LEFT JOIN gold.dim_engine e USING(engine_key)
+    LEFT JOIN gold.dim_country c USING(geo_key) GROUP BY 1"""
 VERSIONS_SQL = 'SELECT scope,version FROM gold.data_version ORDER BY scope'
 REFERENCE_SQL = {
     'engine': "SELECT code,is_default FROM gold.dim_engine WHERE coalesce(code,'')<>''",
@@ -127,7 +137,7 @@ async def read_gold(conn, rule_signature):
     """Everything in one repeatable-read snapshot."""
     g = {'versions': {r['scope']: r['version'] for r in await conn.fetch(VERSIONS_SQL)}}
     for name, query in (('projects', PROJECTS_SQL), ('prompts', PROMPTS_SQL), ('custom_fields', CUSTOM_FIELDS_SQL),
-                        ('custom_values', CUSTOM_VALUES_SQL), ('units', UNITS_SQL), ('targets', TARGETS_SQL)):
+                        ('custom_values', CUSTOM_VALUES_SQL), ('units', UNITS_SQL), ('targets', TARGETS_SQL), ('measured', MEASURED_SQL)):
         g[name] = [dict(r) for r in await conn.fetch(query)]
     releases = [dict(r) for r in await conn.fetch(RELEASE_SQL, rule_signature)]
     if len(releases) != 1:
@@ -257,6 +267,37 @@ def prompt_definitions(g):
         if values[p['id']]:
             definition['custom_values'] = values[p['id']]
         out[p['id']] = (p['text'], definition)
+    return out
+
+
+def brands_of(bits):
+    return [code for bit, code in BRAND_BITS.items() if (bits or 0) & bit]
+
+
+def measurement_settings(g):
+    """Project id -> what Gold holds of its measurement settings: the site's brand (for the Global project, the brands of its catalog
+    rows), what it was measured in, its website units with their declared base, and for a website project the owned bases registered
+    for its brand and country. The rest stays empty: Gold does not hold the cadence, the ACR repeats, tracked URLs or tracked targets."""
+    measured = {m['project_id']: m for m in g['measured']}
+    catalog_bits = 0
+    for c in g['catalog']:
+        catalog_bits |= c['brand_bit'] or 0
+    owned, units = defaultdict(list), defaultdict(list)
+    for o in g['reference']['owned_base']:
+        if o['kind'] == 'base':
+            owned[(o['brand_bit'], o['geo_code'])].append(o['prefix'])
+    for u in g['units']:
+        units[u['project_id']].append({'file_seq': u['file_seq'], 'lang_codes': sorted(u['lang_codes'] or []),
+                                       'base': u['base'] if u['base_src'] == 'decl' else None})
+    out = {}
+    for p in g['projects']:
+        m = measured.get(p['id']) or {}
+        out[p['id']] = {'brands': brands_of(catalog_bits if p['surface'] == 1 else p['site_brand_bit']),
+                        'countries': sorted(m.get('countries') or ([p['country']] if p['country'] else [])),
+                        'engines': sorted(m.get('engines') or []), 'cadence': None, 'acr_repeats': None,
+                        'web_units': sorted(units[p['id']], key=lambda u: u['file_seq']),
+                        'owned_urls': sorted(set(owned[(p['site_brand_bit'], p['country'])])) if p['surface'] == 2 else [],
+                        'tracked_urls': [], 'tracked_targets': []}
     return out
 
 
@@ -438,11 +479,17 @@ async def record(data, g, previous, options, now):
         old = old_prompts[uuid.UUID(i)]
         definition = {**old['definition'], 'status': 'removed'}
         prompt_versions.append((uuid.UUID(i), old['version'] + 1, old['text'], encoded(definition), digest(definition, old['text'])))
-    # Reference families: a whole family again only when it changed.
+    # Reference families: a whole family again only when it changed. The families the store owns come from Gold only while they are empty.
     sets = {r['family']: r for r in await data.fetch(CURRENT_SETS_SQL)}
     release = encoded(g['release'])
     new_sets, new_items = [], []
-    for family, items in reference_items(g).items():
+    all_items = reference_items(g)
+    held = {r['family'] for r in await data.fetch('SELECT DISTINCT family FROM catalog.reference_source')}
+    first_families = [family for family in SOURCE_FAMILIES if family not in held]
+    first_sources = [(family, key, encoded(all_items[family][key])) for family in first_families for key in sorted(all_items[family])]
+    for family, items in all_items.items():
+        if family in SOURCE_FAMILIES:
+            continue
         sha = family_digest(items)
         if family in sets and sets[family]['sha256'] == sha:
             continue
@@ -452,6 +499,11 @@ async def record(data, g, previous, options, now):
                          release if source == 'gold' else None))
         new_items += [(set_id, key, encoded(items[key])) for key in sorted(items)]
     counts['new_reference_sets'] = len(new_sets)
+    counts['first_reference_values'] = len(first_sources)
+    has_settings = {r['project_id'] for r in await data.fetch('SELECT DISTINCT project_id FROM catalog.project_measurement_version')}
+    first_settings = [(identity, s['brands'], s['countries'], s['engines'], encoded(s['web_units']), s['owned_urls'], digest(s))
+                      for identity, s in measurement_settings(g).items() if identity not in has_settings]
+    counts['first_measurement_settings'] = len(first_settings)
     # Batch writes keep a 28k prompt catalog from making 80k round trips.
     await data.executemany("INSERT INTO catalog.project(project_id,origin,source_id) VALUES($1,'gold',$1)", new_projects)
     await data.executemany('INSERT INTO catalog.project_version(project_id,version,definition,sha256) VALUES($1,$2,$3::jsonb,$4)', project_versions)
@@ -460,6 +512,11 @@ async def record(data, g, previous, options, now):
     await data.executemany('''INSERT INTO catalog.reference_set(set_id,family,version,item_count,sha256,source,source_release)
         VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)''', new_sets)
     await data.executemany('INSERT INTO catalog.reference_item(set_id,item_key,definition) VALUES($1,$2,$3::jsonb)', new_items)
+    await data.executemany("INSERT INTO catalog.reference_source(family,item_key,definition,origin) VALUES($1,$2,$3::jsonb,'gold_import')", first_sources)
+    for family in first_families:
+        await data.fetch('SELECT * FROM catalog.publish_reference_source($1)', family)
+    await data.executemany("""INSERT INTO catalog.project_measurement_version(project_id,version,brands,countries,engines,web_units,owned_urls,origin,sha256)
+        VALUES($1,1,$2,$3,$4,$5::jsonb,$6,'gold_import',$7)""", first_settings)
     return counts, {'projects': project_candidates, 'prompts': prompt_candidates}
 
 

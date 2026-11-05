@@ -48,7 +48,7 @@ case "${1:-}" in
 bff)
     # Without the HUB env files the BFF reads Gold only and answers the login with 503, so no page opens.
     hub_env=()
-    for f in .env.analytics.local .env.operations.local .env.hub-edit.local; do
+    for f in .env.analytics.local .env.operations.local .env.input.local .env.metrics.local .env.hub-edit.local; do
         [ -f "$f" ] || { echo "$f is missing: run back/hub_storage/manage.py init first" >&2; exit 1; }
         hub_env+=(--env-file "$f")
     done
@@ -59,9 +59,11 @@ bff)
     # The HUB reads and the login reach both stores here; manage.py also runs the Gold import in this container.
     docker network connect hgh-analytics-network hgh-gold-api
     docker network connect hgh-operations-network hgh-gold-api
+    docker network connect hgh-input-network hgh-gold-api
+    docker network connect hgh-metrics-network hgh-gold-api
     for _ in $(seq 60); do
         case "$(curl -fs --max-time 2 http://127.0.0.1:18091/healthz || true)" in
-            *'"database":"gold"'*'"read_only":"on"'*'"analytics":{"ok":true'*'"operations":{"ok":true'*)
+            *'"database":"gold"'*'"read_only":"on"'*'"analytics":{"ok":true'*'"operations":{"ok":true'*'"input":{"ok":true'*)
                 echo 'BFF ready on 127.0.0.1:18091'; exit 0 ;;
         esac
         sleep 0.5
@@ -73,7 +75,7 @@ ext)
     replace hgh-ext-api
     docker run -d --name hgh-ext-api --restart unless-stopped "${logs[@]}" --env-file .env.ext-api.local \
         -e FORWARDED_ALLOW_IPS="$proxy_ip" --network "$ext_net" --ip "$ext_ip" hgh-ext-api:local >/dev/null
-    docker network connect hgh-analytics-network hgh-ext-api
+    docker network connect hgh-input-network hgh-ext-api
     echo 'External API started on hgh-ext-network' ;;
 proxy)
     tls=.local/ext-tls
@@ -99,7 +101,7 @@ print(" ".join(f"{k}={d[k]}" for k in ("projects","prompts","new_project_version
         log "sync FAILED $(printf '%s' "$out" | tail -1 | cut -c1-400)"; exit 1
     fi ;;
 check-sync)
-    hours="$(docker exec hgh-analytics-db psql -X -A -t -U hmg_analytics_reader -d hmg_analytics -c \
+    hours="$(docker exec hgh-input-db psql -X -A -t -U hmg_input_reader -d hmg_input -c \
         "SELECT coalesce(round(extract(epoch FROM now()-max(finished_at))/3600,1)::text,'never')
          FROM catalog.sync_run WHERE result='ok'")"
     limit="${HGH_SYNC_STALE_HOURS:-3}"

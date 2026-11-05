@@ -24,6 +24,7 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from bff import api
+from bff.hub_stores import measurement as hub_measurement
 from bff.hub_stores import project_prompts as hub_prompts
 from bff.screens import screen, split_context
 from bff.screens._convert import as_of_date
@@ -255,13 +256,14 @@ async def project_settings(q) -> dict:
     """What Gold holds of a project's settings: its ids and Scope market setting (dim_project), what it was measured in
     (the projects/list row), its custom tag fields with the values its prompts carry and how many prompts carry one
     (dim_custom_field · prompt_custom_value), and how many prompts name a target URL (dim_prompt.targets). The name,
-    brand, country, owner, own and tracked URLs, competitors and members live in the original operations DB only."""
+    brand, country, owner and members live in the original operations DB only. The measurement settings (brands, countries, engines,
+    cadence, ACR repeats, website units, owned and tracked URLs, tracked brands and models) are the input store's (hub_stores/measurement)."""
     ctx, _ = split_context(q)
     pid = ctx.get("project_id")
     if not is_uuid(pid):
         raise HTTPException(422, "ctx.project_id must be a project id")
-    listing, gate, listed = await asyncio.gather(api.get("gold/projects"), api.get(f"gold/projects/{pid}", {"view": "gate"}),
-                                                 api.get(f"gold/projects/{pid}", {"view": "prompts"}))
+    listing, gate, listed, settings = await asyncio.gather(api.get("gold/projects"), api.get(f"gold/projects/{pid}", {"view": "gate"}),
+                                                           api.get(f"gold/projects/{pid}", {"view": "prompts"}), hub_measurement.read(UUID(pid)))
     project = gate["data"]["project"]
     row = next((r for r in listing["data"]["items"] if r["id"] == pid), None)
     items = listed["data"]["items"]
@@ -276,4 +278,4 @@ async def project_settings(q) -> dict:
                     "prompts": row["prompts"], "answers": row["answers"], "lastMeasuredDay": day_of(row.get("last_measured"))}
     return {"identity": {"projectId": project.get("project_id"), "scopeProjectId": project.get("scope_project_id"),
                          "regions": project.get("regions")},
-            "measured": measured, "fields": fields, "targets": sum(1 for p in items if p["targets"])}
+            "measured": measured, "fields": fields, "targets": sum(1 for p in items if p["targets"]), "measurement": settings}

@@ -1,0 +1,2268 @@
+{
+  "components": {
+    "schemas": {
+      "BrandBitItem": {
+        "description": "brand_bit (분석)",
+        "properties": {
+          "bit": {
+            "title": "Bit",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "bit",
+          "code"
+        ],
+        "title": "BrandBitItem",
+        "type": "object"
+      },
+      "BrandItem": {
+        "description": "brand (분석): 자사 브랜드",
+        "properties": {
+          "bare": {
+            "title": "Bare",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "own_bit": {
+            "title": "Own Bit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "bare",
+          "own_bit"
+        ],
+        "title": "BrandItem",
+        "type": "object"
+      },
+      "CatalogRow": {
+        "properties": {
+          "brand_presence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Presence"
+          },
+          "brands": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/components/schemas/Unknown"
+                }
+              ]
+            },
+            "title": "Brands",
+            "type": "array"
+          },
+          "catalog_row_id": {
+            "title": "Catalog Row Id"
+          },
+          "depth1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth1"
+          },
+          "depth2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth2"
+          },
+          "depth3": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth3"
+          },
+          "depth4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth4"
+          },
+          "funnel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funnel"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "list_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Type"
+          }
+        },
+        "required": [
+          "brands"
+        ],
+        "title": "CatalogRow",
+        "type": "object"
+      },
+      "CountryItem": {
+        "description": "country (수집)",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "hidden_standard": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hidden Standard"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "virtual_brand_bit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Brand Bit"
+          }
+        },
+        "required": [
+          "key",
+          "code"
+        ],
+        "title": "CountryItem",
+        "type": "object"
+      },
+      "CustomField": {
+        "properties": {
+          "archived": {
+            "title": "Archived",
+            "type": "boolean"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "field_id": {
+            "title": "Field Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_id",
+          "label",
+          "archived"
+        ],
+        "title": "CustomField",
+        "type": "object"
+      },
+      "EngineItem": {
+        "description": "engine (수집)",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "is_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Default"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "code"
+        ],
+        "title": "EngineItem",
+        "type": "object"
+      },
+      "EntityRoleItem": {
+        "description": "entity_role (분석): 사람이 정한 역할만 온다. 없는 엔티티는 경쟁사",
+        "properties": {
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "rep_name": {
+            "title": "Rep Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "own",
+              "excluded"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "entity_id",
+          "rep_name",
+          "role"
+        ],
+        "title": "EntityRoleItem",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "enum": [
+              "unauthorized",
+              "not_found",
+              "method_not_allowed",
+              "invalid_value",
+              "rate_limited",
+              "source_unavailable"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "example": {
+          "error": {
+            "code": "unauthorized",
+            "message": "Send Authorization: Bearer <API key>"
+          }
+        },
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "FamiliesResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FamilyList"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "FamiliesResponse",
+        "type": "object"
+      },
+      "FamilyList": {
+        "properties": {
+          "families": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceFamily"
+            },
+            "title": "Families",
+            "type": "array"
+          }
+        },
+        "required": [
+          "families"
+        ],
+        "title": "FamilyList",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "InterestKeywordItem": {
+        "description": "interest_keyword (수집): 글로벌 키워드 카탈로그. brands가 비면 모든 브랜드 공통",
+        "properties": {
+          "brands": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Brands",
+            "type": "array"
+          },
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordCondition"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "source_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Types",
+            "type": "array"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "term_norm": {
+            "title": "Term Norm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "term",
+          "term_norm",
+          "conditions",
+          "source_types",
+          "brands"
+        ],
+        "title": "InterestKeywordItem",
+        "type": "object"
+      },
+      "InterestSourceItem": {
+        "description": "interest_source (수집): 글로벌 소스 URL",
+        "properties": {
+          "brands": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Brands",
+            "type": "array"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "source_key": {
+            "title": "Source Key",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "source_key",
+          "url",
+          "channel",
+          "brands"
+        ],
+        "title": "InterestSourceItem",
+        "type": "object"
+      },
+      "KeywordCondition": {
+        "properties": {
+          "language_code": {
+            "title": "Language Code",
+            "type": "string"
+          },
+          "location_code": {
+            "title": "Location Code",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "location_code",
+          "language_code"
+        ],
+        "title": "KeywordCondition",
+        "type": "object"
+      },
+      "LanguageItem": {
+        "description": "language (수집)",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "code"
+        ],
+        "title": "LanguageItem",
+        "type": "object"
+      },
+      "Measurement": {
+        "description": "측정 설정. 아직 정하지 않은 값은 비어 있다.",
+        "properties": {
+          "acr_repeats": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ACR 측정에서 셀마다 반복하는 횟수",
+            "title": "Acr Repeats"
+          },
+          "brands": {
+            "description": "측정할 브랜드. brand_bit 코드",
+            "items": {
+              "type": "string"
+            },
+            "title": "Brands",
+            "type": "array"
+          },
+          "cadence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "weekly",
+                  "biweekly",
+                  "monthly"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "측정 주기",
+            "title": "Cadence"
+          },
+          "countries": {
+            "description": "측정할 국가. country 코드",
+            "items": {
+              "type": "string"
+            },
+            "title": "Countries",
+            "type": "array"
+          },
+          "engines": {
+            "description": "AI 엔진. engine 코드",
+            "items": {
+              "type": "string"
+            },
+            "title": "Engines",
+            "type": "array"
+          },
+          "owned_urls": {
+            "description": "소유 URL",
+            "items": {
+              "type": "string"
+            },
+            "title": "Owned Urls",
+            "type": "array"
+          },
+          "tracked_targets": {
+            "description": "추적 대상",
+            "items": {
+              "$ref": "#/components/schemas/TrackedTarget"
+            },
+            "title": "Tracked Targets",
+            "type": "array"
+          },
+          "tracked_urls": {
+            "description": "추적 URL",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tracked Urls",
+            "type": "array"
+          },
+          "web_units": {
+            "items": {
+              "$ref": "#/components/schemas/WebUnit"
+            },
+            "title": "Web Units",
+            "type": "array"
+          }
+        },
+        "required": [
+          "brands",
+          "countries",
+          "engines",
+          "cadence",
+          "acr_repeats",
+          "web_units",
+          "owned_urls",
+          "tracked_urls",
+          "tracked_targets"
+        ],
+        "title": "Measurement",
+        "type": "object"
+      },
+      "MentionTypeItem": {
+        "description": "mention_type (분석)",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "code"
+        ],
+        "title": "MentionTypeItem",
+        "type": "object"
+      },
+      "Meta": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "마지막으로 성공한 입력 가져오기 시각",
+            "title": "As Of"
+          },
+          "contract_version": {
+            "description": "계약 버전. 바뀌면 프로젝트 · 프롬프트 · 기준정보를 전부 다시 읽는다",
+            "title": "Contract Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "as_of"
+        ],
+        "title": "Meta",
+        "type": "object"
+      },
+      "Project": {
+        "description": "active가 아닌 프로젝트는 id · status · 순번 · etag만 온다.",
+        "properties": {
+          "brands": {
+            "title": "Brands"
+          },
+          "change_seq": {
+            "title": "Change Seq",
+            "type": "integer"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CustomField"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "커스텀 태그 컬럼. 값은 프롬프트의 custom_values",
+            "title": "Custom Fields"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_root": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Global 카탈로그 프로젝트",
+            "title": "Is Root"
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Measurement"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "측정 설정"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "regions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regions"
+          },
+          "reset_seq": {
+            "title": "Reset Seq",
+            "type": "integer"
+          },
+          "site_brands": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Unknown"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "website 측정 사이트의 브랜드",
+            "title": "Site Brands"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/Unknown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "change_seq",
+          "reset_seq",
+          "etag",
+          "recorded_at"
+        ],
+        "title": "Project",
+        "type": "object"
+      },
+      "ProjectList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectRow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProjectList",
+        "type": "object"
+      },
+      "ProjectResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Project"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ProjectResponse",
+        "type": "object"
+      },
+      "ProjectRow": {
+        "properties": {
+          "change_seq": {
+            "description": "정의 또는 측정 설정이 마지막으로 바뀐 순번",
+            "title": "Change Seq",
+            "type": "integer"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reset_seq": {
+            "description": "이 값이 내가 든 after_seq보다 크면 그 프로젝트의 프롬프트를 0부터 다시 읽는다",
+            "title": "Reset Seq",
+            "type": "integer"
+          },
+          "status": {
+            "description": "active가 아니면 surface가 오지 않는다",
+            "title": "Status",
+            "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/Unknown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "global · website · project",
+            "title": "Surface"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "change_seq",
+          "reset_seq",
+          "etag"
+        ],
+        "title": "ProjectRow",
+        "type": "object"
+      },
+      "ProjectsResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProjectList"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ProjectsResponse",
+        "type": "object"
+      },
+      "Prompt": {
+        "description": "상태는 active · draft · paused · archived · removed다. active가 아니면 id · project_id · status · 순번 · etag만 온다.",
+        "properties": {
+          "brand_presence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Presence"
+          },
+          "catalogs": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CatalogRow"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Global 카탈로그의 브랜드별 행",
+            "title": "Catalogs"
+          },
+          "change_seq": {
+            "title": "Change Seq",
+            "type": "integer"
+          },
+          "custom_values": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "커스텀 태그 값. 키는 custom_fields의 field_id",
+            "title": "Custom Values"
+          },
+          "depth1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth1"
+          },
+          "depth2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth2"
+          },
+          "depth3": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth3"
+          },
+          "depth4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depth4"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "funnel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Funnel"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "in_catalog": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Catalog"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "측정 종류. single · acr",
+            "title": "Kind"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "list_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Type"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "regions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "측정 국가",
+            "title": "Regions"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "draft",
+              "paused",
+              "archived",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/components/schemas/Unknown"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
+          "target_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "타겟 URL(website)",
+            "title": "Target Url"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "unit_file_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "website 측정 단위 번호",
+            "title": "Unit File Seq"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "status",
+          "change_seq",
+          "etag",
+          "recorded_at"
+        ],
+        "title": "Prompt",
+        "type": "object"
+      },
+      "PromptList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Prompt"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PromptList",
+        "type": "object"
+      },
+      "PromptsMeta": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "마지막으로 성공한 입력 가져오기 시각",
+            "title": "As Of"
+          },
+          "contract_version": {
+            "description": "계약 버전. 바뀌면 프로젝트 · 프롬프트 · 기준정보를 전부 다시 읽는다",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_after_seq": {
+            "description": "다음 요청의 after_seq",
+            "title": "Next After Seq",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "contract_version",
+          "as_of",
+          "next_after_seq",
+          "has_more"
+        ],
+        "title": "PromptsMeta",
+        "type": "object"
+      },
+      "PromptsResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PromptList"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PromptsMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "PromptsResponse",
+        "type": "object"
+      },
+      "ReferenceFamily": {
+        "properties": {
+          "change_seq": {
+            "title": "Change Seq",
+            "type": "integer"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "family": {
+            "description": "내 호출자 종류가 읽을 수 있는 기준정보 종류",
+            "title": "Family",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "family",
+          "item_count",
+          "change_seq",
+          "etag"
+        ],
+        "title": "ReferenceFamily",
+        "type": "object"
+      },
+      "ReferenceItems": {
+        "properties": {
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EngineItem"
+                },
+                {
+                  "$ref": "#/components/schemas/CountryItem"
+                },
+                {
+                  "$ref": "#/components/schemas/LanguageItem"
+                },
+                {
+                  "$ref": "#/components/schemas/InterestKeywordItem"
+                },
+                {
+                  "$ref": "#/components/schemas/InterestSourceItem"
+                },
+                {
+                  "$ref": "#/components/schemas/TaxonItem"
+                },
+                {
+                  "$ref": "#/components/schemas/BrandItem"
+                },
+                {
+                  "$ref": "#/components/schemas/SourceOverrideItem"
+                },
+                {
+                  "$ref": "#/components/schemas/SourceSeedItem"
+                },
+                {
+                  "$ref": "#/components/schemas/SourceSocialItem"
+                },
+                {
+                  "$ref": "#/components/schemas/SourceCodeItem"
+                },
+                {
+                  "$ref": "#/components/schemas/EntityRoleItem"
+                },
+                {
+                  "$ref": "#/components/schemas/SurfaceItem"
+                },
+                {
+                  "$ref": "#/components/schemas/BrandBitItem"
+                },
+                {
+                  "$ref": "#/components/schemas/MentionTypeItem"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "family",
+          "items"
+        ],
+        "title": "ReferenceItems",
+        "type": "object"
+      },
+      "ReferenceMeta": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "마지막으로 성공한 입력 가져오기 시각",
+            "title": "As Of"
+          },
+          "change_seq": {
+            "title": "Change Seq",
+            "type": "integer"
+          },
+          "contract_version": {
+            "description": "계약 버전. 바뀌면 프로젝트 · 프롬프트 · 기준정보를 전부 다시 읽는다",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "etag": {
+            "description": "이 종류의 etag. 목록의 etag와 같으면 다시 읽지 않아도 된다",
+            "title": "Etag",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_after_key": {
+            "description": "다음 요청의 after_key",
+            "title": "Next After Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "as_of",
+          "etag",
+          "change_seq",
+          "next_after_key",
+          "has_more"
+        ],
+        "title": "ReferenceMeta",
+        "type": "object"
+      },
+      "ReferenceResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReferenceItems"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ReferenceMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ReferenceResponse",
+        "type": "object"
+      },
+      "SocialMatcher": {
+        "properties": {
+          "boundary": {
+            "title": "Boundary",
+            "type": "boolean"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prefix",
+          "boundary"
+        ],
+        "title": "SocialMatcher",
+        "type": "object"
+      },
+      "SourceCodeItem": {
+        "description": "source_code (분석): 출처 카테고리 13개와 분류 출처 6개",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "category",
+              "layer"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name_en": {
+            "title": "Name En",
+            "type": "string"
+          },
+          "name_ko": {
+            "title": "Name Ko",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "ord": {
+            "title": "Ord",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "code",
+          "number",
+          "name_en",
+          "name_ko",
+          "ord"
+        ],
+        "title": "SourceCodeItem",
+        "type": "object"
+      },
+      "SourceOverrideItem": {
+        "description": "source_override (분석): 도메인 큐레이션",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "skey": {
+            "title": "Skey",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "skey",
+          "category"
+        ],
+        "title": "SourceOverrideItem",
+        "type": "object"
+      },
+      "SourceSeedItem": {
+        "description": "source_seed (분석): 도메인 → 출처 카테고리 시드",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "skey": {
+            "title": "Skey",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "skey",
+          "category"
+        ],
+        "title": "SourceSeedItem",
+        "type": "object"
+      },
+      "SourceSocialItem": {
+        "description": "source_social (분석): 공식 소셜 계정과 URL 매칭 규칙",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "matchers": {
+            "items": {
+              "$ref": "#/components/schemas/SocialMatcher"
+            },
+            "title": "Matchers",
+            "type": "array"
+          },
+          "skey": {
+            "title": "Skey",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "skey",
+          "domain",
+          "category",
+          "matchers"
+        ],
+        "title": "SourceSocialItem",
+        "type": "object"
+      },
+      "SurfaceItem": {
+        "description": "surface (분석)",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "code"
+        ],
+        "title": "SurfaceItem",
+        "type": "object"
+      },
+      "TaxonItem": {
+        "description": "taxon (분석): 프롬프트 분류. path는 상위 코드",
+        "properties": {
+          "axis": {
+            "title": "Axis",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "path": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Path",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "axis",
+          "code",
+          "path"
+        ],
+        "title": "TaxonItem",
+        "type": "object"
+      },
+      "TrackedTarget": {
+        "properties": {
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "모델의 브랜드",
+            "title": "Brand"
+          },
+          "kind": {
+            "description": "경쟁 브랜드 또는 모델",
+            "enum": [
+              "brand",
+              "model"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "TrackedTarget",
+        "type": "object"
+      },
+      "Unknown": {
+        "description": "A stored code the code tables do not know. The request still succeeds.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "null"
+          },
+          "raw": {
+            "title": "Raw",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "raw"
+        ],
+        "title": "Unknown",
+        "type": "object"
+      },
+      "WebUnit": {
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "기준 URL. 선언된 값만 온다",
+            "title": "Base"
+          },
+          "file_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "website 측정 단위 번호. 프롬프트의 unit_file_seq와 같다",
+            "title": "File Seq"
+          },
+          "lang_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lang Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "file_seq",
+          "lang_codes",
+          "base"
+        ],
+        "title": "WebUnit",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "description": "API 키. `Authorization: Bearer hgh_<key_id>_<secret>`. 서비스 담당자가 발급한다",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "프롬프트·기준정보 원본(서비스 DB)을 읽는 API다. GET만 있다. 지표, 판정, 답변 원문, 회차 · 측정 작업 기록은 주지 않는다.\n\n**호출자 종류.** 키는 호출자 하나에 묶이고, 호출자는 수집 또는 분석이다.\n\n| 호출자 | 읽는 것 |\n|---|---|\n| 수집 | 허용된 프로젝트와 측정 설정, 프롬프트, 수집 기준정보(`engine` · `country` · `language` · `interest_keyword` · `interest_source`) |\n| 분석 | 분석 기준정보(`taxon` · `brand` · `source_override` · `source_seed` · `source_social` · `source_code` · `entity_role` · `surface` · `brand_bit` · `mention_type`) |\n\n**변경 감지.** 모든 변경은 순번 하나(`change_seq`)를 받고, 순번 순서가 커밋 순서다.\n\n- 프롬프트: 프로젝트마다 `after_seq`를 들고 이어 읽는다. 처음 보는 프로젝트나 `reset_seq`가 기준점보다 큰 프로젝트는 0부터 다시 읽는다.\n- 측정 설정: `/ext/v1/projects`의 etag가 바뀐 프로젝트만 `/ext/v1/projects/{id}`를 다시 읽는다.\n- 기준정보: etag가 바뀐 종류만 다시 읽는다.\n- `meta.contract_version`이 바뀌면 전부 다시 읽는다.\n\n**제한.** 키마다 분당 120회, 동시 4개. 넘으면 429와 `Retry-After`를 준다.",
+    "title": "HMG GEO HUB 프롬프트·기준정보 API",
+    "version": "ext-v2"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/ext/healthz": {
+      "get": {
+        "description": "Liveness without names: no database, role or caller details.",
+        "operationId": "healthz_ext_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "DB에 닿지 않음"
+          }
+        },
+        "summary": "상태 확인",
+        "tags": [
+          "상태"
+        ]
+      }
+    },
+    "/ext/v1/projects": {
+      "get": {
+        "operationId": "projects_ext_v1_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "키가 없거나, 모르는 키이거나, 만료 · 폐기된 키"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 한도 초과. Retry-After를 본다"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "입력 저장소를 읽지 못함"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "허용된 프로젝트 목록",
+        "tags": [
+          "수집"
+        ]
+      }
+    },
+    "/ext/v1/projects/{project_id}": {
+      "get": {
+        "operationId": "project_ext_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "키가 없거나, 모르는 키이거나, 만료 · 폐기된 키"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "없거나 이 키로 볼 수 없음"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "파라미터가 잘못됨"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 한도 초과. Retry-After를 본다"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "입력 저장소를 읽지 못함"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "프로젝트 정보와 측정 설정",
+        "tags": [
+          "수집"
+        ]
+      }
+    },
+    "/ext/v1/projects/{project_id}/prompts": {
+      "get": {
+        "operationId": "prompts_ext_v1_projects__project_id__prompts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "이 순번 다음부터 읽는다",
+            "in": "query",
+            "name": "after_seq",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "이 순번 다음부터 읽는다",
+              "minimum": 0,
+              "title": "After Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "키가 없거나, 모르는 키이거나, 만료 · 폐기된 키"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "없거나 이 키로 볼 수 없음"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "파라미터가 잘못됨"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 한도 초과. Retry-After를 본다"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "입력 저장소를 읽지 못함"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "change_seq 순 프롬프트(삭제 표시 포함)",
+        "tags": [
+          "수집"
+        ]
+      }
+    },
+    "/ext/v1/reference": {
+      "get": {
+        "operationId": "reference_ext_v1_reference_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamiliesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "키가 없거나, 모르는 키이거나, 만료 · 폐기된 키"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 한도 초과. Retry-After를 본다"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "입력 저장소를 읽지 못함"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "공개된 기준정보 종류",
+        "tags": [
+          "수집",
+          "분석"
+        ]
+      }
+    },
+    "/ext/v1/reference/{family}": {
+      "get": {
+        "operationId": "reference_family_ext_v1_reference__family__get",
+        "parameters": [
+          {
+            "description": "기준정보 종류. 호출자 종류에 없는 값은 404",
+            "in": "path",
+            "name": "family",
+            "required": true,
+            "schema": {
+              "description": "기준정보 종류. 호출자 종류에 없는 값은 404",
+              "title": "Family",
+              "type": "string"
+            }
+          },
+          {
+            "description": "이 키 다음부터 읽는다",
+            "in": "query",
+            "name": "after_key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "이 키 다음부터 읽는다",
+              "maxLength": 2000,
+              "title": "After Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "키가 없거나, 모르는 키이거나, 만료 · 폐기된 키"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "없거나 이 키로 볼 수 없음"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "파라미터가 잘못됨"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 한도 초과. Retry-After를 본다"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "입력 저장소를 읽지 못함"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "기준정보 항목",
+        "tags": [
+          "수집",
+          "분석"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "S2W 내부망(10.x)에서만. 자체 서명 인증서",
+      "url": "https://10.0.20.132:8087"
+    }
+  ]
+}

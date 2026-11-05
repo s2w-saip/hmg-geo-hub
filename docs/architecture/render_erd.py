@@ -164,7 +164,7 @@ class Figure:
 def operations() -> Figure:
     """hmg_operations: back/hub_storage/operations-001.sql … operations-004.sql."""
     f = Figure("ops", 776, "HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
-               "project_reference는 데이터 DB catalog.project와 같은 UUID만 보관한다. "
+               "project_reference는 입력 DB catalog.project와 같은 UUID만 보관한다. "
                "global_role은 계정의 역할과 열람 범위, saved_filter는 계정별 저장한 필터다.")
     f.table("system.project_member", 616, 40, 270, "사용자가 어느 프로젝트에 어떤 역할로 속하는지 담는다.", [
         ("PK FK", "project_id", "uuid"), ("PK FK", "user_id", "uuid"), ("", "role", "=owner|editor|viewer"),
@@ -188,7 +188,7 @@ def operations() -> Figure:
     f.table("system.audit_event", 616, 448, 270, "누가 어느 프로젝트에서 무엇을 했는지 남기는 감사 이력이다.", [
         ("PK", "event_id", "bigint identity"), ("FK", "actor_id", "uuid"), ("FK", "project_id", "uuid"),
         ("", "action", "text"), ("", "details", "jsonb"), ("", "occurred_at", "timestamptz")])
-    f.table("system.project_reference", 930, 236, 254, "데이터 DB catalog.project에 있음을 확인한 프로젝트 UUID 목록이다.", [
+    f.table("system.project_reference", 930, 236, 254, "입력 DB catalog.project에 있음을 확인한 프로젝트 UUID 목록이다.", [
         ("PK", "project_id", "⇢ catalog.project"), ("", "validated_at", "timestamptz")])
     f.table("system.integration", 930, 408, 254, "프로젝트별 GA4·SEO·Gold 연동 설정과 비밀 저장소 참조를 담는다.", [
         ("PK", "integration_id", "uuid"), ("FK", "project_id", "uuid"), ("", "provider", "=ga4|seo|gold"),
@@ -213,9 +213,9 @@ def operations() -> Figure:
 
 
 def catalog() -> Figure:
-    """hmg_analytics catalog / publication / published: back/hub_storage/data-002.sql, -003, -004, -005, -012."""
-    f = Figure("cat", 552, "HUB 데이터 DB의 catalog·publication 스키마 ERD와 published 뷰. 프로젝트와 프롬프트는 "
-               "정체성 행과 버전 행으로 나뉘고, publication.project_access 승인을 통과한 것만 published 뷰에 보인다.")
+    """hmg_input catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
+    f = Figure("cat", 740, "HUB 입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
+               "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "definition", "jsonb"),
         ("", "sha256", "text"), ("", "recorded_at", "timestamptz"), ("", "recorded_by", "⇢ user_account"),
@@ -230,51 +230,42 @@ def catalog() -> Figure:
         ("PK FK", "prompt_id", "uuid"), ("PK", "version", "integer"), ("", "text", "text"),
         ("", "definition", "jsonb"), ("", "sha256", "text"), ("", "recorded_at", "timestamptz"),
         ("", "recorded_by", "⇢ user_account"), ("", "change_seq", "bigint")])
-    f.table("catalog.project_ga4_property", 16, 290, 260, "프로젝트와 GA4 속성의 연결이며, 실제 연동이 확인된 것만 등록한다.", [
-        ("PK FK", "project_id", "uuid"), ("PK FK", "prop_key", "→ ga4_property")])
-    f.table("publication.project_access", 316, 290, 260, "프로젝트별 projects·prompts·ga4·seo 공개 승인 여부와 승인자를 담는다.", [
-        ("PK FK", "project_id", "uuid"), ("", "projects", "boolean"), ("", "prompts", "boolean"),
-        ("", "ga4", "boolean"), ("", "seo", "boolean"), ("", "approved_by", "text"),
+    f.table("catalog.project_measurement_version", 16, 290, 280, "프로젝트 측정 설정을 바꿀 때마다 한 버전을 쌓는다. 최신 버전이 현재 값이다.", [
+        ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "brands", "text[]"), ("", "countries", "text[]"),
+        ("", "engines", "text[]"), ("", "cadence", "=weekly|biweekly|monthly"), ("", "acr_repeats", "integer"), ("", "web_units", "jsonb"),
+        ("", "owned_urls", "text[]"), ("", "tracked_urls", "text[]"), ("", "tracked_targets", "jsonb"), ("", "origin", "=gold_import|hub"),
+        ("", "sha256", "text"), ("", "change_seq", "bigint"), ("", "recorded_at", "timestamptz"), ("", "recorded_by", "⇢ user_account")],
+        notes=["처음 값은 Gold가 가진 값만 · 나머지는 빈칸"])
+    f.table("publication.project_access", 336, 290, 260, "프로젝트별 projects·prompts 공개 승인 여부와 승인자를 담는다.", [
+        ("PK FK", "project_id", "uuid"), ("", "projects", "boolean"), ("", "prompts", "boolean"), ("", "approved_by", "text"),
         ("", "approved_at", "timestamptz"), ("", "access_seq", "bigint")])
     f.fk("project_version", "project_id", "project")
     f.fk("prompt", "project_id", "project")
     f.fk("prompt_version", "prompt_id", "prompt")
-    f.fk("project_ga4_property", "project_id", "project", via=296, to="registered_at")
-    f.fk("project_access", "project_id", "project", x=446)
+    f.fk("project_measurement_version", "project_id", "project", via=306, to="registered_at")
+    f.fk("project_access", "project_id", "project", x=466)
 
     gy = 310
-    views = [["projects", "prompts", "ga4_daily", "ga4_users_window", "ga4_values"],
-             ["ga4_properties", "seo_visibility_daily", "seo_crawl_daily", "seo_device_daily", "seo_priority"],
-             ["urls", "countries", "crawl_bots", "engines"]]
-    g = [f'<rect class="vgrp" x="646" y="{gy}" width="538" height="222" rx="8"/>',
-         f'<text class="m b" x="662" y="{gy + 26}">published.*<tspan class="mu" dx="10">외부 공개 계약 v1 · 뷰 14개</tspan></text>',
-         f'<text class="mu sm" x="662" y="{gy + 46}">hmg_data_external은 이 스키마만 SELECT · 모두 security_barrier 뷰</text>']
-    for col, names in enumerate(views):
-        for i, name in enumerate(names):
-            g.append(f'<text class="m" x="{662 + 180 * col}" y="{gy + 80 + 20 * i}">{name}</text>')
-    prompt_bottom, access_y = f["prompt"].bottom, f["project_access"].y + 50
-    g += [f'<text class="mu sm" x="662" y="{gy + 190}">읽는 곳: catalog.current_* · analytics.ga4_* · analytics.current_page_* · ref.*</text>',
-          f'<text class="mu sm" x="662" y="{gy + 208}">사전 뷰(urls·countries·engines…)는 공개된 측정 행이 쓰는 키만 보인다</text>',
-          f'<path class="e" d="M576,{access_y}H646" marker-end="url(#cat-a)"/>',
-          f'<text class="mu sm" x="611" y="{access_y - 8}" text-anchor="middle">승인분만</text>',
-          f'<path class="e" d="M756,{prompt_bottom}V{gy}" marker-end="url(#cat-a)"/>',
-          f'<text class="mu sm" x="764" y="{(prompt_bottom + gy) // 2 + 4}">current_* 뷰 (최신 버전)</text>']
+    g = [f'<rect class="vgrp" x="646" y="{gy}" width="538" height="150" rx="8"/>',
+         f'<text class="m b" x="662" y="{gy + 26}">catalog.current_*<tspan class="mu" dx="10">최신 버전을 고르는 뷰</tspan></text>',
+         f'<text class="m" x="662" y="{gy + 58}">current_project</text>',
+         f'<text class="m" x="842" y="{gy + 58}">current_prompt</text>',
+         f'<text class="m" x="1022" y="{gy + 58}">current_measurement</text>',
+         f'<text class="mu sm" x="662" y="{gy + 88}">화면 편집 역할과 Gold 가져오기는 버전 행을 더하기만 한다(UPDATE · DELETE 없음)</text>',
+         f'<text class="mu sm" x="662" y="{gy + 108}">측정 설정 API: /ext/v1/projects/{{id}}의 measurement</text>',
+         f'<text class="mu sm" x="662" y="{gy + 128}">프로젝트 change_seq · etag는 정의와 측정 설정을 함께 따른다</text>']
     f.raw("\n".join(g))
     return f
 
 
 def external() -> Figure:
-    """hmg_analytics external API boundary: back/hub_storage/data-005.sql; the HUB's source classification inputs
-    data-007.sql (corrections) and data-008.sql (seeds, official social accounts, code table); its customer-interest
-    inputs data-009.sql (seed keywords, community sources); its entity roles data-010.sql; the service week
-    data-011.sql (a HUB job's record beside the sync log, not exported); the versions of the source classification inputs
-    data-013.sql (one whole-row version per change, written by a trigger)."""
-    f = Figure("ext", 1530, "HUB 데이터 DB의 외부 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 키와 허용 프로젝트를 가지며, "
+    """hmg_input reference values and the prompt and reference API boundary: back/hub_storage/input-001.sql (the structure of data-005, -007
+    ... -010 and -013 as it moved) and input-002.sql (the reference values the store owns, versions of every list, who reads what)."""
+    f = Figure("ext", 1610, "HUB 입력 DB의 기준정보와 프롬프트·기준정보 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 수집 또는 분석으로 키와 허용 프로젝트를 가지며, "
                "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 "
                "출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과 그 버전, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, "
                "Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · "
-               "interest_keyword · interest_source · entity_role로 발행된다. 엔티티 역할 옆의 service_week는 Global · Website 화면이 Gold를 읽는 마지막 주"
-               "(서비스 기준 주)의 이력이고, HUB 작업이 쓰며 외부 API로 나가지 않는다.")
+               "interest_keyword · interest_source · entity_role로 발행된다. 엔티티 역할 옆의 reference_source는 관리 화면이 없는 기준정보 8종의 원본이다.")
     f.table("catalog.reference_set", 16, 40, 280, "기준값 한 종류의 한 버전이다. 하나라도 바뀌면 그 종류 전체를 새 set으로 쌓는다.", [
         ("PK", "set_id", "uuid"), ("UK", "family", "text"), ("UK", "version", "integer"), ("", "item_count", "integer"),
         ("", "sha256", "text"), ("", "source", "=gold|hub|hub_edit"), ("", "source_release", "jsonb"), ("", "change_seq", "bigint"),
@@ -294,7 +285,7 @@ def external() -> Figure:
         ("", "created_at", "timestamptz"), ("", "expires_at", "timestamptz"), ("", "revoked_at", "timestamptz"),
         ("", "revoked_by", "text"), ("", "revoke_reason", "text")], notes=["호출자당 유효 키 ≤ 2 (관리 명령)"])
     f.table("publication.api_client", 336, y2, 250, "외부 API를 부르는 시스템 하나다. 비활성이면 모든 키가 막힌다.", [
-        ("PK", "client_id", "uuid"), ("UK", "name", "text"), ("", "status", "=active|disabled"),
+        ("PK", "client_id", "uuid"), ("UK", "name", "text"), ("", "status", "=active|disabled"), ("", "audience", "=collect|analyze"),
         ("", "created_by", "text"), ("", "created_at", "timestamptz")])
     f.table("publication.api_client_project", 626, y2, 270, "호출자에게 허용한 프로젝트다. 회수해도 행은 남고 revoked_at이 찍힌다.", [
         ("PK FK", "client_id", "uuid"), ("PK FK", "project_id", "→ catalog.project"), ("", "granted_by", "text"),
@@ -337,17 +328,18 @@ def external() -> Figure:
         ("PK", "entity_id", "uuid"), ("", "rep_name", "text"), ("", "role", "=own|excluded"), ("", "brand", "text"), ("", "note", "text"),
         ("", "status", "=active|cleared"), ("", "origin", "=gold_import|hub"), ("", "updated_at", "timestamptz"),
         ("", "updated_by", "uuid")], notes=["활성 행 → set entity_role"])
-    # the service week (data-011): written by manage.py sync-service-week, read by the BFF; not exported
-    f.table("catalog.service_week", 336, y5, 250, "화면이 Gold를 읽는 마지막 주와 회차다. 바뀔 때만 한 행을 쌓고, 지우지 않는다.", [
-        ("PK", "seq", "bigint identity"), ("", "week_start", "date (월요일)"), ("", "global_cycles", "uuid[]"),
-        ("", "website_cycles", "uuid[]"), ("", "gold_release", "jsonb"), ("", "gold_versions", "jsonb"),
-        ("", "recorded_at", "timestamptz"), ("", "checked_at", "timestamptz")],
-        notes=["최신 행 = current_service_week 뷰", "같은 주를 다시 확인하면 checked_at만"])
-    # the versions of the four source classification tables (data-013): same shape, written by their trigger only
-    f.table("catalog.source_*_version", 626, y5, 270, "출처 분류 네 표의 버전이다. 바뀔 때마다 행 전체를 한 버전으로 쌓는다.", [
-        ("PK FK", "(표마다 키)", "text"), ("PK", "version", "integer"), ("", "(그 표의 값 열 전부)", "…"),
+    # engine, country, language, taxon, brand and the code tables (input-002): first values from Gold once, then the store's own
+    f.table("catalog.reference_source", 336, y5, 250, "관리 화면이 없는 기준정보 8종의 원본이다. Gold는 처음 값만 준다.", [
+        ("PK", "family", "text"), ("PK", "item_key", "text"), ("", "definition", "jsonb"), ("", "status", "=active|stopped"),
+        ("", "origin", "=gold_import|hub"), ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz"), ("", "updated_by", "uuid")],
+        notes=["engine · country · language", "taxon · brand · 코드표 3종", "활성 행 → set(종류마다)"])
+    # the versions of every list (data-013, input-002): same shape, written by their trigger only
+    f.table("catalog.*_version", 626, y5, 270, "목록 여덟 표의 버전이다. 바뀔 때마다 행 전체를 한 버전으로 쌓는다.", [
+        ("PK FK", "(표마다 키)", "text"), ("PK", "version", "integer"), ("", "(그 표의 값 컬럼 전부)", "…"),
         ("", "recorded_at", "timestamptz"), ("", "recorded_by", "uuid"), ("", "change_seq", "bigint")],
         notes=["트리거만 씀 · 최신 버전 = 현재 행", "고치거나 지우는 계정 없음"])
+    f.table("publication.reference_family", 936, y5, 248, "API 계약의 15종과 읽는 쪽이다. 나머지 종류는 나가지 않는다.", [
+        ("PK", "family", "text"), ("", "audience", "=collect|analyze")], notes=["수집 5종 · 분석 10종"])
     f.fk("source_override_event", "skey", "source_override", to="skey")
     f.fk("reference_item", "set_id", "reference_set")
     f.fk("api_key", "client_id", "api_client")
@@ -356,9 +348,9 @@ def external() -> Figure:
     gx, gy, gh = 936, y2, 266
     access_y, grant_y = f["reference_access"].row("access_seq"), f["api_client_project"].row("grant_seq")
     g = [f'<rect class="vgrp" x="{gx}" y="{gy}" width="248" height="{gh}" rx="8"/>',
-         f'<text class="m b" x="{gx + 16}" y="{gy + 26}">ext.*<tspan class="mu" dx="10">외부 API 계약 · 뷰 6개</tspan></text>',
+         f'<text class="m b" x="{gx + 16}" y="{gy + 26}">ext.*<tspan class="mu" dx="10">API 계약 · 뷰 7개</tspan></text>',
          f'<text class="mu sm" x="{gx + 16}" y="{gy + 46}">hmg_ext_api만 SELECT · security_barrier</text>']
-    for i, name in enumerate(("caller", "meta", "projects", "prompts", "reference_sets", "reference_items")):
+    for i, name in enumerate(("caller", "meta", "codes", "projects", "prompts", "reference_sets", "reference_items")):
         g.append(f'<text class="m" x="{gx + 16 + 116 * (i % 2)}" y="{gy + 78 + 20 * (i // 2)}">{name}</text>')
     g += [f'<text class="mu sm" x="{gx + 16}" y="{gy + 160}">트랜잭션마다 hgh.key_hash =</text>',
           f'<text class="mu sm" x="{gx + 16}" y="{gy + 178}">키 원문의 sha256</text>',
@@ -369,6 +361,52 @@ def external() -> Figure:
           f'<text class="mu sm" x="916" y="{grant_y - 8}" text-anchor="middle">허용분</text>',
           f'<path class="e" d="M896,{access_y}H916V{gy + 30}H{gx}" marker-end="url(#ext-a)"/>',
           f'<text class="mu sm" x="906" y="{access_y - 8}" text-anchor="middle">승인분</text>']
+    f.raw("\n".join(g))
+    return f
+
+
+def left_behind() -> Figure:
+    """What stays in hmg_analytics catalog / publication / published after the move: data-002, -003, -011, -014."""
+    f = Figure("left", 360, "HUB 데이터 DB에 남은 catalog · published. 서비스 기준 주, GA4 속성 연결, DB 직접 공개 뷰다. 입력 테이블의 옛 사본은 쓰기를 막아 두었다.")
+    f.table("catalog.service_week", 16, 40, 280, "화면이 Gold를 읽는 마지막 주와 회차다. 바뀔 때만 한 행을 쌓고, 지우지 않는다.", [
+        ("PK", "seq", "bigint identity"), ("", "week_start", "date (월요일)"), ("", "global_cycles", "uuid[]"),
+        ("", "website_cycles", "uuid[]"), ("", "gold_release", "jsonb"), ("", "gold_versions", "jsonb"),
+        ("", "recorded_at", "timestamptz"), ("", "checked_at", "timestamptz")],
+        notes=["최신 행 = current_service_week 뷰", "같은 주를 다시 확인하면 checked_at만"])
+    f.table("catalog.project_ga4_property", 336, 40, 260, "프로젝트와 GA4 속성의 연결이며, 실제 연동이 확인된 것만 등록한다.", [
+        ("PK FK", "project_id", "uuid"), ("PK FK", "prop_key", "→ ga4_property")])
+    gy = 40
+    views = [["projects", "prompts", "ga4_daily", "ga4_users_window", "ga4_values"],
+             ["ga4_properties", "seo_visibility_daily", "seo_crawl_daily", "seo_device_daily", "seo_priority"],
+             ["urls", "countries", "crawl_bots", "engines"]]
+    g = [f'<rect class="vgrp" x="646" y="{gy}" width="538" height="222" rx="8"/>',
+         f'<text class="m b" x="662" y="{gy + 26}">published.*<tspan class="mu" dx="10">DB 직접 공개(미개방) · 뷰 14개</tspan></text>',
+         f'<text class="mu sm" x="662" y="{gy + 46}">hmg_data_external은 이 스키마만 SELECT · 모두 security_barrier 뷰</text>']
+    for col, names in enumerate(views):
+        for i, name in enumerate(names):
+            g.append(f'<text class="m" x="{662 + 180 * col}" y="{gy + 80 + 20 * i}">{name}</text>')
+    g += [f'<text class="mu sm" x="662" y="{gy + 190}">읽는 곳: 동결한 catalog · publication 사본, analytics.ga4_* · analytics.current_page_* · ref.*</text>',
+          f'<text class="mu sm" x="662" y="{gy + 208}">T12에서 동결 사본과 함께 정리한다</text>']
+    f.raw("\n".join(g))
+    return f
+
+
+def metrics() -> Figure:
+    """hmg_metrics gold / cache: back/hub_storage/metrics-001.sql; SSOT service/cache-db.md."""
+    f = Figure("metrics", 330, "HUB 지표 DB의 cache · gold 스키마. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.")
+    f.table("cache.query_result", 16, 40, 320, "필터 조회 결과다. 조회 조건마다 한 행이고 UNLOGGED이며 백업하지 않는다.", [
+        ("PK", "cache_key", "text sha256"), ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "query", "jsonb"),
+        ("", "result", "jsonb"), ("", "created_at", "timestamptz")],
+        notes=["키 = 조회 조건 + 스냅샷 ID + 정의 버전", "TTL 없음 · 새 운영 스냅샷에 이전 행 삭제"])
+    f.table("gold.schema_migration", 376, 40, 240, "이 DB에 적용한 마이그레이션 파일과 체크섬을 기록한다.", [
+        ("PK", "version", "text"), ("", "sha256", "text"), ("", "installed_at", "timestamptz")])
+    gy = 40
+    g = [f'<rect class="vgrp" x="656" y="{gy}" width="528" height="170" rx="8"/>',
+         f'<text class="m b" x="672" y="{gy + 26}">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>',
+         f'<text class="m" x="672" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="842" y="{gy + 58}">BFF 읽기 · gold, cache SELECT</text>',
+         f'<text class="m" x="672" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="842" y="{gy + 82}">BFF 캐시 · query_result 읽기 · 쓰기</text>',
+         f'<text class="m" x="672" y="{gy + 106}">hmg_rollup_writer</text><text class="mu sm" x="842" y="{gy + 106}">사전 집계 작업 · gold 쓰기 (T5.3)</text>',
+         f'<text class="mu sm" x="672" y="{gy + 142}">사전 집계 테이블은 T5.3에서 gold에 더한다</text>']
     f.raw("\n".join(g))
     return f
 
@@ -511,7 +549,7 @@ def ref() -> Figure:
     return f
 
 
-FIGURES = (operations, catalog, external, ga4, seo, ref)
+FIGURES = (operations, catalog, external, ga4, seo, ref, left_behind, metrics)
 
 
 def render() -> dict[str, str]:

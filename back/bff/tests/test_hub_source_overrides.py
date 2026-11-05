@@ -188,7 +188,7 @@ class Routes(unittest.TestCase):
         hub_auth.limiter.failures.clear()
         for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(hub_auth.operations_db, "connection", accounts),
-                  mock.patch.object(so.analytics_db, "connection", data),
+                  mock.patch.object(so.input_db, "connection", data),
                   mock.patch.object(so, "actors", actors),
                   mock.patch.object(so, "gold_list", gold_list),
                   mock.patch.object(so, "gold_check", gold_check),

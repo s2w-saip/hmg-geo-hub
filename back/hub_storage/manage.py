@@ -1,4 +1,4 @@
-"""Manage separate HUB operations/data stores without recreating the analytics volume."""
+"""Manage the separate HUB stores (operations, data, input, metrics) without recreating the analytics volume."""
 from __future__ import annotations
 
 import argparse
@@ -8,11 +8,15 @@ import json
 import os
 import re
 import secrets
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import NamedTuple
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -31,17 +35,38 @@ INTEREST_SECRET = ROOT / '.env.interest-db.local'  # customer-interest editor ro
 ENTITY_ROLE_SECRET = ROOT / '.env.entity-role-db.local'  # entity role editor role password (data DB)
 PROJECT_EDITOR_SECRET = ROOT / '.env.project-editor-db.local'  # project prompt editor role password (data DB)
 SERVICE_WEEK_SECRET = ROOT / '.env.service-week-db.local'  # service week job role password (data DB; manage.py only, never the API)
+INPUT_SECRET = ROOT / '.env.input-db.local'        # input store (2026-11-06): admin, API reader and measurement editor passwords
+METRICS_SECRET = ROOT / '.env.metrics-db.local'    # metrics store (2026-11-06): admin, API reader, cache and rollup passwords
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'hmg_operations'
+
+
+class Store(NamedTuple):
+    container: str
+    database: str
+    admin: str
+    owner: str
+    secret: Path
+    port_key: str
+    migrations: str  # the schema of its schema_migration table
+
+
+STORES = {
+    'analytics': Store(analytics.CONTAINER, analytics.DB, analytics.ADMIN, analytics.OWNER, analytics.SECRET, 'HGH_ANALYTICS_DB_PORT', 'ops'),
+    'operations': Store(OPS_CONTAINER, OPS_DB, 'hmg_operations_admin', 'hmg_operations_owner', OPS_SECRET, 'HGH_OPERATIONS_DB_PORT', 'system'),
+    'input': Store('hgh-input-db', 'hmg_input', 'hmg_input_admin', 'hmg_input_owner', INPUT_SECRET, 'HGH_INPUT_DB_PORT', 'catalog'),
+    'metrics': Store('hgh-metrics-db', 'hmg_metrics', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'gold'),
+}
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
 # open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
 PROJECT_FLAGS = ('projects', 'prompts')
 # source_override, source_seed, source_social and source_code (2026-10-30) are the HUB's own source classification
 # inputs, interest_keyword and interest_source (2026-11-02) its customer-interest collection inputs, entity_role
 # (2026-11-02) its entity roles (source hub_edit), approved like the Gold families.
-REFERENCE_FAMILIES = ('engine', 'region', 'country', 'language', 'taxon', 'brand', 'entity', 'source_category',
-                      'source', 'owned_base', 'crawl_bot', 'keyword', 'perspective', 'population', 'source_override',
-                      'source_seed', 'source_social', 'source_code', 'interest_keyword', 'interest_source', 'entity_role')
+# Since 2026-11-06 only the families of the contract (SSOT service/prompt-reference-api.md) can be opened.
+REFERENCE_FAMILIES = ('engine', 'country', 'language', 'interest_keyword', 'interest_source', 'taxon', 'brand', 'source_override',
+                      'source_seed', 'source_social', 'source_code', 'entity_role')
+AUDIENCES = ('collect', 'analyze')  # 수집 reads prompts, settings and the collecting values; 분석 reads the analysis values
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
 CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
@@ -49,7 +74,8 @@ CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB edito
 
 def sanitize(message):
     for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, GA4_REGISTRY_SECRET,
-                 SOURCE_OVERRIDE_SECRET, INTEREST_SECRET, ENTITY_ROLE_SECRET, SERVICE_WEEK_SECRET, analytics.SECRET):
+                 SOURCE_OVERRIDE_SECRET, INTEREST_SECRET, ENTITY_ROLE_SECRET, SERVICE_WEEK_SECRET, PROJECT_EDITOR_SECRET,
+                 INPUT_SECRET, METRICS_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -64,29 +90,38 @@ def run(args, text=None, check=True):
     return result
 
 
-def sql(query, operations=False, role=None, check=True):
-    container, database, admin = (OPS_CONTAINER, OPS_DB, 'hmg_operations_admin') if operations else (
-        analytics.CONTAINER, analytics.DB, analytics.ADMIN)
-    if analytics.NATIVE:   # native mode (back/analytics/manage.py): the store's local server
-        store, port = ('operations', ops_port()) if operations else ('analytics', data_port())
-        return run(analytics.native_psql(store, port, role or admin, database), text=query, check=check)
-    return run(['docker', 'exec', '-i', container, 'psql', '-X', '-q', '-A', '-t', '-v',
-                'ON_ERROR_STOP=1', '-U', role or admin, '-d', database], text=query, check=check)
+def port_of(store):
+    return analytics.port_of(STORES[store].secret, STORES[store].port_key)
+
+
+def psql_args(store, role=None):
+    """The psql command for a store: its local server's socket in native mode, inside its container otherwise."""
+    s = STORES[store]
+    if analytics.NATIVE:
+        return analytics.native_psql(store, port_of(store), role or s.admin, s.database)
+    return ['docker', 'exec', '-i', s.container, 'psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-U', role or s.admin, '-d', s.database]
+
+
+def sql(query, operations=False, role=None, check=True, store=None):
+    return run(psql_args(store or ('operations' if operations else 'analytics'), role), text=query, check=check)
+
+
+def isql(query, **options):
+    """The input store: prompts, settings, reference values, API policy (2026-11-06)."""
+    return sql(query, store='input', **options)
 
 
 def ops_port():
-    return analytics.port_of(OPS_SECRET, 'HGH_OPERATIONS_DB_PORT')
+    return port_of('operations')
 
 
 def data_port():
-    return analytics.port_of(analytics.SECRET, 'HGH_ANALYTICS_DB_PORT')
+    return port_of('analytics')
 
 
 def service_host(store):
     """Where the API reaches a store: the container on its Docker network, or this host in native mode."""
-    if analytics.NATIVE:
-        return f'127.0.0.1:{ops_port() if store == "operations" else data_port()}'
-    return f'{OPS_CONTAINER}:5432' if store == 'operations' else f'{analytics.CONTAINER}:5432'
+    return f'127.0.0.1:{port_of(store)}' if analytics.NATIVE else f'{STORES[store].container}:5432'
 
 
 def api_python(script):
@@ -94,7 +129,6 @@ def api_python(script):
     if analytics.NATIVE:
         gold = ROOT / '.env.gold.local'
         env = {**os.environ, **(analytics.env_file(gold) if gold.exists() else {})}
-        import subprocess
         out = subprocess.run([sys.executable, '-'], input=script.encode(), capture_output=True, env=env)
         if out.returncode:
             raise RuntimeError(sanitize(out.stderr.decode(errors='replace')[-2500:]))
@@ -102,9 +136,9 @@ def api_python(script):
     return run(['docker', 'exec', '-i', 'hgh-gold-api', 'python', '-'], text=script).stdout
 
 
-def create_secret(path, fields, volume=None):
+def create_secret(path, fields, volume=None, store='operations'):
     if not path.exists():
-        stored = volume and (analytics.native_exists('operations') if analytics.NATIVE
+        stored = volume and (analytics.native_exists(store) if analytics.NATIVE
                              else run(['docker', 'volume', 'inspect', volume], check=False).returncode == 0)
         if stored:
             raise RuntimeError(f'{volume} exists; restore {path.name}. No existing credentials/data were changed.')
@@ -116,20 +150,20 @@ def create_secret(path, fields, volume=None):
     return values
 
 
-def migrate(filename, version, operations=False):
-    namespace = 'system' if operations else 'ops'
+def migrate(filename, version, operations=False, store=None):
+    name = store or ('operations' if operations else 'analytics')
+    namespace, owner = STORES[name].migrations, STORES[name].owner
     query = (HERE / filename).read_text(encoding='utf8')
     checksum = hashlib.sha256(query.encode()).hexdigest()
-    exists = sql(f"SELECT to_regclass('{namespace}.schema_migration') IS NOT NULL;", operations).stdout.strip() == 't'
-    installed = sql(f"SELECT sha256 FROM {namespace}.schema_migration WHERE version={analytics.literal(version)};", operations).stdout.strip() if exists else ''
+    exists = sql(f"SELECT to_regclass('{namespace}.schema_migration') IS NOT NULL;", store=name).stdout.strip() == 't'
+    installed = sql(f"SELECT sha256 FROM {namespace}.schema_migration WHERE version={analytics.literal(version)};", store=name).stdout.strip() if exists else ''
     if installed:
         if installed != checksum:
             raise RuntimeError(f'Installed {version} checksum differs; add a new migration instead')
         print(f'{version}: already installed; rows preserved')
         return
-    owner = 'hmg_operations_owner' if operations else analytics.OWNER
     sql(f'BEGIN; SELECT pg_advisory_xact_lock(617427412); SET LOCAL ROLE {owner};\n' + query +
-        f"\nINSERT INTO {namespace}.schema_migration(version,sha256) VALUES({analytics.literal(version)},{analytics.literal(checksum)}); COMMIT;", operations)
+        f"\nINSERT INTO {namespace}.schema_migration(version,sha256) VALUES({analytics.literal(version)},{analytics.literal(checksum)}); COMMIT;", store=name)
     print(f'{version}: installed')
 
 
@@ -146,6 +180,11 @@ def initialize():
     else:
         start_operations_container()
     install(values)
+    install_input()
+    install_metrics()
+    move_input()
+    write_env_files()
+    status()
 
 
 def start_operations_container():
@@ -362,41 +401,212 @@ COMMIT;""")
     # Source list versions (2026-11-03): every change of the 인용 출처 분류 inputs is one whole-row version (a trigger;
     # no new role, the screen's role only reads them).
     migrate('data-013.sql', '013_source_versions')
+
+
+# ═══ the input and metrics stores (2026-11-06) ═══════════════════════════════════════════════════════════════════════════════
+
+def start_store(store):
+    """The store's server: a local one in native mode, its own container otherwise."""
+    s = STORES[store]
+    values = analytics.env_file(s.secret)
+    if analytics.NATIVE:
+        analytics.native_start(store, int(values[s.port_key]), s.admin, s.database, values['POSTGRES_PASSWORD'])
+        return
+    run(['docker', 'compose', '--env-file', str(s.secret), '-f', str(ROOT / f'infra/{store}/compose.yml'), 'up', '-d'])
+    for _ in range(90):
+        ready = run(['docker', 'inspect', s.container, '--format', '{{.State.Health.Status}}'], check=False)
+        if ready.returncode == 0 and ready.stdout.strip() == 'healthy':
+            return
+        time.sleep(.5)
+    raise RuntimeError(f'The {store} DB did not become ready')
+
+
+def login_role(name, password, *settings):
+    """Create the role if missing and (re)set its limits. Passwords travel over psql stdin, never argv."""
+    return (f"DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='{name}') THEN CREATE ROLE {name} LOGIN; END IF; END $$;\n"
+            f"ALTER ROLE {name} WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(password)};\n"
+            + ''.join(f'ALTER ROLE {name} {setting};\n' for setting in settings))
+
+
+def store_database(store, logins):
+    """The database belongs to the store's owner role and only the named roles may connect to it."""
+    s = STORES[store]
+    return f"""DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='{s.owner}') THEN CREATE ROLE {s.owner} NOLOGIN; END IF; END $$;
+ALTER DATABASE {s.database} OWNER TO {s.owner};
+REVOKE ALL ON DATABASE {s.database} FROM PUBLIC;
+REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
+REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;
+GRANT CONNECT ON DATABASE {s.database} TO {','.join(logins)};
+"""
+
+
+def install_input():
+    """The input store. The roles keep the names they have on the data server, with the passwords already in their secret files, so
+    only the host in their connections changes."""
+    values = create_secret(INPUT_SECRET, {'HGH_INPUT_DB_PORT': '55438', 'POSTGRES_PASSWORD': None, 'INPUT_READER_PASSWORD': None,
+                                          'MEASUREMENT_EDITOR_PASSWORD': None}, 'hgh-input-pgdata', 'input')
+    start_store('input')
+    env = analytics.env_file
+    editor = ("SET statement_timeout='15s'", 'CONNECTION LIMIT 4')
+    roles = [login_role('hmg_input_reader', values['INPUT_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'"),
+             login_role('hmg_measurement_editor', values['MEASUREMENT_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_catalog_writer', env(DATA_SECRET)['CATALOG_WRITER_PASSWORD'], "SET statement_timeout='60s'"),
+             login_role('hmg_catalog_editor', env(EDIT_SECRET)['CATALOG_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_interest_editor', env(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_entity_role_editor', env(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_ext_api', env(EXT_SECRET)['EXT_API_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='10s'",
+                        "SET idle_in_transaction_session_timeout='15s'", 'SET search_path=ext', 'CONNECTION LIMIT 8')]
+    logins = ['hmg_input_reader', 'hmg_measurement_editor', 'hmg_catalog_writer', 'hmg_catalog_editor', 'hmg_project_editor',
+              'hmg_source_override_editor', 'hmg_interest_editor', 'hmg_entity_role_editor', 'hmg_ext_api']
+    isql('BEGIN;\n' + ''.join(roles) + store_database('input', logins) + 'COMMIT;')
+    migrate('input-001.sql', '001_input_store', store='input')
+    migrate('input-002.sql', '002_measurement_reference_contract', store='input')
+
+
+def install_metrics():
+    """The metrics store: Gold (pre-computed values) and the cache DB, both the BFF's own."""
+    values = create_secret(METRICS_SECRET, {'HGH_METRICS_DB_PORT': '55439', 'POSTGRES_PASSWORD': None, 'METRICS_READER_PASSWORD': None,
+                                            'CACHE_WRITER_PASSWORD': None, 'ROLLUP_WRITER_PASSWORD': None}, 'hgh-metrics-pgdata', 'metrics')
+    start_store('metrics')
+    logins = ['hmg_metrics_reader', 'hmg_cache_writer', 'hmg_rollup_writer']
+    sql('BEGIN;\n' + login_role('hmg_metrics_reader', values['METRICS_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'")
+        + login_role('hmg_cache_writer', values['CACHE_WRITER_PASSWORD'], "SET statement_timeout='30s'", 'CONNECTION LIMIT 4')
+        + login_role('hmg_rollup_writer', values['ROLLUP_WRITER_PASSWORD'], "SET statement_timeout='10min'", 'CONNECTION LIMIT 2')
+        + store_database('metrics', logins) + 'COMMIT;', store='metrics')
+    migrate('metrics-001.sql', '001_gold_cache', store='metrics')
+
+
+# Everything the inputs were in the data DB. catalog.service_week, catalog.project_ga4_property and published.* stay there.
+MOVED_TABLES = ('catalog.project', 'catalog.project_version', 'catalog.prompt', 'catalog.prompt_version', 'catalog.reference_set',
+                'catalog.reference_item', 'catalog.sync_run', 'catalog.source_override', 'catalog.source_override_event',
+                'catalog.source_override_version', 'catalog.source_seed', 'catalog.source_seed_event', 'catalog.source_seed_version',
+                'catalog.source_social', 'catalog.source_social_event', 'catalog.source_social_version', 'catalog.source_code',
+                'catalog.source_code_event', 'catalog.source_code_version', 'catalog.interest_keyword', 'catalog.interest_keyword_event',
+                'catalog.interest_source', 'catalog.interest_source_event', 'catalog.entity_role', 'catalog.entity_role_event',
+                'publication.project_access', 'publication.reference_access', 'publication.api_client', 'publication.api_key',
+                'publication.api_client_project')
+MOVE_FINGERPRINTS = ("SELECT md5(string_agg(prompt_id::text||version||sha256||change_seq,'' ORDER BY prompt_id,version)) FROM catalog.prompt_version",
+                     "SELECT md5(string_agg(project_id::text||version||sha256||change_seq,'' ORDER BY project_id,version)) FROM catalog.project_version",
+                     "SELECT md5(string_agg(set_id::text||item_key||definition::text,'' ORDER BY set_id,item_key)) FROM catalog.reference_item",
+                     "SELECT md5(string_agg(key_hash,'' ORDER BY key_hash)) FROM publication.api_key")
+
+
+def columns_of(table, store):
+    schema, name = table.split('.')
+    out = sql(f"""SELECT column_name FROM information_schema.columns WHERE table_schema={analytics.literal(schema)}
+AND table_name={analytics.literal(name)} ORDER BY ordinal_position;""", store=store).stdout.split()
+    return [str(c) for c in out]
+
+
+def move_input():
+    """Once: the inputs written so far move from the data DB to the input store, with their ids, versions and change_seq, in one
+    transaction, and the data DB copy stops taking writes first. Runs before the API restarts, so until then the old API's writes fail
+    rather than get lost. Nothing is deleted; T12 removes the frozen copy."""
+    migrate('data-014.sql', '014_inputs_moved')
+    # install() grants these for a new data DB; on the data DB they stay out for good.
+    sql('REVOKE CONNECT ON DATABASE hmg_analytics FROM hmg_catalog_writer,hmg_catalog_editor,hmg_project_editor,hmg_source_override_editor,'
+        'hmg_interest_editor,hmg_entity_role_editor,hmg_ext_api;')
+    if isql('SELECT EXISTS(SELECT 1 FROM catalog.project);').stdout.strip() == 't':
+        print('Inputs: already in the input store')
+        return
+    if sql('SELECT NOT EXISTS(SELECT 1 FROM catalog.project);').stdout.strip() == 't':
+        print('Inputs: nothing to move yet')
+        return
+    with tempfile.TemporaryFile() as errors:
+        target = subprocess.Popen(psql_args('input'), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=errors)
+        try:
+            target.stdin.write(b'BEGIN;\nSET LOCAL session_replication_role=replica;\n')
+            for table in MOVED_TABLES:
+                wanted = columns_of(table, 'input')
+                present = set(columns_of(table, 'analytics'))
+                cols = ','.join(c for c in wanted if c in present)  # a column the store added later takes its default
+                target.stdin.write(f'COPY {table}({cols}) FROM STDIN;\n'.encode())
+                source = subprocess.Popen(psql_args('analytics') + ['-c', f'COPY (SELECT {cols} FROM {table}) TO STDOUT'],
+                                          stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                shutil.copyfileobj(source.stdout, target.stdin)
+                failed = source.stderr.read()
+                if source.wait():
+                    raise RuntimeError(sanitize(failed.decode(errors='replace')[-1500:]))
+                target.stdin.write(b'\\.\n')
+            last = sql('SELECT last_value FROM catalog.change_seq;').stdout.strip()
+            target.stdin.write(f"SELECT setval('catalog.change_seq',{int(last)});\n".encode())
+            identities = isql("""SELECT table_schema||'.'||table_name||' '||column_name FROM information_schema.columns
+WHERE is_identity='YES' AND table_schema IN ('catalog','publication');""").stdout.split('\n')
+            for line in filter(None, identities):
+                table, column = line.split(' ')
+                target.stdin.write(f"SELECT setval(pg_get_serial_sequence('{table}','{column}'),greatest(coalesce(max({column}),0),1)) FROM {table};\n".encode())
+            # The lists that had no versions start theirs at the moved value (their history stays in the event tables).
+            target.stdin.write(b"""INSERT INTO catalog.interest_keyword_version(term_norm,version,term,conditions,source_types,brands,note,status,origin,recorded_at,recorded_by,change_seq)
+SELECT term_norm,1,term,conditions,source_types,brands,note,status,origin,updated_at,updated_by,nextval('catalog.change_seq') FROM catalog.interest_keyword;
+INSERT INTO catalog.interest_source_version(source_key,version,url,channel,brands,note,status,recorded_at,recorded_by,change_seq)
+SELECT source_key,1,url,channel,brands,note,status,updated_at,updated_by,nextval('catalog.change_seq') FROM catalog.interest_source;
+INSERT INTO catalog.entity_role_version(entity_id,version,rep_name,role,brand,note,status,origin,recorded_at,recorded_by,change_seq)
+SELECT entity_id,1,rep_name,role,brand,note,status,origin,updated_at,updated_by,nextval('catalog.change_seq') FROM catalog.entity_role;
+COMMIT;
+""")
+            target.stdin.close()
+        except BrokenPipeError:
+            pass
+        if target.wait():
+            errors.seek(0)
+            raise RuntimeError(sanitize(errors.read().decode(errors='replace')[-2500:]))
+    for table in MOVED_TABLES:
+        count = f'SELECT count(*) FROM {table};'
+        if sql(count).stdout != isql(count).stdout:
+            raise RuntimeError(f'{table}: the moved row count differs; compare both stores before going on')
+    for query in MOVE_FINGERPRINTS:
+        if sql(query + ';').stdout != isql(query + ';').stdout:
+            raise RuntimeError(f'The moved rows differ: {query}')
+    print(f'Inputs: moved {len(MOVED_TABLES)} tables to the input store')
+
+
+def write_env_files():
+    """The connections the API and the external API get. The editors and the external API reach the input store."""
+    env = analytics.env_file
+    def url(role, password, store):
+        return f"postgresql://{role}:{password}@{service_host(store)}/{STORES[store].database}"
+    data, values = env(DATA_SECRET), env(OPS_SECRET)
+    edit, inputs, metrics = env(EDIT_SECRET), env(INPUT_SECRET), env(METRICS_SECRET)
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
-        f"HGH_EXT_DB_URL=postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n")
+        f"HGH_EXT_DB_URL={url('hmg_ext_api', env(EXT_SECRET)['EXT_API_PASSWORD'], 'input')}\n")
     analytics.secure_write(ROOT / '.env.operations.local', '# FastAPI read-only operations connection.\n'
-        f"HGH_OPERATIONS_DB_URL=postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n")
-    analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes: Global prompt editing (INSERT-only catalog role), '
-        'saved filters (system.saved_filter only), accounts (the account tables only), the GA4 registry (its two tables), '
-        'source category corrections (their two tables and publishing function), the customer-interest inputs (their lists and '
-        'publishing functions), the entity roles (their two tables and publishing function), the project prompts (project catalog '
-        'revisions only) and the login token secret.\n'
-        f"HGH_CATALOG_EDITOR_DB_URL=postgresql://hmg_catalog_editor:{edit['CATALOG_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
-        f"HGH_SAVED_FILTER_EDITOR_DB_URL=postgresql://hmg_saved_filter_editor:{saved['SAVED_FILTER_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
-        f"HGH_ACCOUNT_EDITOR_DB_URL=postgresql://hmg_account_editor:{account['ACCOUNT_EDITOR_PASSWORD']}@{service_host('operations')}/{OPS_DB}\n"
-        f"HGH_GA4_REGISTRY_EDITOR_DB_URL=postgresql://hmg_ga4_registry_editor:{registry['GA4_REGISTRY_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
-        f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL=postgresql://hmg_source_override_editor:{override['SOURCE_OVERRIDE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
-        f"HGH_INTEREST_EDITOR_DB_URL=postgresql://hmg_interest_editor:{interest['INTEREST_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
-        f"HGH_ENTITY_ROLE_EDITOR_DB_URL=postgresql://hmg_entity_role_editor:{entity_role['ENTITY_ROLE_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
-        f"HGH_PROJECT_EDITOR_DB_URL=postgresql://hmg_project_editor:{project_editor['PROJECT_EDITOR_PASSWORD']}@{service_host('analytics')}/hmg_analytics\n"
+        f"HGH_OPERATIONS_DB_URL={url('hmg_operations_reader', values['OPERATIONS_READER_PASSWORD'], 'operations')}\n")
+    analytics.secure_write(ROOT / '.env.input.local', '# FastAPI read-only input store connection.\n'
+        f"HGH_INPUT_DB_URL={url('hmg_input_reader', inputs['INPUT_READER_PASSWORD'], 'input')}\n")
+    analytics.secure_write(ROOT / '.env.metrics.local', '# FastAPI metrics store: read Gold and the cache, write the cache. The rollup role stays with the job.\n'
+        f"HGH_METRICS_DB_URL={url('hmg_metrics_reader', metrics['METRICS_READER_PASSWORD'], 'metrics')}\n"
+        f"HGH_CACHE_DB_URL={url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'metrics')}\n")
+    analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes, each role for one screen: Global prompts, Project prompts, measurement settings, '
+        'source classification, customer interest, entity roles (input store), saved filters, accounts (operations store), the GA4 registry (data store), '
+        'and the login token secret.\n'
+        f"HGH_CATALOG_EDITOR_DB_URL={url('hmg_catalog_editor', edit['CATALOG_EDITOR_PASSWORD'], 'input')}\n"
+        f"HGH_SAVED_FILTER_EDITOR_DB_URL={url('hmg_saved_filter_editor', env(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD'], 'operations')}\n"
+        f"HGH_ACCOUNT_EDITOR_DB_URL={url('hmg_account_editor', env(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD'], 'operations')}\n"
+        f"HGH_GA4_REGISTRY_EDITOR_DB_URL={url('hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD'], 'analytics')}\n"
+        f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL={url('hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD'], 'input')}\n"
+        f"HGH_INTEREST_EDITOR_DB_URL={url('hmg_interest_editor', env(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD'], 'input')}\n"
+        f"HGH_ENTITY_ROLE_EDITOR_DB_URL={url('hmg_entity_role_editor', env(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD'], 'input')}\n"
+        f"HGH_PROJECT_EDITOR_DB_URL={url('hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD'], 'input')}\n"
+        f"HGH_MEASUREMENT_EDITOR_DB_URL={url('hmg_measurement_editor', inputs['MEASUREMENT_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
         f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
-    status()
 
 
 def status():
-    for ops, namespace in ((False, 'catalog'), (True, 'system')):
+    for store, namespace, migrations in (('analytics', 'catalog', 'ops'), ('operations', 'system', 'system'), ('input', 'catalog', 'catalog'), ('metrics', 'cache', 'gold')):
         print(sql(f"""SELECT json_build_object('database',current_database(),
             'tables',(SELECT count(*) FROM information_schema.tables WHERE table_schema='{namespace}' AND table_type='BASE TABLE'),
-            'migrations',(SELECT json_agg(version ORDER BY version) FROM {'system' if ops else 'ops'}.schema_migration));""", ops).stdout.strip())
+            'migrations',(SELECT json_agg(version ORDER BY version) FROM {migrations}.schema_migration));""", store=store).stdout.strip())
 
 
 def sync(args):
     """Import actual Gold catalog definitions only, using transient writer connections."""
     values, data = analytics.env_file(OPS_SECRET), analytics.env_file(DATA_SECRET)
     config = {
-        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('analytics')}/hmg_analytics",
+        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/hmg_input",
         'operations': f"postgresql://hmg_operations_writer:{values['OPERATIONS_WRITER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
         'allow_removals': args.allow_removals, 'expect_mass_change': args.expect_mass_change,
     }
@@ -422,41 +632,39 @@ def service_week(args):
 def verify():
     sql((HERE / 'verify-data.sql').read_text(encoding='utf8'))
     sql((HERE / 'verify-operations.sql').read_text(encoding='utf8'), True)
-    for ops, role in ((False, 'hmg_data_external'), (False, 'hmg_ext_api'), (False, 'hmg_analytics_reader'), (True, 'hmg_operations_reader')):
-        print(sql("SELECT json_build_object('database',current_database(),'role',current_user,'read_only',current_setting('transaction_read_only'));", ops, role).stdout.strip())
+    isql((HERE / 'verify-input.sql').read_text(encoding='utf8'))
+    sql((HERE / 'verify-metrics.sql').read_text(encoding='utf8'), store='metrics')
+    for store, role in (('analytics', 'hmg_data_external'), ('input', 'hmg_ext_api'), ('input', 'hmg_input_reader'), ('analytics', 'hmg_analytics_reader'),
+                        ('operations', 'hmg_operations_reader'), ('metrics', 'hmg_metrics_reader')):
+        print(sql("SELECT json_build_object('database',current_database(),'role',current_user,'read_only',current_setting('transaction_read_only'));", store=store, role=role).stdout.strip())
     # Connection checks cannot assume the database has no intentionally approved exports.
-    data, values, ext = analytics.env_file(DATA_SECRET), analytics.env_file(OPS_SECRET), analytics.env_file(EXT_SECRET)
-    external = f"postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}"
-    ext_api = f"postgresql://hmg_ext_api:{ext['EXT_API_PASSWORD']}"
-    saved = f"postgresql://hmg_saved_filter_editor:{analytics.env_file(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD']}"
-    account = f"postgresql://hmg_account_editor:{analytics.env_file(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD']}"
-    registry = f"postgresql://hmg_ga4_registry_editor:{analytics.env_file(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD']}"
-    override = f"postgresql://hmg_source_override_editor:{analytics.env_file(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']}"
-    interest = f"postgresql://hmg_interest_editor:{analytics.env_file(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']}"
-    entity_role = f"postgresql://hmg_entity_role_editor:{analytics.env_file(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD']}"
-    week_writer = f"postgresql://hmg_service_week_writer:{analytics.env_file(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD']}"
-    project_editor = f"postgresql://hmg_project_editor:{analytics.env_file(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD']}"
-    config = {'external':external+f"@{service_host('analytics')}/hmg_analytics",
-              'external_operations':external+f"@{service_host('operations')}/{OPS_DB}",
-              'ext':ext_api+f"@{service_host('analytics')}/hmg_analytics",
-              'ext_operations':ext_api+f"@{service_host('operations')}/{OPS_DB}",
-              'operations_reader':f"postgresql://hmg_operations_reader:{values['OPERATIONS_READER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
-              'saved_filter':saved+f"@{service_host('operations')}/{OPS_DB}",
-              'saved_filter_data':saved+f"@{service_host('analytics')}/hmg_analytics",
-              'account':account+f"@{service_host('operations')}/{OPS_DB}",
-              'account_data':account+f"@{service_host('analytics')}/hmg_analytics",
-              'ga4_registry':registry+f"@{service_host('analytics')}/hmg_analytics",
-              'ga4_registry_operations':registry+f"@{service_host('operations')}/{OPS_DB}",
-              'source_override':override+f"@{service_host('analytics')}/hmg_analytics",
-              'source_override_operations':override+f"@{service_host('operations')}/{OPS_DB}",
-              'interest':interest+f"@{service_host('analytics')}/hmg_analytics",
-              'interest_operations':interest+f"@{service_host('operations')}/{OPS_DB}",
-              'entity_role':entity_role+f"@{service_host('analytics')}/hmg_analytics",
-              'entity_role_operations':entity_role+f"@{service_host('operations')}/{OPS_DB}",
-              'project_editor':project_editor+f"@{service_host('analytics')}/hmg_analytics",
-              'project_editor_operations':project_editor+f"@{service_host('operations')}/{OPS_DB}",
-              'service_week':week_writer+f"@{service_host('analytics')}/hmg_analytics",
-              'service_week_operations':week_writer+f"@{service_host('operations')}/{OPS_DB}"}
+    env = analytics.env_file
+    data, values, ext = env(DATA_SECRET), env(OPS_SECRET), env(EXT_SECRET)
+    def url(role, password, store):
+        return f"postgresql://{role}:{password}@{service_host(store)}/{STORES[store].database}"
+    def both(name, role, password, store='input', other='operations'):
+        return {name: url(role, password, store), f'{name}_operations': url(role, password, other)}
+    inputs, metrics = env(INPUT_SECRET), env(METRICS_SECRET)
+    config = {**both('external', 'hmg_data_external', data['DATA_EXTERNAL_PASSWORD'], 'analytics'),
+              **both('ext', 'hmg_ext_api', ext['EXT_API_PASSWORD']),
+              'ext_data': url('hmg_ext_api', ext['EXT_API_PASSWORD'], 'analytics'),
+              'operations_reader': url('hmg_operations_reader', values['OPERATIONS_READER_PASSWORD'], 'operations'),
+              'saved_filter': url('hmg_saved_filter_editor', env(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD'], 'operations'),
+              'saved_filter_data': url('hmg_saved_filter_editor', env(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD'], 'analytics'),
+              'account': url('hmg_account_editor', env(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD'], 'operations'),
+              'account_data': url('hmg_account_editor', env(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD'], 'analytics'),
+              **both('ga4_registry', 'hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD'], 'analytics'),
+              **both('source_override', 'hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']),
+              **both('interest', 'hmg_interest_editor', env(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']),
+              **both('entity_role', 'hmg_entity_role_editor', env(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD']),
+              **both('project_editor', 'hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD']),
+              'project_editor_data': url('hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD'], 'analytics'),
+              **both('service_week', 'hmg_service_week_writer', env(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD'], 'analytics'),
+              **both('measurement', 'hmg_measurement_editor', inputs['MEASUREMENT_EDITOR_PASSWORD']),
+              'input_reader': url('hmg_input_reader', inputs['INPUT_READER_PASSWORD'], 'input'),
+              'metrics_reader': url('hmg_metrics_reader', metrics['METRICS_READER_PASSWORD'], 'metrics'),
+              'cache_writer': url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'metrics'),
+              'cache_writer_input': url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'input')}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
     print('Verified opt-in exports, grants, immutable versions, operations isolation; all fixture transactions rolled back')
@@ -536,7 +744,7 @@ def import_source_overrides(args):
         print('Gold applies no source correction; nothing imported')
         return
     values = ','.join(f"({analytics.literal(k)},{analytics.literal(v)},'gold_import')" for k, v in sorted(found.items()))
-    sql(f"""BEGIN;
+    isql(f"""BEGIN;
 SELECT pg_advisory_xact_lock({CATALOG_LOCK});
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM catalog.source_override) THEN RAISE EXCEPTION 'The HUB already has source corrections; the first import runs once'; END IF;
@@ -576,10 +784,10 @@ def set_project_access(args, enabled):
     project, flags = uuid_of(project, 'project_id'), flags or list(PROJECT_FLAGS)
     if any(f not in PROJECT_FLAGS for f in flags):
         raise ValueError(f'Flags: {", ".join(PROJECT_FLAGS)}')
-    if sql(f"SELECT count(*) FROM catalog.project WHERE project_id={analytics.literal(project)};").stdout.strip() != '1':
+    if isql(f"SELECT count(*) FROM catalog.project WHERE project_id={analytics.literal(project)};").stdout.strip() != '1':
         raise ValueError('No such project in the HUB catalog')
     value = 'true' if enabled else 'false'
-    sql(f"""INSERT INTO publication.project_access(project_id,{','.join(flags)},approved_by)
+    isql(f"""INSERT INTO publication.project_access(project_id,{','.join(flags)},approved_by)
 VALUES({analytics.literal(project)},{','.join(value for _ in flags)},{analytics.literal(actor())})
 ON CONFLICT(project_id) DO UPDATE SET {','.join(f'{f}={value}' for f in flags)},approved_by=EXCLUDED.approved_by,approved_at=now();""")
     print(f'{project}: {", ".join(flags)} {"published" if enabled else "withdrawn"}')
@@ -592,21 +800,24 @@ def set_reference_access(args, enabled):
     if any(f not in REFERENCE_FAMILIES for f in families):
         raise ValueError(f'Families: {", ".join(REFERENCE_FAMILIES)} or all')
     rows = ','.join(f"({analytics.literal(f)},{'true' if enabled else 'false'},{analytics.literal(actor())})" for f in families)
-    sql(f"""INSERT INTO publication.reference_access(family,enabled,approved_by) VALUES{rows}
+    isql(f"""INSERT INTO publication.reference_access(family,enabled,approved_by) VALUES{rows}
 ON CONFLICT(family) DO UPDATE SET enabled=EXCLUDED.enabled,approved_by=EXCLUDED.approved_by,approved_at=now();""")
     print(f'{", ".join(families)}: {"published" if enabled else "withdrawn"}')
 
 
 def client_add(args):
-    name = ' '.join(params(args, 1, '<name>')).strip()
-    out = sql(f"""INSERT INTO publication.api_client(client_id,name,created_by)
-VALUES(gen_random_uuid(),{analytics.literal(name)},{analytics.literal(actor())}) RETURNING client_id;""").stdout.strip()
-    print(f'{name}: client {out.splitlines()[0]}')
+    """ext-client-add <name> --audience collect|analyze: 수집 reads prompts, settings and the collecting values, 분석 the analysis values."""
+    name = ' '.join(params(args, 1, '<name> --audience collect|analyze')).strip()
+    if args.audience not in AUDIENCES:
+        raise ValueError(f'--audience must be one of: {", ".join(AUDIENCES)}')
+    out = isql(f"""INSERT INTO publication.api_client(client_id,name,created_by,audience)
+VALUES(gen_random_uuid(),{analytics.literal(name)},{analytics.literal(actor())},{analytics.literal(args.audience)}) RETURNING client_id;""").stdout.strip()
+    print(f'{name}: {args.audience} client {out.splitlines()[0]}')
 
 
 def client_status(args, status):
     client = uuid_of(params(args, 1, '<client_id>')[0], 'client_id')
-    out = sql(f"UPDATE publication.api_client SET status={analytics.literal(status)} WHERE client_id={analytics.literal(client)} RETURNING 1;").stdout.strip()
+    out = isql(f"UPDATE publication.api_client SET status={analytics.literal(status)} WHERE client_id={analytics.literal(client)} RETURNING 1;").stdout.strip()
     print(f'{client}: ' + (status if out else 'no such client'))
 
 
@@ -619,7 +830,7 @@ def key_issue(args):
     key_id = uuid.uuid4()
     key = f'hgh_{key_id.hex}_{secrets.token_urlsafe(32)}'
     digest = hashlib.sha256(key.encode()).hexdigest()
-    out = sql(f"""BEGIN;
+    out = isql(f"""BEGIN;
 SELECT pg_advisory_xact_lock({KEY_LOCK});
 DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM publication.api_client WHERE client_id={analytics.literal(client)} AND status='active') THEN
@@ -642,7 +853,7 @@ COMMIT;""", check=False)
 def key_revoke(args):
     key, *reason = params(args, 2, '<key_id> <reason>')
     key = uuid_of(key, 'key_id')
-    out = sql(f"""UPDATE publication.api_key SET revoked_at=now(),revoked_by={analytics.literal(actor())},
+    out = isql(f"""UPDATE publication.api_key SET revoked_at=now(),revoked_by={analytics.literal(actor())},
 revoke_reason={analytics.literal(' '.join(reason))} WHERE key_id={analytics.literal(key)} AND revoked_at IS NULL RETURNING 1;""").stdout.strip()
     print(f'{key}: ' + ('revoked' if out else 'no such unrevoked key'))
 
@@ -654,17 +865,17 @@ def grant(args, granted):
     who = analytics.literal(actor())
     if granted:
         rows = ','.join(f'({analytics.literal(client)},{analytics.literal(p)},{who})' for p in projects)
-        sql(f"""INSERT INTO publication.api_client_project(client_id,project_id,granted_by) VALUES{rows}
+        isql(f"""INSERT INTO publication.api_client_project(client_id,project_id,granted_by) VALUES{rows}
 ON CONFLICT(client_id,project_id) DO UPDATE SET granted_by=EXCLUDED.granted_by,granted_at=now(),revoked_at=NULL,revoked_by=NULL;""")
     else:
-        sql(f"""UPDATE publication.api_client_project SET revoked_at=now(),revoked_by={who}
+        isql(f"""UPDATE publication.api_client_project SET revoked_at=now(),revoked_by={who}
 WHERE client_id={analytics.literal(client)} AND project_id IN ({','.join(analytics.literal(p) for p in projects)}) AND revoked_at IS NULL;""")
     print(f'{client}: {len(projects)} project(s) {"granted" if granted else "withdrawn"}')
 
 
 def ext_list(args):
-    print(sql("""SELECT json_build_object(
- 'clients',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'name',name,'status',status) ORDER BY name),'[]') FROM publication.api_client),
+    print(isql("""SELECT json_build_object(
+ 'clients',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'name',name,'status',status,'audience',audience) ORDER BY name),'[]') FROM publication.api_client),
  'keys',(SELECT coalesce(json_agg(json_build_object('key_id',key_id,'client_id',client_id,'expires_at',expires_at,'revoked_at',revoked_at) ORDER BY created_at),'[]') FROM publication.api_key),
  'grants',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'project_id',project_id,'revoked_at',revoked_at)),'[]') FROM publication.api_client_project),
  'projects',(SELECT coalesce(json_agg(json_build_object('project_id',project_id,'projects',projects,'prompts',prompts)),'[]') FROM publication.project_access),
@@ -672,16 +883,21 @@ def ext_list(args):
 
 
 def start():
-    """Native mode: start both local servers after a reboot (no migrations; `init` does those)."""
+    """Native mode: start the local servers after a reboot (no migrations; `init` does those). The input and metrics stores start when
+    `init` has made them; without them the API serves Gold and leaves the input screens at 503."""
     if not analytics.NATIVE:
         raise RuntimeError('start is for native mode (HGH_HUB_NATIVE=1); with Docker the containers restart themselves')
-    for store, secret, port, admin, database in (('analytics', analytics.SECRET, 'HGH_ANALYTICS_DB_PORT', analytics.ADMIN, analytics.DB),
-                                                 ('operations', OPS_SECRET, 'HGH_OPERATIONS_DB_PORT', 'hmg_operations_admin', OPS_DB)):
-        if not (secret.exists() and analytics.native_exists(store)):
-            raise RuntimeError(f'No native {store} store yet; run init first')
-        values = analytics.env_file(secret)
-        analytics.native_start(store, int(values[port]), admin, database, values['POSTGRES_PASSWORD'])
-    print('HUB stores running on 127.0.0.1:' + str(data_port()) + ' and :' + str(ops_port()))
+    running = []
+    for store, s in STORES.items():
+        if not (s.secret.exists() and analytics.native_exists(store)):
+            if store in ('analytics', 'operations'):
+                raise RuntimeError(f'No native {store} store yet; run init first')
+            print(f'No native {store} store yet; run init to create it')
+            continue
+        values = analytics.env_file(s.secret)
+        analytics.native_start(store, int(values[s.port_key]), s.admin, s.database, values['POSTGRES_PASSWORD'])
+        running.append(str(values[s.port_key]))
+    print('HUB stores running on 127.0.0.1:' + ', :'.join(running))
 
 
 def backup():
@@ -690,7 +906,6 @@ def backup():
     output.parent.mkdir(parents=True, exist_ok=True)
     # Use secure_write to establish file ACLs before writing the binary archive.
     analytics.secure_write(output, '')
-    import subprocess
     if analytics.NATIVE:
         dump = [analytics.pg_tool('pg_dump'), '-h', str(analytics.NATIVE_ROOT / 'operations-socket'), '-p', str(ops_port())]
     else:
@@ -700,6 +915,24 @@ def backup():
                                 stdout=handle, stderr=subprocess.PIPE)
     if result.returncode:
         raise RuntimeError('Operations backup failed')
+    print(f'Backup created: {output}')
+    # The input store is a source of truth. The metrics store is not: Gold is computed again, and SSOT keeps the cache out of backups.
+    dump_store('input')
+
+
+def dump_store(store):
+    s = STORES[store]
+    output = ROOT / f'.local/{store}-backups' / f"{s.database}-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.dump"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    analytics.secure_write(output, '')
+    if analytics.NATIVE:
+        dump = [analytics.pg_tool('pg_dump'), '-h', str(analytics.NATIVE_ROOT / f'{store}-socket'), '-p', str(port_of(store))]
+    else:
+        dump = ['docker', 'exec', s.container, 'pg_dump']
+    with output.open('wb') as handle:
+        result = subprocess.run(dump + ['-U', s.admin, '-d', s.database, '--format=custom', '--no-owner', '--no-acl'], stdout=handle, stderr=subprocess.PIPE)
+    if result.returncode:
+        raise RuntimeError(f'{store} backup failed')
     print(f'Backup created: {output}')
 
 
@@ -742,7 +975,7 @@ def import_source_lists(args):
     Each list is imported once; a list the HUB already has stays as it is. Records the rows (origin file_import),
     their history and the first source_code / source_seed / source_social sets, in one transaction under the catalog
     lock."""
-    counts = {name: int(sql(f"SELECT count(*) FROM catalog.{table};").stdout.strip() or 0)
+    counts = {name: int(isql(f"SELECT count(*) FROM catalog.{table};").stdout.strip() or 0)
               for name, table in (('code', 'source_code'), ('seed', 'source_seed'), ('social', 'source_social'))}
     gold = json.loads(api_python(GOLD_CATEGORIES_SCRIPT).strip().splitlines()[-1])
     labels = {lang: json.loads((ROOT / 'front' / 'messages' / f'{lang}.json').read_text(encoding='utf8')) for lang in ('ko', 'en')}
@@ -788,7 +1021,7 @@ SELECT account_key,'import',jsonb_build_object('matchers',jsonb_build_array(NULL
 FROM catalog.source_social;""")
         done['social'] = len(accounts)
     if statements:
-        sql(f"BEGIN;\nSELECT pg_advisory_xact_lock({CATALOG_LOCK});\n" + '\n'.join(statements) + '\nCOMMIT;')
+        isql(f"BEGIN;\nSELECT pg_advisory_xact_lock({CATALOG_LOCK});\n" + '\n'.join(statements) + '\nCOMMIT;')
     print(json.dumps({'imported': done, 'already_present': {k: v for k, v in counts.items() if v}}, ensure_ascii=False))
 
 
@@ -821,7 +1054,7 @@ def import_interest_keywords(args):
         return
     values = ','.join(f"({analytics.literal(k)},{analytics.literal(v['term'])},{analytics.literal(json.dumps(v['conditions'], ensure_ascii=False))}::jsonb,"
                       "ARRAY['google_keyword'],'gold_import')" for k, v in sorted(found.items()))
-    sql(f"""BEGIN;
+    isql(f"""BEGIN;
 SELECT pg_advisory_xact_lock({CATALOG_LOCK});
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM catalog.interest_keyword) THEN RAISE EXCEPTION 'The HUB already has seed keywords; the first import runs once'; END IF;
@@ -864,7 +1097,7 @@ def import_entity_roles(args):
             raise RuntimeError(f'Gold entity {entity_id}: role {role} with brand {brand}; nothing imported')
     values = ','.join(f"({analytics.literal(e)}::uuid,{analytics.literal(n)},{analytics.literal(r)},"
                       f"{analytics.literal(b) if r == 'own' else 'NULL'},'gold_import')" for e, n, r, b in rows)
-    sql(f"""BEGIN;
+    isql(f"""BEGIN;
 SELECT pg_advisory_xact_lock({CATALOG_LOCK});
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM catalog.entity_role) THEN RAISE EXCEPTION 'The HUB already has entity roles; the first import runs once'; END IF;
@@ -901,6 +1134,7 @@ if __name__ == '__main__':
     parser.add_argument('--allow-removals', type=int, default=0, help='sync: accept up to N Gold removals above the guard')
     parser.add_argument('--expect-mass-change', action='store_true', help='sync: accept more than the guard share of new revisions')
     parser.add_argument('--days', type=int, help='ext-key-issue: lifetime in days')
+    parser.add_argument('--audience', default='collect', help='ext-client-add: collect (수집) or analyze (분석)')
     parser.add_argument('--dry-run', action='store_true', help='sync-service-week: decide and print, write nothing')
     args = parser.parse_args()
     try:

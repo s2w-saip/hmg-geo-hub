@@ -13,6 +13,8 @@ import { NO_STORE, hubErrorResponse, hubFail, jsonBody, sameOrigin } from "@/lib
 //   POST /api/hub/projects/<pid>/prompt-tags                          -> one tag value on prompts {promptIds, fieldId, value}
 //   POST /api/hub/projects/<pid>/prompt-fields                        -> a tag column {label}
 //   POST /api/hub/projects/<pid>/prompt-fields/<fid>/archive|restore  -> its status ({})
+//   GET  /api/hub/projects/<pid>/measurement                          -> the measurement settings (2026-11-06)
+//   POST /api/hub/projects/<pid>/measurement                          -> a new version {expectedVersion, brands, ...}
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -26,6 +28,8 @@ const ROUTES: ReadonlyArray<readonly [HubMethod, RegExp]> = [
   ["POST", /^prompt-tags$/],
   ["POST", /^prompt-fields$/],
   ["POST", new RegExp(`^prompt-fields/${UUID}/(archive|restore)$`)],
+  ["GET", /^measurement$/],
+  ["POST", /^measurement$/],
 ];
 
 type Ctx = { params: Promise<{ id: string; rest?: string[] }> };

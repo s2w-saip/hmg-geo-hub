@@ -4,10 +4,11 @@ import { aiEngineLabel } from "@/lib/scope/engines";
 import { countryName } from "@/lib/geo-catalog/country-name";
 import { languageName } from "@/lib/geo-catalog/language-name";
 import { RnCard, RnCardHeader, RnNote } from "@/components/renewal-ui";
+import { RnProjectMeasurement, type MeasurementView } from "./project-measurement";
 
-// Renewal Project › Setting › General and Member (2026-11-03, read part): the original sections in order, each with what
-// Gold holds (screen projects/settings) or 데이터 없음 where only the original operations DB has it. Nothing is
-// editable: the write path and the 정본 of the name · brand · country are D-7.
+// Renewal Project › Setting › General and Member (2026-11-03): the original sections in order, each with what Gold holds (screen
+// projects/settings) or 데이터 없음 where only the original operations DB has it. The measurement settings (2026-11-06) are the input
+// store's, and this page edits them (project-measurement.tsx).
 
 /** projects/settings */
 export interface ProjectSettingsView {
@@ -24,6 +25,8 @@ export interface ProjectSettingsView {
   fields: { id: string; label: string; values: string[]; prompts: number }[];
   /** prompts naming a target URL */
   targets: number;
+  /** the input store's settings; null when it is not there or does not hold the project yet */
+  measurement: MeasurementView | null;
 }
 
 function Rows({ children }: { children: ReactNode }) {
@@ -47,12 +50,14 @@ export async function RnProjectGeneral({ view }: { view: ProjectSettingsView }) 
   const none = t("noData");
   const m = view.measured;
   const list = (items: string[], label: (v: string) => string) => (items.length ? items.map(label).join(", ") : t("none"));
+  const settings = view.measurement;
   return (
     <div className="flex flex-col gap-4" data-rn-project-setting="">
+      {settings && view.identity.projectId ? <RnProjectMeasurement projectId={view.identity.projectId} view={settings} /> : <RnNote>{t("measurement.unavailable")}</RnNote>}
       <RnCard aria-label={t("general.title")}>
         <RnCardHeader title={t("general.title")} hint={t("general.hint")} />
         <Rows>
-          {(["name", "description", "brand", "country", "created", "owner"] as const).map((k) => (
+          {(["name", "description", "created", "owner"] as const).map((k) => (
             <Row key={k} label={t(`general.${k}`)} missing={none} />
           ))}
         </Rows>
@@ -78,15 +83,12 @@ export async function RnProjectGeneral({ view }: { view: ProjectSettingsView }) 
         <RnCardHeader title={t("engines.title")} hint={t("engines.hint")} />
         <Rows>
           <Row label={t("engines.measured")}>{m ? list(m.engines, aiEngineLabel) : null}</Row>
-          <Row label={t("engines.setting")} missing={none} />
         </Rows>
       </RnCard>
       <RnCard aria-label={t("tracked.title")}>
         <RnCardHeader title={t("tracked.title")} hint={t("tracked.hint")} />
         <Rows>
-          <Row label={t("tracked.owned")} missing={none} />
           <Row label={t("tracked.targets")}>{t("tracked.targetsValue", { count: view.targets })}</Row>
-          <Row label={t("tracked.entities")} missing={none} />
         </Rows>
       </RnCard>
       <RnCard aria-label={t("tags.title")} data-rn-project-tags="">

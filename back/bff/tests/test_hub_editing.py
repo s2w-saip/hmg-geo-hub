@@ -375,7 +375,7 @@ class Routes(unittest.TestCase):
         for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(hub_auth.operations_db, "connection", self.accounts.connection),
                   mock.patch.object(ce.operations_db, "connection", self.accounts.connection),
-                  mock.patch.object(ce.analytics_db, "connection", reader),
+                  mock.patch.object(ce.input_db, "connection", reader),
                   mock.patch.object(ce, "_pool", Pool(Conn(self.catalog)))):
             p.start()
             self.addCleanup(p.stop)
@@ -491,15 +491,33 @@ class Routes(unittest.TestCase):
         self.assertEqual(history[2]["changes"], {"text": {"old": "새 프롬프트", "new": "고친 프롬프트"}})
         self.assertEqual(history[0]["actor"], {"login": "admin", "displayName": "Admin"})
 
-    def test_stale_versions_and_gold_prompts_are_refused(self):
+    def test_stale_versions_and_removed_prompts_are_refused(self):
         token = self.token()
         pid = self.new(token)[1]["data"]["item"]["id"]
         run(call("PUT", f"/v1/hub/global-prompts/{pid}", {"text": "v2", "expectedVersion": 1}, token))
         status, body = run(call("PUT", f"/v1/hub/global-prompts/{pid}", {"text": "v3", "expectedVersion": 1}, token))
         self.assertEqual((status, body["error"]["code"], body["error"]["details"]), (409, "version_conflict", {"currentVersion": 2}))
-        status, body = run(call("POST", f"/v1/hub/global-prompts/{self.gold}/archive", {"expectedVersion": 1}, token))
-        self.assertEqual((status, body["error"]["code"]), (409, "gold_owned"))
-        self.assertEqual(len(self.catalog.versions[self.gold]), 1)
+        removed = self.catalog.add("gold", "Gold에서 빠진 프롬프트", {"surface": 1, "status": "removed"})
+        status, body = run(call("POST", f"/v1/hub/global-prompts/{removed}/archive", {"expectedVersion": 1}, token))
+        self.assertEqual((status, body["error"]["code"]), (409, "removed"))
+
+    def test_a_gold_prompt_is_edited_here_and_keeps_golds_keys(self):
+        """T4.2: every Global prompt is edited in the input store; what the screen does not edit (catalog rows, Gold's keys) stays."""
+        token = self.token()
+        status, body = run(call("GET", f"/v1/hub/global-prompts/{self.gold}", token=token))
+        item = body["data"]["item"]
+        self.assertEqual((item["origin"], item["editable"]), ("gold", True))
+        stored = dict(self.catalog.versions[self.gold][-1]["definition"]) if isinstance(self.catalog.versions[self.gold][-1]["definition"], dict) \
+            else json.loads(self.catalog.versions[self.gold][-1]["definition"])
+        unchanged = {k: item[k] for k in ("kind", "language", "regions", "funnel", "brandPresence", "listType", "depth1", "depth2", "depth3", "depth4")}
+        status, body = run(call("PUT", f"/v1/hub/global-prompts/{self.gold}", {**unchanged, "text": item["text"], "expectedVersion": item["version"]}, token))
+        self.assertEqual((status, body["data"]["changed"]), (200, False))
+        status, body = run(call("PUT", f"/v1/hub/global-prompts/{self.gold}", {**unchanged, "text": "고친 Gold 프롬프트", "expectedVersion": item["version"]}, token))
+        self.assertEqual((status, body["data"]["changed"], body["data"]["item"]["text"]), (200, True, "고친 Gold 프롬프트"))
+        latest = self.catalog.versions[self.gold][-1]["definition"]
+        latest = latest if isinstance(latest, dict) else json.loads(latest)
+        for key in set(stored) - {"status"} - set(ce.LABELS.values()) - {"kind", "language", "regions"}:
+            self.assertEqual(latest[key], stored[key], key)
 
     def test_prompts_outside_the_global_project_are_not_found(self):
         token = self.token()

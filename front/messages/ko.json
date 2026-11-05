@@ -6528,7 +6528,59 @@
         }
       },
       "setting": {
-        "description": "Gold에 있는 이 프로젝트의 식별 정보 · 측정 값 · 커스텀 태그입니다(열람 전용).",
+        "description": "이 프로젝트의 측정 설정과, Gold에 있는 식별 정보 · 측정 값 · 커스텀 태그입니다.",
+        "measurement": {
+          "title": "측정 설정",
+          "hint": "수집이 프롬프트·기준정보 API로 읽는 값입니다. 저장해도 이 화면의 숫자는 바뀌지 않습니다.",
+          "brands": "측정 브랜드",
+          "brandNames": {
+            "hyundai": "현대",
+            "kia": "기아",
+            "genesis": "제네시스",
+            "hyundai-n": "현대 N"
+          },
+          "countries": "측정 국가",
+          "countriesHint": "국가 코드를 쉼표로 구분해 입력합니다.",
+          "unknownCountries": "기준정보에 없는 국가 코드: {codes}",
+          "engines": "AI 엔진",
+          "cadence": "측정 주기",
+          "cadenceNone": "정하지 않음",
+          "cadences": {
+            "weekly": "매주",
+            "biweekly": "격주",
+            "monthly": "매월"
+          },
+          "acrRepeats": "ACR 반복 수",
+          "acrRepeatsHint": "ACR 측정에서 셀마다 반복하는 횟수(1~100)",
+          "acrRepeatsBad": "1~100 사이의 정수를 입력하세요.",
+          "webUnits": "Website 측정 단위",
+          "webUnitsHint": "언어 · 기준 URL",
+          "none": "언어 없음",
+          "noBase": "기준 URL 없음",
+          "ownedUrls": "소유 URL",
+          "trackedUrls": "추적 URL",
+          "urlsHint": "한 줄에 하나씩 입력합니다.",
+          "trackedBrands": "추적 브랜드",
+          "trackedBrandsHint": "경쟁 브랜드를 한 줄에 하나씩 입력합니다.",
+          "trackedModels": "추적 모델",
+          "trackedModelsHint": "한 줄에 하나씩, 브랜드와 함께 쓰려면 ‘브랜드 / 모델’로 입력합니다.",
+          "save": "저장",
+          "saved": "측정 설정을 저장했습니다",
+          "version": "버전 {version} · {origin}",
+          "noVersion": "저장된 설정이 없습니다",
+          "origin": {
+            "gold_import": "처음 값(Gold 측정 기록)",
+            "hub": "서비스에서 저장"
+          },
+          "notEditing": "이 서버에는 측정 설정 편집 연결이 없어 저장할 수 없습니다.",
+          "unavailable": "입력 DB에 이 프로젝트의 측정 설정이 아직 없습니다.",
+          "errors": {
+            "conflict": "다른 사람이 먼저 고쳤습니다. 새로고침한 뒤 다시 저장하세요.",
+            "unknown": "기준정보에 없는 코드가 있습니다.",
+            "invalid": "입력 값을 확인하세요. URL에는 공백을 넣을 수 없습니다.",
+            "failed": "저장하지 못했습니다. 잠시 뒤 다시 시도하세요."
+          }
+        },
         "noData": "데이터 없음",
         "none": "없음",
         "general": {
@@ -6536,8 +6588,6 @@
           "hint": "원본 운영 DB에만 있는 값",
           "name": "프로젝트 이름",
           "description": "설명",
-          "brand": "브랜드",
-          "country": "국가",
           "created": "생성일",
           "owner": "담당"
         },
@@ -6556,16 +6606,13 @@
         "engines": {
           "title": "AI 엔진",
           "hint": "측정된 엔진은 Gold 답변의 값",
-          "measured": "측정된 엔진",
-          "setting": "측정 엔진 설정"
+          "measured": "측정된 엔진"
         },
         "tracked": {
           "title": "추적 대상",
           "hint": "자사 URL · 타겟 URL · 경쟁사 · 차종",
-          "owned": "자사 URL (소유 URL)",
           "targets": "타겟 URL",
-          "targetsValue": "타겟 URL을 지정한 프롬프트 {count}개",
-          "entities": "경쟁사 · 차종"
+          "targetsValue": "타겟 URL을 지정한 프롬프트 {count}개"
         },
         "tags": {
           "title": "커스텀 태그",

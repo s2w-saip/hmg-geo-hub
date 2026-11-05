@@ -1,13 +1,15 @@
-# HUB 운영 DB / 데이터 DB 분리
+# HUB DB 분리
 
-두 개의 독립 PostgreSQL 컨테이너·볼륨·계정을 사용한다. 외부 Gold에는 쓰지 않는다.
+네 개의 독립 PostgreSQL 컨테이너·볼륨·계정을 사용한다. 외부 Gold에는 쓰지 않는다.
 
 [서비스 구조·DB ERD 정본](../../docs/architecture/hmg-geo-hub-architecture.html) (운영 DB ERD `#erd-ops`, 데이터 DB ERD `#erd-data`)
 
 | 저장소 | 실제 DB / 로컬 포트 | 책임 |
 |---|---|---|
 | HUB 운영 DB | `hmg_operations` / `127.0.0.1:55437` | 사용자, 프로젝트 멤버십·권한, SW 설정 버전, 연동 설정, 감사 이력, 계정별 저장한 필터 |
-| HUB 데이터 DB | `hmg_analytics` / `127.0.0.1:55436` | GA4·SEO, 프로젝트·프롬프트 정의/버전, 외부 공개 정책·뷰 |
+| HUB 입력 DB | `hmg_input` / `127.0.0.1:55438` | 프롬프트, 측정 설정, 수집 · 분석 기준정보, API 호출자 · 승인(아래 '입력 DB') |
+| HUB 데이터 DB | `hmg_analytics` / `127.0.0.1:55436` | GA4·SEO, 서비스 기준 주. `catalog` · `publication`의 입력 테이블은 2026-11-06부터 동결한 옛 사본 |
+| HUB 지표 DB | `hmg_metrics` / `127.0.0.1:55439` | 사전 집계(`gold`), 캐시 DB(`cache`). 정본이 아니다(아래 '지표 DB') |
 | 외부 Gold DB | `gold` / 사내망 `10.0.20.126:8097` | GEO 측정·응답·멘션·인용 등 원천 데이터, 읽기 전용 |
 
 기존 `hmg_analytics` 이름과 GA4·SEO 스키마를 유지했다. DB를 삭제하거나 재생성하지 않는다. 데이터 DB의 기존 `ops` 스키마는 SEO 빌드·발행 메타데이터이며, 사용자·권한을 담는 운영 DB와 별개다.
@@ -32,12 +34,28 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 로컬 비밀 파일은 git에서 제외하고 Windows에서는 현재 사용자와 SYSTEM에만 ACL을 부여한다. API에는 각 DB의 **조회 계정**과, 글로벌 프롬프트 편집용 **INSERT 전용 편집 계정**(`hmg_catalog_editor`, 아래 절), 저장한 필터용 **한 표 계정**(`hmg_saved_filter_editor`, 아래 절), 계정 관리용 `hmg_account_editor`, GA4 속성 등록부용 `hmg_ga4_registry_editor`(아래 절), 인용 출처 교정용 `hmg_source_override_editor`(아래 절)만 전달한다. 카탈로그 쓰기 계정, 운영 쓰기 계정, 서비스 기준 주 계정(`hmg_service_week_writer`, `.env.service-week-db.local`, 아래 절)은 관리 명령이 일시적으로 사용하며 Next나 API 이미지에 넣지 않는다. 초기화 전 기존 데이터 DB 백업을 만들었으며, 이후 두 DB 백업은 위 명령으로 실행한다. 백업 복원 시 두 DB와 비밀 파일을 함께 복원하고 프로젝트 참조를 검사한다.
 
+## 입력 DB (2026-11-06)
+
+프롬프트 · 측정 설정 · 수집 기준정보 · 분석 기준정보의 원본이다(SSOT `shared/input-contract.md`). 아래 절들의 `catalog` · `publication` 표와 역할은 이름과 권한 그대로 이 DB로 옮겼다(`input-001.sql`은 옮길 때의 구조, `input-002.sql`은 새로 더한 것). 그래서 '데이터 DB'라고 적힌 예전 설명은 입력 표에 관한 한 입력 DB로 읽는다.
+
+- **옮기기:** `manage.py init`이 한 번 한다. 데이터 DB 사본의 쓰기를 먼저 막고(`data-014.sql`, 입력 역할의 접속도 회수), 표 30개를 한 트랜잭션으로 복사한 뒤(id · 버전 · `change_seq` · 키 해시 유지) 행 수와 해시를 대조한다. 그동안 옛 API의 쓰기는 실패한다. 끝나면 API를 재시작한다. 옛 사본은 지우지 않는다(T12). 남은 것: `catalog.service_week`, `catalog.project_ga4_property`, `published.*`.
+- **입력의 공통 모양:** 현재 값, 값 전체를 담는 번호 매긴 버전(기록자 · `change_seq`), API가 읽는 발행 묶음. 프로젝트 · 프롬프트 · 측정 설정은 버전 행의 최신이 현재 값이고, 목록은 현재 행과 트리거가 쌓는 `*_version`이다(고객 관심 · 엔티티 역할 · 기준정보 원본에도 붙였다).
+- **기준정보 원본 `catalog.reference_source`:** `engine` · `country` · `language` · `taxon` · `brand` · `surface` · `brand_bit` · `mention_type`. SSOT에 관리 화면이 없어 한 표에 둔다. 처음 값만 `sync-gold-catalog`가 Gold에서 넣고(`origin = gold_import`), 그 뒤로 가져오기는 이 종류를 쓰지 않는다. 발행은 `catalog.publish_reference_source(종류)`이고, 코드표 셋은 `source = hub`, 나머지는 `hub_edit`이다.
+- **측정 설정 `catalog.project_measurement_version`:** 프로젝트마다 버전 행을 더한다(`catalog.current_measurement`가 최신). `sync-gold-catalog`가 설정이 없는 프로젝트에 Gold가 가진 값만 버전 1로 넣는다: 브랜드(사이트 브랜드, Global은 카탈로그 브랜드), 국가 · 엔진(측정 기록), website 단위(선언된 기준 URL만), 소유 URL(같은 브랜드 · 국가의 `dim_owned_base`, website만). 측정 주기 · ACR 반복 수 · 추적 URL · 추적 대상은 비어 있다. 2026-11-06 첫 값: Global 1 · Website 127(소유 URL 106) · Project 130(국가 · 엔진 73, 브랜드 0).
+- **화면:** 리뉴얼 Project › Setting이 읽고 쓴다(최상위 관리자). `GET|POST /v1/hub/projects/{id}/measurement`, 쓰기 역할 `hmg_measurement_editor`(`HGH_MEASUREMENT_EDITOR_DB_URL`, 버전 INSERT만). Website · Global 프로젝트의 입력 화면은 아직 없다.
+- **Global 프롬프트:** Gold에서 온 것도 Admin › Global prompts에서 고친다. 고치면 Project 프롬프트처럼 HUB 소유가 되어 가져오기가 HUB 키를 덮어쓰지 않는다. `removed`만 읽기 전용이다. 측정 반영은 앤써가 API를 읽기 시작한 뒤다(T2 2.5).
+- **API:** `back/ext`가 이 DB의 `ext` 뷰만 읽는다. 호출자는 `collect`(수집) 또는 `analyze`(분석)이고, API 계약의 15종만 나간다(`publication.reference_family`). `manage.py ext-client-add "<이름>" --audience collect|analyze`. 명세는 `docs/ssot-staging/service/openapi.json`이고, 코드를 바꾸면 `cd back && python -m ext.export_openapi`로 다시 쓴다(테스트가 어긋남을 잡는다).
+
+## 지표 DB (2026-11-06)
+
+BFF가 계산해 두는 값의 자리다(SSOT `service/cache-db.md`). `gold` 스키마는 사전 집계 테이블이 들어올 자리(T5.3)이고, `cache.query_result`는 필터 조회 결과다(UNLOGGED, TTL 없음, `manage.py backup`에 들지 않음). 역할은 `hmg_metrics_reader`(읽기), `hmg_cache_writer`(캐시만, `HGH_CACHE_DB_URL`), `hmg_rollup_writer`(`gold`만, 작업 전용)이고 다른 파트에는 열지 않는다. 코드는 `bff/hub_stores/cache_db.py`(키 · 읽기 · 쓰기 · 이전 스냅샷 삭제)이고, 화면은 아직 읽지 않는다(T5.5).
+
 ## 프로젝트·프롬프트의 기준
 
 - `catalog.project` / `catalog.prompt`: 삭제되지 않는 UUID, 원천(`gold` 또는 `hub`), 원천 UUID.
 - `catalog.*_version`: 정의가 달라질 때 추가되는 버전. 서비스 계정은 수정·삭제할 수 없다. `current_*` 뷰는 최신 버전을 읽는다.
 - Gold 가져오기는 현재 원천 정의의 버전 기록이다. Gold 측정 사실 전체를 복제하지 않는다. 원천에 없는 프로젝트 이름은 `null`이다. `registered_at`, `recorded_at`은 HUB 등록/관측 시각이며 원천 생성 시각이 아니다.
-- `origin=gold`는 Gold 동기화가 관리한다. `origin=hub` 정의는 가져오기가 덮어쓰지 않는다. 글로벌 프롬프트는 최상위 관리자가 HUB에서 만들고 고칠 수 있다(아래 절). 프로젝트 프롬프트 · 커스텀 태그는 2026-11-03부터 HUB가 정본이고, HUB가 고친 항목은 가져오기가 HUB 키를 지킨다(아래 '프로젝트 프롬프트' 절). Gold 측정 파이프라인으로의 전달(측정 실행)은 아직 구현하지 않았다.
+- `origin=gold`는 HUB가 고치기 전까지 Gold 동기화가 관리한다. `origin=hub` 정의와 HUB가 고친 항목은 가져오기가 덮어쓰지 않는다. 글로벌 프롬프트는 최상위 관리자가 HUB에서 만들고 고칠 수 있다(아래 절). 프로젝트 프롬프트 · 커스텀 태그는 2026-11-03부터 HUB가 정본이고, HUB가 고친 항목은 가져오기가 HUB 키를 지킨다(아래 '프로젝트 프롬프트' 절). Gold 측정 파이프라인으로의 전달(측정 실행)은 아직 구현하지 않았다.
 - 운영 DB는 `system.project_reference`에 **같은 UUID만** 보관한다. 관리 명령이 데이터 DB 존재를 확인한 뒤 등록한다. 데이터 커밋 후 운영 등록이 실패해도 재실행으로 복구된다. 두 DB 사이 FK나 원자적 트랜잭션은 없다.
 - 향후 프로젝트 생성/설정 변경 서비스도 이 검증·등록 경로를 사용해야 한다. 프로젝트 제거는 새 정의의 보관 상태로 처리하고 정체성 행을 지우지 않는다. 설정·측정 실행은 프롬프트 버전과 설정 버전을 고정해서 기록해야 한다. 기존 Gold 측정에는 과거 HUB 버전 대응을 임의로 붙이지 않는다.
 - `system.integration.credential_ref`에는 비밀 저장소 참조만 보관한다. 실제 키·토큰은 설정 JSON에 저장하지 않는다. 사용자/설정/권한에는 가상 초기 행을 넣지 않았다. 로컬 모드는 조회와 쓰기(글로벌 프롬프트 편집) 모두 HUB 로그인을 요구한다(2026-10-28부터 조회도).
@@ -46,7 +64,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 리뉴얼 화면 Admin › Global prompts(`/renewal/admin/standards/prompts`)에서 **최상위 관리자만** HUB 카탈로그의 글로벌 프롬프트를 만들고, 고치고, 보관하고, 복원한다. 2026-10-28부터 로컬 모드의 모든 화면이 이 로그인을 요구한다. 쿠키가 없으면 화면은 `/login?next=…`로, `/api/*`는 401로 막힌다(`front/middleware.ts`).
 
-- **대상:** Gold 루트 프로젝트(`definition.surface=1`, `is_root=true`)에 속한 프롬프트. `origin=hub`만 편집한다. `origin=gold`는 읽기 전용으로 보여 준다. HUB에서 고쳐도 다음 `sync-gold-catalog`가 Gold 정의를 새 버전으로 다시 기록하기 때문이다.
+- **대상:** Gold 루트 프로젝트(`definition.surface=1`, `is_root=true`)에 속한 프롬프트 전부(2026-11-06부터 `origin=gold` 포함, 위 '입력 DB'). `removed`만 읽기 전용이다.
 - **기록 방식:** 모든 변경은 `catalog.prompt_version`에 새 버전을 추가한다. 삭제는 `definition.status='archived'`인 버전이고, 복원도 버전 하나다. 정체성 행과 이력은 지우지 않는다. 버전마다 `recorded_by`(운영 DB `user_account.user_id`)를 남긴다. Gold 가져오기 버전은 `NULL`이다.
 - **동시 편집:** 쓰기 요청은 보고 있던 버전(`expectedVersion`)을 보낸다. 최신이 아니면 409 `version_conflict`로 거부한다. 쓰기는 Gold 가져오기와 같은 advisory lock을 잡아 한 번에 하나씩만 기록한다.
 - **검증:** 본문은 한 줄, 2000자 이하다. 퍼널·브랜드 언급·목록 유형·분류 코드는 마지막 Gold 가져오기가 기록한 분류 체계(`catalog.current_reference`, family `taxon`)의 값만 받고, depth2·depth3은 함께 고른 depth1·depth2 아래에 있어야 한다(같은 코드가 여러 부모 아래 있다). 잠금을 쥔 채 Gold를 부르지 않는다. 언어·시장은 글로벌 카탈로그가 이미 쓰는 값만 받는다. 분류 체계가 아직 기록되지 않았으면 카탈로그가 이미 쓰는 코드만 받는다. 같은 본문·언어의 사용 중 프롬프트가 있으면 409 `duplicate`로 거부한다. Gold 가져오기가 실행 중이면 5초 기다린 뒤 503으로 돌려준다.
@@ -212,8 +230,8 @@ m() { HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py "$@"; }   # Win
 m init                                   # 005_external_api, hmg_ext_api 계정, .env.ext-api.local
 m sync-gold-catalog                      # 정의와 기준값 가져오기 (거부되면 사유를 보고 플래그 판단)
 m publish-project <project_id> [projects] [prompts]     # 공개 승인 (기본 둘 다) · unpublish-project
-m publish-reference <family ...|all>     # 기준값 종류 공개 승인 · unpublish-reference
-m ext-client-add "<호출자 이름>"          # client_id 출력 · ext-client-disable / ext-client-enable
+m publish-reference <family ...|all>     # API 계약의 기준값 종류 공개 승인 · unpublish-reference
+m ext-client-add "<호출자 이름>" --audience collect|analyze   # client_id 출력 · ext-client-disable / ext-client-enable
 m ext-key-issue <client_id> [--days N]   # 키를 한 번만 출력 (최대 365일, 호출자당 유효 키 2개)
 m ext-key-revoke <key_id> <사유>
 m grant-project <client_id> <project_id ...>            # 허용 · withdraw-project 로 회수(행은 남음)
@@ -221,7 +239,7 @@ m ext-list                               # 호출자·키(해시 제외)·허용
 cd back && uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json   # .env.ext-api.local 필요
 ```
 
-**내부 VM(taeho-dev).** Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 10분에 `vm.sh service-week`(서비스 기준 주, 위 절), 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. `service-week FAILED` 줄은 그 실행이 아무것도 기록하지 않았다는 뜻이고(사유는 줄 끝), 화면은 마지막 기준 주를 그대로 쓴다. 011을 처음 적용하면 `vm.sh bff` 뒤에 `vm.sh service-week`를 한 번 손으로 돌린다. crontab 줄은 `scripts/vm.sh` 머리말에 있다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
+**내부 VM(taeho-dev).** 2026-11-06 입력 · 지표 DB를 적용하려면 `init` → `vm.sh bff` · `ext` → `sync-gold-catalog` → `verify` 순서로 한다(Docker 경로는 Mac에 Docker가 없어 아직 실행하지 않았다). Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 10분에 `vm.sh service-week`(서비스 기준 주, 위 절), 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. `service-week FAILED` 줄은 그 실행이 아무것도 기록하지 않았다는 뜻이고(사유는 줄 끝), 화면은 마지막 기준 주를 그대로 쓴다. 011을 처음 적용하면 `vm.sh bff` 뒤에 `vm.sh service-week`를 한 번 손으로 돌린다. crontab 줄은 `scripts/vm.sh` 머리말에 있다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
 
 ## 외부 조회 경계 (DB 직접 공개, 미개방)
 
@@ -237,6 +255,6 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 ## 검증
 
-`verify`는 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. 서비스 기준 주 계정은 `catalog.service_week`에 행을 더하고 `checked_at`만 바꾼다(기록된 주 · 회차 · Gold 기록 · 시각 변경, seq · 시각 지정, DELETE, 다른 catalog 표 읽기, 스키마 객체 만들기, 운영 DB 접속 거부). 권한 자체도 보므로 `checked_at` 밖의 열(나중에 더한 열 포함) UPDATE나 DELETE · TRUNCATE · REFERENCES · TRIGGER 권한이 생기면 verify가 실패한다. 월요일이 아닌 주, 두 표면 모두 빈 회차, NULL 회차 ID, 객체가 아닌 기록, 기록보다 이른 확인 시각은 DB가 거부한다. API 조회 계정은 최신 주를 읽되 쓰지 못하고, 외부 API 계정 · Gold 가져오기 계정 · 카탈로그 편집 계정은 기준 주 표에 닿지 못한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 서비스 기준 주 규칙과 쓰기는 `test_hub_service_week.py`(쓰기 · 실행 흐름은 기본 실행에서 가짜 연결로, 실제 표 쓰기와 넘치는 권한을 잡는 verify 확인, PostgreSQL에서의 Gold 읽기는 `HGH_SERVICE_WEEK_TEST_DB_URL`이 있을 때), 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
+`verify`는 네 DB에서 돈다(`verify-data.sql` · `verify-operations.sql` · `verify-input.sql` · `verify-metrics.sql`). 롤백되는 트랜잭션에서 비공개/선택 공개, 외부 계정의 기본 테이블 접근 차단, 버전 불변성, 운영 설정 이력·감사 이력 보존, 잘못된 참조 차단을 확인한다. 외부 API 경계도 같은 방식으로 확인한다: 키 없음·빈 키·만료·폐기·비활성 호출자는 0행, 다른 호출자의 프로젝트와 미승인 종류는 안 보임, 내부 Gold 식별자 비노출, 쓰기 계정의 `change_seq` 지정 거부, 승인 변경 시 순번 증가, `hmg_ext_api`의 운영 DB 접속 거부. 저장한 필터 계정은 자기 표만 쓰고(계정·자격증명·역할·감사 표 거부, 데이터 DB 접속 거부), 기본 필터 둘·주인 없는 행·빈 이름은 DB가 거부한다. GA4 등록부 계정은 등록부와 이력만 쓰고(속성 ID 변경·DELETE·이력 고치기·수집 결과 쓰기·GA4 행 읽기 거부, 운영 DB 접속 거부), 한 시장의 두 번째 수집 속성·숫자 아닌 속성 ID·소문자 국가·모르는 브랜드·이벤트 없는 고른 이벤트 기준은 DB가 거부한다. 출처 교정 계정은 교정과 이력만 쓰고 발행 함수로만 목록을 기록한다(키 · 출처 · 메모 변경, DELETE, 이력 고치기, `reference_set` 직접 쓰기, catalog · GA4 · 키 읽기, 운영 DB 접속 거부). 대문자 · `www.` 키, slug 아닌 카테고리는 DB가 거부하고, Gold 가져오기 계정은 `hub_edit` set을 쓰지 못한다. 교정 종류는 승인 전에는 외부 API에 나가지 않고 `hub_reference`를 바꾸지 않으며, 원복한 교정은 목록에서 빠진다. 서비스 기준 주 계정은 `catalog.service_week`에 행을 더하고 `checked_at`만 바꾼다(기록된 주 · 회차 · Gold 기록 · 시각 변경, seq · 시각 지정, DELETE, 다른 catalog 표 읽기, 스키마 객체 만들기, 운영 DB 접속 거부). 권한 자체도 보므로 `checked_at` 밖의 열(나중에 더한 열 포함) UPDATE나 DELETE · TRUNCATE · REFERENCES · TRIGGER 권한이 생기면 verify가 실패한다. 월요일이 아닌 주, 두 표면 모두 빈 회차, NULL 회차 ID, 객체가 아닌 기록, 기록보다 이른 확인 시각은 DB가 거부한다. API 조회 계정은 최신 주를 읽되 쓰지 못하고, 외부 API 계정 · Gold 가져오기 계정 · 카탈로그 편집 계정은 기준 주 표에 닿지 못한다. API 통합 검증은 `back/bff/tests/test_hub_storage.py`, 가져오기 규칙은 `test_hub_sync.py`, 서비스 기준 주 규칙과 쓰기는 `test_hub_service_week.py`(쓰기 · 실행 흐름은 기본 실행에서 가짜 연결로, 실제 표 쓰기와 넘치는 권한을 잡는 verify 확인, PostgreSQL에서의 Gold 읽기는 `HGH_SERVICE_WEEK_TEST_DB_URL`이 있을 때), 저장한 필터는 `test_saved_filters.py`, 외부 API는 `back/ext/tests/test_app.py`를 사용한다. 영구 테스트 사용자나 가상 측정치를 생성하지 않는다.
 
-마이그레이션: 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, `010_entity_roles`, `011_service_week`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`, `004_hub_accounts`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.
+마이그레이션: 입력 DB `001_input_store`, `002_measurement_reference_contract`, 지표 DB `001_gold_cache`, 데이터 DB `002_data_catalog_publication`, `003_published_dimensions`, `004_hub_prompt_editing`, `005_external_api`, `006_ga4_registry`, `007_source_overrides`, `008_source_lists`, `009_interest_inputs`, `010_entity_roles`, `011_service_week`, `012_project_prompts`, `013_source_versions`, `014_inputs_moved`, 운영 DB `001_operations`, `002_hub_login`, `003_saved_filters`, `004_hub_accounts`. 기존 데이터 DB `001_gold_ga4_seo`는 변경하지 않았다.

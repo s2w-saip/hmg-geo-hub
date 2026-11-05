@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import (accounts, analytics_db, catalog_editor, entity_roles, ga4_registry, hub_auth, hub_catalog, interest,
+from bff.hub_stores import (accounts, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, hub_auth, hub_catalog, input_db, measurement, interest,
                              operations_db, project_prompts, saved_filters, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
@@ -30,6 +30,9 @@ log = logging.getLogger("hgh.gold")
 async def lifespan(app: FastAPI):
     await open_pool()
     await analytics_db.open_pool()
+    await input_db.open_pool()
+    await cache_db.open_pool()
+    await measurement.open_pool()
     await operations_db.open_pool()
     await catalog_editor.open_pool()
     await saved_filters.open_pool()
@@ -44,6 +47,9 @@ async def lifespan(app: FastAPI):
     finally:
         await close_pool()
         await analytics_db.close_pool()
+        await input_db.close_pool()
+        await cache_db.close_pool()
+        await measurement.close_pool()
         await operations_db.close_pool()
         await catalog_editor.close_pool()
         await saved_filters.close_pool()
@@ -111,14 +117,14 @@ async def healthz():
     async with connection() as conn:
         info = dict(await conn.fetchrow("SELECT current_database() AS database,current_user AS role,current_setting('transaction_read_only') AS read_only"))
     return {"ok": True, "source": "gold", **info, "analytics": await analytics_db.health(),
-            "operations": await operations_db.health()}
+            "operations": await operations_db.health(), "input": await input_db.health(), "cache": await cache_db.health()}
 
 
 # ─── HUB login, accounts, Global prompt editing and saved filters ─────────────────────────────────────
 # Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
 
-def hub_json(data, status: int = 200, database: str = "hmg_analytics") -> JSONResponse:
-    source = "hub_operations" if database == "hmg_operations" else "hub_data"
+def hub_json(data, status: int = 200, database: str = "hmg_input") -> JSONResponse:
+    source = {"hmg_operations": "hub_operations", "hmg_input": "hub_input"}.get(database, "hub_data")
     return JSONResponse(jsonable_encoder({"data": data, "meta": {"source": source, "database": database}}),
                         status_code=status, headers={"Cache-Control": "no-store"})
 
@@ -201,33 +207,33 @@ def ga4_property_id(property_id: str) -> str:
 @app.get("/v1/hub/ga4-properties")
 async def ga4_property_list(request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.listing())
+    return hub_json(await ga4_registry.listing(), database="hmg_analytics")
 
 
 @app.post("/v1/hub/ga4-properties")
 async def ga4_property_create(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(ga4_registry.PropertyCreate, await json_body(request), "GA4 property")
-    return hub_json(await ga4_registry.create(body, actor), 201)
+    return hub_json(await ga4_registry.create(body, actor), 201, database="hmg_analytics")
 
 
 @app.get("/v1/hub/ga4-properties/{property_id}")
 async def ga4_property(property_id: str, request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.detail(ga4_property_id(property_id)))
+    return hub_json(await ga4_registry.detail(ga4_property_id(property_id)), database="hmg_analytics")
 
 
 @app.put("/v1/hub/ga4-properties/{property_id}")
 async def ga4_property_update(property_id: str, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(ga4_registry.PropertyUpdate, await json_body(request), "GA4 property")
-    return hub_json(await ga4_registry.update(ga4_property_id(property_id), body, actor))
+    return hub_json(await ga4_registry.update(ga4_property_id(property_id), body, actor), database="hmg_analytics")
 
 
 @app.get("/v1/hub/ga4-properties/{property_id}/events")
 async def ga4_property_events(property_id: str, request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.events(ga4_property_id(property_id)))
+    return hub_json(await ga4_registry.events(ga4_property_id(property_id)), database="hmg_analytics")
 
 
 @app.post("/v1/hub/ga4-properties/{property_id}/{action}")
@@ -235,7 +241,7 @@ async def ga4_property_action(property_id: str, action: str, request: Request):
     if action not in ("stop", "resume"):
         raise HTTPException(404, "Unknown action")
     actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor))
+    return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor), database="hmg_analytics")
 
 
 # Admin › 인용 출처 분류 (hub_stores/source_overrides.py): the top-level administrator only. A source key can hold a
@@ -441,6 +447,22 @@ async def entity_role_clear(request: Request):
 
 
 # Project › Prompt (hub_stores/project_prompts.py): the top-level administrator only (project pages are, decision J).
+@app.get("/v1/hub/projects/{project_id}/measurement")
+async def project_measurement_read(project_id: UUID, request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    value = await measurement.read(project_id)
+    if value is None:
+        raise HTTPException(404, "The input store does not hold this project")
+    return hub_json(value)
+
+
+@app.post("/v1/hub/projects/{project_id}/measurement")
+async def project_measurement_write(project_id: UUID, request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = catalog_editor.parse(measurement.MeasurementWrite, await json_body(request), "measurement")
+    return hub_json(await measurement.write(project_id, body, actor))
+
+
 @app.post("/v1/hub/projects/{project_id}/prompts")
 async def project_prompt_add(project_id: UUID, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))

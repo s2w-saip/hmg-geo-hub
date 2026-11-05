@@ -44,10 +44,9 @@ async def main(config):
     ext = await asyncpg.connect(config['ext'], timeout=5)
     try:
         assert await ext.fetchval('SHOW transaction_read_only') == 'on'
-        for view in ('caller', 'meta', 'projects', 'prompts', 'reference_sets', 'reference_items'):
+        for view in ('caller', 'meta', 'codes', 'projects', 'prompts', 'reference_sets', 'reference_items'):
             assert await ext.fetchval(f'SELECT count(*) FROM ext.{view}') == 0, f'ext.{view} answers without a key'
-        for query in ('SELECT 1 FROM catalog.prompt LIMIT 1', 'SELECT 1 FROM publication.api_key LIMIT 1',
-                      'SELECT 1 FROM published.projects LIMIT 1'):
+        for query in ('SELECT 1 FROM catalog.prompt LIMIT 1', 'SELECT 1 FROM publication.api_key LIMIT 1'):
             try:
                 await ext.execute(query)
             except asyncpg.InsufficientPrivilegeError:
@@ -63,6 +62,57 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('External API credentials can connect to operations DB')
+    try:
+        forbidden = await asyncpg.connect(config['ext_data'], timeout=5)
+    except (asyncpg.InsufficientPrivilegeError, asyncpg.InvalidCatalogNameError):
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('External API credentials can still connect to the data DB')
+    # The input store's API reader and measurement editor; the metrics store's reader and cache role.
+    reader = await asyncpg.connect(config['input_reader'], timeout=5)
+    try:
+        assert await reader.fetchval('SHOW transaction_read_only') == 'on'
+        await reader.fetchval('SELECT count(*) FROM catalog.current_measurement')
+        await reader.fetchval('SELECT count(*) FROM catalog.reference_source')
+    finally:
+        await reader.close()
+    measurement = await asyncpg.connect(config['measurement'], timeout=5)
+    try:
+        await measurement.fetchval('SELECT count(*) FROM catalog.current_measurement')
+        try:
+            await measurement.execute('SELECT 1 FROM catalog.entity_role LIMIT 1')
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            raise AssertionError('Measurement editor reads beyond its tables')
+    finally:
+        await measurement.close()
+    try:
+        forbidden = await asyncpg.connect(config['measurement_operations'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Measurement editor credentials can connect to the operations DB')
+    metrics = await asyncpg.connect(config['metrics_reader'], timeout=5)
+    try:
+        assert await metrics.fetchval('SHOW transaction_read_only') == 'on'
+        await metrics.fetchval('SELECT count(*) FROM cache.query_result')
+    finally:
+        await metrics.close()
+    cache = await asyncpg.connect(config['cache_writer'], timeout=5)
+    try:
+        await cache.fetchval('SELECT count(*) FROM cache.query_result')
+    finally:
+        await cache.close()
+    try:
+        forbidden = await asyncpg.connect(config['cache_writer_input'], timeout=5)
+    except asyncpg.InvalidAuthorizationSpecificationError:
+        pass
+    else:
+        await forbidden.close()
+        raise AssertionError('Cache credentials can connect to the input store')
     # Saved filter role: system.saved_filter on the operations server only.
     saved = await asyncpg.connect(config['saved_filter'], timeout=5)
     try:
@@ -219,6 +269,7 @@ async def main(config):
         await forbidden.close()
         raise AssertionError('Service week credentials can connect to the operations DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
+                      'input_reader':'read_only','measurement':'its_tables','metrics_reader':'read_only','cache':'cache_table','cache_input_access':'denied',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
                       'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied',
                       'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied',
