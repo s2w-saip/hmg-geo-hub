@@ -138,8 +138,8 @@ td .tier { margin-left: 0; }
 
 
 <h1>지표 가공 위치 비교</h1>
-<p class="lede">지금처럼 분석팀과 파이프라인이 지표까지 계산할까(현행), 분석팀은 추출만 하고 BFF가 지표를 계산할까(안 B)</p>
-<p class="meta">초안 · 2026-11-05 · 결정 전 · 읽는 사람: 개발팀 전체 · 안 B는 지금 구현된 코드와 규칙에 얽매이지 않고 설계했고, 근거로는 서비스 중인 데이터 양을 썼다.</p>
+<p class="lede">지표 계산(가공)을 파이프라인에 둘까(현행), BFF로 옮길까(안 B)</p>
+<p class="meta">초안 · 2026-11-05 · 결정 전 · 대상: 개발팀 전체 · 근거: 서비스 중인 데이터 양(2026-11-05)</p>
 
 <div class="tabs" role="tablist" aria-label="문서 보기">
   <button type="button" role="tab" id="t-diagram" aria-controls="tab-diagram" aria-selected="true">다이어그램</button>
@@ -247,7 +247,7 @@ td .tier { margin-left: 0; }
   </div>
   <div class="shape">
     <h4><span class="badge x">2</span>추출 결과 (OBT Table) · 프롬프트 1개 = 1행, 수십 개 열<span class="tier silver">Silver</span></h4>
-    <p class="by">분석팀이 추출한 정보를 프롬프트 행에 바로 넣음 → 파이프라인의 가공이 읽음</p>
+    <p class="by">분석팀이 추출 정보를 바로 넣음 → 파이프라인 가공이 읽음</p>
     <table>
       <tr><th>prompt_key</th><td class="mono">10234</td></tr>
       <tr><th>프롬프트 · 회차</th><td>best 3-row SUV for families · <span class="mono">2026-10-05</span></td></tr>
@@ -256,12 +256,12 @@ td .tier { margin-left: 0; }
       <tr><th>답변별 인용 (URL · 출처 분류)</th><td>여러 열에 나눠 담음</td></tr>
       <tr><th>…</th><td>같은 행에 수십 개 열이 더 있음</td></tr>
     </table>
-    <p class="sub">판정 · 집계는 없다</p>
-    <p class="by">분석팀은 추출한 정보만 넣는다. 분모 조건 · 자사 판정 · 합산은 파이프라인의 가공이 한다. 다만 행이 프롬프트 단위라, 답변 단위로 새로 세려면 분석팀이 OBT의 열을 바꿔야 한다.</p>
+    <p class="sub">판정 · 집계 없음</p>
+    <p class="by">프롬프트 단위라 답변 단위로 세려면 분석팀이 열을 바꿔야 한다.</p>
   </div>
   <div class="shape">
     <h4><span class="badge x">3</span>지표 셀 (파이프라인이 가공)<span class="tier gold">Gold</span></h4>
-    <p class="by">파이프라인이 OBT를 읽어 판정 · 합산 → BFF가 읽음</p>
+    <p class="by">파이프라인이 OBT를 판정 · 합산 → BFF가 읽음</p>
     <table>
       <tr><th>묶음</th><td>2026-10-05 · US · ChatGPT · Hyundai</td></tr>
       <tr><th>분모 (유효 답변)</th><td class="mono">1,240</td></tr>
@@ -269,12 +269,12 @@ td .tier { margin-left: 0; }
       <tr><th>1순위 답변</th><td class="mono">228 → 1순위율 18.4%</td></tr>
       <tr><th>인용 / 공식(HMG)</th><td class="mono">13,950 / 1,325 → 9.5%</td></tr>
     </table>
-    <p class="sub">이 값을 만드는 규칙</p>
-    <p class="by">분모 조건 · 자사 판정 · 셀마다 대표 답변 · 회차 창 · 지표 공식이 모두 파이프라인의 가공에 있다.</p>
+    <p class="sub">규칙 위치</p>
+    <p class="by">분모 조건 · 자사 판정 · 대표 답변 · 회차 창 · 지표 공식 → 파이프라인 가공</p>
   </div>
 </div>
-<p class="shapes-note">값은 데이터 모양을 보이기 위한 예시다.</p>
-<figcaption>현행은 추출 사실을 답변 단위로 따로 두지 않고, 분석팀이 추출한 정보를 프롬프트 1개 = 1행(수십 개 열)인 Silver OBT Table에 바로 넣는다. 가공(분모 조건 · 자사 판정 · 지표별 합산)은 파이프라인 안에서 해서 Gold 지표 셀을 만들고, BFF는 Gold DB를 읽는다. 지표를 바꾸려면 파이프라인의 가공을 고쳐야 하므로 화면 요구가 팀 경계를 넘는다(빨간 점선). 1 · 2 · 3 모두 다른 팀이 읽으므로 셋 다 팀 사이 계약이다.</figcaption>
+<p class="shapes-note">값은 예시다.</p>
+<figcaption>분석팀이 추출 정보를 OBT Table(프롬프트 1행)에 넣고, 파이프라인이 가공해 Gold 지표 셀을 만든다. BFF는 Gold DB를 읽는다. 지표를 바꾸려면 파이프라인 가공을 고쳐야 한다(빨간 점선). 팀 사이 계약은 1 · 2 · 3 모두.</figcaption>
 </figure>
 
 <h2>그림 2 — 안 B: BFF가 가공한다</h2>
@@ -367,7 +367,7 @@ td .tier { margin-left: 0; }
   </div>
   <div class="shape">
     <h4><span class="badge x">2</span>추출 사실 (OBT Table) · 답변 1건 = 1행<span class="tier silver">Silver</span></h4>
-    <p class="by">분석팀이 만듦 → 파이프라인이 Silver 저장소에 세대로 적재 · 공개 → BFF 가공이 읽음</p>
+    <p class="by">분석팀이 만듦 → 파이프라인이 세대로 적재 · 공개 → BFF 가공이 읽음</p>
     <table>
       <tr><th>answer_key</th><td class="mono">8812031</td></tr>
       <tr><th>프롬프트 · 엔진 · 국가 · 회차</th><td>best 3-row SUV … · ChatGPT · US · <span class="mono">2026-10-05</span></td></tr>
@@ -375,12 +375,12 @@ td .tier { margin-left: 0; }
       <tr><th>인용 (출처 분류)</th><td><span class="mono">kia.com/us/telluride</span> (공식 HMG)<br><span class="mono">caranddriver.com/…</span> (자동차 미디어)<br><span class="mono">edmunds.com/…</span> (리뷰 · 비교)</td></tr>
       <tr><th>…</th><td>추출 열이 더 있음. 판정 · 집계 열은 없음</td></tr>
     </table>
-    <p class="sub">현행 OBT와 다른 점</p>
-    <p class="by">현행 OBT는 프롬프트 1행이고, B의 OBT는 답변 1행이다. 둘 다 추출한 정보만 담고, 세는 규칙은 현행은 파이프라인, B는 BFF가 갖는다. 답변 1건당 언급 브랜드는 평균 3.2개, 인용은 평균 11.5개다.</p>
+    <p class="sub">현행 OBT와 차이</p>
+    <p class="by">프롬프트 1행 → 답변 1행. 답변당 언급 브랜드 평균 3.2개, 인용 11.5개.</p>
   </div>
   <div class="shape">
     <h4><span class="badge i">3</span>지표 (BFF가 계산)<span class="tier gold">Gold</span></h4>
-    <p class="by">BFF 가공이 요청 때 만듦(무거운 계열은 롤업) → 화면 · 외부 API</p>
+    <p class="by">BFF가 요청 때 계산(무거운 계열은 롤업) → 화면 · 외부 API</p>
     <table>
       <tr><th>묶음</th><td>요청: 2026-10-05 · US · ChatGPT · Hyundai</td></tr>
       <tr><th>분모 (유효 답변)</th><td class="mono">1,240</td></tr>
@@ -388,229 +388,202 @@ td .tier { margin-left: 0; }
       <tr><th>1순위 답변</th><td class="mono">228 → 1순위율 18.4%</td></tr>
       <tr><th>인용 / 공식(HMG)</th><td class="mono">13,950 / 1,325 → 9.5%</td></tr>
     </table>
-    <p class="sub">이 값을 만드는 규칙</p>
-    <p class="by">분모 조건 · 자사 판정 · 셀마다 대표 답변 · 회차 창 · 지표 공식</p>
+    <p class="sub">규칙 위치</p>
+    <p class="by">분모 조건 · 자사 판정 · 대표 답변 · 회차 창 · 지표 공식 → BFF</p>
   </div>
 </div>
-<p class="shapes-note">값은 데이터 모양을 보이기 위한 예시다. 행 수 비율(3.2 · 11.5)만 서비스 중인 데이터에서 셌다.</p>
-<figcaption>B에서 다른 팀이 읽는 DB는 1(응답 원문, Bronze)과 2(추출 사실 OBT Table, Silver)이다. Silver 저장소는 하나이고, 파이프라인이 쓰고 BFF는 공개된 세대만 읽는다. 딜리버리는 데이터를 옮기는 일이 아니라 검사를 통과한 세대를 공개로 바꾸는 일이다('자세한 내용' 탭 2절 '서비스 딜리버리'). 3(롤업 표, Gold)은 서비스가 쓰고 서비스만 읽는다. 지표를 바꾸는 고리가 서비스 담당 안에서 닫힌다.</figcaption>
+<p class="shapes-note">값은 예시다. 평균 3.2 · 11.5만 실측.</p>
+<figcaption>분석팀이 추출 사실을 OBT Table(답변 1행)에 넣고, 파이프라인이 세대로 적재 · 공개한다(딜리버리 = 공개 전환, 복사 없음. 자세한 내용 2절). BFF가 공개 세대를 읽어 가공한다. 팀 사이 계약은 1 · 2. 3(롤업)은 서비스 안에서만 쓴다. 지표 변경은 서비스 안에서 끝난다(초록 점선).</figcaption>
 </figure>
 
 </section>
 
 <section id="tab-details" role="tabpanel" aria-labelledby="t-details" hidden>
 <div class="verdict">
-  <strong>권고: 안 B. 분석팀은 추출만 하고, 가공(지표 계산)은 BFF가 맡는다.</strong>
-  <p>현행은 지표를 쓰는 쪽(서비스)과 계산하는 쪽(파이프라인)이 달라, 지표 하나를 바꿀 때 팀 사이를 오간다. OBT가 프롬프트 1행이라 답변 단위로 새로 세려면 분석팀까지 움직인다. B에서는 지표를 쓰는 쪽(서비스)이 지표를 정의하고 계산하므로 팀 사이를 오가지 않고, 분석팀은 AI 추출 품질에 집중한다. 성능은 1~4회차 읽기를 요청 때 집계해도 1초 안팎이라 버티고, 무거운 계열만 롤업한다. 단, 5절의 조건 다섯 개를 함께 정해야 한다.</p>
+  <strong>권고: 안 B. 가공(지표 계산)을 BFF로 옮기고, 분석팀은 추출만 한다.</strong>
+  <p>현행은 지표를 쓰는 쪽(서비스)과 계산하는 쪽(파이프라인)이 달라, 지표를 바꿀 때마다 팀 사이를 오간다. B는 서비스가 지표를 정의하고 계산한다. 요청 때 집계는 1~4회차 기준 1초 안팎이고, 무거운 계열만 롤업한다. 전제 조건은 5절.</p>
 </div>
 
 <h2>1. 단계와 담당</h2>
 <table>
-  <tr><th style="width:12%">단계</th><th style="width:28%">하는 일</th><th>현행</th><th>안 B</th></tr>
-  <tr><td>수집</td><td>AI 엔진에 프롬프트를 묻고 응답을 받는다.</td>
-      <td colspan="2"><span class="who ext"></span>앤써 (두 안 같음)</td></tr>
-  <tr><td>분석</td><td>AI 모델로 응답에서 사실을 뽑는다(추출).</td>
-      <td colspan="2"><span class="who ana"></span>분석 · 신민철 · 박보규 (두 안 같음)</td></tr>
-  <tr><td><strong>가공</strong></td><td>추출 사실을 규칙대로 세어 지표를 만든다.</td>
-      <td><span class="who pipe"></span><strong>파이프라인 · 이시형 · 김혜민 (판정 · 지표별 합산)</strong></td>
-      <td><span class="who svc"></span><strong>서비스 · 김태호 (BFF)</strong></td></tr>
-  <tr><td>서비스 출력</td><td>지표를 화면과 외부 API로 내보낸다.</td>
-      <td colspan="2"><span class="who svc"></span>서비스 · 김태호 (두 안 같음)</td></tr>
-  <tr><td>데이터 파이프라인</td><td>수집 완료 데이터를 분석이 쓸 수 있게 준비하고, 분석이 만든 데이터를 저장하고, 서비스에 내놓는다.</td>
-      <td><span class="who pipe"></span>이시형 · 김혜민 · 분석 입력 준비, 추출 결과(OBT Table) 보관, 가공(판정 · 지표별 합산)</td>
-      <td><span class="who pipe"></span>이시형 · 김혜민 · 분석 입력 준비, 추출 사실(OBT Table)을 세대로 적재 · 공개</td></tr>
+  <tr><th style="width:12%">단계</th><th style="width:26%">하는 일</th><th>현행</th><th>안 B</th></tr>
+  <tr><td>수집</td><td>AI 엔진에 질의, 응답 수신</td><td colspan="2"><span class="who ext"></span>앤써</td></tr>
+  <tr><td>분석</td><td>응답에서 사실 추출 (AI 모델)</td><td colspan="2"><span class="who ana"></span>신민철 · 박보규</td></tr>
+  <tr><td><strong>가공</strong></td><td>추출 사실을 규칙대로 세어 지표 계산</td><td><span class="who pipe"></span><strong>파이프라인 · 이시형 · 김혜민</strong></td><td><span class="who svc"></span><strong>서비스 · 김태호 (BFF)</strong></td></tr>
+  <tr><td>서비스 출력</td><td>화면, 외부 API</td><td colspan="2"><span class="who svc"></span>김태호</td></tr>
+  <tr><td>데이터 파이프라인</td><td>분석 입력 준비, 저장, 서비스 제공</td><td><span class="who pipe"></span>이시형 · 김혜민: 입력 준비, OBT 보관, 가공</td><td><span class="who pipe"></span>이시형 · 김혜민: 입력 준비, OBT 세대 적재 · 공개</td></tr>
 </table>
-<p class="note">두 안은 가공을 누가 하는지가 다르다. 현행은 파이프라인이, B는 서비스가 한다. 두 그림은 배치가 같고, 가공 칸(분홍 점선), 파이프라인이 하는 일, DB 번호의 색(빨강 = 다른 팀이 읽는 DB)만 다르다.</p>
+<p class="note">차이는 두 가지다. 가공 담당(현행 파이프라인, B 서비스)과 OBT 단위(현행 프롬프트 1행, B 답변 1행).</p>
+
 <h3>메달리온 층</h3>
 <table>
-  <tr><th style="width:9%">층</th><th style="width:16%">담는 것</th><th>현행</th><th>안 B</th></tr>
-  <tr><td><span class="tier bronze">Bronze</span></td><td>수집한 그대로의 응답 원문</td><td colspan="2">앤써가 만든 응답 원문 (두 안 같음)</td></tr>
-  <tr><td><span class="tier silver">Silver</span></td><td>분석팀 산출물 (OBT Table)</td><td>추출 결과: 프롬프트 1행 · 수십 열. 분석팀이 추출한 정보를 바로 넣음. 판정 · 집계는 없음</td><td>추출 사실: 답변 1행. 추출만 들어 있고 판정 · 집계는 없음. 파이프라인이 세대로 적재 · 공개</td></tr>
-  <tr><td><span class="tier gold">Gold</span></td><td>지표 · 롤업</td><td>파이프라인이 OBT를 가공(판정 · 합산)한 지표 셀 (모든 조합)</td><td>서비스가 가진 롤업 표 (무거운 계열만) + 요청 때 BFF가 계산하는 값</td></tr>
+  <tr><th style="width:9%">층</th><th>현행</th><th>안 B</th></tr>
+  <tr><td><span class="tier bronze">Bronze</span></td><td colspan="2">응답 원문 (앤써)</td></tr>
+  <tr><td><span class="tier silver">Silver</span></td><td>추출 결과 OBT Table: 프롬프트 1행 · 수십 열, 추출만</td><td>추출 사실 OBT Table: 답변 1행, 추출만, 세대로 적재 · 공개</td></tr>
+  <tr><td><span class="tier gold">Gold</span></td><td>지표 셀: 파이프라인이 모든 조합을 계산</td><td>롤업 표(무거운 계열만, 서비스 소유) + 요청 때 BFF 계산</td></tr>
 </table>
-<p class="note">층마다 저장소는 하나이고, 같은 층을 두 곳에 두지 않는다. Bronze는 두 안이 같다. Silver는 두 안 모두 추출만 담지만, 현행은 프롬프트 1행, B는 답변 1행이다. Gold는 현행은 파이프라인이, B는 서비스가 만든다.</p>
+<p class="note">층마다 저장소는 하나다.</p>
 
-
-<h2>2. 추출과 가공의 경계, 단계 사이 계약</h2>
-<p>B가 성립하려면 '추출'이 어디서 끝나는지가 분명해야 한다. 기준은 AI 모델이 필요한 판단인지, 정해진 규칙인지다.</p>
+<h2>2. 추출 · 가공 경계와 계약</h2>
 <table>
-  <tr><th style="width:14%"></th><th>추출 (분석팀)</th><th>가공 (현행: 파이프라인 / B: BFF)</th></tr>
-  <tr><td>뜻</td><td>응답에서 읽어 낸 사실과 그 분류</td><td>사실을 세는 규칙</td></tr>
-  <tr><td>예</td><td>엔티티 식별 · 브랜드 묶음, 감성, 언급 유형, 순위 · 첫 등장 위치, 인용 URL · 출처 분류</td>
-      <td>분모 조건(어떤 답변을 셀지), 자사 판정, 셀마다 대표 답변 고르기, 회차 · 기간 창, 지표 공식(점유율 · 노출률 · 증감)</td></tr>
-  <tr><td>성격</td><td>AI 모델이 필요한 판단. 모델이 바뀌면 다시 돈다.</td><td>정해진 규칙. 화면 요구에 따라 바뀐다.</td></tr>
+  <tr><th style="width:12%"></th><th>추출 (분석팀)</th><th>가공 (현행 파이프라인 / B BFF)</th></tr>
+  <tr><td>정의</td><td>응답에서 읽어 낸 사실과 분류</td><td>사실을 세는 규칙</td></tr>
+  <tr><td>예</td><td>엔티티 · 브랜드 묶음, 감성, 언급 유형, 순위 · 첫 등장, 인용 URL · 출처 분류</td><td>분모 조건, 자사 판정, 대표 답변, 회차 · 기간 창, 지표 공식</td></tr>
+  <tr><td>바뀌는 때</td><td>모델이 바뀔 때</td><td>화면 요구가 바뀔 때</td></tr>
 </table>
 
 <h3>단계 사이 계약</h3>
 <table>
-  <tr><th style="width:5%">번호</th><th style="width:13%">DB</th><th style="width:24%">현행</th><th style="width:24%">안 B</th><th>담는 것</th></tr>
-  <tr><td>1</td><td>응답 원문 <span class="tier bronze">Bronze</span></td><td colspan="2">앤써 → 분석 (팀 경계, 두 안 같음). 파이프라인이 분석 입력으로 준비</td>
-      <td>답변 키, 프롬프트 · 엔진 · 국가 · 언어 · 측정 시각, 본문, 인용 원문</td></tr>
-  <tr><td>2</td><td>OBT Table <span class="tier silver">Silver</span></td><td><strong>분석 → 파이프라인 (팀 경계)</strong>. 추출 결과: 판정 · 집계 없음</td><td><strong>분석 → 서비스 (팀 경계)</strong>. 추출 사실: 파이프라인이 적재 · 공개</td>
-      <td>현행: 프롬프트 1행 · 수십 열<br>B: 답변 1행 (언급 브랜드 · 인용 · 감성 · 출처 분류, 추출 규칙 버전, 세대 번호)</td></tr>
-  <tr><td>3</td><td>지표 · 롤업 <span class="tier gold">Gold</span></td><td><strong>파이프라인 → 서비스 (팀 경계)</strong>. 모든 조합의 지표 셀</td><td>서비스가 쓰고 서비스만 읽음 (계약 아님)</td>
-      <td>회차 · 국가 · 엔진 · 브랜드 지표, 지표 정의 버전</td></tr>
+  <tr><th style="width:5%">번호</th><th style="width:14%">DB</th><th style="width:24%">현행</th><th style="width:24%">안 B</th><th>담는 것</th></tr>
+  <tr><td>1</td><td>응답 원문 <span class="tier bronze">Bronze</span></td><td colspan="2">앤써 → 분석 (팀 경계)</td><td>답변 키, 프롬프트 · 엔진 · 국가 · 언어 · 측정 시각, 본문, 인용 원문</td></tr>
+  <tr><td>2</td><td>OBT Table <span class="tier silver">Silver</span></td><td><strong>분석 → 파이프라인 (팀 경계)</strong></td><td><strong>분석 → 서비스 (팀 경계)</strong></td><td>현행: 프롬프트 1행 · 수십 열<br>B: 답변 1행, 추출 규칙 버전, 세대 번호</td></tr>
+  <tr><td>3</td><td>지표 · 롤업 <span class="tier gold">Gold</span></td><td><strong>파이프라인 → 서비스 (팀 경계)</strong></td><td>서비스 안에서만 씀 (계약 아님)</td><td>회차 · 국가 · 엔진 · 브랜드 지표, 정의 버전</td></tr>
 </table>
-<p class="note">현행은 팀 사이 계약이 1 · 2 · 3 셋이고, 3에 판정 · 집계 규칙이 들어 있어 지표 정의가 바뀌면 계약도 바뀐다. B는 팀 사이 계약이 1 · 2 둘이고 2에는 추출만 들어 있어, 지표 정의가 바뀌어도 계약은 그대로다. 대신 2의 열과 뜻은 넓게 맞춰야 한다.</p>
+<p class="note">현행은 팀 사이 계약이 3개이고, 3에 지표 규칙이 들어 있어 지표 정의가 바뀌면 계약도 바뀐다. B는 2개이고, 2는 추출만 담아 지표 정의가 바뀌어도 계약은 그대로다. 대신 2의 열 · 뜻을 넓게 맞춰야 한다.</p>
 
-<h3>서비스 딜리버리</h3>
-<p>층마다 저장소는 하나다. 파이프라인이 Silver 저장소에 쓰는 유일한 주체이고, 서비스는 공개된 세대만 읽는다. '임시 저장'은 따로 둔 저장소가 아니라 아직 공개하지 않은 세대이고, '딜리버리'는 데이터를 옮기는 일이 아니라 검사를 통과한 세대를 공개로 바꾸는 일이다. 같은 데이터를 두 곳에 두지 않으므로 어느 쪽이 정본인지, 둘을 어떻게 맞출지 정할 일이 없다.</p>
+<h3>서비스 딜리버리 (안 B)</h3>
+<p>Silver 저장소는 하나다. 쓰는 것은 파이프라인뿐이고, 서비스는 공개 세대만 읽는다. 임시 저장은 공개 전 세대이고, 딜리버리는 세대를 공개로 바꾸는 일이다(복사 없음).</p>
 <table>
-  <tr><th style="width:12%">세대 상태</th><th>뜻</th><th style="width:22%">바꾸는 주체</th><th style="width:14%">서비스가 보나</th></tr>
-  <tr><td class="mono">loading</td><td>적재 중. 지금까지 '임시 저장'이라 부른 것</td><td>파이프라인</td><td>아니오</td></tr>
+  <tr><th style="width:12%">세대 상태</th><th>뜻</th><th style="width:18%">바꾸는 주체</th><th style="width:14%">서비스가 보나</th></tr>
+  <tr><td class="mono">loading</td><td>적재 중 (임시 저장)</td><td>파이프라인</td><td>아니오</td></tr>
   <tr><td class="mono">ready</td><td>검사 통과, 공개 대기</td><td>파이프라인</td><td>아니오</td></tr>
-  <tr><td class="mono">public</td><td>공개 중. 회차마다 하나</td><td>파이프라인 (공개 전환 = 딜리버리)</td><td>예</td></tr>
-  <tr><td class="mono">retired</td><td>지난 세대. 되돌리기용으로 1~2개만 남김</td><td>파이프라인</td><td>아니오</td></tr>
+  <tr><td class="mono">public</td><td>공개 중, 회차마다 하나 (딜리버리)</td><td>파이프라인</td><td>예</td></tr>
+  <tr><td class="mono">retired</td><td>지난 세대, 1~2개만 보관</td><td>파이프라인</td><td>아니오</td></tr>
 </table>
 <table>
   <tr><th style="width:42%">구성 요소</th><th>쓰는 주체</th><th>읽는 주체</th></tr>
-  <tr><td>Silver 저장소: 추출 사실 OBT Table (답변 1건 = 1행, 세대 번호 · 상태 포함)</td><td>파이프라인만</td><td>서비스</td></tr>
-  <tr><td>매니페스트: 회차 · 세대 · 행 수 · 추출 규칙 버전 · 상태</td><td>파이프라인만</td><td>서비스</td></tr>
-  <tr><td>공개 세대 포인터 (회차마다 한 행)</td><td>파이프라인만</td><td>BFF</td></tr>
-  <tr><td>Silver 읽기 색인</td><td>서비스 (색인만 만들 수 있는 권한)</td><td>BFF</td></tr>
-  <tr><td>롤업 (Gold, 세대 · 정의 버전 기록)</td><td>서비스만</td><td>BFF</td></tr>
+  <tr><td>Silver: 추출 사실 OBT Table (세대 번호 · 상태 포함)</td><td>파이프라인</td><td>서비스</td></tr>
+  <tr><td>매니페스트: 회차 · 세대 · 행 수 · 추출 규칙 버전 · 상태</td><td>파이프라인</td><td>서비스</td></tr>
+  <tr><td>공개 세대 포인터 (회차마다 한 행)</td><td>파이프라인</td><td>BFF</td></tr>
+  <tr><td>Silver 읽기 색인</td><td>서비스 (색인 권한만)</td><td>BFF</td></tr>
+  <tr><td>롤업 (Gold, 세대 · 정의 버전 기록)</td><td>서비스</td><td>BFF</td></tr>
 </table>
-
 <p><strong>동작 (회차마다)</strong></p>
 <ol>
-  <li>파이프라인이 분석 산출물을 새 세대로 적재한다(<code>loading</code>). 이전 공개 세대는 그대로 보인다.</li>
-  <li>행 수 · 필수 열 · 키 중복을 검사하고, 통과하면 <code>ready</code>로 바꾸고 매니페스트에 적는다.</li>
-  <li>한 트랜잭션으로 공개 포인터를 새 세대로 바꾼다(<code>public</code>). 이것이 딜리버리다. 이전 세대는 <code>retired</code>가 된다.</li>
-  <li>서비스는 매니페스트에서 새 공개 세대를 보고(완료 신호) 롤업을 갱신하고 캐시를 비운다.</li>
-  <li>롤업의 세대가 공개 세대와 다르면(롤업 실패 · 지연) BFF는 요청 때 Silver에서 계산한다. 느려도 틀리지 않는다.</li>
-  <li>되돌릴 때는 포인터를 <code>retired</code> 세대로 돌린다. 오래된 세대는 정리한다.</li>
+  <li>파이프라인이 새 세대를 적재한다(<code>loading</code>). 화면은 이전 공개 세대를 계속 보인다.</li>
+  <li>행 수 · 필수 열 · 키 중복을 검사하고 <code>ready</code>로 바꾼 뒤 매니페스트에 적는다.</li>
+  <li>한 트랜잭션으로 공개 포인터를 바꾼다(<code>public</code>). 이전 세대는 <code>retired</code>가 된다.</li>
+  <li>서비스는 매니페스트로 새 세대를 확인하고 롤업을 갱신한 뒤 캐시를 비운다.</li>
+  <li>롤업이 늦거나 실패하면 BFF가 요청 때 Silver에서 계산한다. 느리지만 값은 맞다.</li>
+  <li>되돌릴 때는 포인터를 <code>retired</code> 세대로 돌린다.</li>
 </ol>
 <table>
-  <tr><th>한 번에 적재할 양 (추정)</th><th class="num">OBT 행 (= 답변)</th><th class="num">그 안의 브랜드 언급</th><th class="num">그 안의 인용</th></tr>
+  <tr><th>한 번에 적재할 양 (추정)</th><th class="num">OBT 행 (= 답변)</th><th class="num">브랜드 언급</th><th class="num">인용</th></tr>
   <tr><td>global 1회차</td><td class="num">약 4.7만</td><td class="num">약 15만</td><td class="num">약 54만</td></tr>
   <tr><td>website 1주</td><td class="num">약 2만</td><td class="num">약 6만</td><td class="num">약 23만</td></tr>
 </table>
-<p class="note">답변 1건당 언급 브랜드 · 인용 수(3.2 · 11.5)와 최근 답변 수로 셌다. 한 번에 수만 행(그 안의 항목은 100만 개 미만)이라 적재 · 검사는 몇 초 수준으로 본다. 이 적재가 서비스가 읽는 저장소에 걸리는 것이 이 구성이 감수하는 점이다.</p>
-
+<p class="note">답변당 3.2 · 11.5개 × 최근 답변 수로 추정했다. 적재 · 검사는 몇 초로 본다. 감수하는 점: 적재가 서비스가 읽는 저장소에 걸린다.</p>
 <p><strong>뺀 방식</strong></p>
 <ul>
-  <li>임시 저장 + 서비스 쪽 사본(복사): 같은 Silver가 두 곳에 생겨 정본 · 동기화 · 보존 규칙이 둘이 된다.</li>
-  <li>파이프라인 전용 저장소를 서비스가 색인 권한 없이 읽음: 색인을 바꿀 때마다 파이프라인에 요청해야 한다.</li>
-  <li>서비스가 당겨 감: 적재기가 서비스 담당 한 명의 일로 늘어난다.</li>
+  <li>서비스 쪽 사본: Silver가 두 곳에 생겨 정본 · 동기화 · 보존 규칙이 둘이 된다.</li>
+  <li>색인 권한 없이 직접 읽기: 색인을 바꿀 때마다 파이프라인에 요청해야 한다.</li>
+  <li>서비스가 당겨 감: 적재 작업이 서비스 담당 한 명에게 간다.</li>
 </ul>
-<p><strong>책임.</strong> 세대가 다 왔는지는 파이프라인, 내용이 맞는지는 분석, 지표는 서비스가 진다. 숫자가 틀리면 매니페스트와 롤업에 남은 세대 · 정의 버전으로 어느 단계 문제인지 가린다.</p>
-<p class="note">확인하지 못한 것: Silver 저장소를 어느 DB에 두고 누가 운영할지, 서비스에 색인 권한을 줄 수 있는지, 파이프라인 팀이 '임시 저장'을 별도 저장소로 생각하고 있는지.</p>
+<p><strong>책임.</strong> 세대가 다 왔는지는 파이프라인, 내용은 분석팀, 지표는 서비스가 진다. 문제가 생기면 매니페스트와 롤업에 남은 세대 · 정의 버전으로 단계를 가린다.</p>
 
 <h2>3. 기준별 비교</h2>
-<p>현행은 지금 모습 그대로, 안 B는 아래 4절의 계산 방식으로 비교한다.</p>
+<p>현행은 지금 그대로, B는 4절의 계산 방식으로 비교했다.</p>
 <table>
   <tr><th style="width:12%">기준</th><th style="width:38%">현행 · 파이프라인 가공</th><th style="width:38%">안 B · BFF 가공</th><th style="width:12%">우세</th></tr>
   <tr><td><strong>개발 효율성</strong></td>
     <td><ul>
-      <li><span class="plus">+</span> BFF는 읽기만 하므로 단순하다.</li>
-      <li><span class="minus">−</span> 새 지표 · 필터 축 · 분모 조건이 바뀌면 서비스가 파이프라인에 요청하고, 파이프라인이 가공을 고쳐 다시 계산한 뒤에야 화면에 반영된다(그림 1의 빨간 점선).</li>
-      <li><span class="minus">−</span> 파이프라인이 데이터 이동 · 저장에 더해 지표 규칙까지 맡아, 지표 요구가 몰리면 파이프라인 일이 밀린다.</li>
-      <li><span class="minus">−</span> OBT가 프롬프트 1행이라, 답변 단위로 새로 세려면 분석팀이 OBT의 열을 바꿔야 한다.</li>
+      <li><span class="plus">+</span> BFF는 읽기만 한다.</li>
+      <li><span class="minus">−</span> 지표 · 필터 · 분모를 바꾸려면 파이프라인이 가공을 고치고 다시 계산해야 반영된다(그림 1 빨간 점선).</li>
+      <li><span class="minus">−</span> 파이프라인에 데이터 이동 · 저장과 지표 규칙이 몰린다.</li>
+      <li><span class="minus">−</span> OBT가 프롬프트 단위라 답변 단위로 세려면 분석팀이 열을 바꿔야 한다.</li>
     </ul></td>
     <td><ul>
-      <li><span class="plus">+</span> 화면 요구와 지표 계산을 같은 담당이 고쳐 한 번에 끝난다(그림 2의 초록 점선).</li>
-      <li><span class="plus">+</span> 분석팀은 추출 품질(모델 · 프롬프트 · 분류)에 집중한다.</li>
-      <li><span class="minus">−</span> 서비스 담당 한 명의 일이 늘어난다.</li>
-      <li><span class="minus">−</span> 추출 사실의 열 · 뜻이 바뀌면 BFF도 함께 고쳐야 한다.</li>
+      <li><span class="plus">+</span> 화면 요구와 지표 계산을 한 담당이 고친다(그림 2 초록 점선).</li>
+      <li><span class="plus">+</span> 분석팀은 추출 품질에 집중한다.</li>
+      <li><span class="minus">−</span> 서비스 담당 한 명의 일이 는다.</li>
+      <li><span class="minus">−</span> OBT 열 · 뜻이 바뀌면 BFF도 고쳐야 한다.</li>
     </ul></td>
     <td><span class="pill win">B</span></td></tr>
   <tr><td><strong>책임 · 소유</strong></td>
     <td><ul>
-      <li><span class="plus">+</span> 지표가 미리 계산돼 있어 서비스는 값을 그대로 보인다.</li>
-      <li><span class="minus">−</span> 숫자가 틀리면 추출(분석팀) 문제인지 가공(파이프라인) 문제인지 두 팀 사이에서 가려야 한다.</li>
-      <li><span class="minus">−</span> 지표가 어떻게 쓰이는지 아는 쪽(화면)과 지표를 정의하는 쪽이 달라 해석 차이가 생기기 쉽다.</li>
+      <li><span class="plus">+</span> 서비스는 계산된 값을 그대로 보인다.</li>
+      <li><span class="minus">−</span> 지표를 쓰는 쪽과 정의하는 쪽이 달라 해석 차이가 생긴다.</li>
+      <li><span class="minus">−</span> 숫자가 틀리면 추출(분석팀)과 가공(파이프라인) 사이에서 원인을 가려야 한다.</li>
     </ul></td>
     <td><ul>
-      <li><span class="plus">+</span> 경계가 '사실과 규칙'으로 분명하다. 추출이 맞는지는 분석팀이, 세는 규칙은 서비스가 책임진다.</li>
-      <li><span class="plus">+</span> 각 팀의 전문성(AI 모델 / 서비스 · 쿼리)과 맡은 일이 맞는다.</li>
-      <li><span class="minus">−</span> 숫자가 틀리면 추출 문제인지 가공 문제인지를 두 팀 사이에서 가려야 한다. 추출 사실 검수 기준이 필요하다.</li>
+      <li><span class="plus">+</span> 경계가 분명하다: 사실은 분석팀, 규칙은 서비스.</li>
+      <li><span class="plus">+</span> 맡은 일이 팀 전문성과 맞는다.</li>
+      <li><span class="minus">−</span> 숫자가 틀리면 추출과 가공 사이에서 원인을 가려야 한다. 추출 검수 기준이 필요하다.</li>
     </ul></td>
     <td><span class="pill win">B</span></td></tr>
   <tr><td><strong>정확성 · 일관성</strong></td>
     <td><ul>
-      <li><span class="plus">+</span> 회차를 마감할 때 한 번 계산해 저장하므로, 모든 소비자가 같은 값을 본다.</li>
-      <li><span class="minus">−</span> 지표 셀에 없는 조합을 BFF가 따로 계산하기 시작하면 정의가 두 곳으로 갈라진다.</li>
+      <li><span class="plus">+</span> 회차 마감 때 한 번 계산하므로 모든 소비자가 같은 값을 본다.</li>
+      <li><span class="minus">−</span> 지표 셀에 없는 조합을 BFF가 따로 계산하면 정의가 두 곳에 생긴다.</li>
     </ul></td>
     <td><ul>
-      <li><span class="plus">+</span> 지표 정의가 BFF 한 곳에 모인다. 화면과 외부 API가 모두 BFF를 거친다.</li>
-      <li><span class="minus">−</span> 요청 때 계산하므로, 추출 사실이 다시 분석되면 값이 바로 바뀐다. 세대 번호를 고정하는 계약이 꼭 있어야 한다.</li>
-      <li><span class="minus">−</span> BFF를 거치지 않고 추출 사실을 직접 세는 소비자가 생기면 값이 갈라진다.</li>
+      <li><span class="plus">+</span> 정의가 BFF 한 곳에 있다. 화면과 외부 API 모두 BFF를 거친다.</li>
+      <li><span class="minus">−</span> 요청 때 계산하므로 세대 고정이 필수다.</li>
+      <li><span class="minus">−</span> BFF를 거치지 않고 OBT를 직접 세는 소비자가 생기면 값이 갈라진다.</li>
     </ul></td>
     <td><span class="pill even">비슷함</span></td></tr>
   <tr><td><strong>성능 · 비용</strong></td>
     <td><ul>
-      <li><span class="plus">+</span> 미리 계산해 두므로 화면이 빠르다.</li>
-      <li><span class="minus">−</span> 모든 조합을 미리 계산해, 지표 셀이 답변 단위 사실의 약 4.2배(5,420만 행)이고 회차마다 다시 만든다.</li>
+      <li><span class="plus">+</span> 미리 계산해 두어 빠르다.</li>
+      <li><span class="minus">−</span> 지표 셀 5,420만 행(답변 단위 사실의 4.2배)을 회차마다 다시 만든다.</li>
     </ul></td>
     <td><ul>
-      <li><span class="plus">+</span> 1~4회차 읽기는 요청 때 집계해도 1초 안팎이다(4절 측정). 저장은 추출 사실과 작은 롤업뿐이다.</li>
-      <li><span class="minus">−</span> 기간 전체의 인용 집계는 첫 실행에 6.6초가 걸려 롤업이 필요하다.</li>
-      <li><span class="minus">−</span> 서비스 쪽 DB · 서버 부하가 늘고, 동시 사용자 부하는 아직 재지 않았다.</li>
+      <li><span class="plus">+</span> 1~4회차 요청 때 집계는 1초 안팎이다(4절). 저장은 OBT와 작은 롤업뿐이다.</li>
+      <li><span class="minus">−</span> 기간 전체 인용 집계는 첫 실행에 6.6초라 롤업이 필요하다.</li>
+      <li><span class="minus">−</span> 서비스 DB · 서버 부하가 늘고, 동시 사용자 부하는 재지 않았다.</li>
     </ul></td>
     <td><span class="pill even">비슷함</span></td></tr>
 </table>
 
 <h2>4. 근거 — 데이터 양과 집계 시간</h2>
-<p>2026-11-05 서비스 중인 데이터에서 공개 중인 세대만 셌다. 시간은 global 질의를 읽기 전용으로 두 번씩 돌린 값이고, 동시 요청은 없었다.</p>
-
-<h3>데이터 양</h3>
+<p>2026-11-05 공개 세대 기준이다. 시간은 global 질의를 읽기 전용으로 두 번씩 돌린 값이고, 동시 요청은 없었다.</p>
 <table>
   <tr><th>구분</th><th class="num">행 수</th><th class="num">답변 1건당</th><th>비고</th></tr>
   <tr><td>답변</td><td class="num">74만</td><td class="num">1</td><td>global 44만 · website 30만 · project 1만</td></tr>
-  <tr><td>추출 사실: 브랜드 언급</td><td class="num">235만</td><td class="num">3.2</td><td></td></tr>
-  <tr><td>추출 사실: 인용</td><td class="num">859만</td><td class="num">11.5</td><td></td></tr>
-  <tr><td>추출 사실 합계(스탠스 포함)</td><td class="num">1,290만</td><td class="num">17</td><td></td></tr>
-  <tr><td>모든 조합을 미리 계산한 지표 셀</td><td class="num">5,420만</td><td class="num">73</td><td>추출 사실의 약 4.2배</td></tr>
-  <tr><td>증가 속도</td><td class="num">주당 약 6.7만 답변</td><td class="num"></td><td>global 회차당 약 4.7만 + website 주당 약 2만</td></tr>
+  <tr><td>브랜드 언급</td><td class="num">235만</td><td class="num">3.2</td><td></td></tr>
+  <tr><td>인용</td><td class="num">859만</td><td class="num">11.5</td><td></td></tr>
+  <tr><td>답변 단위 사실 합계 (스탠스 포함)</td><td class="num">1,290만</td><td class="num">17</td><td></td></tr>
+  <tr><td>지표 셀 (모든 조합)</td><td class="num">5,420만</td><td class="num">73</td><td>사실의 4.2배</td></tr>
+  <tr><td>증가</td><td class="num">주당 약 6.7만 답변</td><td class="num"></td><td>global 회차당 4.7만 + website 주당 2만</td></tr>
 </table>
-
-<h3>요청 때 추출 사실에서 바로 집계한 시간</h3>
 <table>
-  <tr><th>질의</th><th>읽는 범위</th><th class="num">시간</th></tr>
+  <tr><th>요청 때 집계</th><th>읽는 범위</th><th class="num">시간</th></tr>
   <tr><td>회차 × 엔진 KPI 분모</td><td>23회차, 답변 44만</td><td class="num">0.2초</td></tr>
   <tr><td>브랜드 × 엔진 언급</td><td>최근 1회차</td><td class="num">0.7~0.9초</td></tr>
   <tr><td>브랜드 × 엔진 × 국가 언급</td><td>최근 4회차</td><td class="num">1.0초</td></tr>
-  <tr><td>출처 도메인 순위(고유 URL 수 포함)</td><td>23회차, 인용 467만</td><td class="num">처음 6.6초 · 두 번째 2.1초</td></tr>
+  <tr><td>출처 도메인 순위 (고유 URL 포함)</td><td>23회차, 인용 467만</td><td class="num">첫 6.6초 · 재실행 2.1초</td></tr>
 </table>
-
-<h3>1년 뒤</h3>
-<p>최근 회차 크기(약 4.7만 답변)로 52회차를 쌓으면 global 답변은 약 244만, 인용은 약 2,600만으로 오늘 기간 전체의 약 5.6배다. 시간이 선형으로 늘어난다고 보면 기간 전체의 인용 집계는 처음 약 37초, 두 번째 약 12초다. 회차 1~4개를 읽는 질의는 기간 길이와 관계없이 지금 수준에 머문다.</p>
-
-<h3>현행과 B의 계산 방식</h3>
+<p><strong>1년 뒤.</strong> 52회차(회차당 4.7만 답변)가 쌓이면 global 인용은 약 2,600만 행으로 지금의 5.6배가 된다. 선형으로 가정하면 기간 전체 인용 집계는 첫 실행 37초, 재실행 12초다. 1~4회차 질의는 기간 길이와 관계없다.</p>
 <table>
-  <tr><th style="width:16%"></th><th>현행</th><th>안 B</th></tr>
-  <tr><td>분석팀</td><td>추출만 (추출 결과 OBT Table, 프롬프트 1행)</td><td>추출만 (추출 사실 OBT Table, 답변 1행)</td></tr>
-  <tr><td>미리 계산</td><td>파이프라인이 가공(판정 · 합산)해 모든 조합을 지표 셀로 만듦</td><td>BFF가 무거운 계열(기간 전체 인용 등)만 회차 단위로 롤업</td></tr>
-  <tr><td>요청 때</td><td>BFF는 읽기만 함</td><td>BFF가 추출 사실에서 집계하고 캐시</td></tr>
-  <tr><td>모든 조합을 미리 계산</td><td>함 (지표 셀 5,420만 행)</td><td>하지 않음. 1~4회차 읽기가 1초 안팎이라 필요 없음</td></tr>
+  <tr><th style="width:16%">계산 방식</th><th>현행</th><th>안 B</th></tr>
+  <tr><td>분석팀</td><td>추출만 (OBT 프롬프트 1행)</td><td>추출만 (OBT 답변 1행)</td></tr>
+  <tr><td>미리 계산</td><td>파이프라인이 모든 조합을 지표 셀로 만든다</td><td>BFF가 무거운 계열만 회차 단위로 롤업한다</td></tr>
+  <tr><td>요청 때</td><td>BFF는 읽기만 한다</td><td>BFF가 OBT에서 집계하고 캐시한다</td></tr>
 </table>
-<p class="note">센 곳(재현용): 답변 <code>answer_fact</code>, 브랜드 언급 <code>answer_brand_fact</code>, 인용 <code>citation_fact</code>, 스탠스 <code>answer_stance_fact</code>, 지표 셀 <code>kpi_cell</code> · <code>brand_cell</code> · <code>citation_cell</code> · <code>url_prompt_cell</code> · <code>kpi_rollup</code>. 행 수는 활성 릴리스가 가리키는 빌드의 <code>row_counts</code> 합이다.</p>
+<p class="note">센 곳: <code>answer_fact</code> · <code>answer_brand_fact</code> · <code>citation_fact</code> · <code>answer_stance_fact</code>, 지표 셀 <code>kpi_cell</code> · <code>brand_cell</code> · <code>citation_cell</code> · <code>url_prompt_cell</code> · <code>kpi_rollup</code>. 행 수는 활성 릴리스가 가리키는 빌드의 <code>row_counts</code> 합이다.</p>
 
 <h2>5. 권고와 조건</h2>
-<p><strong>안 B를 권고한다.</strong> 성능은 현행이 더 빠르지만 B도 1~4회차 읽기가 1초 안팎이라 버티고, 저장 · 재계산 비용은 B가 작다. 개발 효율성과 책임에서 B가 낫다. B의 약점은 넓어진 계약, 값의 고정, 한 명에게 쏠리는 일이고, 아래 조건으로 막는다.</p>
+<p><strong>안 B를 권고한다.</strong> 성능은 현행이 빠르지만 B도 1~4회차 1초 안팎으로 충분하고, 저장 · 재계산 비용은 B가 작다. 개발 효율성과 책임은 B가 낫다. B의 약점(넓은 계약, 세대 고정, 1인 집중)은 아래 조건으로 막는다.</p>
 <ol>
-  <li><strong>추출 계약을 문서로 고정한다.</strong> 추출 사실 OBT Table의 열 · 뜻 · 세대 번호를 적고, 바꿀 때는 미리 알린다. 분석팀과 서비스가 함께 갖는다.</li>
-  <li><strong>지표는 BFF로만 내보낸다.</strong> 외부 API와 다른 소비자도 BFF를 거친다. 추출 사실을 직접 세어 지표를 내는 곳을 두지 않는다.</li>
-  <li><strong>세대를 고정한다.</strong> BFF는 공개된 세대의 추출 사실만 읽는다. 다시 분석한 결과는 새 세대로 들어오고, 공개 전환 때만 화면 값이 바뀐다.</li>
-  <li><strong>지표 정의를 코드와 시험으로 남긴다.</strong> 정의 변경은 분석팀도 리뷰해 한 사람에게만 기대지 않게 한다.</li>
-  <li><strong>롤업은 서비스가 갖고 돌린다.</strong> 파이프라인이 새 세대를 공개하면(매니페스트) 그것을 신호로 갱신하고, 실패하거나 늦으면 BFF가 요청 때 계산한다.</li>
+  <li><strong>OBT 계약을 고정한다.</strong> 열 · 뜻 · 세대 번호를 문서로 두고, 바꿀 때는 미리 알린다.</li>
+  <li><strong>지표는 BFF로만 내보낸다.</strong> 외부 API를 포함해 모든 소비자가 BFF를 거친다.</li>
+  <li><strong>세대를 고정한다.</strong> BFF는 공개 세대만 읽고, 재분석 결과는 공개 전환 때만 반영된다.</li>
+  <li><strong>정의는 코드와 시험으로 남긴다.</strong> 정의 변경은 분석팀도 리뷰한다.</li>
+  <li><strong>롤업은 서비스가 돌린다.</strong> 새 공개 세대(매니페스트)를 신호로 갱신하고, 실패하면 요청 때 계산한다.</li>
 </ol>
-
-<h3>현행을 유지하는 편이 나은 경우</h3>
+<h3>현행 유지가 나은 경우</h3>
 <ul>
   <li>지표 정의가 거의 바뀌지 않을 때</li>
   <li>BFF 말고도 지표를 직접 읽는 소비자가 많을 때</li>
-  <li>서비스 쪽 인력을 늘리거나 나눌 수 없을 때</li>
+  <li>서비스 쪽 인력을 늘릴 수 없을 때</li>
 </ul>
-
 <h3>확인하지 못한 것</h3>
 <ul>
-  <li>동시 사용자가 많을 때의 집계 시간</li>
-  <li>website · project 질의 시간 (global만 쟀다)</li>
-  <li>서비스 담당의 실제 여력과 분석팀의 의견</li>
-  <li>Silver 저장소를 어느 DB에 두고 누가 운영하는지, 서비스에 색인 권한을 줄 수 있는지</li>
-  <li>현행 그림: 지금 Gold DB에는 지표 셀 말고도 답변 1건 = 1행인 사실 표(<code>answer_fact</code> 74만 행, <code>answer_brand_fact</code> · <code>citation_fact</code>)가 있고 BFF가 이것도 읽는다(BFF 코드에서 확인). Silver가 프롬프트 단위라면 이 표를 어느 단계에서 누가 만드는지</li>
-  <li>현행 그림: 이 DB의 표 설명에는 지표 셀 표의 입력이 '데이터 분석팀'으로 적혀 있어, 지표별 가공(판정 · 지표별 합산)을 실제로 파이프라인이 돌리는지</li>
+  <li>동시 사용자 부하, website · project 질의 시간 (global만 쟀다)</li>
+  <li>서비스 담당의 여력, 분석팀 의견</li>
+  <li>Silver 저장소의 DB와 운영 주체, 서비스에 줄 색인 권한, 파이프라인 팀의 임시 저장 구상</li>
+  <li>현행 Gold DB의 답변 단위 사실 표(<code>answer_fact</code> 74만 행 등, BFF가 읽음)를 누가 어느 단계에서 만드는지</li>
+  <li>현행 지표 셀의 가공을 실제로 파이프라인이 하는지 (표 설명에는 입력이 '데이터 분석팀'으로 적혀 있음)</li>
 </ul>
 </section>
 </main>
