@@ -112,7 +112,7 @@
   .f-search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; margin: 0 0 4px; border-radius: 9px; box-shadow: inset 0 0 0 1px var(--line); color: var(--soft); font-size: 13px; }
 
   /* ── 본문 ── */
-  .content { min-width: 0; min-height: 0; overflow-y: auto; padding: 0 28px 64px 32px; display: flex; flex-direction: column; gap: 16px; scrollbar-gutter: stable; }
+  .content { min-width: 0; min-height: 0; overflow-y: auto; padding: 8px 28px 64px 32px; display: flex; flex-direction: column; gap: 16px; scrollbar-gutter: stable; }
   .content > * { flex-shrink: 0; }
   .notice { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 16px; border-radius: 12px; background: color-mix(in srgb, #faf600 6%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, #faf600 30%, var(--line)); font-size: 13px; color: var(--ink-2); }
   .notice .i { color: var(--warn-ink); }
@@ -398,7 +398,7 @@
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
-<body class="fcollapsed">
+<body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8M13 12h8M13 18h8"/></symbol>
@@ -446,7 +446,7 @@
     <li>브랜드별 우호도(지금은 서랍에만), 엔진별 우호도 · 우선 노출도(Gold에 있음, 구현 때 BFF에 더함).</li>
     <li>그대로: 비교 브랜드 제한 없음(타사 15색), 서랍, 원문, HUB가 만든 기준선 · 문턱 없음, 측정 변화로 값을 숨기지 않음(7월 우호도 그대로).</li>
     <li>목업 표는 언급 상위 40개 브랜드까지 담았습니다.</li>
-    <li><b>두 안</b>(사이드바 카드에서 전환, 주소 #sections · #tabs): 구역 안 = 한 페이지를 현황 → 경쟁 비교 → 당사 상세 순서와 구역 제목으로, 탭 안 = '당사 지표'(추이 카드는 당사 선만 · 엔진 · 감정 · 유형별 노출 · 감정)와 '경쟁 비교'(비교 브랜드 · 브랜드 비교 · 유형 안 점유율). 유형 표는 두 안 모두 당사 표와 경쟁 표로 나눴습니다.</li></ul></div>
+    <li><b>탭 '당사 지표 | 경쟁 비교'</b>(사용자 결정 2026-11-05): 당사 지표 = 추이 카드(당사 선만) · 엔진 · 감정 · 유형별 노출 · 감정, 경쟁 비교 = 비교 브랜드 · 브랜드 비교(순위 변화로 엶) · 유형 안 점유율. 비교용으로 구역 안은 주소 끝 #sections에 남겼습니다. 발행 지연은 머리의 기간 버튼(배지 + 툴팁)으로 합쳤습니다.</li></ul></div>
 </div>
 
 <div class="sx">
@@ -476,7 +476,6 @@
     </nav>
     <div class="mkcard">
       <div class="mk-top"><span class="mk-tag">목업</span><b>Mention 개편안</b></div>
-      <div class="seg mk-seg" id="variantSeg" role="group" aria-label="안 고르기"><button type="button" data-variant="sections">구역 안</button><button type="button" data-variant="tabs">탭 안</button></div>
       <button class="mk-btn" id="mkCap" aria-expanded="false" type="button">무엇이 바뀌었나</button>
     </div>
     <div class="acct"><span class="av">T</span><div><b>test-admin</b><small>시스템 관리자</small></div></div>
@@ -489,8 +488,8 @@
         <div class="sub">AI 답변에 어떤 브랜드가 얼마나 등장하는지 확인합니다 · 주 1회 측정 · 측정 회차 2026-10-05 기준</div>
       </div>
       <div class="hacts">
-        <button class="btn" id="periodBtn" type="button" title="기간은 필터의 '기간'에서 고릅니다"><svg class="i"><use href="#i-cal"/></svg>10월 2주차 · 10/5~10/11<span class="warn">발행 지연 25일</span></button>
-        <button class="btn" id="fBtn" type="button" aria-pressed="false"><svg class="i"><use href="#i-sliders"/></svg>필터<span class="cnt">선택 없음</span></button>
+        <button class="btn" id="periodBtn" type="button" data-tip="발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.&#10;Gold 마지막 확인 2026-11-03 17:33&#10;누르면 필터의 '기간'을 엽니다."><svg class="i"><use href="#i-cal"/></svg>10월 2주차 · 10/5~10/11<span class="warn">발행 지연 25일</span></button>
+        <button class="btn" id="fBtn" type="button" aria-pressed="true"><svg class="i"><use href="#i-sliders"/></svg>필터<span class="cnt">선택 없음</span></button>
         <button class="btn" type="button"><svg class="i"><use href="#i-link"/></svg>링크 복사</button>
         <button class="btn pri" type="button"><svg class="i"><use href="#i-dl"/></svg>CSV 내보내기</button>
       </div>
@@ -510,7 +509,6 @@
       </aside>
 
       <div class="content" id="content">
-        <div class="notice"><svg class="i s14"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">Gold 마지막 확인 2026-11-03 17:33</span></div>
 
         <div class="cbar" role="toolbar" aria-label="페이지 조작">
           <div class="tabbar" role="tablist" aria-label="보기"><button type="button" role="tab" data-tab="own" aria-selected="true">당사 지표</button><button type="button" role="tab" data-tab="cmp" aria-selected="false">경쟁 비교</button></div>
@@ -569,7 +567,7 @@ const M = {
   favorability: { label: "AI 우호도", short: "우호도", unit: "%", better: "up", dUnit: "pp", row: "fav", d: null },
   "first-rank": { label: "AI 우선 노출도", short: "우선 노출도", unit: "번째", better: "down", dUnit: "", row: "pos", d: "posD" },
 };
-let VARIANT = location.hash === "#tabs" ? "tabs" : "sections";
+let VARIANT = location.hash === "#sections" ? "sections" : "tabs";
 const st = { tab: "own", focus: "exposure", compare: ["Toyota"], auto: true, view: "bump", sort: null, all: false, q: "", lit: null, unit: "pct", ownOpen: true, tbl: {} };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -786,8 +784,6 @@ function renderBoard() {
   const ii = (k) => `<span class="info" tabindex="0" data-tip="${esc(DEF[k])}"><svg class="i s12"><use href="#i-info"/></svg></span>`;
   const HI = { exp: "i-eye", share: "i-pie", pos: "i-trophy", fav: "i-smile", mentions: "i-msg", prompts: "i-list" };
   const head = `<tr><th class="l" style="width:60px">비교</th><th class="l ${sort.key === "rank" ? "sorted" : ""}" style="width:56px" data-tip="${esc(DEF.rank)}"><button type="button" data-sort="rank">#${arrow("rank")}</button></th><th class="l" style="width:21%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${sort.key === key ? "fx" : ""}" style="width:${m ? (sort.key === key ? "16%" : "10.5%") : "8.5%"}" data-tip="${esc(DEF[key])}"><button type="button" data-sort="${key}"><svg class="i s14"><use href="#${HI[key]}"/></svg>${lab}${arrow(key)}</button></th>`).join("")}<th style="width:112px">추이 · ${M[tm].short}</th><th style="width:30px"></th></tr>`;
-  /** the Δ of a column that is not the sorted one, on hover */
-  const dtip = (key, row) => { const dk = { exp: "expD", share: "shareD", pos: "posD" }[key]; if (!dk || sort.key === key || row[dk] == null) return ""; const v = Math.round(row[dk] * 10) / 10; return `직전 회차 대비 ${v === 0 ? "변화 없음" : `${v > 0 ? "▲" : "▼"}${Math.abs(v).toFixed(1)}${key === "pos" ? "" : "pp"}`}`; };
   const tipAttr = (...t) => { const x = t.filter(Boolean).join("\n"); return x ? `data-tip="${esc(x)}"` : ""; };
   /** a value cell: the sorted column carries the bar or dot and its Δ chip; the others the value and a small Δ */
   const dsm = (v, { unit = "pp", better = "up", own = false } = {}) => {
@@ -798,9 +794,9 @@ function renderBoard() {
   };
   const cell = (key, r, isOwn, c) => {
     const on = sort.key === key;
-    if (key === "exp") return on ? `<span class="vb"><span class="bar"><i style="width:${((r.exp || 0) / maxExp) * 100}%;background:${c}"></i></span><b>${p1(r.exp)}</b>${dchip(r.expD, { own: isOwn })}</span>` : p1(r.exp);
-    if (key === "share") return on ? `<span class="vb"><span class="bar"><i style="width:${Math.min(100, ((r.share || 0) / 40) * 100)}%;background:${c}"></i></span><b>${p1(r.share)}</b>${dchip(r.shareD, { own: isOwn })}</span>` : p1(r.share);
-    if (key === "pos") return on ? `<span class="vb"><span class="ptrack"><i style="left:${(((r.pos || 1) - 1) / (posMax - 1)) * 100}%;background:${c}"></i></span><b>${r1(r.pos)}</b>${dchip(r.posD, { unit: "", better: "down", own: isOwn })}</span>` : r1(r.pos);
+    if (key === "exp") return on ? `<span class="vb"><span class="bar"><i style="width:${((r.exp || 0) / maxExp) * 100}%;background:${c}"></i></span><b>${p1(r.exp)}</b>${dchip(r.expD, { own: isOwn })}</span>` : `${p1(r.exp)}${dsm(r.expD, { own: isOwn })}`;
+    if (key === "share") return on ? `<span class="vb"><span class="bar"><i style="width:${Math.min(100, ((r.share || 0) / 40) * 100)}%;background:${c}"></i></span><b>${p1(r.share)}</b>${dchip(r.shareD, { own: isOwn })}</span>` : `${p1(r.share)}${dsm(r.shareD, { own: isOwn })}`;
+    if (key === "pos") return on ? `<span class="vb"><span class="ptrack"><i style="left:${(((r.pos || 1) - 1) / (posMax - 1)) * 100}%;background:${c}"></i></span><b>${r1(r.pos)}</b>${dchip(r.posD, { unit: "", better: "down", own: isOwn })}</span>` : `${r1(r.pos)}${dsm(r.posD, { unit: "", better: "down", own: isOwn })}`;
     if (key === "fav") return on ? `<span class="vb">${sentBar(r.sent)}<b>${p1(r.fav)}</b></span>` : `<span ${r.sent ? `data-tip="${Object.keys(SENT).map((k) => `${SENT[k][0]} ${n0(r.sent[k])}건`).join("\n")}"` : ""}>${p1(r.fav)}</span>`;
     return n0(r[key]);
   };
@@ -812,12 +808,12 @@ function renderBoard() {
     return `<tr class="${isOwn ? "own" : ""} ${st.lit === r.brand ? "lit" : ""}" data-b="${r.brand}" tabindex="0">
       <td class="l">${chk}</td><td class="l rk">${isOwn ? 1 : r.rank}</td>
       <td class="l"><span class="bname">${name}</span></td>
-      ${COLS.map(([m, , key]) => `<td class="${sort.key === key ? "fx" : ""}" ${tipAttr(dtip(key, r), isOwn && key === "pos" ? `HMG · 우선 노출도 표 ${D.rankTable.n}개 브랜드 중 ${D.rankTable.rank}위 · 상위 ${D.rankTable.topPct}%` : "")}>${cell(key, r, isOwn, c)}</td>`).join("")}
+      ${COLS.map(([m, , key]) => `<td class="${sort.key === key ? "fx" : ""}" ${tipAttr(isOwn && key === "pos" ? `HMG · 우선 노출도 표 ${D.rankTable.n}개 브랜드 중 ${D.rankTable.rank}위 · 상위 ${D.rankTable.topPct}%` : "")}>${cell(key, r, isOwn, c)}</td>`).join("")}
       <td>${tm === "favorability" ? '<span class="muted" style="font-size:11px">회차 값 없음</span>' : spark(sv, isOwn ? NAVY : on ? colorOf(r.brand) : "#b4b5b9", { invert: tm === "first-rank" })}</td>
       <td class="go">›</td></tr>`;
   };
   const sub = (o) => `<tr class="sub"><td></td><td></td><td class="l"><span class="bname">${avatar(o.brand, "own")}<b>${o.brand}</b></span></td>
-      ${COLS.map(([m, , key]) => { const on = sort.key === key; return `<td class="${on ? "fx" : ""}" ${tipAttr(dtip(key, o))}>${key === "exp" ? `${p1(o.exp)}${on ? dsm(o.expD, { own: true }) : ""}` : key === "share" ? `${p1(o.share)}${on ? dsm(o.shareD, { own: true }) : ""}` : key === "pos" ? `${r1(o.pos)}${on ? dsm(o.posD, { unit: "", better: "down", own: true }) : ""}` : key === "fav" ? p1(o.fav) : n0(o[key])}</td>`; }).join("")}
+      ${COLS.map(([m, , key]) => { const on = sort.key === key; return `<td class="${on ? "fx" : ""}" >${key === "exp" ? `${p1(o.exp)}${dsm(o.expD, { own: true })}` : key === "share" ? `${p1(o.share)}${dsm(o.shareD, { own: true })}` : key === "pos" ? `${r1(o.pos)}${dsm(o.posD, { unit: "", better: "down", own: true })}` : key === "fav" ? p1(o.fav) : n0(o[key])}</td>`; }).join("")}
       <td><span class="muted" style="font-size:11px">—</span></td><td></td></tr>`;
   body.innerHTML = `
     <table class="bt"><thead>${head}</thead><tbody>${tr(own)}${st.ownOpen ? D.ownRows.map(sub).join("") : ""}${shown.map(tr).join("")}</tbody></table>
@@ -1030,12 +1026,10 @@ function renderAll() {
 function applyVariant() {
   document.body.classList.toggle("v-tabs", VARIANT === "tabs"); document.body.classList.toggle("v-sections", VARIANT !== "tabs");
   document.body.classList.toggle("t-own", st.tab === "own"); document.body.classList.toggle("t-cmp", st.tab === "cmp");
-  $("#variantSeg").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.variant === VARIANT)));
   document.querySelectorAll(".tabbar [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === st.tab)));
   document.title = `Mention 개편안 — ${VARIANT === "tabs" ? "탭 안" : "구역 안"}`;
 }
-$("#variantSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { location.hash = b.dataset.variant; }));
-addEventListener("hashchange", () => { VARIANT = location.hash === "#tabs" ? "tabs" : "sections"; applyVariant(); $("#content").scrollTop = 0; renderAll(); });
+addEventListener("hashchange", () => { VARIANT = location.hash === "#sections" ? "sections" : "tabs"; applyVariant(); $("#content").scrollTop = 0; renderAll(); });
 document.querySelectorAll(".tabbar [data-tab]").forEach((b) => b.addEventListener("click", () => { st.tab = b.dataset.tab; applyVariant(); $("#content").scrollTop = 0; renderAll(); }));
 applyVariant();
 renderAll();
