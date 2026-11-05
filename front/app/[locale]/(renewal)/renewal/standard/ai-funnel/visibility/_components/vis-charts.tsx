@@ -22,6 +22,7 @@ import {
   YAxis,
 } from "recharts";
 import { rnNiceTicks } from "@/components/renewal-ui";
+import { RN_OWN, RN_OWN_ON_DARK } from "@/components/renewal-ui/palette";
 
 const TICK = { fontSize: 11, fill: "var(--color-rn-muted)" } as const;
 
@@ -44,7 +45,7 @@ function TipBox({ title, children }: { title: ReactNode; children: ReactNode }) 
 function TipRow({ color, value, name, bold }: { color: string; value: string; name: string; bold?: boolean }) {
   return (
     <div className="flex items-center gap-2 py-px">
-      <i aria-hidden className="inline-block size-2 rounded-sm" style={{ background: color === "#002c5f" ? "#aacae6" : color }} />
+      <i aria-hidden className="inline-block size-2 rounded-sm" style={{ background: color === RN_OWN ? RN_OWN_ON_DARK : color }} />
       <b className={bold ? "font-bold" : "font-semibold"}>{value}</b>
       <span className="text-white/80">{name}</span>
     </div>
@@ -279,12 +280,12 @@ export function VisLorenz({
           <YAxis type="number" width={40} domain={[0, 1]} ticks={[0, 0.25, 0.5, 0.75, 1]} tickFormatter={pctTick} tick={TICK} tickLine={false} axisLine={false} />
           <ReferenceLine segment={[{ x: 0, y: 0 }, { x: 1, y: 1 }]} stroke="var(--color-rn-faint)" strokeDasharray="4 4" />
           <ReferenceDot x={0.3} y={0.3} r={0} label={{ value: equalLabel, position: "left", offset: 8, fontSize: 11, fill: "var(--color-rn-muted)", fontWeight: 600 }} />
-          <Area dataKey="y" type="linear" stroke="none" fill="#002c5f" fillOpacity={0.08} isAnimationActive={false} activeDot={false} tooltipType="none" />
-          <Line dataKey="y" type="linear" stroke="#002c5f" strokeWidth={2} dot={false} isAnimationActive={false} activeDot={false} />
+          <Area dataKey="y" type="linear" stroke="none" fill={RN_OWN} fillOpacity={0.08} isAnimationActive={false} activeDot={false} tooltipType="none" />
+          <Line dataKey="y" type="linear" stroke={RN_OWN} strokeWidth={2} dot={false} isAnimationActive={false} activeDot={false} />
           {y9 != null ? (
             <>
-              <ReferenceLine segment={[{ x: 0, y: y9 }, { x: 0.9, y: y9 }]} stroke="#002c5f" strokeDasharray="2 3" />
-              <ReferenceDot x={0.9} y={y9} r={4} fill="#002c5f" stroke="#fff" strokeWidth={2} />
+              <ReferenceLine segment={[{ x: 0, y: y9 }, { x: 0.9, y: y9 }]} stroke={RN_OWN} strokeDasharray="2 3" />
+              <ReferenceDot x={0.9} y={y9} r={4} fill={RN_OWN} stroke="#fff" strokeWidth={2} />
             </>
           ) : null}
         </ComposedChart>

@@ -7,8 +7,8 @@ import { TrendTooltip } from "./charts";
 // tooltips did. The point's index comes with the data row; without a note the tooltip is the same as before.
 
 const series = [
-  { key: "__avg", name: "경쟁사 평균", color: "#8a837b", values: [30, 31] },
-  { key: "__own", name: "HMG", color: "#002c5f", values: [76.6, 77.0], own: true },
+  { key: "__avg", name: "경쟁사 평균", color: "#6c6d70", values: [30, 31] },
+  { key: "__own", name: "HMG", color: "#1e38fa", values: [76.6, 77.0], own: true },
 ];
 const payload = [
   { dataKey: "__avg", value: 31, payload: { x: "10/5", __rnRow: 1 } },

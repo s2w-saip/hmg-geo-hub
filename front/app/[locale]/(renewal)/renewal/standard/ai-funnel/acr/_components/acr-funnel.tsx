@@ -5,13 +5,14 @@ import { useTranslations } from "next-intl";
 import { RnBasisChip, RnButton, RnCard, RnCardHead, RnEmpty, RnInfoTip, RnInfoTipItem, RnSegmented, RnTag, cx, rnHighlightState } from "@/components/renewal-ui";
 import type { AcrConversionRow, AcrConversionSort, AcrDistState, AcrDuelPart } from "../_data/screen-types";
 import { AcrCardActions, OWN_COLOR, pctTxt, useAcr } from "./acr-context";
+import { RN_QUIET } from "@/components/renewal-ui/palette";
 
 // 후보 → 선택 전환 · 결선 맞대결 cards of the renewal ACR page (2026-10-29). Counts, shares,
 // orders and the sheet a row opens come computed in the view model (screen acr/renewal).
 
 const STATES: AcrDistState[] = ["pick", "listed", "absent"];
 /** 당사 state colours: picked navy, a candidate never picked red (the conversion loss), not a candidate grey */
-const STATE_COLOR: Record<AcrDistState, string> = { pick: OWN_COLOR, listed: "color-mix(in srgb, var(--color-rn-down) 72%, #ffffff)", absent: "#ddd6ce" };
+const STATE_COLOR: Record<AcrDistState, string> = { pick: OWN_COLOR, listed: "color-mix(in srgb, var(--color-rn-down) 72%, #ffffff)", absent: RN_QUIET };
 const STATE_KEY = { pick: "statePick", listed: "stateListed", absent: "stateAbsent" } as const;
 
 const countTxt = (n: number, share: number | null) => `${n.toLocaleString()} (${pctTxt(share)})`;

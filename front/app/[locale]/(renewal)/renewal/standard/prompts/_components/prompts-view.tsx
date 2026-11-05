@@ -558,7 +558,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                             <td className={cx(TD, "pl-5")}>
                               <span className="flex min-w-0 items-center gap-2">
                                 {r.lang ? (
-                                  <span data-rn-tip={languageName(r.lang, locale)} className="w-5 shrink-0 text-rn-11 font-semibold text-rn-faint uppercase">
+                                  <span data-rn-tip={languageName(r.lang, locale)} className="w-5 shrink-0 text-rn-11 font-semibold text-rn-muted uppercase">
                                     {r.lang}
                                   </span>
                                 ) : null}

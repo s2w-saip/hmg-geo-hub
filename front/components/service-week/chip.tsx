@@ -56,7 +56,7 @@ function useChipModel(view: ServiceWeekView | null): ChipModel {
   };
 }
 
-const WARN = "text-[#d65a43]"; // the warn tone of RnFindingGrid (there is no amber token)
+const WARN = "text-[#d65a43]"; // the (dash) shell's warn tone; the renewal chip takes RnFindingGrid's (rn-warn-ink)
 
 /** Renewal page header (RnPageHeader). `row`: the meta line's class, for a header without one (the chip on its own line). */
 export function RnServiceWeekChip({ row }: { row?: string }) {
@@ -82,7 +82,7 @@ function RnChip({ ctx }: { ctx: ServiceWeekContextValue }) {
         {m.late ? (
           <>
             <span aria-hidden className="h-3 w-px bg-rn-line-2" />
-            <TriangleAlert className={cx("size-3", WARN)} aria-hidden />
+            <TriangleAlert className="size-3 text-rn-warn-ink" aria-hidden />
             <span className="font-semibold text-rn-ink-2 tabular-nums">{m.late}</span>
           </>
         ) : null}

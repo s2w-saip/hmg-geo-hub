@@ -7,13 +7,14 @@ import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnBasisChip, RnButton, RnCard, RnCardHead, RnDeltaChip, RnLineChart, RnSegmented, cx, rnNiceTicks } from "@/components/renewal-ui";
 import type { ConvView } from "../_data/screen-types";
+import { RN_CONTEXT, RN_GREY, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
 import { DefTip, NoteTip, StatusTag, range, useConvFmt } from "./conv-body";
 
-// the validated renewal palette in rank order, grey beyond it; AI = navy, 일반 (the benchmark) = grey
-const ENGINE_COLORS = ["#002c5f", "#1baf7a", "#eb6834", "#6250d6"];
-export const GREY = "#c9c3bb";
-export const AI_COLOR = "#002c5f";
-export const GEN_COLOR = "#939393";
+// the own blue, then the palette series in rank order, grey beyond it; AI = the own blue, 일반 (the benchmark) = grey
+const ENGINE_COLORS = [RN_OWN, ...RN_SERIES];
+export const GREY = RN_CONTEXT;
+export const AI_COLOR = RN_OWN;
+export const GEN_COLOR = RN_GREY;
 export const engineColor = (i: number) => ENGINE_COLORS[i] ?? GREY;
 const PAGE_ROWS = 10;
 const EVENT_ROWS = 8;
@@ -134,7 +135,7 @@ export function ConvTrendCard({ view }: { view: ConvView }) {
           </div>
           <div>
             <h3 className={h3}>{t("trend.conv")}</h3>
-            <RnLineChart x={x} series={[{ key: "conv", name: t("trend.conv"), color: "#eb6834", values: tr.conv, own: true }]} height={150}
+            <RnLineChart x={x} series={[{ key: "conv", name: t("trend.conv"), color: RN_SERIES[0], values: tr.conv, own: true }]} height={150}
               yTick={fmt.n} value={(v) => t("unit.convN", { n: fmt.n(v) })} tooltipTitle={title} ariaLabel={t("trend.conv")} domain={fromZero(tr.conv)} />
           </div>
           <div>
@@ -163,7 +164,7 @@ export function ConvTrendCard({ view }: { view: ConvView }) {
           <div>
             <h3 className={h3}>{t("trend.share")}</h3>
             {shared ? (
-              <RnLineChart x={x} series={[{ key: "share", name: t("trend.share"), color: "#6250d6", values: tr.share, own: true }]} height={150}
+              <RnLineChart x={x} series={[{ key: "share", name: t("trend.share"), color: RN_SERIES[2], values: tr.share, own: true }]} height={150}
                 yTick={(v) => `${v.toFixed(1)}%`} value={(v) => fmt.pct(v, 2)} tooltipTitle={title} ariaLabel={t("trend.share")} domain={fromZero(tr.share)} />
             ) : (
               <p className={none}>{t("trend.shareNone")}</p>

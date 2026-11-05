@@ -33,6 +33,7 @@ import { squarify } from "./treemap-layout";
 import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerSignal, type DrawerTarget } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable, useDegradedText } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
+import { RN_INK, RN_QUIET, RN_QUIET_2 } from "@/components/renewal-ui/palette";
 
 export function BrandDetail() {
   const t = useTranslations("renewal.mention");
@@ -324,14 +325,15 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
   );
 }
 
-// Diverging colours for the share change (pp): green up, red down, sand only for a change that rounds to 0.0pp (what
+// Diverging colours for the share change (pp): System green up, red down, grey only for a change that rounds to 0.0pp (what
 // the tile reads "0.0pp"); hatch = no trend. The tint deepens with the size (from 0.1 · 0.5 · 1.0pp): a scale, not a
 // judgment (renewal audit 8-3: |Δ| < 0.2pp was painted as no change).
 const DIV_STEPS = [0.5, 1.0];
-export const DIV_POS = ["#d3ecdc", "#8fcca6", "#4fa577"];
-export const DIV_NEG = ["#f8d6ce", "#f0a28f", "#dc6a52"];
-export const DIV_ZERO = "#e7e1da";
-const DIV_NA = "repeating-linear-gradient(135deg, #f1ede8 0 6px, #e4ded7 6px 8px)";
+// (the System colour at 25 · 55 · 100% on white)
+export const DIV_POS = ["#cefccc", "#a2f79d", "#3df134"];
+export const DIV_NEG = ["#fec7ca", "#fc8e94", "#fa1e2a"];
+export const DIV_ZERO = RN_QUIET;
+const DIV_NA = `repeating-linear-gradient(135deg, ${RN_QUIET_2} 0 6px, ${RN_QUIET} 6px 8px)`;
 export const divColor = (d: number | null): string => {
   // the size the tile reads (deltaTxt: under 0.05 is "0.0pp", else one decimal)
   if (d == null || Math.abs(d) < 0.05) return DIV_ZERO;
@@ -354,7 +356,7 @@ const relLum = (hex: string) => {
   });
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 };
-const inkOn = (hex: string) => (1.05 / (relLum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#0a0908");
+const inkOn = (hex: string) => (1.05 / (relLum(hex) + 0.05) >= 4.5 ? "#ffffff" : RN_INK);
 // label width at a bold size, measured with the page font (labels are drawn only when they fit)
 let measureCtx: CanvasRenderingContext2D | null = null;
 const textW = (text: string, px: number): number => {
@@ -400,7 +402,7 @@ function Treemap({
   const fill = (d: number | null, hasTrend: boolean) => (multi ? DIV_ZERO : hasTrend ? divColor(d) : null);
   const tile = (key: string, rect: { x: number; y: number; w: number; h: number }, body: { title: string; short?: string; share: number; delta: number | null; hasTrend: boolean; own: boolean; dashed?: boolean; drillN?: number; members?: TreemapBrand[]; tip: string; onClick: () => void }) => {
     const bg = fill(body.delta, body.hasTrend);
-    const ink = bg ? inkOn(bg) : "#0a0908";
+    const ink = bg ? inkOn(bg) : RN_INK;
     const big = rect.w > 70 && rect.h > 44;
     const size = big ? 13 : 11;
     const avail = rect.w - 14;
@@ -644,7 +646,7 @@ function RankTable({
                     className={cx(
                       "grid min-h-10 w-full cursor-pointer items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5",
                       COLS,
-                      r.own && "bg-[linear-gradient(90deg,rgba(0,44,95,.06),rgba(0,44,95,0)_70%)]",
+                      r.own && "bg-[linear-gradient(90deg,rgba(30,56,250,.06),rgba(30,56,250,0)_70%)]",
                       st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
                     )}
                   >

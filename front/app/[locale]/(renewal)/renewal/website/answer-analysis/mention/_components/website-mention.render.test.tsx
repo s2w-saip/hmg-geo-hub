@@ -137,7 +137,7 @@ describe("website mention summary", () => {
     expect(html).toContain("chatgpt 88.3% · deepseek 31.0%");
     expect(html).toContain("긍정 신호 25.5%");
     expect(html).toContain("부정 신호 0.1%");
-    expect(html.match(/text-\[#d65a43\]/g)).toHaveLength(1); // the warn icon: favorability's fall alone
+    expect(html.match(/text-rn-warn-ink/g)).toHaveLength(1); // the warn icon: favorability's fall alone
   });
 });
 

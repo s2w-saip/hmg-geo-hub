@@ -65,7 +65,7 @@ function RnNotices({ ctx, period }: { ctx: ServiceWeekContextValue; period?: Ser
     <>
       {delay ? (
         <RnNote>
-          <TriangleAlert className="size-3.5 shrink-0 text-[#d65a43]" aria-hidden />
+          <TriangleAlert className="size-3.5 shrink-0 text-rn-warn-ink" aria-hidden />
           <span data-rn-service-week-delay="">{delay.text}</span>
           {delay.checked ? <span className="text-rn-muted tabular-nums">{delay.checked}</span> : null}
         </RnNote>

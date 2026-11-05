@@ -54,11 +54,11 @@ export interface RnFinding {
   detail?: ReactNode;
 }
 const TONE_BAR: Record<RnFindingTone, string> = {
-  warn: "shadow-[inset_3px_0_0_#d65a43]",
+  warn: "shadow-[inset_3px_0_0_var(--color-rn-warn)]",
   good: "shadow-[inset_3px_0_0_var(--color-rn-up)]",
   info: "shadow-[inset_3px_0_0_var(--color-rn-navy-300)]",
 };
-const TONE_ICON: Record<RnFindingTone, string> = { warn: "text-[#d65a43]", good: "text-rn-up", info: "text-rn-navy-300" };
+const TONE_ICON: Record<RnFindingTone, string> = { warn: "text-rn-warn-ink", good: "text-rn-up-ink", info: "text-rn-navy-300" };
 
 /** "이번 회차 요약" findings: up to four read-only cards (no jump to the card, no scroll jumps). */
 export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
@@ -88,7 +88,7 @@ export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
 /** Basis chip on a card head ("측정 기준일 …", "추이 12회차"). */
 export function RnBasisChip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [&_svg]:text-rn-faint [.rn-hero_&]:bg-white/12 [.rn-hero_&]:text-white/90 [.rn-hero_&_svg]:text-rn-sky">
+    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [.rn-hero_&]:bg-white/12 [.rn-hero_&]:text-white/90 [.rn-hero_&_svg]:text-rn-sky">
       {icon}
       {children}
     </span>

@@ -3,6 +3,7 @@
 // count of them; nothing here estimates or judges.
 
 import type { WebsitePromptSortKey as LegacySortKey, WebsitePromptViewRow } from "@/lib/db/repositories/website-sites";
+import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
 
 /** A row of the list: the original's fields, the rounds it was measured in and its answers by engine (in the lens). */
 export interface WebsitePromptRow extends WebsitePromptViewRow {
@@ -48,8 +49,8 @@ export interface WebsitePromptInsights {
 // ── engines: one colour per engine, whatever the list holds (the renewal's validated palette, grey beyond) ──
 
 const ENGINE_ORDER = ["chatgpt", "gemini", "deepseek", "perplexity"] as const;
-const ENGINE_COLORS = ["#002c5f", "#1baf7a", "#eb6834", "#6250d6"];
-const ENGINE_GREY = "#c9c3bb";
+const ENGINE_COLORS = [RN_OWN, ...RN_SERIES];
+const ENGINE_GREY = RN_CONTEXT;
 
 export function engineColor(code: string): string {
   const i = (ENGINE_ORDER as readonly string[]).indexOf(code);

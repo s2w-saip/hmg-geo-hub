@@ -13,6 +13,7 @@ import {
   YAxis,
   usePlotArea,
 } from "recharts";
+import { RN_OWN, RN_OWN_ON_DARK } from "./palette";
 
 // Recharts wrapped in the renewal look (rn tokens): recessive grid and axes, 2px lines,
 // direct end labels (text in ink, the line carries the colour; labels that would touch are
@@ -101,7 +102,7 @@ export function TrendTooltip({
       <b className="mb-1 block text-rn-11 font-semibold text-rn-sky">{title(String(label))}</b>
       {rows.map(({ s, v }) => (
         <div key={s.key} className="flex items-center gap-2 py-px">
-          <i aria-hidden className="inline-block h-0.5 w-2.5 rounded" style={{ background: s.color === "#002c5f" ? "#aacae6" : s.color }} />
+          <i aria-hidden className="inline-block h-0.5 w-2.5 rounded" style={{ background: s.color === RN_OWN ? RN_OWN_ON_DARK : s.color }} />
           <b className={s.own ? "font-bold" : "font-semibold"}>{value(v)}</b>
           <span className="text-white/80">{s.name}</span>
         </div>

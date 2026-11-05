@@ -9,13 +9,14 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowUpRight } from "lucide-react";
 import { RnCard, RnCardHeader, RnEmpty, RnTag, cx } from "@/components/renewal-ui";
+import { RN_OTHER, RN_OWN, RN_OWN_RAMP, RN_QUIET } from "@/components/renewal-ui/palette";
 import type { CompositionView } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { useFormat } from "./website-format";
 
-// own domains in navy steps, the others in warm greys, 기타 the lightest (the order of the list)
-const OWN_FILL = ["#002c5f", "#1a4d8e", "#6b89b3", "#aacae6"];
-const OTHER_FILL = ["#8a837b", "#b5aea6", "#cfc8c0"];
-const REST_FILL = "#eee9e2";
+// own domains down the own ramp, the others down the first Chart - Other family, 기타 the quiet grey (the order of the list)
+const OWN_FILL = [RN_OWN, RN_OWN_RAMP[4], RN_OWN_RAMP[5], RN_OWN_RAMP[6]];
+const OTHER_FILL = RN_OTHER.orange.slice(0, 3);
+const REST_FILL = RN_QUIET;
 
 export function sliceFills(sources: CompositionView["sources"]): string[] {
   let own = 0;
@@ -70,7 +71,7 @@ export function RnWebsiteSources({ composition, citationHref, newTab = true }: {
                   data-rn-source={rest ? "rest" : s.domain}
                   className="grid h-9 grid-cols-[22px_minmax(0,1.5fr)_minmax(40px,1fr)_auto_52px] items-center gap-2.5 border-b border-rn-line px-6 text-rn-13 last:border-b-0"
                 >
-                  <span className="flex items-center gap-1.5 text-rn-12 text-rn-faint tabular-nums">
+                  <span className="flex items-center gap-1.5 text-rn-12 text-rn-muted tabular-nums">
                     <i aria-hidden className="inline-block size-2 shrink-0 rounded-[2px]" style={{ background: fills[i] }} />
                     {rest ? "" : i + 1}
                   </span>

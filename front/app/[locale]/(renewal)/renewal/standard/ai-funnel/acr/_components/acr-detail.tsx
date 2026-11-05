@@ -25,12 +25,13 @@ import { useServiceWeekRead } from "@/components/service-week/provider";
 import type { AcrDistRow, AcrDistSheet, AcrDistSort, AcrDistState, AcrDistTab, AcrModelSort } from "../_data/screen-types";
 import { fetchAcrSheet } from "../_data/sheet-client";
 import { AcrCardActions, CONTEXT_COLOR, OWN_COLOR, pctTxt, useAcr } from "./acr-context";
+import { RN_CONTEXT, RN_QUIET_2 } from "@/components/renewal-ui/palette";
 
 // 엔진·프롬프트 · 차종 · 선택 분포 cards of the renewal ACR page. Rows, orders, views, scales
 // and the distribution sheets come computed in the view model (screen acr/renewal; the sheets
 // other than the first from acr/renewal-sheet when their tab opens).
 
-const HATCH = "repeating-linear-gradient(135deg, #f1ede8 0 4px, #ddd6ce 4px 6px)";
+const HATCH = `repeating-linear-gradient(135deg, ${RN_QUIET_2} 0 4px, ${RN_CONTEXT} 4px 6px)`;
 
 function WinBadge({ brand }: { brand: string | null }) {
   const { colorOf, isOwn, lit, hover, view } = useAcr();
@@ -259,7 +260,7 @@ export function AcrModels() {
                 className={cx(
                   "grid min-h-10 items-center gap-2.5 border-b border-rn-line px-6 text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
                   MODEL_COLS,
-                  own && "bg-[linear-gradient(90deg,rgba(0,44,95,.06),rgba(0,44,95,0)_70%)]",
+                  own && "bg-[linear-gradient(90deg,rgba(30,56,250,.06),rgba(30,56,250,0)_70%)]",
                   st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
                 )}
               >

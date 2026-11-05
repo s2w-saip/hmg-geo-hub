@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
+import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
 import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { AcrDistState, RnAcrView } from "../_data/screen-types";
@@ -11,9 +12,9 @@ import type { AcrDistState, RnAcrView } from "../_data/screen-types";
 // (colour follows the brand: 당사 navy, compare slots in pick order, the rest grey), the
 // lit keys of the linked highlight, and which cards show their table twin.
 
-export const OWN_COLOR = "#002c5f";
-export const COMPARE_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
-export const CONTEXT_COLOR = "#c9c3bb";
+export const OWN_COLOR = RN_OWN;
+export const COMPARE_COLORS = RN_SERIES;
+export const CONTEXT_COLOR = RN_CONTEXT;
 
 export interface AcrCtx {
   view: RnAcrView;

@@ -85,7 +85,7 @@ describe("renewal Website Overview trend", () => {
 
   it("gives the multiples no colour of their own: each is the 당사 series (the old legend dot drew 점유율 in red)", () => {
     const out = wrap(<TrendMultiples view={view} />);
-    expect(out).not.toMatch(/#e63312|rn-down/i);
+    expect(out).not.toMatch(/#fa1e2a|rn-down/i);
     expect(part(out, "data-rn-multiple", "shareOfVoice")).not.toContain("rounded-full");
   });
 
@@ -132,8 +132,8 @@ describe("renewal Website Overview sources", () => {
     expect(row("rest")).toBe("기타194,466회46.8%");
   });
 
-  it("colours 당사 in navy steps, the others in greys, 기타 lightest", () => {
-    expect(sliceFills(c.sources)).toEqual(["#002c5f", "#8a837b", "#eee9e2"]);
+  it("colours 당사 down the own ramp, the others down Chart - Other orange, 기타 the quiet grey", () => {
+    expect(sliceFills(c.sources)).toEqual(["#1e38fa", "#ff7651", "#e5e6e9"]);
   });
 
   it("says the read failed instead of showing no sources", () => {

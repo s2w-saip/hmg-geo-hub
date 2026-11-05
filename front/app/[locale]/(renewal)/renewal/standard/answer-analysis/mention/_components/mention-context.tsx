@@ -3,6 +3,7 @@
 import { createContext, use, useContext, useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
+import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { RnMentionInput } from "./mention-input";
@@ -13,9 +14,9 @@ import { OWN_KEY, type RnDrawerBrand } from "../_data/screen-types";
 // brands (colour follows the brand: 당사 navy, compare slots in pick order, the rest grey), the
 // lit keys of the linked highlight, which cards show their table twin, and the brand drawer.
 
-export const OWN_COLOR = "#002c5f";
-export const COMPARE_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
-export const CONTEXT_COLOR = "#c9c3bb";
+export const OWN_COLOR = RN_OWN;
+export const COMPARE_COLORS = RN_SERIES;
+export const CONTEXT_COLOR = RN_CONTEXT;
 
 /** A signal the drawer lists the prompts of: a sentiment, or a mention type (renewal audit 7-3, the original type
  *  breakdown's drilldown; the signal route takes both). */

@@ -131,7 +131,7 @@ export function RnProjectList({ rows }: { rows: ProjectRow[] }) {
                           className="inline-flex items-center gap-1.5 rounded-[3px] font-mono text-rn-13 font-bold text-rn-ink no-underline group-hover/row:text-rn-navy focus-visible:outline-2 focus-visible:outline-rn-navy"
                         >
                           {shortId(r.id)}
-                          <ExternalLink className="size-3.5 text-rn-faint group-hover/row:text-rn-navy" aria-label={t("newTab")} />
+                          <ExternalLink className="size-3.5 text-rn-muted group-hover/row:text-rn-navy" aria-label={t("newTab")} />
                         </Link>
                         <span title={r.first_prompt ?? undefined} className={cx("mt-px block truncate text-rn-12", r.first_prompt ? "text-rn-muted" : "text-rn-faint")}>
                           {r.first_prompt ?? t("noPrompt")}

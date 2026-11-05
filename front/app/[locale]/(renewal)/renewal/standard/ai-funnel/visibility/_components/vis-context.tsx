@@ -11,12 +11,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import { geoCodeLabel } from "@/lib/geo-catalog/geo-code-label";
 import { cx } from "@/components/renewal-ui";
+import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
 import type { VisRow, VisTab, VisView } from "../_data/screen-types";
 import { VIS_TABS, tabQuery } from "../_data/tab";
 
-// 엔진 colours in the screen's engine order (by AI 크롤): the validated renewal palette, grey beyond it.
-const ENGINE_COLORS = ["#002c5f", "#1baf7a", "#eb6834", "#6250d6"];
-export const CONTEXT_GREY = "#c9c3bb";
+// 엔진 colours in the screen's engine order (by AI 크롤): the own blue, then the palette series, grey beyond it.
+const ENGINE_COLORS = [RN_OWN, ...RN_SERIES];
+export const CONTEXT_GREY = RN_CONTEXT;
 export const engineColor = (i: number) => ENGINE_COLORS[i] ?? CONTEXT_GREY;
 
 // ── formats ──────────────────────────────────────────────────────────────────

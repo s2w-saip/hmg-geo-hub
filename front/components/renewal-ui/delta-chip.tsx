@@ -40,7 +40,7 @@ export function RnToneChip({
       )}
     >
       {Icon ? (
-        <Icon aria-hidden strokeWidth={2.5} className={cx("size-3", tone === "up" ? "text-rn-up" : tone === "down" ? "text-rn-down" : "text-rn-muted")} />
+        <Icon aria-hidden strokeWidth={2.5} className={cx("size-3", tone === "up" ? "text-rn-up-ink" : tone === "down" ? "text-rn-danger-ink" : "text-rn-muted")} />
       ) : null}
       {children}
     </span>

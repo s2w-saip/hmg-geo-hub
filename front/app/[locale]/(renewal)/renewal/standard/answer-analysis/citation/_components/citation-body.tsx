@@ -23,6 +23,7 @@ import {
   type RnFinding,
 } from "@/components/renewal-ui";
 import { PeriodDeltaLine } from "@/components/dash/period-delta-line";
+import { RN_SYSTEM } from "@/components/renewal-ui/palette";
 import { useServiceWeekReadState } from "@/components/service-week/provider";
 import { useRnFilterReset, useRnFilterToggle } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { useActiveCitationCategories, useActiveCompetitors } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/citation-url-axes";
@@ -1039,8 +1040,8 @@ function ToneCard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-y-4 pb-5 @min-[560px]/rnpage:grid-cols-2 @min-[560px]/rnpage:divide-x @min-[560px]/rnpage:divide-rn-line">
-          {tile("positive", "#2a78d6")}
-          {tile("negative", "#e34948")}
+          {tile("positive", RN_SYSTEM.good)}
+          {tile("negative", RN_SYSTEM.bad)}
         </div>
       )}
     </>

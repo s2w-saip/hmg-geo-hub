@@ -471,7 +471,7 @@ function Manager({ initial, initialSearch, options, loginHref, savedFilters }: H
                         <td className={cx(TD, "pl-5")}>
                           <span className="flex min-w-0 items-center gap-2">
                             {p.language ? (
-                              <span data-rn-tip={languageName(p.language, locale)} className="w-5 shrink-0 text-rn-11 font-semibold text-rn-faint uppercase">
+                              <span data-rn-tip={languageName(p.language, locale)} className="w-5 shrink-0 text-rn-11 font-semibold text-rn-muted uppercase">
                                 {p.language}
                               </span>
                             ) : null}

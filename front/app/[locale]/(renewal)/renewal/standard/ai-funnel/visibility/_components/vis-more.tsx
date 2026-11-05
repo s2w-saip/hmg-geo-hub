@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { DIMENSIONS } from "@/components/dash/dimension-filter-panel";
+import { RN_OWN, RN_SYSTEM } from "@/components/renewal-ui/palette";
 import { rhqForCountry, rhqLabel } from "@/lib/rhq";
 import { RnBasisChip, RnCard, RnCardHead, RnDeltaChip, RnSparkline, cx } from "@/components/renewal-ui";
 import type { VisHeatKey, VisSite, VisView } from "../_data/screen-types";
@@ -113,7 +114,7 @@ function ComboCard({ view }: { view: VisView }) {
             </span>
             <span className="truncate text-rn-ink-2">{label(c.set)}</span>
             <span className="h-2 overflow-hidden rounded bg-rn-page">
-              <i className="block h-full rounded" style={{ width: `${(c.n / max) * 100}%`, background: c.set.length ? "#002c5f" : "#c4482f" }} />
+              <i className="block h-full rounded" style={{ width: `${(c.n / max) * 100}%`, background: c.set.length ? RN_OWN : RN_SYSTEM.bad }} />
             </span>
             <span className="text-right font-bold tabular-nums">{c.n}</span>
             <span className="text-right text-rn-muted tabular-nums">{fmt.pct(c.share, 0)}</span>
@@ -126,7 +127,7 @@ function ComboCard({ view }: { view: VisView }) {
 }
 
 // one background per cell (cx joins classes, it does not resolve conflicts): the level, or the page tone
-const covLevel = (v: number | null) => (v == null ? "bg-rn-page" : v >= 90 ? "bg-[color-mix(in_srgb,var(--color-rn-navy)_38%,#fff)] font-bold text-rn-navy-900" : v >= 75 ? "bg-[color-mix(in_srgb,var(--color-rn-navy)_22%,#fff)] text-rn-navy" : v >= 50 ? "bg-[color-mix(in_srgb,var(--color-rn-navy)_10%,#fff)]" : v >= 25 ? "bg-[color-mix(in_srgb,#eb6834_10%,#fff)]" : "bg-[color-mix(in_srgb,#c4482f_14%,#fff)] text-rn-danger-ink");
+const covLevel = (v: number | null) => (v == null ? "bg-rn-page" : v >= 90 ? "bg-[color-mix(in_srgb,var(--color-rn-navy)_38%,#fff)] font-bold text-rn-navy-900" : v >= 75 ? "bg-[color-mix(in_srgb,var(--color-rn-navy)_22%,#fff)] text-rn-navy" : v >= 50 ? "bg-[color-mix(in_srgb,var(--color-rn-navy)_10%,#fff)]" : v >= 25 ? "bg-[color-mix(in_srgb,var(--color-rn-warn)_14%,#fff)]" : "bg-[color-mix(in_srgb,var(--color-rn-down)_10%,#fff)] text-rn-danger-ink");
 
 function EngineSectionCard({ view }: { view: VisView }) {
   const t = useTranslations("renewal.visibility.esec");
@@ -208,9 +209,9 @@ export function VisEngineTab({ view }: { view: VisView }) {
 type SiteCol = "pages" | VisHeatKey;
 const SITE_COLS: SiteCol[] = ["pages", "ai", "d", "cov1", "int", "read", "top10", "short"];
 // good (4) ↔ bad (0); volume (ai) is navy intensity only
-const GOOD_BAD = ["bg-[color-mix(in_srgb,#c4482f_14%,#fff)] text-rn-danger-ink", "bg-[color-mix(in_srgb,#eb6834_10%,#fff)]", "bg-[color-mix(in_srgb,var(--color-rn-navy)_10%,#fff)]",
+const GOOD_BAD = ["bg-[color-mix(in_srgb,var(--color-rn-down)_10%,#fff)] text-rn-danger-ink", "bg-[color-mix(in_srgb,var(--color-rn-warn)_14%,#fff)]", "bg-[color-mix(in_srgb,var(--color-rn-navy)_10%,#fff)]",
   "bg-[color-mix(in_srgb,var(--color-rn-navy)_22%,#fff)] text-rn-navy", "bg-[color-mix(in_srgb,var(--color-rn-navy)_38%,#fff)] font-bold text-rn-navy-900"];
-const VOLUME = ["bg-rn-heat-0", "bg-rn-heat-1", "bg-rn-heat-2", "bg-rn-heat-3 text-rn-navy", "bg-rn-heat-4 font-bold text-rn-navy-900"];
+const VOLUME = ["bg-rn-heat-0", "bg-rn-heat-1", "bg-rn-heat-2", "bg-rn-heat-3 text-rn-navy-500", "bg-rn-heat-4 font-bold text-rn-navy-900"];
 
 function SiteCard({ view }: { view: VisView }) {
   const t = useTranslations("renewal.visibility.bench");
@@ -281,7 +282,7 @@ function SectionCard({ view }: { view: VisView }) {
           <span>{t("cols.sec")}</span>
           <span className="text-right">{t("cols.pages")}</span>
           <span className="flex gap-3 font-medium">
-            <span className="inline-flex items-center gap-1.5"><i aria-hidden className="inline-block size-2.5 rounded-full bg-[#9a928a]" />{t("seoShare")}</span>
+            <span className="inline-flex items-center gap-1.5"><i aria-hidden className="inline-block size-2.5 rounded-full bg-rn-muted" />{t("seoShare")}</span>
             <span className="inline-flex items-center gap-1.5"><i aria-hidden className="inline-block size-2.5 rounded-full bg-rn-navy" />{t("aiShare")}</span>
           </span>
           <span className="text-right">{t("cols.gap")}</span>
@@ -297,12 +298,12 @@ function SectionCard({ view }: { view: VisView }) {
               <span className="text-right tabular-nums">{s.pages}</span>
               <span className="relative mx-1.5 h-[18px]" title={t("tip", { sec: fmt.section(s.sec), seo: fmt.pct(s.seoShare), ai: fmt.pct(s.aiShare) })}>
                 <i className="absolute inset-x-0 top-1/2 h-px bg-rn-line" />
-                <i className={cx("absolute top-1/2 h-1 -translate-y-1/2 rounded-sm", s.gap < 0 ? "bg-[color-mix(in_srgb,#eb6834_45%,#fff)]" : "bg-[color-mix(in_srgb,var(--color-rn-navy)_30%,#fff)]")}
+                <i className={cx("absolute top-1/2 h-1 -translate-y-1/2 rounded-sm", s.gap < 0 ? "bg-[color-mix(in_srgb,#ff7651_45%,#fff)]" : "bg-[color-mix(in_srgb,var(--color-rn-navy)_30%,#fff)]")}
                   style={{ left: `${Math.min(a, b)}%`, width: `${Math.abs(a - b)}%` }} />
-                <i className="absolute top-1/2 size-[11px] -translate-1/2 rounded-full border-2 border-white bg-[#9a928a]" style={{ left: `${a}%` }} />
+                <i className="absolute top-1/2 size-[11px] -translate-1/2 rounded-full border-2 border-white bg-rn-muted" style={{ left: `${a}%` }} />
                 <i className="absolute top-1/2 size-[11px] -translate-1/2 rounded-full border-2 border-white bg-rn-navy" style={{ left: `${b}%` }} />
               </span>
-              <span className={cx("text-right font-bold tabular-nums", s.gap <= -3 ? "text-[#b4501f]" : s.gap >= 3 ? "text-rn-up" : "")}>{`${s.gap >= 0 ? "+" : "−"}${Math.abs(s.gap).toFixed(1)}pp`}</span>
+              <span className={cx("text-right font-bold tabular-nums", s.gap <= -3 ? "text-rn-warn-ink" : s.gap >= 3 ? "text-rn-up-ink" : "")}>{`${s.gap >= 0 ? "+" : "−"}${Math.abs(s.gap).toFixed(1)}pp`}</span>
               <span className="text-right tabular-nums">{fmt.pct(s.cov, 0)}</span>
               <span className="text-right tabular-nums">{fmt.rate(s.int)}</span>
             </div>

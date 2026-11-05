@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnCardActions, RnTag, useRnToast } from "@/components/renewal-ui";
+import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import { ENGINE_LABEL } from "@/components/dash/dimension-filter-panel";
 import { citationCategorySlug } from "@/lib/citation-categorizer/taxonomy";
@@ -14,13 +15,13 @@ import type { RnCitationInput } from "./citation-input";
 // the domain drawer. Colour only where identity matters: 공식(HMG) navy, the three biggest rank
 // movers in the compare colours, a diverging pair for the matrix gaps; categories carry names.
 
-export const OWN_COLOR = "#002c5f";
-export const MOVER_COLORS = ["#eb6834", "#1baf7a", "#6250d6"] as const;
-export const CONTEXT_COLOR = "#c9c3bb";
-/** Matrix: cited more than 전체 (blue) / less (orange) / no gap (warm grey). */
-export const DIV_MORE = [47, 109, 181] as const;
-export const DIV_LESS = [217, 130, 43] as const;
-export const DIV_MID = [243, 241, 238] as const;
+export const OWN_COLOR = RN_OWN;
+export const MOVER_COLORS = RN_SERIES;
+export const CONTEXT_COLOR = RN_CONTEXT;
+/** Matrix: cited more than 전체 (the own blue) / less (the first series orange) / no gap (the page grey). */
+export const DIV_MORE = [30, 56, 250] as const;
+export const DIV_LESS = [255, 118, 81] as const;
+export const DIV_MID = [248, 248, 249] as const;
 
 export type MatrixAxis = "engine" | "type";
 

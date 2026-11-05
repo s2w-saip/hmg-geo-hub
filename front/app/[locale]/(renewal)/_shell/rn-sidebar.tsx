@@ -248,9 +248,9 @@ function ProjectListLink() {
       data-rn-project-list-link=""
       className="group/link flex min-h-8 items-center gap-2.5 rounded-lg px-2.5 text-rn-13 font-medium text-rn-ink-2 no-underline hover:bg-rn-navy/6 hover:text-rn-navy focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy"
     >
-      <Briefcase aria-hidden className="size-4 shrink-0 text-rn-faint group-hover/link:text-rn-navy" />
+      <Briefcase aria-hidden className="size-4 shrink-0 text-rn-muted group-hover/link:text-rn-navy" />
       <span className="min-w-0 truncate">{t("list")}</span>
-      <ExternalLink aria-label={t("listHint")} className="ml-auto size-3.5 shrink-0 text-rn-faint" />
+      <ExternalLink aria-label={t("listHint")} className="ml-auto size-3.5 shrink-0 text-rn-muted" />
     </Link>
   );
 }
@@ -292,7 +292,7 @@ function NavGroup({ item, current }: { item: NavItem; current: string | null }) 
   return (
     <div role="group" aria-labelledby={id} className="mt-0.5 flex flex-col gap-px">
       <div id={id} data-rn-nav-group="" className="flex min-h-8 items-center gap-2.5 px-2.5 text-rn-12 font-bold text-rn-muted">
-        {Icon ? <Icon aria-hidden className="size-4 shrink-0 text-rn-faint" /> : null}
+        {Icon ? <Icon aria-hidden className="size-4 shrink-0 text-rn-muted" /> : null}
         <span>{item.label}</span>
       </div>
       {/* the line runs under the heading's icon (px-2.5 + half of size-4) */}
@@ -333,7 +333,7 @@ function NavLink({ leaf, active, icon: Icon, kid = false }: { leaf: NavLeaf; act
         kid && active && "before:absolute before:inset-y-1.5 before:-left-[7px] before:w-0.5 before:rounded-full before:bg-rn-navy",
       )}
     >
-      {Icon ? <Icon aria-hidden className={cx("size-4 shrink-0", active ? "text-rn-navy" : "text-rn-faint group-hover/link:text-rn-navy")} /> : null}
+      {Icon ? <Icon aria-hidden className={cx("size-4 shrink-0", active ? "text-rn-navy" : "text-rn-muted group-hover/link:text-rn-navy")} /> : null}
       <span className="min-w-0 truncate">{leaf.label}</span>
       {pending ? <Loader2 aria-hidden className="ml-auto size-3.5 shrink-0 animate-spin" /> : null}
       {leaf.unimplemented ? (

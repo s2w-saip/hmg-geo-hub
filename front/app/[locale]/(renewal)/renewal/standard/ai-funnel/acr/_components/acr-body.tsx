@@ -35,7 +35,7 @@ import {
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { AcrFinding, RnAcrInput, RnAcrView } from "../_data/screen-types";
-import { AcrCardActions, AcrProvider, COMPARE_COLORS, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
+import { AcrCardActions, AcrProvider, COMPARE_COLORS, CONTEXT_COLOR, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
 import { AcrConversion, AcrDuels } from "./acr-funnel";
 
@@ -514,7 +514,7 @@ function AcrBoard() {
   const keys = ["__own", ...view.brands.map((b) => b.brand)];
   const row = (r: { key: string; name: string; rank: number | null; top1: number | null; bar: number; cov: number | null; trend: Array<number | null> | null; d: number | null; own: boolean; sibling: boolean; canCompare: boolean; total: boolean; tip: string }) => {
     const on = compare.includes(r.key);
-    const color = r.own ? OWN_COLOR : on ? colorOf(r.key) : "#c9c3bb";
+    const color = r.own ? OWN_COLOR : on ? colorOf(r.key) : CONTEXT_COLOR;
     const canCompare = r.canCompare;
     const st = rnHighlightState(lit, [r.key], keys);
     const cells = (
@@ -548,7 +548,7 @@ function AcrBoard() {
     const cls = cx(
       "grid min-h-11 w-full items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
       BOARD_COLS,
-      r.own && (r.total || !multiOwn) && "bg-[linear-gradient(90deg,rgba(0,44,95,.06),rgba(0,44,95,0)_70%)]",
+      r.own && (r.total || !multiOwn) && "bg-[linear-gradient(90deg,rgba(30,56,250,.06),rgba(30,56,250,0)_70%)]",
       st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
     );
     return canCompare ? (

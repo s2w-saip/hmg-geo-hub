@@ -92,7 +92,7 @@ export function KpiBasisChip() {
   const t = useTranslations("renewal.mention.tabs");
   const tTab = useTranslations("answerAnalysis.mentions.kpi.tabs");
   return (
-    <span data-rn-kchip="" className="inline-flex h-[22px] items-center self-center rounded-full bg-rn-surface px-2.5 text-rn-11 font-bold whitespace-nowrap text-rn-navy shadow-[inset_0_0_0_1px_rgba(0,44,95,0.2)]">
+    <span data-rn-kchip="" className="inline-flex h-[22px] items-center self-center rounded-full bg-rn-surface px-2.5 text-rn-11 font-bold whitespace-nowrap text-rn-navy shadow-[inset_0_0_0_1px_rgba(30,56,250,0.2)]">
       {t("basis", { kpi: tTab(kpi) })}
     </span>
   );

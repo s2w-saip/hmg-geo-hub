@@ -9,13 +9,14 @@ import { useTranslations } from "next-intl";
 import { ArrowUpRight, Search } from "lucide-react";
 import { RnBasisChip, RnButton, RnCard, RnCardHead, RnSegmented, cx } from "@/components/renewal-ui";
 import type { VisBand, VisOrderKey, VisQuad, VisRow, VisView } from "../_data/screen-types";
+import { RN_OWN, RN_OWN_RAMP, RN_SERIES, RN_SYSTEM } from "@/components/renewal-ui/palette";
 import { CONTEXT_GREY, engineColor, useVisFmt } from "./vis-context";
 import { VisLogScatter } from "./vis-charts";
 import { DefTip, NoteTip, range } from "./vis-body";
 
-export const BAND_COLORS: Record<VisBand, string> = { none: "#c4482f", low: "#eb6834", mid: "#9db5d3", high: "#002c5f" };
+export const BAND_COLORS: Record<VisBand, string> = { none: RN_SYSTEM.bad, low: RN_SERIES[0], mid: RN_OWN_RAMP[5], high: RN_OWN };
 const BANDS: VisBand[] = ["none", "low", "mid", "high"];
-const QUAD_COLORS: Record<VisQuad, string> = { seo_only: "#eb6834", crawl_only: "#6250d6", both: "#002c5f", neither: CONTEXT_GREY };
+const QUAD_COLORS: Record<VisQuad, string> = { seo_only: RN_SERIES[0], crawl_only: RN_SERIES[2], both: RN_OWN, neither: CONTEXT_GREY };
 const QUADS: VisQuad[] = ["seo_only", "crawl_only", "both", "neither"];
 const WORK_ROWS = 15;
 const TABLE_ROWS = 20;
@@ -31,8 +32,8 @@ function Prio({ p }: { p: number | null }) {
 function Ago({ r, stale }: { r: VisRow; stale: number }) {
   const t = useTranslations("renewal.visibility.ago");
   if (r.ai == null) return <span className="text-rn-12 text-rn-muted">—</span>;
-  if (r.ago == null) return <span className="text-rn-12 font-bold whitespace-nowrap text-[#c4482f]">{t("never")}</span>;
-  return <span className={cx("text-rn-12 whitespace-nowrap", r.ago >= stale ? "font-bold text-[#b4501f]" : "text-rn-ink-2")}>{r.ago === 0 ? t("today") : t("days", { n: r.ago })}</span>;
+  if (r.ago == null) return <span className="text-rn-12 font-bold whitespace-nowrap text-rn-danger-ink">{t("never")}</span>;
+  return <span className={cx("text-rn-12 whitespace-nowrap", r.ago >= stale ? "font-bold text-rn-warn-ink" : "text-rn-ink-2")}>{r.ago === 0 ? t("today") : t("days", { n: r.ago })}</span>;
 }
 
 function EngineDots({ r, view }: { r: VisRow; view: VisView }) {
@@ -119,7 +120,7 @@ function WorkCard({ view }: { view: VisView }) {
                 </span>
                 <span className="text-rn-12 whitespace-nowrap text-rn-ink-2 tabular-nums">{t("actualOf", { ai: fmt.n(r.ai), exp: fmt.n(r.exp) })}</span>
               </span>
-              <span className={cx("justify-self-end font-bold tabular-nums", r.band === "none" ? "text-[#c4482f]" : "text-[#b4501f]")}>{r.ach == null ? "—" : fmt.pct(r.ach * 100, 0)}</span>
+              <span className={cx("justify-self-end font-bold tabular-nums", r.band === "none" ? "text-rn-danger-ink" : "text-rn-warn-ink")}>{r.ach == null ? "—" : fmt.pct(r.ach * 100, 0)}</span>
               <span className="tabular-nums">{fmt.pct(r.read == null ? null : r.read * 100, 0)}</span>
               <Ago r={r} stale={view.staleDays} />
               <EngineDots r={r} view={view} />
@@ -205,7 +206,7 @@ function ChangeCard({ view }: { view: VisView }) {
     <div key={key} className="flex min-w-0 flex-col gap-1.5 border-l border-rn-line px-3 first:border-l-0">
       <h3 className="m-0 mb-0.5 flex items-baseline gap-1.5 text-rn-13 font-bold">
         {t(key)}
-        <span className={cx("ml-auto text-rn-20 tracking-[-0.02em] tabular-nums", bad ? "text-[#c4482f]" : "text-rn-up")}>{key === "up" || key === "down" ? Math.min(ids.length, 5) : ids.length}</span>
+        <span className={cx("ml-auto text-rn-20 tracking-[-0.02em] tabular-nums", bad ? "text-rn-danger-ink" : "text-rn-up-ink")}>{key === "up" || key === "down" ? Math.min(ids.length, 5) : ids.length}</span>
       </h3>
       {ids.length ? (
         <ol className="m-0 flex list-none flex-col gap-1.5 p-0">
@@ -317,8 +318,8 @@ function PageTable({ view }: { view: VisView }) {
               <span role="cell" className="min-w-0"><PageCell r={r} view={view} link /></span>
               {multi ? <span role="cell" data-x="" className="truncate text-rn-12 text-rn-ink-2">{fmt.site(r)}</span> : null}
               <span role="cell" className="justify-self-end tabular-nums">{fmt.n(r.seo)}</span>
-              <span role="cell" className={cx("justify-self-end tabular-nums", r.ai === 0 && "font-bold text-[#c4482f]")}>{fmt.n(r.ai)}</span>
-              <span role="cell" className={cx("justify-self-end tabular-nums", (r.band === "none" || r.band === "low") && (r.short ?? 0) > 0 && "font-bold text-[#b4501f]")}>{r.short ? fmt.n(r.short) : "—"}</span>
+              <span role="cell" className={cx("justify-self-end tabular-nums", r.ai === 0 && "font-bold text-rn-danger-ink")}>{fmt.n(r.ai)}</span>
+              <span role="cell" className={cx("justify-self-end tabular-nums", (r.band === "none" || r.band === "low") && (r.short ?? 0) > 0 && "font-bold text-rn-warn-ink")}>{r.short ? fmt.n(r.short) : "—"}</span>
               <span role="cell" data-x="" className="justify-self-end tabular-nums">{fmt.rate(r.int)}</span>
               <span role="cell" data-x="" className="justify-self-end tabular-nums">{fmt.pct(r.read == null ? null : r.read * 100, 0)}</span>
               <span role="cell" className="justify-self-end"><Ago r={r} stale={view.staleDays} /></span>

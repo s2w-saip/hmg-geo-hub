@@ -21,6 +21,7 @@ import {
   cx,
   type RnFinding,
 } from "@/components/renewal-ui";
+import { RN_CONTEXT, RN_GREY, RN_OWN, RN_OWN_RAMP, RN_QUIET } from "@/components/renewal-ui/palette";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { RnVisBody, VisFinding, VisView } from "../_data/screen-types";
 import { CONTEXT_GREY, engineColor, useVisFmt, useVisPage, type VisFmt } from "./vis-context";
@@ -185,7 +186,7 @@ function TrendCard({ view }: { view: VisView }) {
         <Legend items={series.map((s) => ({ key: s.key, name: s.name, color: s.color }))} />
         <VisStackChart x={x} series={series} height={200} yTick={fmt.k} value={(v) => t("unit.timesN", { n: fmt.n(v) })} title={(i) => view.days[i]} totalLabel={t("trend.total")} ariaLabel={t("trend.title")} />
         <h3 className="m-0 mt-2.5 mb-1 text-rn-12 font-bold text-rn-muted">{t("trend.seo")}</h3>
-        <RnLineChart x={x} series={[{ key: "seo", name: t("trend.seoName"), color: "#7a736b", values: view.trend.seo, own: true }]} height={104} yTick={fmt.k}
+        <RnLineChart x={x} series={[{ key: "seo", name: t("trend.seoName"), color: RN_GREY, values: view.trend.seo, own: true }]} height={104} yTick={fmt.k}
           value={(v) => t("unit.timesN", { n: fmt.n(v) })} tooltipTitle={(d) => view.days[x.indexOf(d)] ?? d} ariaLabel={t("trend.seo")} />
       </div>
     </RnCard>
@@ -205,8 +206,9 @@ export function Legend({ items }: { items: { key: string; name: string; color: s
   );
 }
 
-const TIER_COLORS = ["#002c5f", "#5a85b3", "#c9d6e6", "#e3dcd3"];
-const FREQ_COLORS = ["#002c5f", "#5a85b3", "#aec6df", "#e3dcd3"];
+// the own ramp down to the quiet grey; a white label only on the base (the second step takes ink at 4.9:1)
+const TIER_COLORS = [RN_OWN, RN_OWN_RAMP[4], RN_OWN_RAMP[6], RN_QUIET];
+const FREQ_COLORS = [RN_OWN, RN_OWN_RAMP[4], RN_OWN_RAMP[5], RN_QUIET];
 const FREQ_KEYS = ["daily", "often", "rare", "none"] as const;
 
 function StackBar({ parts }: { parts: { key: string; w: number; color: string; label?: string; tip: string; dark?: boolean }[] }) {
@@ -235,7 +237,7 @@ function TierCard({ view }: { view: VisView }) {
         {rows.map(([k, label]) => (
           <div key={k} className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3">
             <span className="text-rn-12 font-semibold text-rn-ink-2">{label}</span>
-            <StackBar parts={view.tiers.map((x, i) => ({ key: String(x.prio), w: x[k] ?? 0, color: TIER_COLORS[i], label: fmt.pct(x[k], 0), tip: `${name(x.prio)} · ${label} ${fmt.pct(x[k])}`, dark: i < 2 }))} />
+            <StackBar parts={view.tiers.map((x, i) => ({ key: String(x.prio), w: x[k] ?? 0, color: TIER_COLORS[i], label: fmt.pct(x[k], 0), tip: `${name(x.prio)} · ${label} ${fmt.pct(x[k])}`, dark: i === 0 }))} />
           </div>
         ))}
         <Legend items={view.tiers.map((x, i) => ({ key: String(x.prio), name: t("legend", { name: name(x.prio), n: x.pages }), color: TIER_COLORS[i] }))} />
@@ -255,7 +257,7 @@ function FreqCard({ view }: { view: VisView }) {
         {view.tiers.map((x) => (
           <div key={String(x.prio)} className="grid grid-cols-[84px_minmax(0,1fr)] items-center gap-3">
             <span className="text-rn-12 font-semibold text-rn-ink-2">{x.prio == null ? tt("noPrio") : tt("prio", { p: x.prio })}</span>
-            <StackBar parts={FREQ_KEYS.map((k, i) => ({ key: k, w: (x.freq[i] / x.pages) * 100, color: FREQ_COLORS[i], label: String(x.freq[i]), tip: t("tip", { bucket: t(`buckets.${k}`), n: x.freq[i], of: x.pages }), dark: i < 2 }))} />
+            <StackBar parts={FREQ_KEYS.map((k, i) => ({ key: k, w: (x.freq[i] / x.pages) * 100, color: FREQ_COLORS[i], label: String(x.freq[i]), tip: t("tip", { bucket: t(`buckets.${k}`), n: x.freq[i], of: x.pages }), dark: i === 0 }))} />
           </div>
         ))}
         <Legend items={FREQ_KEYS.map((k, i) => ({ key: k, name: t(`buckets.${k}`), color: FREQ_COLORS[i] }))} />
@@ -287,7 +289,7 @@ function LorenzCard({ view }: { view: VisView }) {
   );
 }
 
-const DEVICE_COLORS = ["#002c5f", "#5a85b3", "#aec6df", "#d7cfc6"];
+const DEVICE_COLORS = [RN_OWN, RN_OWN_RAMP[4], RN_OWN_RAMP[5], RN_CONTEXT];
 
 function DeviceCard({ view }: { view: VisView }) {
   const t = useTranslations("renewal.visibility.device");

@@ -149,7 +149,7 @@ export function AddPromptsSheet({ pid, open, onClose, onDone }: { pid: string; o
           className="w-full resize-y rounded-[10px] border border-rn-line-2 bg-rn-surface p-3 text-rn-13 leading-relaxed text-rn-ink outline-none focus:border-rn-navy focus:ring-3 focus:ring-rn-navy/12"
         />
         {failure ? (
-          <p role="alert" className="m-0 text-rn-12 text-rn-down">
+          <p role="alert" className="m-0 text-rn-12 text-rn-danger-ink">
             {failure}
           </p>
         ) : null}
@@ -234,7 +234,7 @@ export function TagFieldsSheet({
           </form>
         ) : null}
         {failure ? (
-          <p role="alert" className="m-0 text-rn-12 text-rn-down">
+          <p role="alert" className="m-0 text-rn-12 text-rn-danger-ink">
             {failure}
           </p>
         ) : null}

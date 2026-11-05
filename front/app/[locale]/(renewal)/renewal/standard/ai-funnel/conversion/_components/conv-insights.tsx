@@ -10,13 +10,14 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { RnBasisChip, RnButton, RnCard, RnCardHead, RnDeltaChip, RnSegmented, cx } from "@/components/renewal-ui";
 import type { ConvFactors, ConvSegment, ConvView, ConvWindow } from "../_data/screen-types";
+import { RN_OWN, RN_OWN_RAMP, RN_SERIES } from "@/components/renewal-ui/palette";
 import { DefTip, NoteTip, useConvFmt, type ConvFmt } from "./conv-body";
 import { AI_COLOR, Bar, GEN_COLOR, GREY, Head, Legend, MoreButton, Takeaway, useDeltaLabels } from "./conv-cards";
 
 // diverging pair for a change (+ cool, − warm) and the previous period's bar
-const UP = "#1a4d8e";
-const DOWN = "#eb6834";
-const PREV = "#6b89b3";
+const UP = RN_OWN_RAMP[2];
+const DOWN = RN_SERIES[0];
+const PREV = RN_OWN_RAMP[4];
 const RAW_ROWS = 30;
 
 // ══ 채널별 유입 · 주요 이벤트 ══
@@ -194,11 +195,12 @@ function EngineSessions({ f, fmt }: { f: ConvFactors; fmt: ConvFmt }) {
 
 type SegKind = "device" | "visitorType";
 // colour follows the value (never its rank), the renewal palette in this order; anything else grey
-const SEG_COLORS: Record<string, string> = { desktop: "#002c5f", mobile: "#1baf7a", tablet: "#eb6834", "smart tv": "#6250d6", new: "#002c5f", returning: "#1baf7a" };
+const SEG_COLORS: Record<string, string> = { desktop: RN_OWN, mobile: RN_SERIES[1], tablet: RN_SERIES[0], "smart tv": RN_SERIES[2], new: RN_OWN, returning: RN_SERIES[1] };
 const SEG_KEYS: Record<string, "desktop" | "mobile" | "tablet" | "smartTv" | "new" | "returning" | "notSet"> = {
   desktop: "desktop", mobile: "mobile", tablet: "tablet", "smart tv": "smartTv", new: "new", returning: "returning", "(not set)": "notSet",
 };
-const DARK = new Set(["#002c5f", "#6250d6"]);
+// white labels where they keep 4.5:1 (the pink and the orange take ink)
+const DARK = new Set<string>([RN_OWN, RN_SERIES[2]]);
 
 export function ConvSegmentCard({ view }: { view: ConvView }) {
   const t = useTranslations("renewal.conversion.segments");

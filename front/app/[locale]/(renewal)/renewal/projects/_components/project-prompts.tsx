@@ -800,7 +800,7 @@ function PromptForm({ pid, row, languages, onChanged }: { pid: string; row: Proj
       </div>
       {draft ? null : <p className="m-0 text-rn-12 text-rn-muted">{t("draftOnly")}</p>}
       {failure ? (
-        <p role="alert" className="m-0 text-rn-12 text-rn-down">
+        <p role="alert" className="m-0 text-rn-12 text-rn-danger-ink">
           {failure}
         </p>
       ) : null}

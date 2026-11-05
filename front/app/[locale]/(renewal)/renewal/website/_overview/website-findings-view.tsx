@@ -7,11 +7,11 @@ import { cx, type RnFindingTone } from "@/components/renewal-ui";
 import type { FindingRow, WebsiteFinding } from "./website-findings";
 
 const TONE_BAR: Record<RnFindingTone, string> = {
-  warn: "shadow-[inset_3px_0_0_#d65a43]",
+  warn: "shadow-[inset_3px_0_0_var(--color-rn-warn)]",
   good: "shadow-[inset_3px_0_0_var(--color-rn-up)]",
   info: "shadow-[inset_3px_0_0_var(--color-rn-navy-300)]",
 };
-const TONE_ICON: Record<RnFindingTone, string> = { warn: "text-[#d65a43]", good: "text-rn-up", info: "text-rn-navy-300" };
+const TONE_ICON: Record<RnFindingTone, string> = { warn: "text-rn-warn-ink", good: "text-rn-up-ink", info: "text-rn-navy-300" };
 
 export function WebsiteFindingList({ items }: { items: ReadonlyArray<WebsiteFinding> }) {
   return (
@@ -25,7 +25,7 @@ export function WebsiteFindingList({ items }: { items: ReadonlyArray<WebsiteFind
                 <Icon className={cx("size-3", TONE_ICON[x.tone])} aria-hidden />
                 {x.tag}
               </span>
-              {x.note ? <span className="ml-auto font-semibold text-rn-faint">{x.note}</span> : null}
+              {x.note ? <span className="ml-auto font-semibold text-rn-muted">{x.note}</span> : null}
             </h3>
             {x.rows.length ? (
               <ul className="m-0 flex list-none flex-col p-0">

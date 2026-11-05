@@ -8,9 +8,10 @@ import { SENTIMENT_KEYS, type SentimentKey } from "../_data/screen-types";
 import { MentionCardActions, numTxt, pctTxt, slotLabel, useMention } from "./mention-context";
 import { CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDegradedText, useDeltaBasis, useDeltaNote } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
+import { RN_CONTEXT, RN_SYSTEM } from "@/components/renewal-ui/palette";
 
-// Sentiment colours: positive / neutral / mixed / negative (never the compare-brand hues).
-export const SENTIMENT_COLOR: Record<SentimentKey, string> = { positive: "#2f9e6e", neutral: "#b8b0a6", mixed: "#e0a43a", negative: "#d65a43" };
+// Sentiment colours: positive / neutral / mixed / negative = System good · grey · warn · bad (never the compare-brand hues).
+export const SENTIMENT_COLOR: Record<SentimentKey, string> = { positive: RN_SYSTEM.good, neutral: RN_CONTEXT, mixed: RN_SYSTEM.warn, negative: RN_SYSTEM.bad };
 
 export function FavorBody() {
   const t = useTranslations("renewal.mention");
@@ -102,7 +103,7 @@ export function FavorHeroCard() {
               {t("favor.negative")}
               {h.mixedBasis ? <InfoTip label={t("favor.negativeBasisLabel")} items={[[t("favor.negativeBasisLabel"), tF("negativeBasisNote")]]} /> : null}
             </span>
-            <span className="text-rn-40 font-bold tracking-[-0.03em] text-[#b5432f] tabular-nums">{pctTxt(h.negativePct)}</span>
+            <span className="text-rn-40 font-bold tracking-[-0.03em] text-rn-danger-ink tabular-nums">{pctTxt(h.negativePct)}</span>
             <span className="flex flex-wrap items-center gap-1.5 text-rn-11 text-rn-muted">
               <DeltaChip value={h.negativeDelta.value} invert />
               {basis(h.negativeDelta)}
