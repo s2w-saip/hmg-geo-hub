@@ -16,12 +16,12 @@
 | 운영 스냅샷 | 상태가 `public`인 스냅샷. 회차마다 하나다 |
 | 운영 반영 | 스냅샷을 `public`으로 바꾸는 일. 데이터 복사는 없다 |
 | 매니페스트 | 파이프라인이 쓰는 적재 기록(회차, 스냅샷 ID, 행 수, 추출 규칙 버전, 상태) |
-| Gold | 서비스가 소유하는 사전 집계 테이블. 필터 없는 초기 화면의 지표 값 |
-| 캐시 DB | 필터 조회 결과를 다음 회차가 운영 반영될 때까지 두는 서비스 전용 DB. 정본이 아니다 |
+| Gold | BFF가 계산해 저장하는 사전 집계 테이블. 필터 없는 초기 화면의 지표 값 |
+| 캐시 DB | 필터 조회 결과를 다음 회차가 운영 반영될 때까지 두는 서비스 전용 DB. BFF가 만들어 저장한다. 정본이 아니다 |
 | 현행 Gold DB | 지금 BFF가 읽는 업스트림 DB(`kpi_cell`, `answer_fact` 등) |
 
 - 데이터는 한 방향으로 흐른다: 프롬프트·기준정보 원본(서비스 DB) → 프롬프트·기준정보 API → 수집 · Bronze(앤써) → 분석 입력 준비(파이프라인) → 추출(분석팀) → Silver 적재 · 운영 반영(파이프라인) → 지표 계산(BFF) ↔ Gold 사전 집계 · 캐시 DB(서비스) → 화면 · 지표 API.
-- 프롬프트 · 측정 설정 · 분석 기준정보는 서비스가 만들고 관리하며, Gold DB와 분리한 서비스 DB에 둔다. 앤써는 프롬프트 · 측정 설정을, 분석은 분석 기준정보를 프롬프트·기준정보 API로 읽는다.
+- 프롬프트 · 측정 설정 · 수집 기준정보 · 분석 기준정보는 서비스가 만들고 관리하며, Gold DB와 분리한 서비스 DB에 둔다. 수집(앤써)은 프롬프트 · 측정 설정 · 수집 기준정보를, 분석은 분석 기준정보를 프롬프트·기준정보 API로 읽는다. 분석은 자사 브랜드 · 엔티티 역할로 Silver에 자사 분류를 남기고, 자사 여부 판정은 BFF가 한다.
 - Silver에는 쓰지 않는다. BFF는 운영 스냅샷만 읽고, 반영 전(`loading` · `ready`)이나 이전(`retired`) 스냅샷은 읽지 않는다. 재분석 결과는 운영 반영 뒤에만 화면에 나온다.
 - 필터 없는 초기 화면 값은 회차마다 미리 전부 계산해 Gold에 두고, 스냅샷 ID · 지표 정의 버전을 남긴다(사전 집계). 늦거나 실패하면 그 값은 보여 주지 않고, 조회 시점에 대신 계산하지 않는다.
 - 필터를 건 조회는 BFF가 운영 스냅샷에서 전부 센다(조회 시점 집계). 결과는 조회 조건별로 캐시 DB에 두고 다음 회차가 운영 반영되면 지운다. 구현 기준은 SSOT `service/cache-db.md`.
@@ -109,7 +109,7 @@
 |---|---|
 | 세션 시작, 지금 할 일 · 미결 ⛔ | `docs/handoff/admin-todo.md`의 '지금 할 일' 줄과 '결정 대기' 표 |
 | 지난 결정 찾기 | 같은 파일의 '결정 기록' |
-| 모든 정의: 프로젝트 전체 구조 · 팀 간 데이터 계약 · 지표 가공 · 캐시 DB | `../hmg-geo-hub-ssot/shared/project-architecture.md`, `../hmg-geo-hub-ssot/service/cache-db.md` |
+| 모든 정의: 프로젝트 전체 구조 · 팀 간 데이터 계약 · 용어 · 지표 가공 · 캐시 DB · 지표 정의 | `../hmg-geo-hub-ssot/shared/project-architecture.md` · `shared/glossary.md` · `shared/input-contract.md` · `service/cache-db.md` · `service/metric-definitions.md` |
 | 시스템 구조 · ERD | `docs/architecture/hmg-geo-hub-architecture.html` |
 | 화면 디자인 | `docs/design/ui/design-rules.html` |
 | 지표별 데이터 출처 | `docs/handoff/kpi-data-lineage.html` |
