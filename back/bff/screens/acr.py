@@ -231,9 +231,12 @@ async def _global_reads(filters: dict, territory_rows: str = "all", duels: bool 
 
 BATTLE_VISIBLE = 30
 INK_300 = "var(--color-ink-300)"
-ACR_SERIES_FALLBACK = ("#4a6685", "#8a8f98", "#a36b4f", "#6b89b3", "#c4c9d4")
-BATTLE_BRAND_COLORS = {"Hyundai": "#002c5f", "Kia": "#a36b4f", "Genesis": "#6b89b3", "Toyota": "#e63312",
-                       "Tesla": "#00aad2", "BMW": "#1a4d8e", "Honda": "#8a8f98"}
+# the service palette (2026-11-05) as the front's globals.css tokens: 당사 = the own colours, the fixed rivals and
+# the fallback = the Chart - Other series
+ACR_SERIES_FALLBACK = tuple(f"var(--color-series-{n})" for n in (5, 6, 7, 8, 9))
+BATTLE_BRAND_COLORS = {"Hyundai": "var(--color-own-hyundai)", "Kia": "var(--color-own-kia)", "Genesis": "var(--color-own-genesis)",
+                       "Toyota": "var(--color-series-1)", "Tesla": "var(--color-series-2)", "BMW": "var(--color-series-3)",
+                       "Honda": "var(--color-series-4)"}
 
 
 def acr_card_row(data: dict) -> dict | None:

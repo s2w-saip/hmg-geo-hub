@@ -128,17 +128,17 @@ function findingItems(view: VisView, t: T, fmt: VisFmt): RnFinding[] {
 function Kpi({ name, info, value, unit, delta, sub, spark, invert }: { name: string; info: ReactNode; value: string; unit: string; delta: ReactNode; sub: string; spark?: (number | null)[]; invert?: boolean }) {
   return (
     <div data-rn-kpi="" className="flex min-w-0 flex-col gap-1.5 border-l border-white/14 px-3.5 py-1 first:border-l-0">
-      <span className="flex min-h-8 items-center gap-1 text-rn-12 leading-[1.35] font-semibold text-white/86">
+      <span className="flex min-h-8 items-center gap-1 text-rn-12 leading-[1.35] font-semibold text-rn-on-dark/86">
         {name}
         {info}
       </span>
-      <b className="text-rn-34 leading-[1.05] font-bold tracking-[-0.03em] text-white tabular-nums">
+      <b className="text-rn-34 leading-[1.05] font-bold tracking-[-0.03em] text-rn-on-dark tabular-nums">
         {value}
-        <small className="ml-0.5 text-rn-13 font-semibold tracking-normal text-white/78">{unit}</small>
+        <small className="ml-0.5 text-rn-13 font-semibold tracking-normal text-rn-on-dark/78">{unit}</small>
       </b>
-      <span className="flex flex-wrap items-center gap-1.5 text-rn-11 text-white/70">{delta}</span>
+      <span className="flex flex-wrap items-center gap-1.5 text-rn-11 text-rn-on-dark/70">{delta}</span>
       {spark && spark.length > 1 ? <RnSparkline values={spark} tone="onDark" invert={invert} className="h-[30px]" /> : null}
-      <span className="text-rn-11 leading-[1.4] text-white/66 [.rn-dense_&]:hidden">{sub}</span>
+      <span className="text-rn-11 leading-[1.4] text-rn-on-dark/66 [.rn-dense_&]:hidden">{sub}</span>
     </div>
   );
 }
@@ -216,7 +216,7 @@ function StackBar({ parts }: { parts: { key: string; w: number; color: string; l
     <span className="flex h-[26px] gap-0.5 overflow-hidden rounded-md bg-rn-page">
       {parts.map((p) => (
         <i key={p.key} title={p.tip} style={{ width: `${p.w}%`, background: p.color }}
-          className={cx("flex h-full items-center justify-center text-rn-11 font-bold not-italic tabular-nums", p.dark ? "text-white" : "text-rn-ink-2")}>
+          className={cx("flex h-full items-center justify-center text-rn-11 font-bold not-italic tabular-nums", p.dark ? "text-rn-on-dark" : "text-rn-ink-2")}>
           {p.w >= 9 ? p.label : null}
         </i>
       ))}

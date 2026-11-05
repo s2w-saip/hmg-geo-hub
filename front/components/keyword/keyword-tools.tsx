@@ -527,10 +527,10 @@ function TrendBars({ monthly }: { monthly: MonthlySearch[] }) {
 function IntentBadge({ intent }: { intent: SearchIntent }) {
   const t = useTranslations("keywordTools");
   const tone: Record<SearchIntent, string> = {
-    informational: "border-sky-300 text-sky-700 dark:text-sky-300",
-    navigational: "border-violet-300 text-violet-700 dark:text-violet-300",
-    transactional: "border-emerald-300 text-emerald-700 dark:text-emerald-300",
-    commercial: "border-amber-300 text-amber-700 dark:text-amber-300",
+    informational: "border-accent-info/60 text-brand-500",
+    navigational: "border-series-3/50 text-series-3",
+    transactional: "border-sentiment-positive/50 text-positive",
+    commercial: "border-warn/70 text-warn-ink",
   };
   return (
     <Badge variant="outline" className={cn(tone[intent])}>

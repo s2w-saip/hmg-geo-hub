@@ -229,17 +229,17 @@ function findingItems(view: ConvView, t: T, fmt: ConvFmt): RnFinding[] {
 function Kpi({ name, info, value, unit, delta, sub, spark }: { name: string; info: ReactNode; value: string; unit: string; delta: ReactNode; sub: ReactNode; spark?: (number | null)[] }) {
   return (
     <div data-rn-kpi="" className="flex min-w-0 flex-col gap-1.5 border-l border-white/14 px-3.5 py-1 first:border-l-0">
-      <span className="flex min-h-8 items-center gap-1 text-rn-12 leading-[1.35] font-semibold text-white/86">
+      <span className="flex min-h-8 items-center gap-1 text-rn-12 leading-[1.35] font-semibold text-rn-on-dark/86">
         {name}
         {info}
       </span>
-      <b className="text-rn-34 leading-[1.05] font-bold tracking-[-0.03em] text-white tabular-nums">
+      <b className="text-rn-34 leading-[1.05] font-bold tracking-[-0.03em] text-rn-on-dark tabular-nums">
         {value}
-        {value !== "—" && unit ? <small className="ml-0.5 text-rn-13 font-semibold tracking-normal text-white/78">{unit}</small> : null}
+        {value !== "—" && unit ? <small className="ml-0.5 text-rn-13 font-semibold tracking-normal text-rn-on-dark/78">{unit}</small> : null}
       </b>
-      <span className="flex min-h-6 flex-wrap items-center gap-1.5 text-rn-11 text-white/70">{delta}</span>
+      <span className="flex min-h-6 flex-wrap items-center gap-1.5 text-rn-11 text-rn-on-dark/70">{delta}</span>
       {spark && spark.length > 1 ? <RnSparkline values={spark} tone="onDark" className="h-[30px]" /> : null}
-      <span className="text-rn-11 leading-[1.4] break-keep text-white/66">{sub}</span>
+      <span className="text-rn-11 leading-[1.4] break-keep text-rn-on-dark/66">{sub}</span>
     </div>
   );
 }
@@ -254,7 +254,7 @@ function ConvHero({ view }: { view: ConvView }) {
     view.prevOk ? <RnDeltaChip onDark delta={d ?? null} format={(r) => `${Math.abs(r).toFixed(1)}${unit}`} emptyText="−" labels={labels} /> : null;
   const span = range(t, view.days[0], view.days[view.days.length - 1]);
   const noRate = T.aiRate == null || T.genRate == null;
-  const note = "m-0 mx-5 mb-3 flex items-start gap-1.5 rounded-lg bg-white/8 px-3 py-2 text-rn-12 leading-[1.5] break-keep text-white/86";
+  const note = "m-0 mx-5 mb-3 flex items-start gap-1.5 rounded-lg bg-white/8 px-3 py-2 text-rn-12 leading-[1.5] break-keep text-rn-on-dark/86";
   const missed = view.missing.map((m) => t("summary.missingItem", { place: fmt.place(m), n: m.days.length })).join(", ");
   return (
     <RnCard id="sec-summary" tone="hero" aria-label={t("summary.title")} className="pb-3">
@@ -277,8 +277,8 @@ function ConvHero({ view }: { view: ConvView }) {
         <Kpi name={t("kpi.share")} info={<DefTip k="share" align="end" />} value={fmt.one(T.share)} unit="%" delta={<>{chip(T.dShare, "pp")}{basis}</>}
           sub={t("kpi.shareSub", { gen: fmt.n(T.genSessions) })} />
       </div>
-      <p data-rn-site="" className="m-0 mx-5 mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/14 pt-2.5 text-rn-12 text-white/78 tabular-nums">
-        <b className="font-semibold text-white/90">{t("site.label")}</b>
+      <p data-rn-site="" className="m-0 mx-5 mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/14 pt-2.5 text-rn-12 text-rn-on-dark/78 tabular-nums">
+        <b className="font-semibold text-rn-on-dark/90">{t("site.label")}</b>
         <span className="inline-flex items-center gap-1.5">{t("site.sessions", { n: fmt.n(T.siteSessions) })}{chip(T.dSite, "%")}</span>
         <span className="inline-flex items-center gap-1.5">{t("site.views", { n: fmt.n(T.pageViews) })}{chip(T.dPageViews, "%")}</span>
         <span>{t("site.genSessions", { n: fmt.n(T.genSessions) })}</span>

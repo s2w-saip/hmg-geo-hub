@@ -141,8 +141,8 @@ describe("the applied period stops at the service week's end", () => {
   it("the round calendar marks the end read, not the day picked", () => {
     const html = render(WEEK, PICKED, { selectableDates: ["2026-09-25", "2026-10-02", "2026-10-09"] });
     const cellOf = (day: string) => new RegExp(`<button[^>]*data-day="${day}"[^>]*>`).exec(html)?.[0] ?? "";
-    expect(cellOf("2026-10-11")).toContain("text-white");
-    expect(cellOf("2026-10-25")).not.toContain("text-white");
+    expect(cellOf("2026-10-11")).toContain("text-rn-on-dark");
+    expect(cellOf("2026-10-25")).not.toContain("text-rn-on-dark");
   });
 
   it("a saved filter's summary is the filter as saved", () => {
@@ -213,8 +213,8 @@ describe("the first paint holds the period to the layout's week", () => {
     for (const input of inputs) expect(input).toContain('max="2026-10-11"');
     expect(inputs[1]).toContain('value="2026-10-11"');
     const calendar = firstPaint(settled(WEEK), PICKED, { selectableDates: ["2026-09-25", "2026-10-02", "2026-10-09"] });
-    expect(dayCell(calendar, "2026-10-11")).toContain("text-white");
-    expect(dayCell(calendar, "2026-10-31")).not.toContain("text-white");
+    expect(dayCell(calendar, "2026-10-11")).toContain("text-rn-on-dark");
+    expect(dayCell(calendar, "2026-10-31")).not.toContain("text-rn-on-dark");
   });
 
   it("a layout read not known yet, or failed: the pick, and the rest of the panel renders", () => {

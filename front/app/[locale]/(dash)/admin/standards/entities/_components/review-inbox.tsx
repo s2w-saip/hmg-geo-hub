@@ -110,7 +110,7 @@ export function ReviewInbox({
               onClick={() => nav({ status: s })}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs",
-                status === s ? "border-brand-700 bg-brand-700 text-white" : "border-border text-ink-700 hover:bg-bg-subtle",
+                status === s ? "border-brand-700 bg-brand-700 text-ink-50" : "border-border text-ink-700 hover:bg-bg-subtle",
               )}
             >
               {s === "all" ? t("statusAll") : tst(s)}

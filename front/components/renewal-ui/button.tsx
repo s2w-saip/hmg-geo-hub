@@ -4,7 +4,7 @@ import { cx } from "./cx";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rn-navy";
 
 const VARIANT = {
-  primary: "border-rn-navy bg-rn-navy text-white hover:bg-rn-navy-900",
+  primary: "border-rn-navy bg-rn-navy text-rn-on-dark hover:bg-rn-navy-900",
   secondary: "border-rn-line-2 bg-rn-surface text-rn-ink hover:border-rn-faint",
   ghost: "border-transparent bg-transparent text-rn-muted hover:bg-rn-inset hover:text-rn-ink",
 } as const;

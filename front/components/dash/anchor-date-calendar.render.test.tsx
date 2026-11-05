@@ -159,7 +159,7 @@ describe("AnchorDateCalendar — 기본 회차 표시", () => {
     expect(c).not.toContain('data-in-range="1"');
     // 선택 색(bg-brand-700)과 구분되는 연한 채우기.
     expect(c).toContain("bg-brand-700/20");
-    expect(c).not.toContain("text-white");
+    expect(c).not.toContain("text-ink-50");
   });
 
   it("다른 회차에는 안 붙는다", () => {

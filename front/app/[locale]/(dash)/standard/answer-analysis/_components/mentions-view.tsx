@@ -572,7 +572,7 @@ function SummaryCard({
             <span
               className={cn(
                 "text-[10px] font-semibold whitespace-nowrap tabular-nums",
-                delta!.tone === "good" && "text-emerald-600 dark:text-emerald-500",
+                delta!.tone === "good" && "text-positive",
                 delta!.tone === "bad" && "text-destructive",
                 delta!.tone === "neutral" && "text-muted-foreground",
               )}

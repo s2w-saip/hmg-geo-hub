@@ -118,7 +118,7 @@ export function RnSparkAxis({
     <span
       className={cx(
         "relative block h-4 text-rn-11 whitespace-nowrap tabular-nums",
-        tone === "onDark" ? "text-white/72" : "text-rn-muted",
+        tone === "onDark" ? "text-rn-on-dark/72" : "text-rn-muted",
         className,
       )}
     >

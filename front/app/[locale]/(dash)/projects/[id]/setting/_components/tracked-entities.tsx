@@ -823,7 +823,7 @@ function EntityList({
                 <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                   {row.title}
                   {row.target?.active ? (
-                    <Badge className="gap-1 bg-brand-700 text-[10px] text-white">
+                    <Badge className="gap-1 bg-brand-700 text-[10px] text-ink-50">
                       <Target className="h-3 w-3" aria-hidden />
                       {row.target.badgeLabel}
                     </Badge>

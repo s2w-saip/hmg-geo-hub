@@ -47,8 +47,8 @@ export function RnCardHeader({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-[18px] pr-[22px] pb-3 pl-6">
-      <h2 className="m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink [.rn-hero_&]:text-white">{title}</h2>
-      {hint ? <span className="text-rn-12 text-rn-muted [.rn-hero_&]:text-white/72">{hint}</span> : null}
+      <h2 className="m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink [.rn-hero_&]:text-rn-on-dark">{title}</h2>
+      {hint ? <span className="text-rn-12 text-rn-muted [.rn-hero_&]:text-rn-on-dark/72">{hint}</span> : null}
       {actions ? <div className="ml-auto flex items-center gap-2.5">{actions}</div> : null}
     </div>
   );

@@ -42,6 +42,7 @@
   --color-brand-900: #111f8a;
 
   /* Ink — Text 1–4 and the Surface line grey. */
+  --color-ink-50:    #f7f7f7; /* Text 5 — text on dark fills */
   --color-ink-100:   #e5e6e9;
   --color-ink-300:   #d5d5d6;
   --color-ink-400:   #6c6d70; /* 감성 밑줄 neutral 톤 · 보조 글자 (Text 3) */
@@ -63,10 +64,13 @@
   /* Accent — used sparingly. Gold = an attention mark (text: the System yellow's
      ink, 4.5:1); Info = Point 2 for badges; Soft = Chart - Own 6 for soft chips;
      Danger = System red. */
-  --color-accent-gold:  #77750a;
+  --color-accent-gold:  var(--color-warn-ink);
   --color-accent-info:  #00cfff; /* Point 2 */
   --color-accent-soft:  #a5affd;
   --color-danger:       #fa1e2a; /* System red */
+  /* System yellow: fills and tints; its text/icon ink keeps 4.5:1 on white and on a 12% tint */
+  --color-warn:         #faf600;
+  --color-warn-ink:     #77750a;
 
   /* 시맨틱 — 증감·감정 (2026-09-02 피그마 정합, 2026-11-05 서비스 팔레트 System 색).
      positive = 개선 방향 Δ 배지(글자로 읽히므로 System 초록의 진한 색). 악화는 danger 그대로.
@@ -181,7 +185,7 @@
   --popover:                var(--color-bg);
   --popover-foreground:     var(--color-ink-900);
   --primary:                var(--color-brand-700);
-  --primary-foreground:     var(--color-bg);
+  --primary-foreground:     var(--color-ink-50);
   --secondary:              var(--color-bg-warm);  /* warmer Sand for chips */
   --secondary-foreground:   var(--color-ink-700);
   --muted:                  var(--color-bg-subtle);  /* WAS bg-soft → indistinguishable from page */

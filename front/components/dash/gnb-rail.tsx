@@ -67,7 +67,7 @@ export function GnbRail({
 
   return (
     <aside
-      className="hidden shrink-0 flex-col bg-brand-700 text-white lg:sticky lg:top-24 lg:flex lg:h-[calc(100vh-6rem)] lg:w-20"
+      className="hidden shrink-0 flex-col bg-brand-700 text-ink-50 lg:sticky lg:top-24 lg:flex lg:h-[calc(100vh-6rem)] lg:w-20"
       aria-label="Primary"
     >
       <nav className="flex flex-1 flex-col items-stretch gap-1 px-2 py-4">
@@ -115,8 +115,8 @@ function RailTabLink({ tab, active }: { tab: RailTab; active: boolean }) {
         // certain viewport sizes.
         "group relative flex w-full flex-col items-center gap-1 rounded-md px-2 py-3 text-[11px] font-medium tracking-tight transition-colors",
         active
-          ? "bg-white/20 text-white"
-          : "text-white/85 hover:bg-white/10 hover:text-white",
+          ? "bg-white/20 text-ink-50"
+          : "text-ink-50/85 hover:bg-white/10 hover:text-ink-50",
       )}
     >
       {active ? (
@@ -143,13 +143,13 @@ function UserTile({ user, locale }: { user: RailUser; locale: string }) {
         {monogram}
       </div>
       <span
-        className="max-w-[3.75rem] truncate text-center text-[10px] text-white"
+        className="max-w-[3.75rem] truncate text-center text-[10px] text-ink-50"
         title={user.email}
       >
         {handle}
       </span>
       <span
-        className="max-w-[3.75rem] truncate text-center text-[9px] text-white/70"
+        className="max-w-[3.75rem] truncate text-center text-[9px] text-ink-50/70"
         title={tRoles(user.role)}
       >
         {tRoles(user.role)}
@@ -163,7 +163,7 @@ function UserTile({ user, locale }: { user: RailUser; locale: string }) {
           aria-label={tNav("logout")}
           title={tNav("logout")}
           onClick={() => void hubLogout()}
-          className="mt-0.5 text-white/85 hover:bg-white/10 hover:text-white"
+          className="mt-0.5 text-ink-50/85 hover:bg-white/10 hover:text-ink-50"
         >
           <LogOut className="h-4 w-4" aria-hidden />
         </Button>
@@ -175,7 +175,7 @@ function UserTile({ user, locale }: { user: RailUser; locale: string }) {
           size="icon-sm"
           aria-label={tNav("logout")}
           title={tNav("logout")}
-          className="mt-0.5 text-white/85 hover:bg-white/10 hover:text-white"
+          className="mt-0.5 text-ink-50/85 hover:bg-white/10 hover:text-ink-50"
         >
           <LogOut className="h-4 w-4" aria-hidden />
         </Button>

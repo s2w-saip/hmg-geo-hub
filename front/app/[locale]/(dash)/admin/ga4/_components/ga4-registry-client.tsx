@@ -41,8 +41,8 @@ export interface OverrideRow {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  active: "bg-emerald-100 text-emerald-700",
-  pending_grant: "bg-amber-100 text-amber-700",
+  active: "bg-sentiment-positive/15 text-positive",
+  pending_grant: "bg-warn/15 text-warn-ink",
   unmapped: "bg-muted text-muted-foreground",
 };
 
@@ -233,7 +233,7 @@ export function Ga4RegistryClient({
                     <td className="px-3 py-2">{r.countryCode}</td>
                     <td className="px-3 py-2 font-mono">{r.propertyId ?? "—"}</td>
                     <td className="px-3 py-2">
-                      <Badge variant="secondary" className="bg-sky-100 font-normal text-sky-700">
+                      <Badge variant="secondary" className="bg-accent-info/15 font-normal text-brand-500">
                         {t("legacy.source")}
                       </Badge>
                     </td>

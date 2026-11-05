@@ -41,9 +41,9 @@ const ACTION_COLOR: Record<MemberAuditAction, string> = {
   invite: "text-brand-700",
   cancel_invite: "text-muted-foreground",
   remove: "text-destructive",
-  promote: "text-emerald-600",
-  demote: "text-amber-600",
-  accept: "text-emerald-600",
+  promote: "text-positive",
+  demote: "text-warn-ink",
+  accept: "text-positive",
   reject: "text-muted-foreground",
 };
 

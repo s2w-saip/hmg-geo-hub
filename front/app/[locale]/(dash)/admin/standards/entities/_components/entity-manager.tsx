@@ -102,7 +102,7 @@ export function EntityManager({
             }}
             className={cn(
               "rounded-full border px-3 py-1 text-xs transition-colors",
-              tab === k ? "border-brand-700 bg-brand-700 text-white" : "border-border bg-background text-ink-700 hover:bg-bg-subtle",
+              tab === k ? "border-brand-700 bg-brand-700 text-ink-50" : "border-border bg-background text-ink-700 hover:bg-bg-subtle",
             )}
           >
             {t(`tabs.${k}`)} <span className="tabular-nums opacity-80">{fmtInt(counts[k])}</span>

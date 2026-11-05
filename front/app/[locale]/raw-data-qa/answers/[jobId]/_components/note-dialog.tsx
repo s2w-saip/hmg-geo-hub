@@ -150,7 +150,7 @@ export function NoteDialog({
               className={cn(
                 "rounded-full border px-2.5 py-1 text-xs transition-colors",
                 severity === s
-                  ? "border-brand-700 bg-brand-700 text-white"
+                  ? "border-brand-700 bg-brand-700 text-ink-50"
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >

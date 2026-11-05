@@ -97,7 +97,7 @@ export function RnRoundCalendar({
                 !ok && "cursor-default text-rn-muted",
                 ok && !end && "cursor-pointer bg-rn-navy-25 font-bold text-rn-navy hover:bg-rn-navy-50",
                 ok && inside && "bg-rn-navy-50",
-                end && "cursor-pointer bg-rn-navy font-bold text-white",
+                end && "cursor-pointer bg-rn-navy font-bold text-rn-on-dark",
                 day === mark && "shadow-[inset_0_0_0_1.5px_var(--color-rn-navy)]",
               )}
             >

@@ -894,7 +894,7 @@ function PromptLifecycleDialog({
                     })}
                   </p>
                   {shared ? (
-                    <p className="text-amber-700">
+                    <p className="text-warn-ink">
                       {t("sharedWarning", { count: impact.sharedRows })}
                     </p>
                   ) : null}
@@ -972,11 +972,11 @@ function StatusBadge({
 }) {
   const styles: Record<PromptStatus, string> = {
     draft: "bg-muted text-muted-foreground",
-    queued: "bg-amber-100 text-amber-700",
-    running: "bg-blue-100 text-blue-700",
-    done: "bg-emerald-100 text-emerald-700",
+    queued: "bg-warn/15 text-warn-ink",
+    running: "bg-brand-25 text-brand-500",
+    done: "bg-sentiment-positive/15 text-positive",
     failed: "bg-destructive/10 text-destructive",
-    paused: "bg-slate-200 text-slate-600",
+    paused: "bg-ink-300 text-ink-500",
   };
   return (
     <Tooltip>

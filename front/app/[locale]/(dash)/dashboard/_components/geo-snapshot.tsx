@@ -106,7 +106,7 @@ function RankBadge({ rank }: { rank: number | null }) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 w-8 shrink-0 items-center justify-center rounded text-[10px] font-bold tabular-nums text-white",
+        "inline-flex h-5 w-8 shrink-0 items-center justify-center rounded text-[10px] font-bold tabular-nums text-ink-50",
         rank === 1
           ? "bg-[var(--color-brand-700)]"
           : "bg-[var(--color-accent-gold)]",

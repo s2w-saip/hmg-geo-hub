@@ -76,10 +76,10 @@ const MONTHS_FOR_RANGE: Record<Range, number> = { "3m": 3, "6m": 6, "12m": 12 };
 type SerpSortKey = "rank" | "applied" | "url" | "title" | "suggested";
 
 const INTENT_TONE: Record<SearchIntent, string> = {
-  transactional: "bg-emerald-50 text-emerald-700",
-  commercial: "bg-amber-50 text-amber-700",
-  informational: "bg-blue-50 text-blue-700",
-  navigational: "bg-purple-50 text-purple-700",
+  transactional: "bg-sentiment-positive/10 text-positive",
+  commercial: "bg-warn/10 text-warn-ink",
+  informational: "bg-brand-25 text-brand-500",
+  navigational: "bg-series-3/10 text-series-3",
 };
 
 // ── Live wire types (mirror /api/keyword/* JSON) ──────────────────────────────
@@ -989,7 +989,7 @@ export function GoogleKeywordView({
                       onClick={() => onAddSerpCandidate(row.id, row.suggestedPrompt)}
                       aria-label={addedSerpIds.has(rowKey(row.id)) ? t("addToPromptDone") : t("addToPrompt")}
                       title={addedSerpIds.has(rowKey(row.id)) ? t("addToPromptDone") : t("addToPrompt")}
-                      className={cn(addedSerpIds.has(rowKey(row.id)) ? "text-emerald-600" : "text-brand-700")}
+                      className={cn(addedSerpIds.has(rowKey(row.id)) ? "text-positive" : "text-brand-700")}
                     >
                       {addedSerpIds.has(rowKey(row.id)) ? (
                         <Check className="h-4 w-4" aria-hidden />
@@ -1201,7 +1201,7 @@ function RelatedRow({
           onClick={onAdd}
           aria-label={added ? t("related.added") : t("related.add")}
           title={added ? t("related.added") : t("related.add")}
-          className={added ? "text-emerald-600" : "text-brand-700"}
+          className={added ? "text-positive" : "text-brand-700"}
         >
           {added ? <Check className="h-4 w-4" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />}
         </Button>

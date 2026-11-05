@@ -52,7 +52,7 @@ export function ConvChannelCard({ view }: { view: ConvView }) {
               <div key={r.channel} data-rn-channel={r.channel} className={cx(grid, "min-h-9 border-b border-rn-line text-rn-13 last:border-b-0", r.ai && "-mx-2 rounded-md bg-rn-navy-25 px-2")}>
                 <span className="flex min-w-0 items-center gap-1.5">
                   <b className={cx("truncate", r.ai ? "font-bold text-rn-navy" : "font-semibold")}>{r.channel}</b>
-                  {r.ai ? <span className="inline-flex h-4.5 items-center rounded bg-rn-navy px-1 text-rn-11 font-bold text-white">AI</span> : null}
+                  {r.ai ? <span className="inline-flex h-4.5 items-center rounded bg-rn-navy px-1 text-rn-11 font-bold text-rn-on-dark">AI</span> : null}
                 </span>
                 <span className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
                   <Bar w={r.sessions == null ? null : (r.sessions / maxS) * 100} color={r.ai ? AI_COLOR : GEN_COLOR} />
@@ -199,7 +199,7 @@ const SEG_COLORS: Record<string, string> = { desktop: RN_OWN, mobile: RN_SERIES[
 const SEG_KEYS: Record<string, "desktop" | "mobile" | "tablet" | "smartTv" | "new" | "returning" | "notSet"> = {
   desktop: "desktop", mobile: "mobile", tablet: "tablet", "smart tv": "smartTv", new: "new", returning: "returning", "(not set)": "notSet",
 };
-// white labels where they keep 4.5:1 (the pink and the orange take ink)
+// labels where they keep 4.5:1 (the pink and the orange take ink): Text 5, on the purple the Surface white (Text 5 is 4.3:1)
 const DARK = new Set<string>([RN_OWN, RN_SERIES[2]]);
 
 export function ConvSegmentCard({ view }: { view: ConvView }) {
@@ -279,7 +279,7 @@ function MixBar({ label, rows, pick, name, color, fmt }: {
           const w = pick(r);
           if (!w) return null;
           return (
-            <span key={r.value} title={`${name(r.value)} ${fmt.pct(w)}`} className="grid min-w-0 place-items-center overflow-hidden text-rn-11 font-bold text-white" style={{ width: `${w}%`, background: color(r.value) }}>
+            <span key={r.value} title={`${name(r.value)} ${fmt.pct(w)}`} className={`grid min-w-0 place-items-center overflow-hidden text-rn-11 font-bold ${color(r.value) === RN_SERIES[2] ? "text-white" : "text-rn-on-dark"}`} style={{ width: `${w}%`, background: color(r.value) }}>
               {w >= 10 && DARK.has(color(r.value)) ? fmt.pct(w, 0) : ""}
             </span>
           );

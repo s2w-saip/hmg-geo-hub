@@ -73,7 +73,7 @@ export function OwnedBasesPanel({
           <p className="mt-2">{t("legacyHint", { domain: legacyDomain })}</p>
         ) : null}
         {showMultiBaseHint ? (
-          <p className="mt-2 text-amber-700">{t("multiBaseHint")}</p>
+          <p className="mt-2 text-warn-ink">{t("multiBaseHint")}</p>
         ) : null}
       </div>
 

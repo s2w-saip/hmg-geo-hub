@@ -135,7 +135,7 @@ export function EntityCatalog({
                 <span className="inline-flex items-center gap-1.5">
                   {row.name}
                   {row.role === "own" ? (
-                    <Badge className="gap-1 bg-brand-700 text-[10px] text-white">
+                    <Badge className="gap-1 bg-brand-700 text-[10px] text-ink-50">
                       <Crown className="h-3 w-3" aria-hidden />
                       {t("ownBadge")}
                     </Badge>

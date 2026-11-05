@@ -287,12 +287,12 @@ export function StandardPromptList({
           <Badge variant="secondary" className="font-normal tabular-nums">
             {t("statsTotal", { count: stats.total })}
           </Badge>
-          <Badge variant="outline" className="border-emerald-400 bg-emerald-50 text-[10px] text-emerald-900">
+          <Badge variant="outline" className="border-sentiment-positive/60 bg-sentiment-positive/10 text-[10px] text-positive">
             <CircleCheck className="h-3 w-3" aria-hidden />
             {t("statsInUse", { count: stats.tracked })}
           </Badge>
           {stats.untracked > 0 ? (
-            <Badge variant="outline" className="border-amber-400 bg-amber-50 text-[10px] text-amber-900">
+            <Badge variant="outline" className="border-warn bg-warn/10 text-[10px] text-warn-ink">
               <CircleAlert className="h-3 w-3" aria-hidden />
               {t("statsUntracked", { count: stats.untracked })}
             </Badge>
@@ -527,11 +527,11 @@ export function StandardPromptList({
                   </td>
                   <td className="px-3 py-3 text-right">
                     {r.scopePromptId !== null ? (
-                      <Badge variant="secondary" className="bg-emerald-50 text-[10px] text-emerald-900">
+                      <Badge variant="secondary" className="bg-sentiment-positive/10 text-[10px] text-positive">
                         {t("inUse")}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="border-amber-400 bg-amber-50 text-[10px] text-amber-900">
+                      <Badge variant="outline" className="border-warn bg-warn/10 text-[10px] text-warn-ink">
                         {t("untracked")}
                       </Badge>
                     )}

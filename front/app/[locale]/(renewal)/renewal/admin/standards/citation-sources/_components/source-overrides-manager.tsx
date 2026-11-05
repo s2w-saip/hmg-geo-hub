@@ -380,7 +380,7 @@ function SourceMark({ row, label }: { row: SourceRow; label: (slug: string | nul
   const goldTip = row.gold ? t("goldValue", { category: label(row.gold.category), source: row.gold.source ? t(`source.${row.gold.source}`) : "—" }) : t("goldNone");
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 text-rn-12" data-hub-source-layer={row.source} data-rn-tip={goldTip}>
-      <span className={cx("truncate rounded px-1.5 py-px font-semibold", corrected ? "bg-rn-navy text-white" : "bg-rn-inset text-rn-ink-2")}>{t(`source.${row.source}`)}</span>
+      <span className={cx("truncate rounded px-1.5 py-px font-semibold", corrected ? "bg-rn-navy text-rn-on-dark" : "bg-rn-inset text-rn-ink-2")}>{t(`source.${row.source}`)}</span>
       {row.shadowsOwned ? (
         <span className="inline-flex shrink-0 items-center gap-1 text-rn-danger-ink" data-hub-source-shadows-owned="" title={t("shadowsOwned")}>
           <AlertTriangle className="size-3.5" aria-hidden />

@@ -70,7 +70,7 @@ export function TrackedUrlsPanel({
         <div className="flex flex-col gap-1">
           <p className="text-[12.5px] text-muted-foreground">{t("hint")}</p>
           {ownedBaseCount >= 2 ? (
-            <p className="text-[12.5px] text-amber-700">{t("multiBaseHint")}</p>
+            <p className="text-[12.5px] text-warn-ink">{t("multiBaseHint")}</p>
           ) : ownedBaseCount === 0 ? (
             <p className="text-[12.5px] text-muted-foreground">{t("noOwnedBaseHint")}</p>
           ) : null}

@@ -88,7 +88,7 @@ export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
 /** Basis chip on a card head ("측정 기준일 …", "추이 12회차"). */
 export function RnBasisChip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [.rn-hero_&]:bg-white/12 [.rn-hero_&]:text-white/90 [.rn-hero_&_svg]:text-rn-sky">
+    <span className="inline-flex h-[22px] items-center gap-1 rounded-full bg-rn-page px-2 text-rn-11 font-semibold whitespace-nowrap text-rn-muted [.rn-hero_&]:bg-white/12 [.rn-hero_&]:text-rn-on-dark/90 [.rn-hero_&_svg]:text-rn-sky">
       {icon}
       {children}
     </span>
@@ -113,7 +113,7 @@ export function RnCardHead({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-[18px] pr-[22px] pb-3 pl-6 [.rn-dense_&]:pt-2.5 [.rn-dense_&]:pb-2 [.rn-dense_&]:pl-4.5">
-      <h2 className="m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink [.rn-hero_&]:text-white">{title}</h2>
+      <h2 className="m-0 text-rn-16 font-bold tracking-[-0.01em] text-rn-ink [.rn-hero_&]:text-rn-on-dark">{title}</h2>
       {info}
       {chips}
       {controls || actions ? (

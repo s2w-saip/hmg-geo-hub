@@ -257,7 +257,7 @@ function LinkTile({ label, count, href, disabled, disabledHint, tone, size = "md
   // 피그마: 배지는 연한 틴트 + 진한 글자(당사 navy 15%·경고 amber 30%·긍정/부정 감정 토큰).
   const badge =
     tone === "brand" ? "bg-brand-700/15 text-foreground"
-    : tone === "warn" ? "bg-amber-400/30 text-foreground"
+    : tone === "warn" ? "bg-warn/30 text-foreground"
     : tone === "good" ? "bg-sentiment-positive/15 text-sentiment-positive-ink"
     : "bg-sentiment-negative/15 text-sentiment-negative-ink";
   const inner = (
@@ -356,7 +356,7 @@ function CategoryBlock({ data, vm, sectionDegraded }: Pick<Props, "data" | "vm" 
                   <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-foreground">{label(b.name)}</span>
                   {/* 피그마: 두께 14px, 트랙 연회색·채움 남색(카테고리색은 점만). 폭은 minmax 로 줄어든다 —
                       고정 130px 은 1130px 뷰포트에서 옆 열과 겹쳤다(2026-09-09 제품 책임자 캡처). 2열은 xl 부터. */}
-                  <span className="flex h-[14px] w-full min-w-0 overflow-hidden rounded-full bg-slate-100">
+                  <span className="flex h-[14px] w-full min-w-0 overflow-hidden rounded-full bg-muted">
                     <span className="h-full rounded-full" style={{ width: `${b.pct ?? 0}%`, background: "var(--color-brand-700)" }} />
                   </span>
                   <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-foreground">{b.value.toLocaleString()}</span>

@@ -84,7 +84,7 @@ export function KpiCard({ view, qs, deltas = false, findings }: { view: TilesVie
         ))}
       </div>
       {caption ? (
-        <p data-rn-period-reason={caption.key.replace(/^reason\./, "")} className="m-0 px-6 pb-4 text-rn-12 text-white/72">
+        <p data-rn-period-reason={caption.key.replace(/^reason\./, "")} className="m-0 px-6 pb-4 text-rn-12 text-rn-on-dark/72">
           {tP(caption.key, caption.params)}
         </p>
       ) : null}
@@ -109,7 +109,7 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
   const newTab = variant?.newTab ?? true;
   return (
     <div data-rn-kpi={tile.key} className="group/kpi relative flex min-w-0 flex-col gap-1 border-l border-white/14 px-4 py-0.5 first:border-l-0 @max-[760px]/rnwkpi:nth-[2n+1]:border-l-0">
-      <span className="flex items-center gap-1 text-rn-13 font-bold text-white/86">
+      <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-on-dark/86">
         <span className="truncate">{name}</span>
         {/* above the tile's link, so ⓘ shows its tip instead of opening the page */}
         <span className="relative z-[1] inline-flex">
@@ -123,7 +123,7 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
         <KpiValue tile={tile} />
         {tile.pending ? null : <TileDelta tile={tile} deltas={deltas} periodMode={periodMode} />}
         {perCard && tile.period && tile.periodLabel ? (
-          <span data-rn-compare-label="" className="text-rn-11 text-white/72">
+          <span data-rn-compare-label="" className="text-rn-11 text-rn-on-dark/72">
             {tP(tile.periodLabel.key as "label.weekly", tile.periodLabel.params)}
           </span>
         ) : null}
@@ -134,7 +134,7 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
         <dl className="m-0 flex flex-col gap-px border-t border-white/10 pt-1 text-rn-12">
           {tile.engineConsistency != null ? (
             <div data-rn-engine={tile.key} className={ROW}>
-              <dt className="flex min-w-0 items-center gap-1 text-white/72">
+              <dt className="flex min-w-0 items-center gap-1 text-rn-on-dark/72">
                 <span className="truncate">{tKpi("sub.engineConsistency")}</span>
                 <span className="relative z-[1] inline-flex">
                   <RnInfoTip label={tR("infoLabel", { name: tKpi("sub.engineConsistency") })} align={end ? "end" : "start"}>
@@ -143,26 +143,26 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
                   </RnInfoTip>
                 </span>
               </dt>
-              <dd className="m-0 font-semibold text-white tabular-nums">{tile.engineConsistency.toFixed(1)}%</dd>
+              <dd className="m-0 font-semibold text-rn-on-dark tabular-nums">{tile.engineConsistency.toFixed(1)}%</dd>
             </div>
           ) : null}
           {hasRatio ? (
             <>
               <div data-rn-ratio={`${tile.key}.num`} className={ROW}>
-                <dt className="truncate text-white/72">{copy(`ratio.${tile.key}.num`)}</dt>
-                <dd className="m-0 font-semibold text-white tabular-nums">{f.count(tile.ratio!.numerator!)}</dd>
+                <dt className="truncate text-rn-on-dark/72">{copy(`ratio.${tile.key}.num`)}</dt>
+                <dd className="m-0 font-semibold text-rn-on-dark tabular-nums">{f.count(tile.ratio!.numerator!)}</dd>
               </div>
               <div data-rn-ratio={`${tile.key}.den`} className={ROW}>
-                <dt className="truncate text-white/72">{tKpi(copyKey(`ratio.${tile.key}.den`) as "ratio.visibility.den")}</dt>
-                <dd className="m-0 font-semibold text-white tabular-nums">{f.count(tile.ratio!.denominator!)}</dd>
+                <dt className="truncate text-rn-on-dark/72">{tKpi(copyKey(`ratio.${tile.key}.den`) as "ratio.visibility.den")}</dt>
+                <dd className="m-0 font-semibold text-rn-on-dark tabular-nums">{f.count(tile.ratio!.denominator!)}</dd>
               </div>
             </>
           ) : null}
           {tile.competitorSov ? (
             <div data-rn-competitor-sov="" className={ROW}>
-              <dt className="truncate text-white/72">{tKpi("competitorSov", { brand: tile.competitorSov.brand })}</dt>
+              <dt className="truncate text-rn-on-dark/72">{tKpi("competitorSov", { brand: tile.competitorSov.brand })}</dt>
               {/* the same ratio (legacy KPI #16, own ÷ rival mentions × 100) read as a multiple: 41067.2% = 410.7배 */}
-              <dd className="m-0 font-semibold text-white tabular-nums" title={tile.competitorSov.value == null ? undefined : `${tile.competitorSov.value.toFixed(1)}%`}>
+              <dd className="m-0 font-semibold text-rn-on-dark tabular-nums" title={tile.competitorSov.value == null ? undefined : `${tile.competitorSov.value.toFixed(1)}%`}>
                 {/* no value (no 당사 numerator, or a reference without mentions): a dash (renewal audit 3-3) */}
                 {tile.competitorSov.value == null ? "—" : t("timesOf", { n: (tile.competitorSov.value / 100).toFixed(1) })}
               </dd>
@@ -170,9 +170,9 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
           ) : null}
         </dl>
       ) : null}
-      {tile.coverage ? <span className="text-rn-12 text-white/72">{tKpi("coverageLabel", { measured: tile.coverage.measured, total: tile.coverage.total })}</span> : null}
+      {tile.coverage ? <span className="text-rn-12 text-rn-on-dark/72">{tKpi("coverageLabel", { measured: tile.coverage.measured, total: tile.coverage.total })}</span> : null}
       {tile.provenance ? (
-        <span data-rn-provenance={tile.provenance.source} className="text-rn-11 leading-snug text-white/60">
+        <span data-rn-provenance={tile.provenance.source} className="text-rn-11 leading-snug text-rn-on-dark/60">
           {tile.provenance.source === "published"
             ? tKpi("provenance.published", {
                 cycle: (locale === "ko" ? tile.provenance.cycleLabel : tile.provenance.cycleLabelEn) ?? tile.provenance.cycleLabel ?? tile.provenance.roundDate ?? "",
@@ -199,18 +199,18 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
 function KpiValue({ tile }: { tile: TileView }) {
   const tO = useTranslations("dashboard.overview");
   const f = useFormat();
-  if (tile.pending || tile.value == null) return <span className="text-rn-15 leading-9 font-semibold text-white/72">{tO("cardEmpty")}</span>;
+  if (tile.pending || tile.value == null) return <span className="text-rn-15 leading-9 font-semibold text-rn-on-dark/72">{tO("cardEmpty")}</span>;
   const full = f.value(tile.unit, tile.value);
   // the number big, its unit (%, 번째) small — the renewal Overview's card
   const n = tile.unit === "count" ? full : tile.value.toFixed(1);
   const at = full.indexOf(n);
   return (
-    <span data-rn-value={tile.key} className="text-rn-28 font-bold tracking-[-0.03em] whitespace-nowrap text-white tabular-nums">
+    <span data-rn-value={tile.key} className="text-rn-28 font-bold tracking-[-0.03em] whitespace-nowrap text-rn-on-dark tabular-nums">
       {at >= 0 ? (
         <>
           {full.slice(0, at)}
           {n}
-          <small className="ml-px text-[13px] font-semibold text-white/80">{full.slice(at + n.length)}</small>
+          <small className="ml-px text-[13px] font-semibold text-rn-on-dark/80">{full.slice(at + n.length)}</small>
         </>
       ) : (
         full
@@ -241,7 +241,7 @@ function TileDelta({ tile, deltas, periodMode }: { tile: TileView; deltas: boole
   }
   if (periodMode) {
     return (
-      <span data-rn-no-delta="" className="text-rn-12 text-white/60">
+      <span data-rn-no-delta="" className="text-rn-12 text-rn-on-dark/60">
         {t("noPeriodDelta")}
       </span>
     );
@@ -250,7 +250,7 @@ function TileDelta({ tile, deltas, periodMode }: { tile: TileView; deltas: boole
   if (!deltas) return <RnSkeleton className="h-6 w-14 bg-white/14" />;
   if (tile.delta == null) {
     return (
-      <span data-rn-no-delta="" className="text-rn-12 text-white/60">
+      <span data-rn-no-delta="" className="text-rn-12 text-rn-on-dark/60">
         {t("noDelta")}
       </span>
     );

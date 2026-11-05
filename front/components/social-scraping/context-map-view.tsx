@@ -718,9 +718,9 @@ function PickedChip({
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
         kind === "context"
-          ? "border-teal-200 bg-teal-50 text-teal-900"
+          ? "border-accent-info/40 bg-accent-info/10 text-ink-900"
           : kind === "condition"
-            ? "border-amber-200 bg-amber-50 text-amber-900"
+            ? "border-series-4/60 bg-series-4/15 text-ink-900"
             : "border-border bg-muted/40 text-foreground",
       )}
     >
@@ -1441,10 +1441,10 @@ function CatalogTable({
                 <span className="truncate">{p.sourceLabel}</span>
               </p>
               {p.similarTo ? (
-                <p className="mt-1 flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-500">
+                <p className="mt-1 flex items-start gap-1.5 text-[11px] text-warn-ink">
                   <Badge
                     variant="outline"
-                    className="shrink-0 border-amber-400/60 text-[10px] text-amber-700 dark:text-amber-500"
+                    className="shrink-0 border-warn/60 text-[10px] text-warn-ink"
                   >
                     {t("catalogSimilarBadge", {
                       percent: Math.round(p.similarTo.score * 100),
@@ -1520,10 +1520,10 @@ function PerspectiveBadge({ p }: { p: PerspectiveBreakdown }) {
   const top = p.dominant ?? dominant(p);   // API 원천은 반올림 전 건수로 정한 값(toPerspective)
   const cls =
     top === "buyer"
-      ? "bg-teal-100 text-teal-900"
+      ? "bg-sentiment-positive/15 text-positive"
       : top === "seller"
-        ? "bg-red-100 text-red-900"
-        : "bg-slate-100 text-slate-700";
+        ? "bg-danger/10 text-sentiment-negative-ink"
+        : "bg-muted text-ink-700";
   return (
     <Badge variant="secondary" className={cn("text-[10px]", cls)}>
       {t(top)}
@@ -1675,9 +1675,9 @@ function PerspectiveBlock({ p }: { p: PerspectiveBreakdown }) {
   const t = useTranslations("socialScraping.contextMap.detail");
   const total = Math.max(1, p.buyer + p.seller + p.neutral);
   const seg = [
-    { key: "buyer", v: p.buyer, cls: "bg-teal-500" },
-    { key: "seller", v: p.seller, cls: "bg-red-500" },
-    { key: "neutral", v: p.neutral, cls: "bg-slate-400" },
+    { key: "buyer", v: p.buyer, cls: "bg-sentiment-positive" },
+    { key: "seller", v: p.seller, cls: "bg-danger" },
+    { key: "neutral", v: p.neutral, cls: "bg-ink-300" },
   ];
   return (
     <div>

@@ -104,7 +104,7 @@ export function DetailTable({ rows }: { rows: DetailRow[] }) {
                   className={cn(
                     "px-3 py-2.5 text-right font-semibold",
                     goodness === "good"
-                      ? "text-emerald-600"
+                      ? "text-positive"
                       : goodness === "bad"
                         ? "text-destructive"
                         : "text-muted-foreground",

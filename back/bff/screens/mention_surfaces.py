@@ -29,8 +29,8 @@ from bff.screens.mention_data import (
 OWN_ROW = "__own"
 TYPE_KEYS = ("mention", "recommendation", "comparison", "definition", "final_choice")
 OTHER_SEG_COLORS = ("bg-brand-300", "bg-ink-500", "bg-ink-300")
-SENTIMENT_SEGS = (("positive", "bg-emerald-500"), ("neutral", "bg-muted-foreground/40"), ("mixed", "bg-amber-400"),
-                  ("negative", "bg-destructive"))
+SENTIMENT_SEGS = (("positive", "bg-sentiment-positive"), ("neutral", "bg-sentiment-neutral"), ("mixed", "bg-sentiment-mixed"),
+                  ("negative", "bg-sentiment-negative"))
 
 
 def _sign(x: float) -> int:

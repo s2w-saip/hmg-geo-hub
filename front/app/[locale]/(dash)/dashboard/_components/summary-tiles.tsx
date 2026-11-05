@@ -73,7 +73,7 @@ function Tile({ tile }: { tile: TileView }) {
   const copy = tile.copyVariant === "api" ? "api." : "";
   const DeltaIcon = tile.direction === "up" ? TrendingUp : tile.direction === "down" ? TrendingDown : Minus;
   const deltaColor =
-    tile.tone === "good" ? "text-emerald-600" : tile.tone === "bad" ? "text-destructive" : "text-muted-foreground";
+    tile.tone === "good" ? "text-positive" : tile.tone === "bad" ? "text-destructive" : "text-muted-foreground";
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-soft">

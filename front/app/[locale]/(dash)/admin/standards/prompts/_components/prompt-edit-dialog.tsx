@@ -182,7 +182,7 @@ export function PromptEditDialog({
                       className={
                         "rounded-full border px-2.5 py-1 text-[11px] transition-colors " +
                         (on
-                          ? "border-brand-700 bg-brand-700 text-white"
+                          ? "border-brand-700 bg-brand-700 text-ink-50"
                           : "border-border bg-transparent text-muted-foreground hover:bg-muted")
                       }
                     >

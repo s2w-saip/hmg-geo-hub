@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { Toaster } from "sonner";
+import { TOASTER_STYLE } from "@/lib/viz/toast-style";
 import { resolvePageTitleRef } from "@/lib/nav/page-title";
 import { perfNoCacheActive } from "@/lib/perf/nocache-probe";
 import { getSession } from "@/lib/auth/session";
@@ -73,7 +74,7 @@ export default async function RenewalLayout({ children, params }: { children: Re
       <BetaNoticeDialog />
       <RnBetaToast />
       {/* bottom-center like the renewal toasts (RnToastProvider); the beta notice holds the bottom right */}
-      <Toaster position="bottom-center" richColors closeButton />
+      <Toaster position="bottom-center" richColors closeButton style={TOASTER_STYLE} />
     </>
   );
 }

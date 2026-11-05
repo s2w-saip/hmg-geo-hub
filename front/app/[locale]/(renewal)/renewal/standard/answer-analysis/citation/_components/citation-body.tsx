@@ -305,7 +305,7 @@ function Summary() {
         info={<InfoTip label={t("summary.howLabel")} items={[[t("summary.howLabel"), t("summary.how")]]} />}
         chips={<RnBasisChip>{isPeriod ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: live.asOf?.slice(0, 10) ?? "—" })}</RnBasisChip>}
       />
-      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
+      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-rn-on-dark/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-rn-on-dark">
         {input.website ? (
           <WebsiteHeadline website={input.website} hmg={l.hmg.value} dealer={l.dealer.value} />
         ) : l.hmg.value == null
@@ -319,7 +319,7 @@ function Summary() {
               prompts: split.kind === "ok" ? t("summary.prompts", { owned: numTxt(split.owned), uncited: numTxt(split.uncited) }) : "",
             })}
       </p>
-      {items.length ? <RnFindingGrid items={items} /> : <p className="m-0 px-6 text-rn-12 text-white/72">{t("summary.empty")}</p>}
+      {items.length ? <RnFindingGrid items={items} /> : <p className="m-0 px-6 text-rn-12 text-rn-on-dark/72">{t("summary.empty")}</p>}
     </RnCard>
   );
 }

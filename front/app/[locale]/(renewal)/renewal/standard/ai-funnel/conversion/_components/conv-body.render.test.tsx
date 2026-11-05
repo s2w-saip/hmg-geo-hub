@@ -60,7 +60,7 @@ describe("RnConvBody", () => {
     // 채널 합계 = the channel rows' own total; 사이트 전체 = GA4's totals report on the site line (renewal audit 12-2)
     expect(html).toContain("세션 100회당 주요 이벤트 4.8건 — 1위 · 채널 합계 1.6건");
     // the site line restores the original's page views
-    expect(html).toContain('<b class="font-semibold text-white/90">사이트 전체</b>');
+    expect(html).toContain('<b class="font-semibold text-rn-on-dark/90">사이트 전체</b>');
     expect(html).toContain("세션 28,434회");
     expect(html).toContain("페이지 조회 84,000회");
     expect(html).toContain("일반 유입 세션 100회당 전환 2.5건");

@@ -35,3 +35,5 @@ export const RN_QUIET_2 = "#f8f8f9";
 export const RN_SYSTEM = { good: "#3df134", warn: "#faf600", bad: "#fa1e2a" } as const;
 
 export const RN_INK = "#101012";
+/** Text 5: text on dark fills. */
+export const RN_ON_DARK = "#f7f7f7";

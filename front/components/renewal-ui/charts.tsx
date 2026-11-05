@@ -98,17 +98,17 @@ export function TrendTooltip({
   const at = payload[0]?.payload?.[ROW_INDEX];
   const lines = note && typeof at === "number" ? note(at) : null;
   return (
-    <div className="min-w-[160px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-white shadow-rn-3">
+    <div className="min-w-[160px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-rn-on-dark shadow-rn-3">
       <b className="mb-1 block text-rn-11 font-semibold text-rn-sky">{title(String(label))}</b>
       {rows.map(({ s, v }) => (
         <div key={s.key} className="flex items-center gap-2 py-px">
           <i aria-hidden className="inline-block h-0.5 w-2.5 rounded" style={{ background: s.color === RN_OWN ? RN_OWN_ON_DARK : s.color }} />
           <b className={s.own ? "font-bold" : "font-semibold"}>{value(v)}</b>
-          <span className="text-white/80">{s.name}</span>
+          <span className="text-rn-on-dark/80">{s.name}</span>
         </div>
       ))}
       {lines?.length ? (
-        <div data-rn-tip-note="" className="mt-1 border-t border-white/15 pt-1 text-rn-11 text-white/80 tabular-nums">
+        <div data-rn-tip-note="" className="mt-1 border-t border-white/15 pt-1 text-rn-11 text-rn-on-dark/80 tabular-nums">
           {lines.map((l) => (
             <div key={l}>{l}</div>
           ))}

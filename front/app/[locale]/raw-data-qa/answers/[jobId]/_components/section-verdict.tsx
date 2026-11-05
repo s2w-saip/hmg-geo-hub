@@ -79,8 +79,8 @@ function Segment({
         "px-2 py-1 text-xs transition-colors disabled:opacity-40",
         on
           ? tone === "ok"
-            ? "bg-brand-700 text-white"
-            : "bg-destructive text-white"
+            ? "bg-brand-700 text-ink-50"
+            : "bg-destructive text-ink-50"
           : "bg-card text-muted-foreground hover:text-foreground",
       )}
     >

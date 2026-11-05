@@ -581,7 +581,7 @@ export function ScopeMultiSelect({
           <span className="min-w-0 truncate text-left">{summary}</span>
           <span className="flex shrink-0 items-center gap-1">
             {count > 0 ? (
-              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-700 px-1 text-[10px] font-semibold tabular-nums text-white">
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-700 px-1 text-[10px] font-semibold tabular-nums text-ink-50">
                 {count}
               </span>
             ) : null}

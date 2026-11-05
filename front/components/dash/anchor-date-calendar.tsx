@@ -206,7 +206,7 @@ export function AnchorDateCalendar({
                 ok
                   ? "text-foreground hover:bg-brand-700/10"
                   : "cursor-not-allowed text-muted-foreground/40",
-                (isFrom || isTo) && "bg-brand-700 font-semibold text-white",
+                (isFrom || isTo) && "bg-brand-700 font-semibold text-ink-50",
                 inRange && "bg-brand-700/15",
                 // 기본 회차 = 채우기(선택과 구분되게 연하게) + 굵은 글자.
                 isDefault && "bg-brand-700/20 font-semibold text-foreground",

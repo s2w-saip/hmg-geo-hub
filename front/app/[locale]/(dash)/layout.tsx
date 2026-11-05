@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { resolvePageTitleRef } from "@/lib/nav/page-title";
 import { perfNoCacheActive } from "@/lib/perf/nocache-probe";
 import { Toaster } from "sonner";
+import { TOASTER_STYLE } from "@/lib/viz/toast-style";
 import { getSession } from "@/lib/auth/session";
 import { passwordChangeHref } from "@/lib/hub/next-path";
 import {
@@ -246,7 +247,7 @@ export default async function DashLayout({
           </main>
         </div>
 
-        <Toaster position="bottom-right" richColors closeButton />
+        <Toaster position="bottom-right" richColors closeButton style={TOASTER_STYLE} />
       </div>
     </RnServiceWeekProvider>
   );

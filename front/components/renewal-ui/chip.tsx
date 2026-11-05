@@ -4,7 +4,7 @@ import { cx } from "./cx";
 
 export function RnCountBadge({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rn-navy px-1.5 text-rn-11 font-bold text-white tabular-nums", className)}>
+    <span className={cx("inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-rn-navy px-1.5 text-rn-11 font-bold text-rn-on-dark tabular-nums", className)}>
       {children}
     </span>
   );

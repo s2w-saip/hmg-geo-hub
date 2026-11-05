@@ -122,7 +122,7 @@ function Cards({ cards, period, pageAsOf }: { cards: Promise<RnSiteCardsVM>; per
             aria-pressed={view === "brands"}
             className={cx(
               "group/kg inline-flex h-8 cursor-pointer items-center gap-0.5 rounded-lg px-3 text-rn-12 font-bold focus-visible:outline-2 focus-visible:outline-rn-navy",
-              view === "brands" ? "bg-rn-navy text-white" : "bg-rn-page text-rn-ink hover:bg-rn-navy-25",
+              view === "brands" ? "bg-rn-navy text-rn-on-dark" : "bg-rn-page text-rn-ink hover:bg-rn-navy-25",
             )}
           >
             {t("brands")}

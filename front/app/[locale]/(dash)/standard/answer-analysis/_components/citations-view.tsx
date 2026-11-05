@@ -1051,7 +1051,7 @@ export function CitationsView({
         </table>
       </div>
 
-      <p className="rounded-md border border-dashed border-amber-400/50 bg-amber-50/50 px-4 py-3 text-xs text-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
+      <p className="rounded-md border border-dashed border-warn/50 bg-warn/5 px-4 py-3 text-xs text-warn-ink">
         {t("precondition")}
       </p>
     </div>
@@ -1093,15 +1093,15 @@ function OwnedPromptSplitSection({
           prompts={owned}
           total={ownedCount}
           accentClassName="border-brand-300 bg-brand-50/40"
-          countClassName="bg-brand-700 text-white"
+          countClassName="bg-brand-700 text-ink-50"
         />
         <PromptBucketCard
           title={t("uncitedTitle")}
           description={t("uncitedDescription")}
           prompts={uncited}
           total={uncitedCount}
-          accentClassName="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10"
-          countClassName="bg-amber-500 text-amber-950"
+          accentClassName="border-warn/70 bg-warn/5"
+          countClassName="bg-warn text-ink-900"
           emptyLabel={t("uncitedEmpty")}
         />
       </div>
@@ -1403,7 +1403,7 @@ export function DomainRow({
           <span className="inline-flex items-center gap-1.5">
             {row.domain}
             {row.isOurs ? (
-              <span className="inline-flex items-center rounded bg-brand-700 px-1 py-0.5 text-[9px] font-bold tracking-wide text-white">
+              <span className="inline-flex items-center rounded bg-brand-700 px-1 py-0.5 text-[9px] font-bold tracking-wide text-ink-50">
                 HMG
               </span>
             ) : null}

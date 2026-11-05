@@ -83,7 +83,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
                 on
-                  ? "border-transparent text-white"
+                  ? "border-transparent text-ink-50"
                   : "border-border bg-card text-muted-foreground hover:text-foreground",
               )}
               style={on ? { backgroundColor: s.color } : undefined}

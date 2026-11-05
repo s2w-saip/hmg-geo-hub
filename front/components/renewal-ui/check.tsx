@@ -12,7 +12,7 @@ export function RnCheckMark({ state, radio = false }: { state: RnCheckState; rad
     <span
       aria-hidden
       className={cx(
-        "grid size-4 shrink-0 place-items-center border-[1.5px] text-white",
+        "grid size-4 shrink-0 place-items-center border-[1.5px] text-rn-on-dark",
         radio ? "rounded-full" : "rounded-[4px]",
         state === "on" ? "border-rn-navy bg-rn-navy" : state === "partial" ? "border-rn-navy bg-rn-surface" : "border-rn-faint bg-rn-surface",
       )}

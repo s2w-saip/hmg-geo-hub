@@ -164,7 +164,7 @@ export function AcrBattle() {
             <div
               role="row"
               key={r.promptId}
-              className={cx("grid min-h-[46px] items-center gap-3 border-b border-rn-line px-6 text-rn-13 [.rn-dense_&]:min-h-[38px] [.rn-dense_&]:px-4.5", r.notOwn && "shadow-[inset_3px_0_0_#f0a28f]")}
+              className={cx("grid min-h-[46px] items-center gap-3 border-b border-rn-line px-6 text-rn-13 [.rn-dense_&]:min-h-[38px] [.rn-dense_&]:px-4.5", r.notOwn && "shadow-[inset_3px_0_0_#ffb49f]")}
               style={cols}
             >
               <span role="cell" title={r.label} className="line-clamp-2 leading-[1.45] text-rn-ink-2">

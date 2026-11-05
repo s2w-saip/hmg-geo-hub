@@ -24,7 +24,7 @@ export function RnInfoTip({ label, children, align = "start" }: { label: string;
       </button>
       <span
         role="tooltip"
-        className={`pointer-events-none absolute top-full z-30 mt-1.5 hidden w-[360px] max-w-[min(360px,80vw)] rounded-[10px] bg-rn-ink px-3.5 py-3 text-left text-rn-12 font-normal whitespace-normal text-white shadow-rn-3 group-focus-within/tip:block group-hover/tip:block ${align === "end" ? "right-0" : "left-0"}`}
+        className={`pointer-events-none absolute top-full z-30 mt-1.5 hidden w-[360px] max-w-[min(360px,80vw)] rounded-[10px] bg-rn-ink px-3.5 py-3 text-left text-rn-12 font-normal whitespace-normal text-rn-on-dark shadow-rn-3 group-focus-within/tip:block group-hover/tip:block ${align === "end" ? "right-0" : "left-0"}`}
       >
         {children}
       </span>

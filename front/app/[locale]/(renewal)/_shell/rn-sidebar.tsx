@@ -176,7 +176,7 @@ function Brand() {
   const t = useTranslations("renewal.shell");
   return (
     <span className="flex items-center gap-2.5 px-2 pt-0.5 pb-1">
-      <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-lg bg-rn-navy text-rn-12 font-extrabold tracking-[-0.02em] text-white">
+      <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-lg bg-rn-navy text-rn-12 font-extrabold tracking-[-0.02em] text-rn-on-dark">
         G
       </span>
       <span className="flex flex-col leading-[1.15]">

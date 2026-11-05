@@ -12,10 +12,10 @@ import { type SearchIntent } from "../_data/model";
 import { addTrackedKeywords } from "../_actions";
 
 const INTENT_TONE: Record<SearchIntent, string> = {
-  transactional: "bg-emerald-50 text-emerald-700",
-  commercial: "bg-amber-50 text-amber-700",
-  informational: "bg-blue-50 text-blue-700",
-  navigational: "bg-purple-50 text-purple-700",
+  transactional: "bg-sentiment-positive/10 text-positive",
+  commercial: "bg-warn/10 text-warn-ink",
+  informational: "bg-brand-25 text-brand-500",
+  navigational: "bg-series-3/10 text-series-3",
 };
 
 type RelatedItem = { id: string; term: string; volume: number; intent: SearchIntent };
@@ -274,7 +274,7 @@ function KeywordRow({
         {t(`intent.${intent}`)}
       </span>
       {checked && (
-        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+        <Check className="h-3.5 w-3.5 shrink-0 text-positive" aria-hidden />
       )}
     </div>
   );

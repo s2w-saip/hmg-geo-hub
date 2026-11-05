@@ -58,7 +58,7 @@ export function EcatNav({ reviewCount }: { reviewCount?: number | null }) {
 }
 
 const ROLE_CLASS: Record<EcatRole, string> = {
-  own: "bg-brand-700 text-white",
+  own: "bg-brand-700 text-ink-50",
   competitor: "bg-bg-subtle text-ink-700",
   hidden: "bg-ink-100 text-ink-500",
   removed: "bg-danger/10 text-danger",

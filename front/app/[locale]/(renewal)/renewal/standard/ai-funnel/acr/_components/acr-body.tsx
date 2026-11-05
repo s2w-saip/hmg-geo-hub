@@ -243,7 +243,7 @@ function AcrFindings({ period, asOf }: { period: boolean; asOf: string | null })
         }
         chips={<RnBasisChip>{period ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: asOf ?? "—" })}</RnBasisChip>}
       />
-      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
+      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-rn-on-dark/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-rn-on-dark">
         {t.rich("summary.headline", {
           b: (c) => <b>{c}</b>,
           own: ownLabel,

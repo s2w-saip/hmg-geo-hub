@@ -2571,7 +2571,7 @@ function FacetedFilter({
         >
           <span className="truncate">{label}</span>
           {active ? (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-700 px-1 text-[10px] font-semibold tabular-nums text-white">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-700 px-1 text-[10px] font-semibold tabular-nums text-ink-50">
               {count}
             </span>
           ) : null}

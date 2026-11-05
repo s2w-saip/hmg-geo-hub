@@ -152,9 +152,9 @@ function GapCard({ view }: { view: VisView }) {
           tip: (
             <>
               <b className="block">{fmt.page(r)} · {fmt.site(r)}</b>
-              <span className="block text-white/70">{r.path}</span>
+              <span className="block text-rn-on-dark/70">{r.path}</span>
               <span className="block">{t("tip", { seo: fmt.n(r.seo), ai: fmt.n(r.ai), exp: fmt.n(r.exp) })}</span>
-              <span className="block text-white/80">{tb(r.band as VisBand)} · {t("prio", { p: r.prio ?? "–" })}</span>
+              <span className="block text-rn-on-dark/80">{tb(r.band as VisBand)} · {t("prio", { p: r.prio ?? "–" })}</span>
             </>
           ),
         })),

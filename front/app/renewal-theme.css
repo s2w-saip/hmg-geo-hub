@@ -39,6 +39,8 @@
   --color-rn-ink-2: #222326;
   --color-rn-muted: #6c6d70;
   --color-rn-faint: #d5d5d6;
+  /* Text 5: text and icons on dark fills (the hero, the ink tooltips, the point blue) */
+  --color-rn-on-dark: #f7f7f7;
   --color-rn-line: #e5e6e9;
   --color-rn-line-2: #d5d5d6;
   /* System: good · bad · warn (fills and tints only) */
@@ -112,7 +114,7 @@
 .rn-hero {
   background-color: var(--color-rn-navy-900);
   box-shadow: var(--shadow-rn-hero);
-  color: #fff;
+  color: var(--color-rn-on-dark);
 }
 
 /* ---------------------------------------------------------------------------

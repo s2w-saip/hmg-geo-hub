@@ -35,7 +35,7 @@ export interface VisSeries {
 
 function TipBox({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
-    <div className="min-w-[160px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-white shadow-rn-3">
+    <div className="min-w-[160px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-rn-on-dark shadow-rn-3">
       <b className="mb-1 block text-rn-11 font-semibold text-rn-sky">{title}</b>
       {children}
     </div>
@@ -47,7 +47,7 @@ function TipRow({ color, value, name, bold }: { color: string; value: string; na
     <div className="flex items-center gap-2 py-px">
       <i aria-hidden className="inline-block size-2 rounded-sm" style={{ background: color === RN_OWN ? RN_OWN_ON_DARK : color }} />
       <b className={bold ? "font-bold" : "font-semibold"}>{value}</b>
-      <span className="text-white/80">{name}</span>
+      <span className="text-rn-on-dark/80">{name}</span>
     </div>
   );
 }
@@ -226,7 +226,7 @@ export function VisLogScatter({
             isAnimationActive={false}
             content={({ active, payload }) => {
               const d = (payload?.[0]?.payload as { d?: VisDot } | undefined)?.d;
-              return active && d ? <div className="max-w-[300px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-white shadow-rn-3">{d.tip}</div> : null;
+              return active && d ? <div className="max-w-[300px] rounded-[10px] bg-rn-ink px-3 py-2.5 text-rn-12 text-rn-on-dark shadow-rn-3">{d.tip}</div> : null;
             }}
           />
           <Scatter data={full} line={{ stroke: "var(--color-rn-ink-2)", strokeWidth: 1.5 }} shape={() => <g />} isAnimationActive={false} legendType="none" tooltipType="none" />

@@ -206,7 +206,7 @@ export function PreviewPanel({ preview }: { preview: PreviewView }) {
                 onClick={() => setBrand(b)}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs",
-                  brand === b ? "border-brand-700 bg-brand-700 text-white" : "border-border text-ink-700 hover:bg-bg-subtle",
+                  brand === b ? "border-brand-700 bg-brand-700 text-ink-50" : "border-border text-ink-700 hover:bg-bg-subtle",
                 )}
               >
                 {b}

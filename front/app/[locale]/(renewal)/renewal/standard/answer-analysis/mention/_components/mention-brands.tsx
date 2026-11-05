@@ -33,7 +33,7 @@ import { squarify } from "./treemap-layout";
 import { CONTEXT_COLOR, MentionCardActions, deltaTxt, numTxt, pctTxt, posTxt, slotLabel, useCompare, useMention, type DrawerSignal, type DrawerTarget } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, TwinTable, useDegradedText } from "./mention-kit";
 import { SENTIMENT_COLOR } from "./mention-favor";
-import { RN_INK, RN_QUIET, RN_QUIET_2 } from "@/components/renewal-ui/palette";
+import { RN_INK, RN_ON_DARK, RN_QUIET, RN_QUIET_2 } from "@/components/renewal-ui/palette";
 
 export function BrandDetail() {
   const t = useTranslations("renewal.mention");
@@ -356,7 +356,7 @@ const relLum = (hex: string) => {
   });
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 };
-const inkOn = (hex: string) => (1.05 / (relLum(hex) + 0.05) >= 4.5 ? "#ffffff" : RN_INK);
+const inkOn = (hex: string) => ((relLum(RN_ON_DARK) + 0.05) / (relLum(hex) + 0.05) >= 4.5 ? RN_ON_DARK : RN_INK);
 // label width at a bold size, measured with the page font (labels are drawn only when they fit)
 let measureCtx: CanvasRenderingContext2D | null = null;
 const textW = (text: string, px: number): number => {

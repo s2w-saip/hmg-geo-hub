@@ -331,7 +331,7 @@ export function SummaryCard({ items, how }: { items: RnFinding[]; how: string })
         info={<InfoTip label={t("summary.howLabel")} items={[[t("summary.howLabel"), how]]} />}
         chips={<RnBasisChip>{isPeriod ? t("summary.chipPeriod") : t("summary.chipSnapshot", { date: asOf ?? "—" })}</RnBasisChip>}
       />
-      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-white/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-white">
+      <p className="m-0 px-6 pb-3.5 text-rn-16 leading-[1.6] break-keep text-rn-on-dark/88 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-2.5 [&_b]:font-bold [&_b]:text-rn-on-dark">
         {t.rich("summary.headline", {
           b: (c) => <b>{c}</b>,
           own: ownLabel,
@@ -343,7 +343,7 @@ export function SummaryCard({ items, how }: { items: RnFinding[]; how: string })
           pos: s.pos == null ? "—" : t("rank.unit", { n: posTxt(s.pos) }),
         })}
       </p>
-      {items.length ? <RnFindingGrid items={items} /> : <p className="m-0 px-6 text-rn-12 text-white/72">{t("summary.empty")}</p>}
+      {items.length ? <RnFindingGrid items={items} /> : <p className="m-0 px-6 text-rn-12 text-rn-on-dark/72">{t("summary.empty")}</p>}
     </RnCard>
   );
 }

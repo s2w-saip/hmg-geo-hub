@@ -185,13 +185,13 @@ export function CatalogIo() {
                   {t("previewUnchanged", { count: preview.unchanged })}
                 </Badge>
                 {preview.unmatchedIds.length > 0 ? (
-                  <Badge variant="outline" className="border-amber-400 bg-amber-50 tabular-nums text-amber-900">
+                  <Badge variant="outline" className="border-warn bg-warn/10 tabular-nums text-warn-ink">
                     {t("previewUnmatched", { count: preview.unmatchedIds.length })}
                   </Badge>
                 ) : null}
               </div>
               {preview.warnings.length > 0 ? (
-                <ul className="max-h-24 list-disc overflow-y-auto pl-4 text-[11px] text-amber-700">
+                <ul className="max-h-24 list-disc overflow-y-auto pl-4 text-[11px] text-warn-ink">
                   {preview.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}

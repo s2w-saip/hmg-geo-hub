@@ -27,7 +27,7 @@ export function RnToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-6 z-[120] flex justify-center px-4">
         {toast ? (
-          <div key={toast.id} role="status" className="pointer-events-auto flex items-center gap-3.5 rounded-[10px] bg-rn-ink py-2.5 pr-2.5 pl-4 text-rn-13 text-white shadow-rn-3">
+          <div key={toast.id} role="status" className="pointer-events-auto flex items-center gap-3.5 rounded-[10px] bg-rn-ink py-2.5 pr-2.5 pl-4 text-rn-13 text-rn-on-dark shadow-rn-3">
             <span>{toast.message}</span>
             {toast.undo ? (
               <button

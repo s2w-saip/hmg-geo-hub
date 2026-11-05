@@ -181,7 +181,7 @@ function KpiRow({
               data-rn-kpi={key}
               className="group/kpi relative flex min-w-0 flex-col gap-[7px] border-l border-white/14 px-4 py-1 first:border-l-0 @max-[600px]/rnkpi:nth-[3n+1]:border-l-0"
             >
-              <span className="flex items-center gap-1 text-rn-13 font-bold text-white/86">
+              <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-on-dark/86">
                 <span className="truncate">{name}</span>
                 {/* above the card's link, so ⓘ shows its tip instead of opening the page */}
                 <span className="relative z-[1] inline-flex">
@@ -204,7 +204,7 @@ function KpiRow({
                   </Suspense>
                 )}
               </div>
-              <span data-rn-standing={key} className="min-h-[18px] text-rn-12 text-white/72">
+              <span data-rn-standing={key} className="min-h-[18px] text-rn-12 text-rn-on-dark/72">
                 {pending ? null : (
                   <Suspense fallback={<RnSkeleton className="h-4 w-24" />}>
                     <StandingLine k={key} competitors={deferred.competitors} />
@@ -244,8 +244,8 @@ function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
   const tO = useTranslations("dashboard.overview");
   const tUnit = useTranslations("metricUnit");
   // on the navy KPI card (S급): the value 34px white, the unit small
-  const big = "text-rn-34 font-bold tracking-[-0.03em] whitespace-nowrap text-white tabular-nums";
-  if (value == null) return <span className="text-rn-15 leading-[2.2] font-semibold text-white/72">{tO("cardEmpty")}</span>;
+  const big = "text-rn-34 font-bold tracking-[-0.03em] whitespace-nowrap text-rn-on-dark tabular-nums";
+  if (value == null) return <span className="text-rn-15 leading-[2.2] font-semibold text-rn-on-dark/72">{tO("cardEmpty")}</span>;
   if (isRank(k)) {
     // "{n}번째" — the number big, the unit word small (same string as the card).
     const full = tUnit("position", { n: value.toFixed(1) });
@@ -257,7 +257,7 @@ function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
           <>
             {full.slice(0, at)}
             {n}
-            <small className="ml-px text-[14px] font-semibold text-white/80">{full.slice(at + n.length)}</small>
+            <small className="ml-px text-[14px] font-semibold text-rn-on-dark/80">{full.slice(at + n.length)}</small>
           </>
         ) : (
           full
@@ -268,7 +268,7 @@ function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
   return (
     <span className={big} data-rn-value={k}>
       {value.toFixed(1)}
-      <small className="ml-px text-[14px] font-semibold text-white/80">%</small>
+      <small className="ml-px text-[14px] font-semibold text-rn-on-dark/80">%</small>
     </span>
   );
 }
@@ -299,7 +299,7 @@ function DeltaCell({
           {periodChipText(period.chip)}
         </RnToneChip>
         {perCard ? (
-          <span data-rn-compare-label="" className="text-rn-11 text-white/72">
+          <span data-rn-compare-label="" className="text-rn-11 text-rn-on-dark/72">
             {tP(period.label.key as "label.weekly", period.label.params)}
           </span>
         ) : null}
@@ -354,7 +354,7 @@ function StandingLine({ k, competitors }: { k: OverviewKpiKey; competitors: Prom
   const st = view.standing?.[k] ?? null;
   // no standing: a competitor read that failed says so (not "no competitor value", 2026-10-29 review ⚠️ #32)
   if (!st) return <>{view.degraded.length ? t("rivalsFailed") : tO("noCompetitorData")}</>;
-  return <>{t.rich("standing", { b: (c) => <b className="font-semibold text-white">{c}</b>, rank: st.rank, count: st.count })}</>;
+  return <>{t.rich("standing", { b: (c) => <b className="font-semibold text-rn-on-dark">{c}</b>, rank: st.rank, count: st.count })}</>;
 }
 
 // ─── 브랜드 비교 (brands × KPIs) ────────────────────────────────────────────
