@@ -20,6 +20,8 @@ export function useRnSplit() {
 // the content area scrolls on its own, out to the right edge of the window. --rn-edge is the S급
 // gutter around a 1480px column; top 24px / bottom 72px (20 / 64 up to 1279px), the
 // '스크롤 영역' values of docs/design/ui/design-rules.html. Both reserve the scrollbar gutter so the header lines up with the content.
+// While the beta notice card floats at the bottom right (2026-11-05), the bottom is at least the height it covers + 12px
+// (--rn-toast-space, _shell/beta-toast.tsx), so the last row (a list's pager) scrolls clear of the card.
 
 const FRAME = "@container/rnframe flex flex-col pt-6 max-xl:pt-5";
 const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden px-[var(--rn-edge)] pb-3 [scrollbar-gutter:stable]";
@@ -28,7 +30,7 @@ const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden px-[var(--rn-edge)] pb-3 [s
 // The service week's notes (2026-11-02: a late next week, a week Gold left sites out of) head that column, inside the
 // frame: a strip above the frame would make the window scroll.
 const DENSE = "rn-dense flex min-w-0 flex-col gap-2.5";
-const FRAME_SCROLL = "min-h-0 min-w-0 overflow-y-auto overscroll-contain pt-1 pr-[var(--rn-edge)] pb-18 max-xl:pb-16 [scrollbar-gutter:stable]";
+const FRAME_SCROLL = "min-h-0 min-w-0 overflow-y-auto overscroll-contain pt-1 pr-[var(--rn-edge)] pb-[max(4.5rem,var(--rn-toast-space,0px)_+_0.75rem)] max-xl:pb-[max(4rem,var(--rn-toast-space,0px)_+_0.75rem)] [scrollbar-gutter:stable]";
 
 /** Page layout without a filter panel: the page header on top, the content scrolling below it. */
 export function RnPageFrame({ header, children }: { header: ReactNode; children: ReactNode }) {

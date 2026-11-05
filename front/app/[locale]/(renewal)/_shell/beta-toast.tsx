@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Info, X } from "lucide-react";
 import { CopyStatus, FEEDBACK_EMAILS, useCopyEmails } from "@/components/dash/beta-notice";
@@ -10,13 +10,18 @@ import { CopyStatus, FEEDBACK_EMAILS, useCopyEmails } from "@/components/dash/be
 // shell (no top bar), so the same copy and the same two-address copy button sit in a card at
 // the bottom right. × hides it for this browser session; the first-entry popup
 // (BetaNoticeDialog) stays as in the original shell.
+// The card floats over the bottom right of every page (2026-11-05): while it shows, it puts the height it covers from
+// the window's bottom in --rn-toast-space, and the content's scroll area ends that much lower (FRAME_SCROLL,
+// renewal/_components/filter-split.tsx), so the last row (a list's pager) scrolls clear of it.
 
 const HIDDEN_KEY = "rn-beta-toast-hidden";
+const SPACE_VAR = "--rn-toast-space";
 
 export function RnBetaToast() {
   const t = useTranslations("betaNotice");
   const ts = useTranslations("renewal.shell");
   const { state, copy } = useCopyEmails();
+  const card = useRef<HTMLElement>(null);
   // hidden until mounted: sessionStorage is client-only (no flash on the server render)
   const [hidden, setHidden] = useState(true);
   useEffect(() => {
@@ -28,6 +33,19 @@ export function RnBetaToast() {
     }
     setHidden(off);
   }, []);
+  useEffect(() => {
+    const el = card.current;
+    if (hidden || !el) return;
+    const root = document.documentElement;
+    const cover = () => root.style.setProperty(SPACE_VAR, `${Math.ceil(window.innerHeight - el.getBoundingClientRect().top)}px`);
+    cover();
+    const watch = new ResizeObserver(cover);
+    watch.observe(el);
+    return () => {
+      watch.disconnect();
+      root.style.removeProperty(SPACE_VAR);
+    };
+  }, [hidden]);
   if (hidden) return null;
   const close = () => {
     setHidden(true);
@@ -39,6 +57,7 @@ export function RnBetaToast() {
   };
   return (
     <section
+      ref={card}
       aria-label={t("title")}
       data-rn-beta-toast=""
       className="fixed right-5 bottom-5 z-30 w-[min(360px,calc(100vw-2.5rem))] rounded-rn-card bg-rn-surface py-3.5 pr-2.5 pl-4 shadow-[var(--shadow-rn-3),0_0_0_1px_var(--color-rn-line)]"
