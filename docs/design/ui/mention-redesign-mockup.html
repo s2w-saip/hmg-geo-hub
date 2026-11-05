@@ -372,6 +372,123 @@
   .dtabs button { border: 0; background: none; padding: 5px 14px; border-radius: 8px; font-size: 13px; color: var(--muted); }
   .dtabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; }
   .ph-note { padding: 26px; border-radius: 12px; border: 1.5px dashed var(--line-2); color: var(--muted); font-size: 12px; text-align: center; }
+
+  /* ═══ 2차 외형 (클라이언트 참고 화면의 문법: 넉넉한 카드, 아이콘 칩 + 제목, 큰 값 + 조용한 증감, 부드러운 곡선, 흰 툴팁) ═══ */
+  :root { --page: #f5f6f8; --line: #eceef1; --line-2: #dfe1e6; --shadow-card: 0 1px 2px rgba(16,16,18,.04), 0 0 0 1px var(--line); --r-card: 18px; }
+  body { background: var(--page); font-size: 13px; }
+  .ph { padding: 24px 28px 14px 32px; align-items: center; }
+  .ph h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+  .ph .sub { margin-top: 6px; font-size: 13px; }
+  .pill { height: 26px; box-shadow: inset 0 0 0 1px var(--line); font-weight: 500; }
+  .hacts { margin-left: auto; display: flex; gap: 8px; }
+  .btn { height: 36px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--line-2); font-weight: 600; color: var(--ink-2); }
+  .btn.pri { background: var(--navy); color: #fff; box-shadow: none; }
+  .body { gap: 20px; padding-left: 32px; }
+  .filters { border-radius: var(--r-card) var(--r-card) 0 0; box-shadow: 0 0 0 1px var(--line); }
+  .f-saved { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .f-axis label i { border-radius: 5px; }
+  .content { gap: 16px; padding-right: 32px; }
+  .notice { border-radius: 12px; box-shadow: none; background: #fffbe6; color: #5c5a08; font-size: 12px; padding: 10px 16px; }
+  .cbar { border-radius: 14px; box-shadow: 0 0 0 1px var(--line); padding: 10px 12px 10px 18px; }
+  .chip { height: 30px; box-shadow: inset 0 0 0 1px var(--line-2); font-weight: 600; }
+  .add { height: 30px; }
+  .sh:not(:has(.legend)) { display: none; }
+  .sh { margin: 2px 2px -4px; justify-content: flex-end; }
+  .sh h2, .sh > p { display: none; }
+  .card { border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+  .ch { padding: 20px 22px 12px 24px; gap: 10px; }
+  .ch h3 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .ic { width: 28px; height: 28px; border-radius: 8px; display: inline-grid; place-items: center; background: var(--navy-25); color: var(--navy); flex-shrink: 0; }
+  .bchip { height: 22px; background: var(--page); color: var(--muted); font-weight: 500; }
+  .icon { width: 32px; height: 32px; border-radius: 8px; }
+  .seg { background: var(--page); box-shadow: inset 0 0 0 1px var(--line); border-radius: 10px; padding: 3px; }
+  .seg button { padding: 4px 12px; border-radius: 7px; font-weight: 500; }
+  .seg button[aria-pressed="true"] { box-shadow: 0 1px 2px rgba(16,16,18,.1), 0 0 0 1px var(--line); font-weight: 600; }
+  /* quiet deltas: colour on the text, a faint tint, no box */
+  .d { height: 20px; padding: 0 7px; border-radius: 999px; font-weight: 600; font-size: 11.5px; }
+  .d.good { background: rgba(39,131,35,.08); }
+  .d.bad { background: rgba(208,27,38,.07); }
+  .d.flat, .d.neu { background: transparent; box-shadow: none; padding: 0; color: var(--muted); }
+  /* trend cards */
+  .tgrid { gap: 16px; }
+  .tcard { padding: 20px 22px 14px 24px; }
+  .tcard .th { font-size: 14px; font-weight: 600; color: var(--ink-2); gap: 10px; }
+  .tcard .tv { margin: 14px 0 2px; gap: 10px; }
+  .tcard .tv b { font-size: 32px; font-weight: 600; letter-spacing: -.025em; }
+  .tcard .tv b small { font-size: 15px; font-weight: 500; color: var(--muted); }
+  .tcard .tv .meta { font-size: 12px; }
+  .split { background: none; padding: 0; margin: 2px 0 12px; font-size: 12px; color: var(--muted); gap: 8px; }
+  .split .k { font-weight: 500; }
+  .split b { font-weight: 600; }
+  .tcard .chart { height: 148px; }
+  .twinwrap { height: 148px; }
+  .ph { padding: 18px 28px 10px 32px; }
+  .content { gap: 12px; }
+  .cbar .legend { padding: 0; }
+  .tcard { padding: 16px 22px 10px 24px; }
+  .tcard .tv { margin: 10px 0 0; }
+  .tcard .tv b { font-size: 30px; }
+  .grid line { stroke: #eef0f3; stroke-dasharray: 3 4; }
+  .ax { fill: #9a9ca3; font-size: 11px; }
+  .cross { stroke: #c9ccd3; stroke-dasharray: none; }
+  .legend { gap: 6px 16px; font-size: 12px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; }
+  /* white tooltip card */
+  .tip { background: #fff; color: var(--ink); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(16,16,18,.28), 0 0 0 1px var(--line); padding: 12px 14px; min-width: 200px; }
+  .tip b { color: var(--muted); font-weight: 600; }
+  .tip .r { padding: 2px 0; }
+  .tip .r.own span:first-of-type { color: var(--navy); }
+  .tip .n { color: var(--muted); border-top-color: var(--line); }
+  /* brand table */
+  .tools { padding: 0 24px 12px; }
+  .search { height: 36px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); width: 240px; }
+  .tools .muted { font-size: 12px; color: #9a9ca3; }
+  .bt th { height: 40px; background: #fafbfc; font-weight: 500; color: var(--muted); border-block: 1px solid var(--line); }
+  .bt th.fx { background: #fafbfc; box-shadow: inset 0 -2px 0 var(--navy); }
+  .bt td { height: 52px; border-bottom: 1px solid #f1f2f4; color: var(--ink-2); }
+  .bt td.fx, .tt td.fx, .et td.fx { background: transparent; }
+  .bt tr.own td { background: #f8f9ff; }
+  .bt tbody tr:hover td { background: #f7f8fa; }
+  .bt tr.sub td { height: 40px; background: #fbfbfd; }
+  .av { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; flex-shrink: 0; background: #f1f2f4; color: #6c6d70; }
+  .bname { gap: 10px; }
+  .bname b { font-weight: 600; }
+  .vb .bar { flex: 0 0 56px; height: 4px; }
+  .ptrack { height: 4px; } .ptrack i { width: 8px; height: 8px; }
+  .vb b { font-weight: 600; }
+  .sent { height: 5px; border-radius: 3px; gap: 2px; }
+  .chk { border-radius: 5px; }
+  .more { padding: 14px 24px 18px; }
+  /* engines */
+  .et th { background: #fafbfc; font-weight: 500; border-block: 1px solid var(--line); height: 38px; }
+  .et th.fx, .tt th.fx { background: #fafbfc; box-shadow: none; color: var(--muted); }
+  .et td { padding: 14px 12px; border-bottom: 1px solid #f1f2f4; }
+  .et td:first-child { font-weight: 600; }
+  .ev b { font-size: 20px; font-weight: 600; }
+  .eng { display: inline-flex; align-items: center; gap: 10px; }
+  .ef { padding: 12px 24px 18px; }
+  /* sentiment donut */
+  .dist { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 20px; align-items: center; padding: 4px 24px 20px; }
+  .donut { position: relative; width: 168px; height: 168px; }
+  .donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .donut .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .donut .c b { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+  .donut .c small { color: var(--muted); font-size: 12px; }
+  .dl { display: flex; flex-direction: column; }
+  .dl .row { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f2f4; font-size: 13px; }
+  .dl .row:last-child { border-bottom: 0; }
+  .dl .row i { width: 4px; height: 18px; border-radius: 2px; }
+  .dl .row b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .dl .row small { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
+  .dl .row a { color: var(--navy); font-size: 12px; font-weight: 600; text-decoration: none; }
+  /* types */
+  .tt th { background: #fafbfc; font-weight: 500; color: var(--muted); border-block: 1px solid var(--line); height: 38px; }
+  .tt td { height: 50px; border-bottom: 1px solid #f1f2f4; }
+  .tt td:first-child { font-weight: 600; }
+  .ty { display: inline-flex; align-items: center; gap: 10px; }
+  .tv .bar { height: 4px; }
+  .tf { padding: 12px 24px 18px; color: #9a9ca3; }
+  .dots .ax { background: #eef0f3; }
 </style>
 </head>
 <body>
@@ -395,6 +512,14 @@
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
   <symbol id="i-table" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></symbol>
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></symbol>
+  <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.6 2 2 2 3.8"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42z"/><circle cx="7" cy="7" r="1.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></symbol>
 </svg>
 
@@ -458,7 +583,7 @@
           <span class="pill"><svg class="i s12"><use href="#i-cal"/></svg><b>10월 2주차</b> · 10/5~10/11<span class="sep"></span><span class="warn">⚠ 발행 지연 25일</span></span>
         </div>
       </div>
-      <button class="btn" type="button"><svg class="i s14"><use href="#i-link"/></svg>링크 복사</button>
+      <div class="hacts"><button class="btn" type="button"><svg class="i s14"><use href="#i-link"/></svg>링크 복사</button><button class="btn pri" type="button"><svg class="i s14"><use href="#i-dl"/></svg>CSV 내보내기</button></div>
     </header>
 
     <div class="body">
@@ -479,6 +604,7 @@
         <div class="notice"><svg class="i s14" style="color:var(--warn-ink)"><use href="#i-warn"/></svg>발행 지연: 10월 3주차(10/12~10/18) 결과가 아직 완료로 확인되지 않아, Gold 측정 결과는 10월 2주차(10/5~10/11)까지 보입니다.<span class="muted">(Gold 마지막 확인 2026-11-03 17:33)</span></div>
 
         <div class="cbar" role="toolbar" aria-label="페이지 조작">
+          <div class="legend" id="legend"></div>
           <div class="right">
             <span class="lab">비교 브랜드</span>
             <span id="chips" style="display:contents"></span>
@@ -491,24 +617,24 @@
           </div>
         </div>
 
-        <div class="sh"><h2>현황과 추이</h2><p>네 지표의 이번 회차 값과 회차별 추이입니다. 한 차트에 올리면 네 차트가 같은 회차를 가리킵니다.</p><div class="legend" id="legend"></div></div>
+        <div class="sh"><h2>현황과 추이</h2><p>네 지표의 이번 회차 값과 회차별 추이입니다. 한 차트에 올리면 네 차트가 같은 회차를 가리킵니다.</p></div>
         <div class="tgrid" id="tgrid"></div>
 
         <div class="sh"><h2>경쟁 구도</h2><p>브랜드마다 네 지표를 한 줄에 둡니다. 열 머리를 누르면 그 값으로 정렬하고, 추이 열도 그 지표로 바뀝니다.</p></div>
         <section class="card" id="boardCard">
-          <div class="ch"><h3>브랜드 비교</h3><span class="info" title="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">측정 기준일 스냅샷</span><span class="bchip" id="brandCount">브랜드 752개</span><span class="bchip" id="trendCov"></span>
+          <div class="ch"><span class="ic"><svg class="i s14"><use href="#i-users"/></svg></span><h3>브랜드 비교</h3><span class="info" title="값은 측정 기준일 스냅샷, 증감 · 추이는 회차 집계입니다. 추이는 당사와 언급 상위 브랜드만 계산합니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">측정 기준일 스냅샷</span><span class="bchip" id="brandCount">브랜드 752개</span><span class="bchip" id="trendCov"></span>
             <div class="acts"><div class="seg" id="viewSeg"><button type="button" data-v="table" aria-pressed="true">표</button><button type="button" data-v="map" aria-pressed="false">트리맵</button><button type="button" data-v="bump" aria-pressed="false">순위 변화</button><button type="button" data-v="ladder" aria-pressed="false">순위별 보기</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div>
           <div id="boardBody"></div>
         </section>
 
         <div class="sh"><h2>엔진 · 감정</h2><p>AI 엔진마다 네 지표, 그리고 당사 언급의 감정 구성입니다.</p></div>
         <div class="row2">
-          <section class="card"><div class="ch"><h3>AI 엔진별</h3><span class="info" title="엔진마다 같은 정의로 센 당사 값입니다. 작은 차트는 지표마다 같은 눈금입니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">당사</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="engines"></div></section>
-          <section class="card"><div class="ch"><h3>감정 분포</h3><span class="info" title="당사 언급마다 붙은 감정 신호의 구성입니다(언급 단위)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="distChip"></span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="dist" id="dist"></div></section>
+          <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-cpu"/></svg></span><h3>AI 엔진별</h3><span class="info" title="엔진마다 같은 정의로 센 당사 값입니다. 작은 차트는 지표마다 같은 눈금입니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">당사</span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="engines"></div></section>
+          <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-smile"/></svg></span><h3>감정 분포</h3><span class="info" title="당사 언급마다 붙은 감정 신호의 구성입니다(언급 단위)."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip" id="distChip"></span><div class="acts"><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div class="dist" id="dist"></div></section>
         </div>
 
         <div class="sh"><h2>멘션 유형</h2><p>AI가 당사를 어떤 식으로 언급하는지(최종 선택 · 추천 · 비교 · 정의 · 단순 언급), 유형마다 세 지표입니다.</p></div>
-        <section class="card"><div class="ch"><h3>유형별 노출 · 점유 · 감정</h3><span class="info" title="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">유형 신호 기준</span><div class="acts"><div class="seg" id="unitSeg" aria-label="감정 단위"><button type="button" data-u="pct" aria-pressed="true">비율</button><button type="button" data-u="count" aria-pressed="false">건수</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="types"></div></section>
+        <section class="card"><div class="ch"><span class="ic"><svg class="i s14"><use href="#i-tag"/></svg></span><h3>멘션 유형별 노출 · 점유 · 감정</h3><span class="info" title="답변 분석기가 브랜드 언급마다 붙이는 유형 신호 기준입니다. 한 답변에 여러 유형이 함께 나오면 각 유형에 모두 들어갑니다."><svg class="i s14"><use href="#i-info"/></svg></span><span class="bchip">유형 신호 기준</span><div class="acts"><div class="seg" id="unitSeg" aria-label="감정 단위"><button type="button" data-u="pct" aria-pressed="true">비율</button><button type="button" data-u="count" aria-pressed="false">건수</button></div><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></div></div><div id="types"></div></section>
       </div>
     </div>
   </div>
@@ -593,6 +719,29 @@ function headOf(m) {
   return `<b>${k.v.toFixed(1)}<small>번째</small></b>${dchip(k.d, { unit: "", better: "down" })}<span class="meta">작을수록 먼저 언급 · 직전 회차(09-28) 대비</span>`;
 }
 const charts = {};
+/** monotone cubic through the points (Fritsch–Carlson), broken where a round has no value */
+function smoothPath(pts) {
+  const segs = []; let cur = [];
+  for (const p of pts) { if (p) cur.push(p); else if (cur.length) { segs.push(cur); cur = []; } }
+  if (cur.length) segs.push(cur);
+  return segs.map((q) => {
+    const n = q.length; if (n === 1) return `M${q[0][0]},${q[0][1]}`;
+    const m = [], t = [];
+    for (let i = 0; i < n - 1; i++) m[i] = (q[i + 1][1] - q[i][1]) / (q[i + 1][0] - q[i][0]);
+    t[0] = m[0]; t[n - 1] = m[n - 2];
+    for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
+    for (let i = 0; i < n - 1; i++) { if (m[i] === 0) { t[i] = t[i + 1] = 0; continue; } const a = t[i] / m[i], b = t[i + 1] / m[i], hh = a * a + b * b; if (hh > 9) { const k = 3 / Math.sqrt(hh); t[i] = k * a * m[i]; t[i + 1] = k * b * m[i]; } }
+    let d = `M${q[0][0].toFixed(1)},${q[0][1].toFixed(1)}`;
+    for (let i = 0; i < n - 1; i++) { const hx = (q[i + 1][0] - q[i][0]) / 3; d += `C${(q[i][0] + hx).toFixed(1)},${(q[i][1] + hx * t[i]).toFixed(1)} ${(q[i + 1][0] - hx).toFixed(1)},${(q[i + 1][1] - hx * t[i + 1]).toFixed(1)} ${q[i + 1][0].toFixed(1)},${q[i + 1][1].toFixed(1)}`; }
+    return d;
+  }).join("");
+}
+const ICON = { exposure: "i-eye", sov: "i-pie", favorability: "i-smile", "first-rank": "i-trophy" };
+const initial = (b) => (b === "HMG" ? "H" : b.replace(/[^A-Za-z0-9가-힣]/g, "").slice(0, 2));
+function avatar(b, own) {
+  const c = own ? NAVY : st.compare.includes(b) ? colorOf(b) : null;
+  return `<span class="av" style="${c ? `background:${c}1f;color:${own ? NAVY : "#222326"};box-shadow:inset 0 0 0 1px ${c}55` : ""}">${initial(b)}</span>`;
+}
 /** 질문 유형별(Gold 카탈로그 brand presence 라벨): 브랜드 미포함 질문에서 당사와 첫 비교 브랜드, 포함 질문의 당사 */
 function splitOf(m) {
   const U = D.split.unb, B = D.split.br, ref = st.compare.find((b) => U[b]);
@@ -609,7 +758,7 @@ function twinOf(m) {
 function renderTrends() {
   $("#legend").innerHTML = [{ name: "HMG", color: NAVY, own: true }, ...st.compare.map((b) => ({ name: b, color: colorOf(b) }))].map((s) => `<span class="${s.own ? "own" : ""}"><i style="background:${s.color}"></i>${s.name}${s.own ? ' <span class="own-tag">당사</span>' : ""}</span>`).join("");
   $("#tgrid").innerHTML = CARDS.map(([m, lab, def]) => `<section class="card tcard" data-m="${m}">
-    <div class="th">${lab}<span class="info" title="${def}"><svg class="i s12"><use href="#i-info"/></svg></span>${m === "favorability" ? '<span class="mini"><span><i style="background:#1e38fa"></i>긍정</span><span><i style="background:#fa1e2a"></i>부정</span></span>' : ""}<span class="acts"><button class="icon" type="button" title="표로 보기" data-tbl="${m}" aria-pressed="${!!st.tbl[m]}"><svg class="i s14"><use href="#i-table"/></svg></button><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></span></div>
+    <div class="th"><span class="ic"><svg class="i s14"><use href="#${ICON[m]}"/></svg></span>${lab}<span class="info" title="${def}"><svg class="i s12"><use href="#i-info"/></svg></span>${m === "favorability" ? '<span class="mini"><span><i style="background:#1e38fa"></i>긍정</span><span><i style="background:#fa1e2a"></i>부정</span></span>' : ""}<span class="acts"><button class="icon" type="button" title="표로 보기" data-tbl="${m}" aria-pressed="${!!st.tbl[m]}"><svg class="i s14"><use href="#i-table"/></svg></button><button class="icon" type="button" title="카드 메뉴"><svg class="i s14"><use href="#i-more"/></svg></button></span></div>
     <div class="tv">${headOf(m)}</div>
     ${splitOf(m)}
     ${st.tbl[m] ? twinOf(m) : `<div class="chart" id="ch-${m}" tabindex="0" role="img" aria-label="${lab} 회차별 추이 · 화살표 키로 회차를 옮깁니다"></div>`}</section>`).join("");
@@ -619,7 +768,7 @@ function renderTrends() {
 }
 function drawChart(m) {
   const x = D.x, series = seriesOf(m), el = $(`#ch-${m}`);
-  const W = el.clientWidth, H = el.clientHeight, L = 34, R = 92, Tp = 8, B = 22, inv = m === "first-rank";
+  const W = el.clientWidth, H = el.clientHeight, L = 36, R = 8, Tp = 8, B = 22, inv = m === "first-rank";
   const all = series.flatMap((s) => s.values).filter((v) => v != null);
   let lo = Math.min(...all), hi = Math.max(...all), ticks;
   if (inv) { lo = 1; hi = Math.max(5, Math.ceil(hi)); ticks = Array.from({ length: hi }, (_, i) => i + 1); }
@@ -633,23 +782,22 @@ function drawChart(m) {
   const Y = (v) => (inv ? Tp + ((v - lo) / (hi - lo)) * (H - Tp - B) : H - B - ((v - lo) / (hi - lo)) * (H - Tp - B));
   const fmt = (v) => (v == null ? "—" : inv ? `${v.toFixed(1)}번째` : `${v.toFixed(1)}%`);
   let svg = `<svg viewBox="0 0 ${W} ${H}"><g class="grid">${ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text class="ax" x="${L - 7}" y="${Y(t) + 4}" text-anchor="end">${inv ? t : `${+t.toFixed(1)}%`}</text>`).join("")}</g>`;
-  svg += x.map((d, i) => (i % 3 === (x.length - 1) % 3 ? `<text class="ax" x="${X(i)}" y="${H - 5}" text-anchor="middle">${md(d)}</text>` : "")).join("");
+  svg += x.map((d, i) => (i % 2 === (x.length - 1) % 2 ? `<text class="ax" x="${X(i)}" y="${H - 5}" text-anchor="middle">${md(d)}</text>` : "")).join("");
   const labels = [];
   for (const s of series) {
     const pts = s.values.map((v, i) => (v == null ? null : [X(i), Y(v)]));
-    const d = pts.filter(Boolean).map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
-    if (s.own && m !== "favorability") svg += `<path d="${d}L${X(x.length - 1)},${inv ? Tp : H - B}L${X(0)},${inv ? Tp : H - B}Z" fill="${NAVY}" opacity=".05"/>`;
-    svg += `<path data-k="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.own ? 2.2 : 1.6}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const d = smoothPath(pts);
+    if (s.own && m !== "favorability") svg += `<path d="${d}L${X(x.length - 1)},${inv ? Tp : H - B}L${X(0)},${inv ? Tp : H - B}Z" fill="${NAVY}" opacity=".045"/>`;
+    svg += `<path data-k="${s.key}" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.own ? 2.4 : 1.8}" stroke-linejoin="round" stroke-linecap="round"/>`;
     const last = pts[pts.length - 1];
-    if (last) { svg += `<circle cx="${last[0]}" cy="${last[1]}" r="3" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>`; labels.push({ y: last[1], s, v: s.values[s.values.length - 1] }); }
+    if (last) { svg += `<circle cx="${last[0]}" cy="${last[1]}" r="3.2" fill="${s.color}" stroke="#fff" stroke-width="1.6"/>`; labels.push({ y: last[1], s, v: s.values[s.values.length - 1] }); }
   }
   labels.sort((a, b) => a.y - b.y);
   for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 13) labels[i].y = labels[i - 1].y + 13;
   const bottom = H - B - 2; if (labels.length && labels[labels.length - 1].y > bottom) { labels[labels.length - 1].y = bottom; for (let i = labels.length - 2; i >= 0; i--) if (labels[i + 1].y - labels[i].y < 13) labels[i].y = labels[i + 1].y - 13; }
-  svg += labels.map((l) => `<text class="endl" x="${W - R + 8}" y="${l.y + 4}" fill="${l.s.own ? NAVY : "#222326"}">${m === "favorability" ? "" : l.s.own ? "HMG " : `${l.s.name} `}${fmt(l.v)}</text>`).join("");
-  svg += `<line class="cross" y1="${Tp}" y2="${H - B}" x1="-10" x2="-10"/><rect class="hit" x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg>`;
+  svg += `<line class="cross" y1="${Tp}" y2="${H - B}" x1="-10" x2="-10"/><g class="mk"></g><rect class="hit" x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg>`;
   el.innerHTML = svg;
-  charts[m] = { X, series, fmt, inv, el };
+  charts[m] = { X, Y, series, fmt, inv, el };
   const hit = $(".hit", el);
   let ki = x.length - 1;
   el.addEventListener("keydown", (e) => {
@@ -662,13 +810,13 @@ function drawChart(m) {
     const r = el.getBoundingClientRect(); const i = Math.max(0, Math.min(x.length - 1, Math.round(((e.clientX - r.left - L) / (W - L - R)) * (x.length - 1)))); point(i, e);
   });
   function point(i, e) {
-    for (const c of Object.values(charts)) { const cr = $(".cross", c.el); cr.setAttribute("x1", c.X(i)); cr.setAttribute("x2", c.X(i)); }
+    for (const c of Object.values(charts)) { const cr = $(".cross", c.el); if (!cr) continue; cr.setAttribute("x1", c.X(i)); cr.setAttribute("x2", c.X(i)); $(".mk", c.el).innerHTML = c.series.map((q) => (q.values[i] == null ? "" : `<circle cx="${c.X(i)}" cy="${c.Y(q.values[i])}" r="4.5" fill="#fff" stroke="${q.color}" stroke-width="2.2"/>`)).join(""); }
     const rows = [...series].sort((a, b) => (inv ? (a.values[i] ?? 99) - (b.values[i] ?? 99) : (b.values[i] ?? -1) - (a.values[i] ?? -1)));
     const T = D.trend[m];
     const note = m === "exposure" ? `브랜드 언급 답변 ${n0(T.num[i])} / 모니터링 답변 ${n0(T.den[i])}` : m === "sov" ? `당사 언급 ${n0(T.num[i])} / 전체 언급 ${n0(T.den[i])}` : m === "favorability" ? `당사 긍정 신호 ${n0(T.pc[i])} / 전체 신호 ${n0(T.tot[i])}` : `순위 답변 ${n0(T.ranked[i])}개`;
     showTip(`<b>${x[i]} 회차 · ${CARDS.find((c) => c[0] === m)[1]}</b>${rows.map((s) => `<div class="r ${s.own ? "own" : ""}"><i style="background:${s.color}"></i><span>${s.name}</span><span>${fmt(s.values[i])}</span></div>`).join("")}<div class="n">${note}</div>`, e);
   }
-  hit.addEventListener("mouseleave", () => { hideTip(); for (const c of Object.values(charts)) { const cr = $(".cross", c.el); cr.setAttribute("x1", -10); cr.setAttribute("x2", -10); } });
+  hit.addEventListener("mouseleave", () => { hideTip(); for (const c of Object.values(charts)) { const cr = $(".cross", c.el); if (!cr) continue; cr.setAttribute("x1", -10); cr.setAttribute("x2", -10); $(".mk", c.el).innerHTML = ""; } });
 }
 
 // ── 경쟁 구도 ─────────────────────────────────────────────────────────
@@ -708,7 +856,7 @@ function renderBoard() {
   const sparkKey = { exposure: "expS", sov: "shareS", "first-rank": "posS", favorability: null }[tm];
   const arrow = (key) => (sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "");
   const ii = (k) => `<span class="info" tabindex="0" data-tip="${esc(DEF[k])}"><svg class="i s12"><use href="#i-info"/></svg></span>`;
-  const head = `<tr><th class="l" style="width:52px;padding-left:22px">비교</th><th class="l ${sort.key === "rank" ? "sorted" : ""}" style="width:52px"><button type="button" data-sort="rank">#${arrow("rank")}</button>${ii("rank")}</th><th class="l" style="width:20%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${sort.key === key ? "fx" : ""}" style="width:${m ? (sort.key === key ? "16%" : "10%") : "8%"}"><button type="button" data-sort="${key}">${lab}${arrow(key)}</button>${ii(key)}</th>`).join("")}<th style="width:104px">추이 · ${M[tm].short}</th><th style="width:28px"></th></tr>`;
+  const head = `<tr><th class="l" style="width:52px;padding-left:22px">비교</th><th class="l ${sort.key === "rank" ? "sorted" : ""}" style="width:52px"><button type="button" data-sort="rank">#${arrow("rank")}</button>${ii("rank")}</th><th class="l" style="width:22%">브랜드</th>${COLS.map(([m, lab, key]) => `<th class="${sort.key === key ? "fx" : ""}" style="width:${m ? (sort.key === key ? "16%" : "10%") : "8%"}"><button type="button" data-sort="${key}">${lab}${arrow(key)}</button>${ii(key)}</th>`).join("")}<th style="width:104px">추이 · ${M[tm].short}</th><th style="width:28px"></th></tr>`;
   /** a value cell: the sorted column carries the bar or dot and its Δ chip; the others the value and a small Δ */
   const dsm = (v, { unit = "pp", better = "up", own = false } = {}) => {
     if (v == null) return "";
@@ -726,7 +874,7 @@ function renderBoard() {
   };
   const tr = (r) => {
     const isOwn = r.own, c = isOwn ? NAVY : st.compare.includes(r.brand) ? colorOf(r.brand) : "#b9bbbf", on = st.compare.includes(r.brand);
-    const name = isOwn ? `<button class="chev" type="button" id="ownChev" aria-expanded="${st.ownOpen}" aria-label="당사 브랜드별 행 ${st.ownOpen ? "접기" : "펼치기"}" style="font-size:11px">▶</button><b class="own">HMG</b><span class="own-tag">당사</span><small>Hyundai + Kia + Genesis</small>` : `<b>${r.brand}</b>${r.grouped ? `<small>${r.group} 그룹</small>` : ""}`;
+    const name = isOwn ? `<button class="chev" type="button" id="ownChev" aria-expanded="${st.ownOpen}" aria-label="당사 브랜드별 행 ${st.ownOpen ? "접기" : "펼치기"}" style="font-size:11px">▶</button>${avatar("HMG", true)}<b class="own" title="Hyundai + Kia + Genesis 합산">HMG</b><span class="own-tag">당사</span>` : `${avatar(r.brand)}<b>${r.brand}</b>${r.grouped ? `<small>${r.group} 그룹</small>` : ""}`;
     const chk = isOwn ? `<span class="bname"><span class="dot" style="background:${NAVY};box-shadow:none;cursor:default" title="당사"></span></span>` : `<button class="chk" type="button" role="checkbox" aria-checked="${on}" aria-label="${r.brand} 비교 브랜드" data-cmp="${r.brand}" style="${on ? `background:${colorOf(r.brand)}` : ""}"></button>`;
     const sv = sparkKey ? r[sparkKey] : null;
     return `<tr class="${isOwn ? "own" : ""} ${st.lit === r.brand ? "lit" : ""}" data-b="${r.brand}" tabindex="0">
@@ -736,7 +884,7 @@ function renderBoard() {
       <td>${tm === "favorability" ? '<span class="muted" style="font-size:11px">회차 값 없음</span>' : spark(sv, isOwn ? NAVY : on ? colorOf(r.brand) : "#9fa1a6", { invert: tm === "first-rank" })}</td>
       <td class="go">›</td></tr>`;
   };
-  const sub = (o) => `<tr class="sub"><td></td><td></td><td class="l"><span class="bname"><b>${o.brand}</b><span class="tg">당사 브랜드</span></span></td>
+  const sub = (o) => `<tr class="sub"><td></td><td></td><td class="l"><span class="bname">${avatar(o.brand, true)}<b>${o.brand}</b><span class="tg">당사 브랜드</span></span></td>
       ${COLS.map(([m, , key]) => `<td class="${sort.key === key ? "fx" : ""}">${key === "exp" ? `${p1(o.exp)}${dsm(o.expD, { own: true })}` : key === "share" ? `${p1(o.share)}${dsm(o.shareD, { own: true })}` : key === "pos" ? `${r1(o.pos)}${dsm(o.posD, { unit: "", better: "down", own: true })}` : key === "fav" ? p1(o.fav) : n0(o[key])}</td>`).join("")}
       <td><span class="muted" style="font-size:11px">—</span></td><td></td></tr>`;
   body.innerHTML = `
@@ -840,7 +988,7 @@ function renderEngines() {
   const E = D.engines, names = { chatgpt: "ChatGPT", gemini: "Gemini" };
   const metr = [["exposure", "exp", "%"], ["sov", "sh", "%"], ["favorability", "pos", "%"], ["first-rank", "rk", "번째"]];
   const range = Object.fromEntries(metr.map(([m, k]) => { const v = Object.values(E).flatMap((e) => e[k]); return [m, [Math.min(...v), Math.max(...v)]]; }));
-  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th>${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td>${names[en] || en}</td>${metr.map(([m, k, u]) => {
+  $("#engines").innerHTML = `<table class="et"><thead><tr><th>엔진</th>${metr.map(([m]) => `<th>${M[m].label}</th>`).join("")}</tr></thead><tbody>${Object.entries(E).map(([en, e]) => `<tr><td><span class="eng"><span class="av">${en === "chatgpt" ? "GPT" : "G"}</span>${names[en] || en}</span></td>${metr.map(([m, k, u]) => {
     const s = e[k], v = s[s.length - 1], d = v - s[s.length - 2];
     const val = m === "first-rank" ? `${v.toFixed(1)}<small>번째</small>` : `${v.toFixed(1)}<small>%</small>`;
     return `<td><span class="ev"><b>${val}</b>${dchip(d, { unit: m === "first-rank" ? "" : "pp", better: M[m].better })}</span>${spark(s, NAVY, { w: 120, h: 24, invert: m === "first-rank", lo: range[m][0], hi: range[m][1] })}</td>`;
@@ -848,8 +996,11 @@ function renderEngines() {
 }
 function renderDist() {
   const d = D.dist; $("#distChip").textContent = `신호 ${n0(d.total)}건`;
-  $("#dist").innerHTML = `<div class="bar">${d.segments.map((s) => `<i style="width:${s.pct}%;background:${SENT[s.key][1]}" title="${SENT[s.key][0]} ${s.pct}%"></i>`).join("")}</div>
-    <div class="tiles">${d.segments.map((s) => `<div class="tile"><span class="k"><i style="background:${SENT[s.key][1]}"></i>${SENT[s.key][0]}</span><b>${s.pct.toFixed(1)}%</b><small>신호 ${n0(s.count)}건</small><br><a href="#" onclick="return false">프롬프트 보기 ›</a></div>`).join("")}</div>`;
+  const r = 66, C = 2 * Math.PI * r, gap = 3; let off = 0;
+  const arcs = d.segments.map((sg) => { const len = Math.max(0, (sg.pct / 100) * C - gap); const a = `<circle cx="84" cy="84" r="${r}" fill="none" stroke="${SENT[sg.key][1]}" stroke-width="16" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" stroke-linecap="butt"><title>${SENT[sg.key][0]} ${sg.pct}% · ${n0(sg.count)}건</title></circle>`; off += (sg.pct / 100) * C; return a; }).join("");
+  const pos = d.segments.find((x) => x.key === "positive");
+  $("#dist").innerHTML = `<div class="donut"><svg viewBox="0 0 168 168">${arcs}</svg><div class="c"><b>${pos.pct.toFixed(1)}%</b><small>긍정 신호</small></div></div>
+    <div class="dl">${d.segments.map((sg) => `<div class="row"><i style="background:${SENT[sg.key][1]}"></i><span>${SENT[sg.key][0]}</span><small>${n0(sg.count)}건</small><b>${sg.pct.toFixed(1)}%</b></div>`).join("")}<a href="#" onclick="return false" style="margin-top:8px;font-size:12px;font-weight:600;color:var(--navy);text-decoration:none">신호별 프롬프트 보기 ›</a></div>`;
 }
 
 // ── 멘션 유형 × 지표 ─────────────────────────────────────────────────
@@ -866,7 +1017,7 @@ function renderTypes() {
     const ref = vals.filter((x) => x.v != null).sort((a, b) => b.v - a.v)[0];
     const gap = ref ? c.own - ref.v : null;
     const lo = ref ? Math.min(ref.v, c.own) : null, hi = ref ? Math.max(ref.v, c.own) : null;
-    return `<tr><td>${TYPES[t]} <span class="muted" style="font-weight:500">›</span></td>
+    return `<tr><td><span class="ty"><span class="ic" style="width:26px;height:26px"><svg class="i s14"><use href="#${{ final_choice: "i-trophy", recommendation: "i-smile", comparison: "i-pie", definition: "i-file", mention: "i-msg" }[t]}"/></svg></span>${TYPES[t]}</span></td>
       <td class="${fx("exposure")}"><span class="tv"><span class="bar"><i style="width:${(o.pct / maxPct) * 100}%"></i></span><b>${p1(o.pct)}</b>${dchip(o.delta)}${spark(o.spark, NAVY, { w: 72, h: 22, tips: o.spark.map((v, i) => (v == null ? null : `${md(D.x[i])} · ${v.toFixed(1)}%\n당사 ${TYPES[t]} 답변 ${n0(o.counts[i])}개 / 전체 답변 ${n0(T.answers[i])}개`)) })}</span></td>
       <td class="${fx("sov")}"><span class="cmpv"><span class="dots"><span class="ax"></span>${ref ? `<span class="rg ${gap < 0 ? "bad" : ""}" style="left:${at(lo)};width:calc(${at(hi)} - ${at(lo)})"></span>` : ""}${vals.map((x) => (x.v == null ? "" : `<i style="left:${at(x.v)};background:${colorOf(x.b)}" title="${TYPES[t]} · ${x.b} 유형 안 점유율 ${p1(x.v)}"></i>`)).join("")}<i class="own" style="left:${at(c.own)}" title="${TYPES[t]} · HMG 유형 안 점유율 ${p1(c.own)}"></i></span><span tabindex="0" data-tip="${esc(ref ? `${TYPES[t]} · 유형 안 점유율\nHMG ${p1(c.own)} · ${ref.b} ${p1(ref.v)}\n차이 = HMG − 가장 앞선 비교 브랜드` : `${TYPES[t]} · HMG ${p1(c.own)}`)}" style="color:${gap == null ? "var(--muted)" : gap >= 0 ? "var(--up-ink)" : "var(--down-ink)"}">${gap == null ? "—" : `${gap >= 0 ? "+" : "−"}${Math.abs(gap).toFixed(1)}pp`} <small style="display:inline;color:var(--muted)">${ref ? `vs ${ref.b}` : ""}</small></span></span></td>
       <td class="${fx("favorability")}"><span class="sv">${sentBar(f ? { positive: f.positive, neutral: f.neutral, mixed: f.mixed, negative: f.negative } : null)}<b>${st.unit === "count" ? `${n0(f?.positive)}` : p1(f?.positivePct)}</b></span></td>
