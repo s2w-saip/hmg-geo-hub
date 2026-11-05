@@ -325,7 +325,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   // the sort offers the taxonomy axes the list shows (a Depth no row of the scope has is not offered — Gold
   // metric review ⚠️ #40: Depth4 is empty everywhere); the sort in use stays listed
   const sortKeys = PROMPT_SORTS.filter((k) => k === sort.key || (k === "listType" ? hasListType : !k.startsWith("depth") || (depthCols as readonly string[]).includes(k)));
-  // counts group their thousands like the tab's count (review ⚠️ #6: "표시 12164")
+  // counts group their thousands (review ⚠️ #6: "표시 12164")
   const num = (n: number) => n.toLocaleString(locale);
   // a row's taxonomy levels: the list type and the Depth columns of the scope ("-" = an unset level)
   const level = (v: string | null) => (v && v.trim() !== "-" ? v : null);
@@ -392,6 +392,8 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
             title={t("title")}
             meta={
               <>
+                {/* the original's page description (Global 지표 정리, 2026-11-05) — its '내 권역에서' is the scope pill beside it */}
+                <span className="text-rn-13 text-rn-muted">{tp("subtitle")}</span>
                 {scopeAll ? (
                   <RnPill>
                     <Globe className="size-3 text-rn-muted" aria-hidden />
@@ -406,8 +408,14 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
                   />
                 )}
                 {period ? (
+                  // the original's 마지막 수집일 is the period's end (both period.to): one range, the end date tipped
+                  // with that name (Global 지표 정리, 2026-11-05)
                   <span className="tabular-nums">
-                    {t("collectionPeriod", { from: period.from, to: period.to })} · {t("lastCollectedAt", { date: period.to })}
+                    {tp.rich("collectionPeriod", {
+                      from: period.from,
+                      to: period.to,
+                      last: (chunks) => <span title={t("lastCollectedAt", { date: period.to })}>{chunks}</span>,
+                    })}
                   </span>
                 ) : null}
               </>
@@ -439,8 +447,9 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
           label={tp("tabsLabel")}
           value={tab}
           onChange={setTab}
+          // the catalog tab names no count: the toolbar's 전체 is the same number (Global 지표 정리, 2026-11-05)
           items={[
-            { value: "catalog", label: tAudit("tabCatalog"), count: data.count.toLocaleString(locale) },
+            { value: "catalog", label: tAudit("tabCatalog") },
             { value: "history", label: tAudit("tabHistory") },
           ]}
         />

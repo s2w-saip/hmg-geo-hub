@@ -154,6 +154,19 @@ describe("RnConvBody", () => {
     expect(html).toContain("측정 중인 GA4 속성 2개");
   });
 
+  // Global 지표 정리 (2026-11-05): the original's note '여러 속성을 선택하면 속성별 사용자 수를 합산합니다' back on the
+  // rates' ⓘ and the raw users' ⓘ — the reader adds each property's period users, it does not deduplicate across them
+  it("the rates' and the raw users' ⓘ say several properties' users are added up, not deduplicated across them", () => {
+    const html = render(<RnConvBody input={body} />);
+    const C = ko.renewal.conversion;
+    for (const f of [C.def.aiRate.f, C.def.genRate.f]) {
+      expect(f).toContain("여러 속성이면 속성별 사용자 수를 더합니다(속성 사이 중복은 빼지 않음)");
+      expect(html).toContain(f);
+    }
+    expect(C.raw.info).toContain("여러 속성이면 속성별 값을 더합니다(속성 사이 중복은 빼지 않음)");
+    expect(html).toContain(C.raw.info);
+  });
+
   it("the raw period users: folded, with every window counted", () => {
     const html = render(<RnConvBody input={body} />);
     expect(html).toContain("측정 원자료 · 기간 사용자 수");

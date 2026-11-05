@@ -4814,11 +4814,11 @@
         "formula": "Formula",
         "aiRate": {
           "d": "Conversions per 100 users who came in through AI answers (ChatGPT · Gemini …, the GA4 ‘AI Assistant’ channel). Conversions are events, so one user can count more than once and the rate can pass 100%.",
-          "f": "AI conversions ÷ AI users (deduplicated over the period) × 100"
+          "f": "AI conversions ÷ AI users (deduplicated over the period) × 100 · with several properties, each property's users are added up (not deduplicated across properties)"
         },
         "genRate": {
           "d": "Conversions per 100 users who came in any other way. The baseline AI traffic is compared with.",
-          "f": "Other conversions ÷ other users (deduplicated over the period) × 100"
+          "f": "Other conversions ÷ other users (deduplicated over the period) × 100 · with several properties, each property's users are added up (not deduplicated across properties)"
         },
         "lift": {
           "d": "How many points the AI conversion rate is above the other traffic's. Positive means the AI conversion rate is higher.",
@@ -5119,7 +5119,7 @@
       },
       "raw": {
         "title": "Raw data · period users",
-        "info": "GA4's deduplicated user counts as stored (per property, cohort and window length) — the denominators of the rates above. There are daily windows and pre-counted periods (7 · 28 · 90 days and so on).",
+        "info": "GA4's deduplicated user counts as stored (per property, cohort and window length) — the denominators of the rates above, each property's count added up when there are several (not deduplicated across properties). There are daily windows and pre-counted periods (7 · 28 · 90 days and so on).",
         "chip": "{n} rows",
         "open": "Show",
         "close": "Hide",
@@ -5558,6 +5558,8 @@
       "marketsTitle": "Markets"
     },
     "prompts": {
+      "subtitle": "Browse the global prompts currently tracked.",
+      "collectionPeriod": "Collected {from} – <last>{to}</last>",
       "columnTaxonomy": "Taxonomy",
       "columnMeasure": "Measurement",
       "sortLabel": "Sort",

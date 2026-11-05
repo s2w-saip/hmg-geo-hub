@@ -320,6 +320,49 @@ describe("renewal Global prompts wording", () => {
   });
 });
 
+// Global 지표 정리 (2026-11-05): the header says the original's page description again (its '내 권역에서' is the scope
+// pill), names the collection period once with its end date tipped 마지막 수집일 (both were period.to), and the catalog
+// tab names no count — the toolbar's 전체 is the same number (the card keeps it as its label).
+describe("renewal Global prompts: the header and the tabs", () => {
+  const P = ko.renewal.prompts;
+  const V = ko.standardPromptsView;
+  const BIG: PromptsPage = { ...PAGE, total: 12164, count: 12164, pages: 244, rangeFrom: 1, rangeTo: 50 };
+  const html = wrap(
+    <RnPromptsView
+      remote={{ initial: BIG, load: async () => BIG }}
+      scopeAll
+      scopeRole="admin"
+      scopeBrands={[]}
+      scopeRegions={[]}
+      scopeCountries={[]}
+      period={{ from: "2026-06-08", to: "2026-10-05" }}
+      history={HISTORY}
+      initialTab="catalog"
+      savedFilters={{ page: "prompts", userId: "test", initial: [] }}
+    />,
+  );
+  const meta = strip(html.slice(html.indexOf("<header"), html.indexOf("</header>")));
+
+  it("leads the meta line with the page description", () => {
+    expect(meta.startsWith(`${ko.standardPromptsView.title} ${P.subtitle}`)).toBe(true);
+    expect(meta).not.toContain(V.subtitle);
+  });
+
+  it("names the collection period once, its end date tipped 마지막 수집일", () => {
+    expect(meta).toContain("수집 기간 2026-06-08 ~ 2026-10-05");
+    expect(meta).not.toContain("마지막 수집일");
+    expect(meta.match(/2026-10-05/g)).toHaveLength(1);
+    expect(html).toContain(`<span title="${V.lastCollectedAt.replace("{date}", "2026-10-05")}">2026-10-05</span>`);
+  });
+
+  it("counts the catalog in the toolbar and the card label, not on the tab", () => {
+    const tab = html.match(/<button[^>]*data-rn-tab="catalog"[^>]*>([\s\S]*?)<\/button>/)?.[1] ?? "";
+    expect(strip(tab)).toBe(ko.promptAudit.history.tabCatalog);
+    expect(strip(html)).toContain("표시 12,164 / 전체 12,164");
+    expect(html).toContain(`aria-label="${V.count.replace("{count}", "12,164")}"`);
+  });
+});
+
 // Review r1-13 (2026-11-03): the list covers every round, the header naming them (수집 기간 first ~ latest), so the
 // service week's notes take that period — not the service week, as a snapshot page does.
 describe("renewal Global prompts: the service week's notes", () => {
