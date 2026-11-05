@@ -34,7 +34,7 @@ function useRank() {
 
 /** `plain` (the Website page): the value and its line, without the rivals' track and table place. */
 export function RankHeroCard({ plain = false }: { plain?: boolean }) {
-  const { ownLabel, lit, hover, tables } = useMention();
+  const { input, ownLabel, lit, hover, tables } = useMention();
   const { compare, colorOf } = useCompare();
   const t = useTranslations("renewal.mention.rank");
   const tH = useTranslations("renewal.mention.hero");
@@ -89,7 +89,9 @@ export function RankHeroCard({ plain = false }: { plain?: boolean }) {
         <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
           {/* without a 당사 position the screen sends no counts (null → "—", not "0개") */}
           <Stat label={t("ranked")} value={hero.rankedAnswers == null ? "—" : t("count", { n: numTxt(hero.rankedAnswers, locale) })} />
-          {plain ? null : (
+          {/* Global (2026-11-05 지표 정리): no 앞선 경쟁사 (the table below lists who is ahead) and no 표에서 당사 순위 (the
+              table's 당사 row: its # and, on its tooltip, the top %) */}
+          {plain || input.global ? null : (
             <>
               <Stat
                 label={
@@ -196,13 +198,21 @@ function Track({ rows, track }: { rows: RankRow[]; track: { lo: number; hi: numb
 }
 
 const RANK_COLS = "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_64px_88px_64px_64px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_64px_58px]";
+/** Global: no 당사 대비 column (2026-11-05 지표 정리 — every one of its cells was the difference of the position beside it and
+ * 당사's; the CSV keeps it) */
+const RANK_COLS_GLOBAL = "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_64px_88px_64px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_64px]";
 
 function RankTable() {
-  const { ownLabel, lit, hover } = useMention();
+  const { input, ownLabel, lit, hover } = useMention();
   const { compare, covered, colorOf, toggle } = useCompare();
   const t = useTranslations("renewal.mention");
   const tFR = useTranslations("answerAnalysis.mentions.kpi.firstRank");
-  const { rows, ownFirst, barMax } = useRank();
+  const { rows, ownFirst, barMax, standing } = useRank();
+  const global = Boolean(input.global);
+  const cols = global ? RANK_COLS_GLOBAL : RANK_COLS;
+  // Global: 당사's place (the hero's 표에서 당사 순위 until 2026-11-05) on its row — the # column is the rank, the tooltip
+  // adds the top % over the table's brands (the original's denominator, decision 2026-11-02)
+  const ownTip = global && standing ? t("rank.ownRowTip", { own: ownLabel, n: standing.total, rank: standing.rank, pct: standing.topPct }) : undefined;
   const [ladder, setLadder] = useState(true);
   const shown = ladder ? rows : ownFirst.map((i) => rows[i]);
   const max = barMax;
@@ -213,7 +223,16 @@ function RankTable() {
     <>
       <RnCardHead
         title={t("rank.tableTitle")}
-        info={<InfoTip label={t("board.infoLabel")} items={[[t("board.infoLabel"), t("rank.tableInfo")], [tFR("formulaTitle"), tFR("formula")]]} />}
+        info={
+          <InfoTip
+            label={t("board.infoLabel")}
+            items={[
+              [t("board.infoLabel"), t(global ? "rank.tableInfoGlobal" : "rank.tableInfo")],
+              [tFR("formulaTitle"), tFR("formula")],
+              ...(global && standing ? [[t("rank.standing"), t("rank.standingTip", { n: standing.total })] as [string, string]] : []),
+            ]}
+          />
+        }
         chips={<RnBasisChip>{t("rank.chipTrend")}</RnBasisChip>}
         controls={
           <button type="button" role="switch" aria-checked={ladder} onClick={() => setLadder((v) => !v)} className="inline-flex cursor-pointer items-center gap-2 text-rn-12 font-semibold text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-rn-navy">
@@ -230,7 +249,7 @@ function RankTable() {
         <RnEmpty className="mx-6 mb-5">{tFR("table.empty")}</RnEmpty>
       ) : (
         <>
-          <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", RANK_COLS)}>
+          <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", cols)}>
             <span>#</span>
             <span>{t("board.colBrand")}</span>
             {/* the bar column's cell: an sr-only element alone leaves the grid flow and shifts every heading left */}
@@ -240,7 +259,7 @@ function RankTable() {
             <span className="text-right">{t("rank.colAvg")}</span>
             <span className="@max-[720px]/rnpage:hidden">{t("board.colTrend")}</span>
             <span className="text-right">{t("rank.colWow")}</span>
-            <span className="text-right">{t("rank.colGap")}</span>
+            {global ? null : <span className="text-right">{t("rank.colGap")}</span>}
           </div>
           {shown.map((r) => {
             const on = compare.includes(r.key);
@@ -267,12 +286,14 @@ function RankTable() {
                 <span className="text-right text-rn-13 font-bold text-rn-ink tabular-nums">{r.avgPosition == null ? tFR("noRank") : posTxt(r.avgPosition)}</span>
                 <span className="@max-[720px]/rnpage:hidden">{r.hasSpark ? <RnSparkline values={r.spark} invert className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted">{t("board.noTrend")}</span>}</span>
                 <span className="justify-self-end">{r.hasSpark ? <DeltaChip value={r.delta} rank neutral={!r.own} /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
-                <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap > 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : `${r.gap > 0 ? "+" : "−"}${Math.abs(r.gap).toFixed(1)}`}</span>
+                {global ? null : (
+                  <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap > 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : `${r.gap > 0 ? "+" : "−"}${Math.abs(r.gap).toFixed(1)}`}</span>
+                )}
               </>
             );
             const cls = cx(
               "grid min-h-11 w-full items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
-              RANK_COLS,
+              cols,
               r.own && st !== "on" && "bg-rn-navy-25/50",
               st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
               st === "dim" && "opacity-60",
@@ -282,7 +303,7 @@ function RankTable() {
                 {cells}
               </button>
             ) : (
-              <div key={r.key} data-rn-b={r.key} title={r.own ? undefined : t("board.noCompare")} onPointerEnter={() => hover(r.key)} onPointerLeave={() => hover(null)} className={cls}>
+              <div key={r.key} data-rn-b={r.key} title={r.own ? ownTip : t("board.noCompare")} onPointerEnter={() => hover(r.key)} onPointerLeave={() => hover(null)} className={cls}>
                 {cells}
               </div>
             );

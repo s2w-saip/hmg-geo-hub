@@ -120,9 +120,12 @@ export function HeroValue({ metric }: { metric: KpiMetric }) {
         <Stat label={tTip(metric === "sov" ? "sovNumerator" : "exposureNumerator")} value={numTxt(hero.numerator, locale)} />
         <Stat label={tTip(metric === "sov" ? "sovDenominator" : "exposureDenominator")} value={numTxt(hero.denominator, locale)} />
       </dl>
-      <Suspense fallback={<RnSkeleton className="h-9 w-full" />}>
-        <HeroStanding metric={metric} />
-      </Suspense>
+      {/* Global (2026-11-05 지표 정리): no '비교 13개 브랜드 중 1위 · 2위와 +45.2pp' — the board below holds the same place and gap */}
+      {input.global ? null : (
+        <Suspense fallback={<RnSkeleton className="h-9 w-full" />}>
+          <HeroStanding metric={metric} />
+        </Suspense>
+      )}
       {ownSum.length > 1 ? (
         <div className="flex flex-wrap gap-1.5">
           <RnBasisChip>{t("hero.ownSum", { brands: ownSum.join("+") })}</RnBasisChip>
@@ -238,6 +241,9 @@ export function HeroTrend({ metric, title }: { metric: KpiMetric; title?: string
 
 const BOARD_COLS =
   "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px_70px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px_64px]";
+/** Global: no 당사 대비 column (2026-11-05 지표 정리 — the row tooltip and the CSV keep the gap, as the original table's tooltip) */
+const BOARD_COLS_GLOBAL =
+  "grid-cols-[26px_minmax(150px,1.3fr)_minmax(60px,1.4fr)_58px_88px_74px] @max-[720px]/rnpage:grid-cols-[26px_minmax(130px,1.3fr)_minmax(40px,1fr)_58px_74px]";
 
 export function Board({ metric }: { metric: KpiMetric }) {
   const { input, ownLabel, lit, hover } = useMention();
@@ -256,6 +262,11 @@ export function Board({ metric }: { metric: KpiMetric }) {
     rows: [["#", t("board.colBrand"), short, t("board.colDelta"), t("board.colGap")], ...b.rows.map((r, i) => [i + 1, r.own ? ownLabel : r.key, r.pct, r.delta, r.gap])],
   });
   const name = (r: BoardRow) => (r.own ? ownLabel : r.key);
+  const gapCol = !input.global;
+  const cols = gapCol ? BOARD_COLS : BOARD_COLS_GLOBAL;
+  // the trend axis's rounds the scope did not measure, counted as the original table's coverage line did (2026-11-05:
+  // '추이 축 18회차 · 측정 14 · 미측정 4' for 06-01 ~ 10-31); none missing reads as before
+  const unmeasured = b.axis.length - b.measuredCycles;
   return (
     <>
       <RnCardHead
@@ -264,7 +275,9 @@ export function Board({ metric }: { metric: KpiMetric }) {
         chips={
           <>
             <RnBasisChip>{t(input.period ? "board.chipPeriod" : "board.chipSnapshot")}</RnBasisChip>
-            {b.measuredCycles ? <RnBasisChip>{t("board.chipTrend", { n: b.measuredCycles })}</RnBasisChip> : null}
+            {b.measuredCycles ? (
+              <RnBasisChip>{unmeasured > 0 ? t("board.chipTrendGaps", { n: b.axis.length, m: b.measuredCycles, u: unmeasured }) : t("board.chipTrend", { n: b.measuredCycles })}</RnBasisChip>
+            ) : null}
           </>
         }
         actions={<MentionCardActions section="sec-comp" csv={csv} />}
@@ -274,14 +287,14 @@ export function Board({ metric }: { metric: KpiMetric }) {
         <RnEmpty className="mx-6 mb-5">{t("board.empty")}</RnEmpty>
       ) : (
         <>
-          <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", BOARD_COLS)}>
+          <div className={cx("grid h-[34px] items-center gap-2.5 border-y border-rn-line px-6 text-rn-12 font-semibold whitespace-nowrap text-rn-muted [.rn-dense_&]:px-4.5", cols)}>
             <span>#</span>
             <span>{t("board.colBrand")}</span>
             <span>{short}</span>
             <span />
             <span className="@max-[720px]/rnpage:hidden">{t("board.colTrend")}</span>
             <span className="text-right">{t("board.colDelta")}</span>
-            <span className="text-right">{t("board.colGap")}</span>
+            {gapCol ? <span className="text-right">{t("board.colGap")}</span> : null}
           </div>
           <div>
             {shown.map((r) => {
@@ -305,12 +318,14 @@ export function Board({ metric }: { metric: KpiMetric }) {
                     {r.hasSpark ? <RnSparkline values={r.spark} className="h-[26px]" /> : <span className="text-rn-11 text-rn-muted" title={t("board.noTrendTip")}>{t("board.noTrend")}</span>}
                   </span>
                   <span className="justify-self-end">{r.covered ? <DeltaChip value={r.delta} neutral={!r.own} /> : <span className="text-rn-11 text-rn-muted">—</span>}</span>
-                  <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap < 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : ppTxt(r.gap)}</span>
+                  {gapCol ? (
+                    <span className={cx("text-right text-rn-12 font-semibold tabular-nums", r.gap == null ? "text-rn-muted" : r.gap < 0 ? "text-rn-up-ink" : "text-rn-danger-ink")}>{r.gap == null ? "—" : ppTxt(r.gap)}</span>
+                  ) : null}
                 </>
               );
               const cls = cx(
                 "grid min-h-11 w-full items-center gap-2.5 border-b border-rn-line px-6 text-left text-rn-13 [.rn-dense_&]:min-h-[34px] [.rn-dense_&]:px-4.5",
-                BOARD_COLS,
+                cols,
                 r.own && st !== "on" && "bg-rn-navy-25/50",
                 st === "on" && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
                 st === "dim" && "opacity-60",
@@ -436,7 +451,11 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
   const ownRows = own.rows;
   const id = `type-${metric}`;
   const tableOn = tables.has(id);
-  const isCmp = view === "cmp";
+  // Global (2026-11-05 지표 정리): the share tab has no 당사 view — the same signal counts stood on both tabs; each type's
+  // 유형 구성 % (its signals ÷ our type signals, the share view's own value) sits on the exposure view's rows instead
+  const ownView = !(input.global && metric === "sov");
+  const isCmp = !ownView || view === "cmp";
+  const mix = input.global && metric === "exposure" ? new Map(vm.own.sov.rows.map((r) => [r.type, r.pct])) : null;
   // the exposure lines' rounds: each point names its type answers and the round's answers (the original type chart's bar)
   const sparkTips = (r: (typeof ownRows)[number]) =>
     r.spark.map((v, i) =>
@@ -450,9 +469,9 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
       : {
           name: `mention-type-own-${metric}`,
           rows: [
-            [t("colType"), t(metric === "sov" ? "colOwnSov" : "colOwnExposure"), t("colSignals"), t("colDelta"), ...own.x],
-            ...ownRows.map((r) => [tType(r.type), r.pct, r.signals, r.delta, ...r.spark]),
-            ...(own.x.length ? [[t("colRoundAnswers"), "", "", "", ...own.answers]] : []),
+            [t("colType"), t(metric === "sov" ? "colOwnSov" : "colOwnExposure"), t("colSignals"), ...(mix ? [t("colOwnSov")] : []), t("colDelta"), ...own.x],
+            ...ownRows.map((r) => [tType(r.type), r.pct, r.signals, ...(mix ? [mix.get(r.type) ?? null] : []), r.delta, ...r.spark]),
+            ...(own.x.length ? [[t("colRoundAnswers"), "", "", ...(mix ? [""] : []), "", ...own.answers]] : []),
           ],
         };
   const empty = isCmp ? !cmpRows.length : !ownRows.length;
@@ -464,15 +483,17 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
         chips={<RnBasisChip>{t("chip")}</RnBasisChip>}
         controls={
           <>
-            <RnSegmented
-              label={t("viewLabel")}
-              value={view}
-              onChange={setView}
-              items={[
-                { value: "cmp", label: t("viewCompare") },
-                { value: "own", label: t(metric === "sov" ? "viewOwnSov" : "viewOwnExposure") },
-              ]}
-            />
+            {ownView ? (
+              <RnSegmented
+                label={t("viewLabel")}
+                value={view}
+                onChange={setView}
+                items={[
+                  { value: "cmp", label: t("viewCompare") },
+                  { value: "own", label: t(metric === "sov" ? "viewOwnSov" : "viewOwnExposure") },
+                ]}
+              />
+            ) : null}
             {!isCmp ? (
               <RnSegmented
                 label={t("unitLabel")}
@@ -531,6 +552,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
                   type="button"
                   data-rn-type={r.type}
                   disabled={!r.signals}
+                  title={mix ? t("mixTip", { type: tType(r.type), n: numTxt(r.signals, locale), pct: pctTxt(mix.get(r.type)) }) : undefined}
                   onClick={() => openDrawer({ kind: "signal", signal: r.type })}
                   className="col-span-3 grid min-h-10 cursor-pointer grid-cols-subgrid items-center rounded-md text-left hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy disabled:cursor-default disabled:hover:bg-transparent"
                 >
@@ -549,7 +571,8 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
             );
           })}
           <p className="m-0 pt-2 text-rn-11 text-rn-muted">
-            {t(metric === "sov" ? "footSov" : "footExposure")} · {tB("drilldownHint")}
+            {t(metric === "sov" ? "footSov" : "footExposure")}
+            {mix ? ` · ${t("footMix")}` : ""} · {tB("drilldownHint")}
           </p>
         </div>
       )}

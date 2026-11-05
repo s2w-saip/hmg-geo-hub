@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, use, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, use, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, Search, X } from "lucide-react";
-import { RnBasisChip, RnCard, RnCardHead, RnDrawer, RnEmpty, RnSegmented, RnTabs, RnTag, RnTextButton, cx, rnHighlightState } from "@/components/renewal-ui";
+import { RnBasisChip, RnCard, RnCardHead, RnDrawer, RnEmpty, RnSegmented, RnSelect, RnTabs, RnTag, RnTextButton, cx, rnHighlightState } from "@/components/renewal-ui";
 import type { CitationDomainLive, CitationPromptLive, MentionsPromptLive } from "@/lib/scope/result-adapter";
-import { useOrderedTable } from "@/hooks/use-ordered-table";
+import { useOrderedTable, type TableOrders } from "@/hooks/use-ordered-table";
 import type { DrillPromptRow } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/drilldown-screen-types";
 import { drilldownParams, projectIdFromPath, startListLoad, type ListState } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/mentions-drilldown";
 import { readSignalReply, type SignalPromptsState } from "@/app/[locale]/(dash)/standard/answer-analysis/_components/signal-prompts-dialog";
@@ -260,7 +260,10 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
   const [view, setView] = useState<"map" | "table">(tableOnly ? "table" : initialView);
   const [multi, setMulti] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
-  const mode = multi ? "on" : "off";
+  // Global (2026-11-05 지표 정리): no 복수 언급 toggle — turned on, the top 10 stayed the same 10 (the top 50's rank
+  // correlation 0.99); its values sit on each table row's tooltip and in the CSV beside the plain ones
+  const both = Boolean(input.global);
+  const mode = multi && !both ? "on" : "off";
   // the API sends both value sets (multi toggle off / on) of every body brand
   const rows = useMemo<RankRow[]>(() => vm.rows.map((r) => ({ ...r, v: r[mode] })), [vm.rows, mode]);
   // a parent with several brands reads "{name} 그룹" (HMG stays HMG); a single brand is just its name
@@ -284,12 +287,14 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
                 ]}
               />
             )}
-            <button type="button" role="switch" aria-checked={multi} title={tT("multiHint")} onClick={() => setMulti((v) => !v)} className="inline-flex cursor-pointer items-center gap-2 text-rn-12 font-semibold text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-rn-navy">
-              <span aria-hidden className={cx("relative h-[18px] w-8 rounded-full transition-colors", multi ? "bg-rn-navy" : "bg-rn-line-2")}>
-                <i className={cx("absolute top-0.5 size-3.5 rounded-full bg-white shadow transition-[left]", multi ? "left-4" : "left-0.5")} />
-              </span>
-              {tT("multiToggle")}
-            </button>
+            {both ? null : (
+              <button type="button" role="switch" aria-checked={multi} title={tT("multiHint")} onClick={() => setMulti((v) => !v)} className="inline-flex cursor-pointer items-center gap-2 text-rn-12 font-semibold text-rn-ink-2 focus-visible:outline-2 focus-visible:outline-rn-navy">
+                <span aria-hidden className={cx("relative h-[18px] w-8 rounded-full transition-colors", multi ? "bg-rn-navy" : "bg-rn-line-2")}>
+                  <i className={cx("absolute top-0.5 size-3.5 rounded-full bg-white shadow transition-[left]", multi ? "left-4" : "left-0.5")} />
+                </span>
+                {tT("multiToggle")}
+              </button>
+            )}
           </>
         }
         actions={
@@ -298,8 +303,8 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
             csv={() => ({
               name: "brand-mentions",
               rows: [
-                ["#", tT("col.brand"), tT("col.mentions"), tT("col.share"), t("brands.colDelta"), tT("col.position"), tT("col.prompts"), tT("col.rate")],
-                ...rows.map((r) => [r.rank, r.brand, r.v.mentions, r.v.share, r.v.delta, r.avgPosition, r.v.prompts, r.v.mentionRate]),
+                ["#", tT("col.brand"), tT("col.mentions"), tT("col.share"), t("brands.colDelta"), tT("col.position"), tT("col.prompts"), tT("col.rate"), ...(both ? [tT("col.multiMentions"), t("brands.multiShare"), t("brands.multiPrompts"), tT("col.multiRate")] : [])],
+                ...rows.map((r) => [r.rank, r.brand, r.v.mentions, r.v.share, r.v.delta, r.avgPosition, r.v.prompts, r.v.mentionRate, ...(both ? [r.on.mentions, r.on.share, r.on.prompts, r.on.mentionRate] : [])]),
               ],
             })}
           />
@@ -310,7 +315,7 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
       ) : view === "map" ? (
         <Treemap
           groups={vm.treemap[mode]}
-          multi={multi}
+          multi={mode === "on"}
           groupName={groupName}
           onBrand={(b) => openDrawer({ kind: "brand", brand: b })}
           onGroupTable={(g) => {
@@ -319,7 +324,7 @@ export function BrandRanking({ initialView = "map", initialQuery = "", tableOnly
           }}
         />
       ) : (
-        <RankTable rows={rows} orders={vm.orders[mode]} multi={multi} multiUnavailable={vm.multiUnavailable} count={vm.count} group={group} groupName={groupName} onClearGroup={() => setGroup(null)} total={vm.total} initialQuery={initialQuery} />
+        <RankTable rows={rows} orders={vm.orders[mode]} multi={mode === "on"} multiUnavailable={vm.multiUnavailable} count={vm.count} group={group} groupName={groupName} onClearGroup={() => setGroup(null)} total={vm.total} initialQuery={initialQuery} />
       )}
     </>
   );
@@ -569,16 +574,24 @@ function RankTable({
   // the cut note counts the list being cut: every brand (the backend's count if it cut the list), or the matches
   const listTotal = !dq.trim() && !group && total !== undefined && total > count ? total : matched;
   const tB = (k: string) => t(`brands.${k}`);
-  const def = (definition: string, formula?: string): ReadonlyArray<[string, string]> => (formula ? [[tB("defLabel"), definition], [tB("formulaLabel"), formula]] : [[tB("defLabel"), definition]]);
+  const def = (definition: string, formula?: string): Array<[string, string]> => (formula ? [[tB("defLabel"), definition], [tB("formulaLabel"), formula]] : [[tB("defLabel"), definition]]);
+  // Global (no toggle): each value's 복수 언급 basis under its own, named as the row tooltip and the CSV name it
+  const both = Boolean(input.global);
+  const plus = (items: Array<[string, string]>, label: string, text: string): Array<[string, string]> => (both ? [...items, [label, text]] : items);
   const info: Partial<Record<SortKey, ReadonlyArray<[string, string]>>> = {
     rank: def(tT("colDefinition.rank")),
-    mentions: def(multi ? tT("colDefinition.multiMentions") : tT("colDefinition.mentions")),
-    share: multi ? def(tB("multiShareDef"), tB("multiShareFormula")) : def(tT("colDefinition.share"), tT("colFormula.share")),
+    mentions: multi ? def(tT("colDefinition.multiMentions")) : plus(def(tT("colDefinition.mentions")), tT("col.multiMentions"), tT("colDefinition.multiMentions")),
+    share: multi ? def(tB("multiShareDef"), tB("multiShareFormula")) : plus(def(tT("colDefinition.share"), tT("colFormula.share")), tB("multiShare"), `${tB("multiShareDef")} ${tB("multiShareFormula")}`),
     delta: def(multi ? tB("multiNoDelta") : tB(input.period ? "deltaInfoPeriod" : "deltaInfo")),
     avgPosition: def(tT("colDefinition.position")),
-    prompts: def(multi ? tB("multiPromptsDef") : tT("colDefinition.prompts")),
-    mentionRate: multi ? def(tT("colDefinition.multiRate"), tB("multiRateFormula")) : def(tT("colDefinition.rate"), tT("colFormula.rate")),
+    prompts: multi ? def(tB("multiPromptsDef")) : plus(def(tT("colDefinition.prompts")), tB("multiPrompts"), tB("multiPromptsDef")),
+    mentionRate: multi ? def(tT("colDefinition.multiRate"), tB("multiRateFormula")) : plus(def(tT("colDefinition.rate"), tT("colFormula.rate")), tT("col.multiRate"), `${tT("colDefinition.multiRate")} ${tB("multiRateFormula")}`),
   };
+  // the row's tooltip: what a click opens, and on Global its 복수 언급 values (the toggle's, CSV columns of the same names)
+  const rowTip = (r: RankRow) =>
+    both
+      ? `${t("brands.rowTip")}\n${t("brands.multiTip", { mentions: numTxt(r.on.mentions, locale), share: pctTxt(r.on.share), prompts: numTxt(r.on.prompts, locale), rate: pctTxt(r.on.mentionRate) })}`
+      : t("brands.rowTip");
   const head = (k: SortKey, label: string, right = true) => (
     <span className={cx("inline-flex min-w-0 items-center gap-1", right && "justify-end")}>
       <button
@@ -639,7 +652,7 @@ function RankTable({
                     type="button"
                     data-rn-b={r.brand}
                     data-rn-row={r.rank}
-                    title={t("brands.rowTip")}
+                    title={rowTip(r)}
                     onClick={() => openDrawer({ kind: "brand", brand: r.brand, row: r.drawer })}
                     onPointerEnter={() => hover(r.brand)}
                     onPointerLeave={() => hover(null)}
@@ -896,31 +909,78 @@ function ListStatus({ state, loading, error, empty }: { state: ListState<unknown
   return null;
 }
 
-export function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRow>; onAnswer: (p: MentionsPromptLive) => void }) {
+/** The rows in a sort's order: the route's precomputed `orders` (indices into `list`, back/bff/screens/_sort.py
+ * table_orders); as received without them. */
+export function rowsInOrder<T>(list: readonly T[], orders: TableOrders<string> | undefined, key: string, dir: "asc" | "desc"): T[] {
+  const order = orders?.[key]?.[dir];
+  return order && order.length === list.length ? order.map((i) => list[i]).filter((r) => r !== undefined) : [...list];
+}
+
+/** The brand drawer's prompt sorts (2026-11-05, the original drawer table's six, mentions-drilldown.tsx), one direction
+ * each as the renewal lists (no reverse): names and the funnel ascending, the best rank ascending (named earlier first),
+ * the counts most first. The default is mentions. */
+export const PROMPT_SORTS = { mentions: "desc", rank: "asc", share: "desc", prompt: "asc", funnel: "asc", providers: "desc" } as const satisfies Record<string, "asc" | "desc">;
+export type PromptSort = keyof typeof PROMPT_SORTS;
+
+/** A sortable column head: one direction per key, the arrow shows it on the active one. */
+function SortHead({ on, dir, onClick, right = false, children }: { on: boolean; dir: "asc" | "desc"; onClick?: () => void; right?: boolean; children: ReactNode }) {
+  if (!onClick) return <span>{children}</span>;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={cx("inline-flex cursor-pointer items-center gap-0.5 font-semibold whitespace-nowrap hover:text-rn-ink focus-visible:outline-2 focus-visible:outline-rn-navy", right && "justify-end", on ? "text-rn-ink" : "text-rn-muted")}
+    >
+      {children}
+      {on ? <span aria-hidden>{dir === "asc" ? "↑" : "↓"}</span> : null}
+    </button>
+  );
+}
+
+/** `initialSort`: a render-test seam (the list opens on mentions). */
+export function PromptList({ state, onAnswer, initialSort = "mentions" }: { state: ListState<DrillPromptRow>; onAnswer: (p: MentionsPromptLive) => void; initialSort?: PromptSort }) {
   const { engineLabel } = useMention();
   const t = useTranslations("renewal.mention.brands");
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
   const tM = useTranslations("answerAnalysis.mentions.answerModal");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
+  const [sort, setSort] = useState<PromptSort>(initialSort);
   const status = <ListStatus state={state} loading={tDd("promptsLoading")} error={tDd("promptsError")} empty={tDd("noPrompts")} />;
   if (state.status !== "ready" || !state.list.length) return status;
-  // mentions desc, best rank and the TOP 3 flag come from the route (screen mention/drill-brand-prompts)
-  const order = state.orders?.mentions?.desc;
-  const list = order ? order.map((i) => state.list[i]) : state.list;
+  // the orders, best rank and the TOP 3 flag come from the route (screen mention/drill-brand-prompts)
+  const list = rowsInOrder(state.list, state.orders, sort, PROMPT_SORTS[sort]);
+  const sortable = Boolean(state.orders) && state.list.length > 1;
+  // the keys with a column sort from its head; 퍼널 · 엔진 (tags under the prompt) only from the select, which names all six
+  const by = (k: PromptSort) => (sortable ? () => setSort(k) : undefined);
   return (
     <div className="flex flex-col gap-2">
-      <p className="m-0 text-rn-11 text-rn-muted">{tM("tableHint")}</p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <p className="m-0 min-w-0 flex-1 text-rn-11 text-rn-muted">{tM("tableHint")}</p>
+        {sortable ? (
+          <RnSelect
+            label={t("sortLabel")}
+            value={sort}
+            onChange={(e) => setSort(e.target.value as PromptSort)}
+            options={(Object.keys(PROMPT_SORTS) as PromptSort[]).map((k) => ({ value: k, label: t(`promptSort.${k}`) }))}
+          />
+        ) : null}
+      </div>
       <div className="grid grid-cols-[minmax(0,1fr)_52px_56px_60px] gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted">
-        <span>{tDd("col.prompt")}</span>
+        <SortHead on={sort === "prompt"} dir={PROMPT_SORTS.prompt} onClick={by("prompt")}>
+          {tDd("col.prompt")}
+        </SortHead>
         {(
           [
             ["rank", [[t("defLabel"), tDd("colDefinition.rank")]]],
             ["mentions", [[t("defLabel"), tDd("colDefinition.mentions")]]],
             ["share", [[t("defLabel"), tDd("colDefinition.share")], [t("formulaLabel"), tDd("colFormula.share")]]],
-          ] satisfies [string, [string, string][]][]
+          ] satisfies [PromptSort, [string, string][]][]
         ).map(([k, items]) => (
           <span key={k} className="inline-flex items-center justify-end gap-1">
-            {tDd(`col.${k}`)}
+            <SortHead on={sort === k} dir={PROMPT_SORTS[k]} onClick={by(k)} right>
+              {tDd(`col.${k}`)}
+            </SortHead>
             <InfoTip label={tDd(`col.${k}`)} align="end" items={items} />
           </span>
         ))}
@@ -954,43 +1014,83 @@ export function PromptList({ state, onAnswer }: { state: ListState<DrillPromptRo
   );
 }
 
-const CITE_COLS = "grid-cols-[minmax(0,1fr)_56px_52px_56px_60px]";
+const CITE_COLS = "grid-cols-[28px_minmax(0,1fr)_56px_52px_56px_60px]";
+
+/** The citation sources' sorts (2026-11-05, the original domain table's five, citation-domain-table.tsx), one direction
+ * each: the domain by name, the numbers most first. The default is citations (the route's order). */
+export const CITE_SORTS = { citations: "desc", domain: "asc", share: "desc", prompts: "desc", coverageRate: "desc" } as const satisfies Record<string, "asc" | "desc">;
+export type CiteSort = keyof typeof CITE_SORTS;
+
+/** '#' of each source: its place by citations, whatever the sort (the original kept the citation rank, citation-domain-
+ * table.tsx) — the route's citations order, else the order received. */
+export function citationNos(n: number, orders: TableOrders<string> | undefined): number[] {
+  const by = orders?.citations?.desc;
+  const order = by && by.length === n ? by : Array.from({ length: n }, (_, i) => i);
+  const no = new Array<number>(n);
+  order.forEach((i, at) => (no[i] = at + 1));
+  return no;
+}
 
 /** The brand row's citation sources (renewal audit 7-1, the original drawer's domain table): the sources the answers that
  * mention the brand cite, with their share, prompts, coverage and the 당사 mark; a row opens its cited URLs and prompts
  * (the `&skey=` detail, read when the row opens) as the Citation page's domain sheet shows them. */
-export function CitationList({ state, detailQuery, onAnswer }: { state: ListState<CitationDomainLive>; detailQuery: string; onAnswer: (p: CitationPromptLive) => void }) {
+/** `initialSort`: a render-test seam (the list opens on citations). */
+export function CitationList({
+  state,
+  detailQuery,
+  onAnswer,
+  initialSort = "citations",
+}: {
+  state: ListState<CitationDomainLive>;
+  detailQuery: string;
+  onAnswer: (p: CitationPromptLive) => void;
+  initialSort?: CiteSort;
+}) {
   const t = useTranslations("renewal.mention.brands");
   const tDd = useTranslations("answerAnalysis.mentions.drilldown");
   const tC = useTranslations("answerAnalysis.citations");
   const tTr = useTranslations("answerAnalysis.mentions.kpi.overview.unmeasuredDialog");
   const locale = useLocale();
   const [open, setOpen] = useState<string | null>(null);
+  const [sort, setSort] = useState<CiteSort>(initialSort);
   useEffect(() => setOpen(null), [detailQuery]);
   const status = <ListStatus state={state} loading={tDd("citationsLoading")} error={tDd("citationsError")} empty={tDd("noCitations")} />;
   if (state.status !== "ready" || !state.list.length) return status;
-  const head: [string, [string, string][] | null][] = [
-    ["citations", null],
-    ["share", [[t("defLabel"), t("citeShareDef")], [t("formulaLabel"), t("citeShareFormula")]]],
-    ["prompts", null],
-    ["coverage", [[t("defLabel"), t("citeCoverageDef")], [t("formulaLabel"), t("citeCoverageFormula")]]],
+  const nos = citationNos(state.list.length, state.orders);
+  const rows = rowsInOrder(
+    state.list.map((d, i) => ({ d, no: nos[i] })),
+    state.orders,
+    sort,
+    CITE_SORTS[sort],
+  );
+  const by = (k: CiteSort) => (state.orders && state.list.length > 1 ? () => setSort(k) : undefined);
+  const head: [string, CiteSort, [string, string][] | null][] = [
+    ["citations", "citations", null],
+    ["share", "share", [[t("defLabel"), t("citeShareDef")], [t("formulaLabel"), t("citeShareFormula")]]],
+    ["prompts", "prompts", null],
+    ["coverage", "coverageRate", [[t("defLabel"), t("citeCoverageDef")], [t("formulaLabel"), t("citeCoverageFormula")]]],
   ];
   return (
     <div className="flex flex-col gap-2">
       <p className="m-0 text-rn-11 text-rn-muted">{t("citeHint")}</p>
       <div className={cx("grid gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted", CITE_COLS)}>
-        <span>{tC("table.col.domain")}</span>
-        {head.map(([k, items]) => (
+        <span title={t("citeNoTip")}>{tC("table.col.rank")}</span>
+        <SortHead on={sort === "domain"} dir={CITE_SORTS.domain} onClick={by("domain")}>
+          {tC("table.col.domain")}
+        </SortHead>
+        {head.map(([label, k, items]) => (
           <span key={k} className="inline-flex items-center justify-end gap-1">
-            {tC(`table.col.${k}`)}
-            {items ? <InfoTip label={tC(`table.col.${k}`)} align="end" items={items} /> : null}
+            <SortHead on={sort === k} dir={CITE_SORTS[k]} onClick={by(k)} right>
+              {tC(`table.col.${label}`)}
+            </SortHead>
+            {items ? <InfoTip label={tC(`table.col.${label}`)} align="end" items={items} /> : null}
           </span>
         ))}
       </div>
       <div className="flex flex-col">
-        {state.list.map((d) => {
+        {rows.map(({ d, no }) => {
           const key = d.skey ?? d.domain;
-          return <CitationRow key={key} row={d} open={open === key} onToggle={() => setOpen((cur) => (cur === key ? null : key))} detailQuery={detailQuery} onAnswer={onAnswer} />;
+          return <CitationRow key={key} row={d} no={no} open={open === key} onToggle={() => setOpen((cur) => (cur === key ? null : key))} detailQuery={detailQuery} onAnswer={onAnswer} />;
         })}
       </div>
       {state.total !== undefined && state.total > state.list.length ? <p className="m-0 text-rn-11 text-rn-muted">{tTr("truncated", { shown: numTxt(state.list.length, locale), total: numTxt(state.total, locale) })}</p> : null}
@@ -998,8 +1098,23 @@ export function CitationList({ state, detailQuery, onAnswer }: { state: ListStat
   );
 }
 
-/** One source row; `open` reads its detail (the route's `&skey=` branch) once, kept while the sheet lives. */
-export function CitationRow({ row, open, onToggle, detailQuery, onAnswer }: { row: CitationDomainLive; open: boolean; onToggle: () => void; detailQuery: string; onAnswer: (p: CitationPromptLive) => void }) {
+/** One source row (`no` = its citations rank, the '#' cell); `open` reads its detail (the route's `&skey=` branch) once, kept
+ * while the sheet lives. */
+export function CitationRow({
+  row,
+  no,
+  open,
+  onToggle,
+  detailQuery,
+  onAnswer,
+}: {
+  row: CitationDomainLive;
+  no?: number;
+  open: boolean;
+  onToggle: () => void;
+  detailQuery: string;
+  onAnswer: (p: CitationPromptLive) => void;
+}) {
   const t = useTranslations("renewal.mention.brands");
   const tOv = useTranslations("renewal.overview");
   const cat = useCatLabel();
@@ -1017,6 +1132,9 @@ export function CitationRow({ row, open, onToggle, detailQuery, onAnswer }: { ro
         onClick={onToggle}
         className={cx("grid w-full cursor-pointer items-start gap-2 rounded-md py-2 text-left text-rn-12 hover:bg-rn-navy-25 focus-visible:outline-2 focus-visible:outline-rn-navy", CITE_COLS)}
       >
+        <span className="pt-px text-rn-11 text-rn-muted tabular-nums" data-rn-cite-no="">
+          {no ?? ""}
+        </span>
         <span className="flex min-w-0 flex-col gap-0.5">
           <span className="inline-flex min-w-0 items-center gap-1.5 text-rn-13 font-semibold text-rn-ink">
             <ChevronRight aria-hidden className={cx("size-3.5 shrink-0 text-rn-muted transition-transform", open && "rotate-90")} />

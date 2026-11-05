@@ -39,7 +39,7 @@ export function RnMentionBody() {
     <Suspense
       fallback={
         <div className="rn-dense flex flex-col gap-2.5">
-          <SummarySkeleton />
+          {input.global ? null : <SummarySkeleton />}
           {input.body ? null : <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst={input.brandsFirst} />}
           <RnCard className="p-6">
             <RnSkeleton className="h-40 w-full" />
@@ -130,10 +130,14 @@ function Measured({ shell }: { shell: RnShellVM }) {
                 <ComparePicker />
               </Suspense>
             </RnControlBar>
-            {/* every KPI at once: above the rail, outside what it switches */}
-            <Suspense fallback={<SummarySkeleton />}>
-              <Summary />
-            </Suspense>
+            {/* every KPI at once: above the rail, outside what it switches. Not on Global (2026-11-05 지표 정리, the user's
+                choice C): its headline restated the tab rail and its findings the cards below, so the rail follows the
+                control bar there and the page has no navy card (the heroes' trend charts have no on-navy variant) */}
+            {input.global ? null : (
+              <Suspense fallback={<SummarySkeleton />}>
+                <Summary />
+              </Suspense>
+            )}
             <Suspense fallback={null}>
               <PerAnswerLine />
             </Suspense>

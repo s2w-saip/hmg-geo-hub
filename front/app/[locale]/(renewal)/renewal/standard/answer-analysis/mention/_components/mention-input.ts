@@ -63,6 +63,12 @@ export interface RnMentionInput {
   filtered: boolean;
   /** 브랜드 상세 leads the rail and is the landing view (Global, 2026-11-05 the user's call); else it closes the rail. */
   brandsFirst?: boolean;
+  /** Global page only (2026-11-05 지표 정리): no 이번 회차 요약 card and no navy card at all, no standing line in the rate
+   * hero, no 앞선 경쟁사 · 표에서 당사 순위 in the first-position hero (the place on the table's 당사 row tooltip), no
+   * 당사 대비 column in either table (row tooltip · CSV), no 복수 언급 toggle (its values on the row tooltip · CSV), no
+   * 당사 유형 구성 view on the share tab (its % on the exposure tab's signal count). Website and Project keep their
+   * layout. */
+  global?: boolean;
   /** The page's own sections in place of the standard bar, rail and views (the Website page, 2026-11-02: its prompts aim
    * at its own pages, so the page reads differently), inside the same providers. */
   body?: ReactNode;

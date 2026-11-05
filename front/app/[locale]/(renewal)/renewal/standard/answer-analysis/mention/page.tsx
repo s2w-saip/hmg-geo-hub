@@ -8,7 +8,7 @@ import { screenGet, type ScreenQuery } from "@/lib/screen";
 import type { FilterDatesView, PanelFilterOptions } from "@/lib/hgh/filter-types";
 import { throwForPage } from "@/lib/hgh/errors";
 import { KPI_TAB_PARAM, resolveKpiTab, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
-import { RnCard, RnPageHeader, RnPill, RnSkeleton, RnTag } from "@/components/renewal-ui";
+import { RnCard, RnPageHeader, RnPill, RnTag } from "@/components/renewal-ui";
 import { RnBusyScope, RnFilterRuntime } from "../../../_components/filter-runtime";
 import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import {
@@ -96,6 +96,8 @@ export default async function RenewalMentionPage({
     period,
     filtered,
     brandsFirst: true,
+    // 지표 정리 (2026-11-05): no 이번 회차 요약 card and no navy card; each number once (Website and Project keep theirs)
+    global: true,
     ...sectionReads(q, locale),
   };
   return (
@@ -187,8 +189,8 @@ async function RenewalMention({
   const [props, saved] = await Promise.all([filterProps(sp, scope, locale), loadSavedFilters("mention")]);
   return (
     <RnOverviewFilters props={props} savedFilters={{ page: "mention", userId, initial: saved }}>
-      {/* one provider feeds the view rail and the body; the rail sits in the body, under 이번 회차 요약
-          (2026-10-29: it frames only the view it switches) */}
+      {/* one provider feeds the view rail and the body; the rail sits in the body, under the page controls
+          (2026-10-29: it frames only the view it switches; Global has no 이번 회차 요약 since 2026-11-05) */}
       <RnMentionPageProvider input={body}>
         <RnFilterSplit header={header} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
           <RnOverviewApplied />
@@ -205,10 +207,6 @@ function PageSkeleton({ header, kpi, view }: { header: ReactNode; kpi: KpiTab; v
   return (
     <RnFilterSplit header={header} panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
       <RnCard className="h-12" />
-      <RnCard className="flex min-h-[214px] flex-col gap-3 p-6">
-        <RnSkeleton className="h-4 w-40" />
-        <RnSkeleton className="h-16 w-full" />
-      </RnCard>
       <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst />
       <RnCard className="h-[320px]" />
     </RnFilterSplit>

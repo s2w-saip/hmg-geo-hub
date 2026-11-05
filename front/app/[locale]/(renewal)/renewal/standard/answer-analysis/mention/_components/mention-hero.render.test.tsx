@@ -11,7 +11,8 @@ import type { RnFavorHeroVM, RnRankVM, RnRateHeroVM, RnRateTypesVM, RnRateValueV
 // - the heroes say which answers they count (every answer; the Overview cards count the representative ones);
 // - the favorability trend legend names signal shares, not "AI 긍정 답변";
 // - "앞선 브랜드" says it counts the table's rivals, and the position formula's unit is the page's (번째);
-// - the board's trend chip counts the measured rounds, not the axis slots.
+// - the board's trend chip counts the measured rounds, not the axis slots — and names the axis's unmeasured rounds, as
+//   the original table's coverage line did (2026-11-05).
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
@@ -23,7 +24,7 @@ const { MentionProvider } = await import("./mention-context");
 const { Board, HeroValue, RateHero, Types } = await import("./mention-rate");
 const { PerAnswerLine, Summary } = await import("./mention-body");
 const { FavorHeroCard } = await import("./mention-favor");
-const { RankHeroCard } = await import("./mention-rank");
+const { RankBody, RankHeroCard } = await import("./mention-rank");
 const { RnMentionPageProvider } = await import("./mention-tabs");
 
 const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
@@ -153,10 +154,18 @@ describe("renewal Mention heroes", () => {
     expect(render(<RateHero metric="sov" />)).toContain(ko.renewal.mention.hero.basisAll);
   });
 
-  it("the board's trend chip counts the measured rounds", () => {
+  it("the board's trend chip counts the measured rounds, and the axis's unmeasured ones when there are", () => {
+    // the original competitor table's coverage line: '추이 축 18회차 · 측정 14회차 · 미측정 4회차' (06-01 ~ 10-31)
     const html = render(<Board metric="exposure" />);
-    expect(html).toContain("추이 3회차");
+    expect(html).toContain("추이 축 4회차 · 측정 3 · 미측정 1");
+    expect(html).not.toContain("추이 3회차");
     expect(html).not.toContain("추이 4회차");
+    for (const global of [false, true]) {
+      const all = { ...rateHero, exposure: metric(AXIS, 4) };
+      const full = render(<Board metric="exposure" />, { input: { rateHero: settled(all), global } });
+      expect(full).toContain("추이 4회차");
+      expect(full).not.toContain("미측정");
+    }
   });
 
   it("favorability: no counts without a value, signal-share legend, the basis line", () => {
@@ -290,5 +299,96 @@ describe("renewal Mention heroes", () => {
     expect(html).toContain("답변당 언급 수");
     expect(html).toContain("전전월 대비");
     expect(render(<PerAnswerLine />, { input: { summary: settled(summary(null)) } })).toBe("");
+  });
+});
+
+// Global 지표 정리 (2026-11-05): Global says each number once — Project and Website keep their layout (input.global unset)
+describe("renewal Mention: Global says each number once", () => {
+  const standing = { n: 13, rank: 1, other: "BMW", gap: 45.2 };
+  const withStanding = { exposure: { ...rateHero.exposure, standing }, sov: { ...rateHero.sov, standing } } as unknown as RnRateHeroVM;
+
+  it("the rate hero has no standing line on Global (the board holds the place and the gap)", () => {
+    const project = render(<HeroValue metric="exposure" />, { input: { rateHero: settled(withStanding) } });
+    expect(project).toContain("비교 13개 브랜드 중");
+    expect(project).toContain("2위 BMW 대비 +45.2pp");
+    const global = render(<HeroValue metric="exposure" />, { input: { rateHero: settled(withStanding), global: true } });
+    expect(global).not.toContain("비교 13개 브랜드 중");
+    expect(global).not.toContain("BMW 대비");
+    expect(global).toContain("당사 = Hyundai+Kia+Genesis 합산");
+  });
+
+  it("the competitor board has no 당사 대비 column on Global; the row tooltip keeps the gap", () => {
+    const head = `>${ko.renewal.mention.board.colGap}<`;
+    const project = render(<Board metric="exposure" />);
+    expect(project).toContain(head);
+    expect(project).toContain(">−45.2pp<");
+    const global = render(<Board metric="exposure" />, { input: { global: true } });
+    expect(global).not.toContain(head);
+    expect(global).not.toContain(">−45.2pp<");
+    expect(global).toContain(`${ko.renewal.mention.board.colGap} −45.2pp`);
+  });
+
+  // the first-position hero: 앞선 경쟁사 (0 of 21 conditions) out; 표에서 당사 순위 · 상위 N% onto the table's 당사 row
+  const ranked = {
+    ...rank,
+    fp: true,
+    degraded: false,
+    hero: { avgPosition: 2.4, rankedAnswers: 900, delta: NO_DELTA, series: [2.1, 2.4], axis: ["2026-09-28", "2026-10-05"], rankedSeries: [800, 900] },
+    ahead: 0,
+    standing: { rank: 1, total: 11, topPct: 9 },
+    rows: [
+      { key: "__own", own: true, sibling: false, avgPosition: 2.4, rank: null, spark: [2.1, 2.4], delta: 0.3, gap: null, covered: true, pos: 1, hasSpark: true },
+      { key: "Tesla", own: false, sibling: false, avgPosition: 3.7, rank: 1, spark: [3.6, 3.7], delta: 0.1, gap: 1.3, covered: false, pos: 2, hasSpark: true },
+    ],
+    ownFirst: [0, 1],
+    barMax: 3.7,
+    track: { lo: 2.4, hi: 3.7 },
+  } as unknown as RnRankVM;
+
+  it("first position: the hero drops 앞선 경쟁사 and 표에서 당사 순위 on Global; Project keeps both", () => {
+    const project = render(<RankHeroCard />, { input: { rank: settled(ranked) } });
+    expect(dd(project)).toEqual(["900개", "0개", "1위 · 상위 9%"]);
+    expect(project).toContain(ko.renewal.mention.rank.ahead);
+    const global = render(<RankHeroCard />, { input: { rank: settled(ranked), global: true } });
+    expect(dd(global)).toEqual(["900개"]);
+    expect(global).not.toContain(ko.renewal.mention.rank.ahead);
+    expect(global).not.toContain(ko.renewal.mention.rank.aheadTip);
+    // the Website page's plain card stays as it was
+    expect(dd(render(<RankHeroCard plain />, { input: { rank: settled(ranked) } }))).toEqual(["900개"]);
+  });
+
+  it("first position: the table has no 당사 대비 column on Global, and 당사's row names its place and top %", () => {
+    const head = `>${ko.renewal.mention.rank.colGap}<`;
+    const project = render(<RankBody />, { input: { rank: settled(ranked) } });
+    expect(project).toContain(head);
+    expect(project).toContain(">+1.3<");
+    expect(project).not.toContain("표 11개 브랜드 중 1위");
+    const global = render(<RankBody />, { input: { rank: settled(ranked), global: true } });
+    expect(global).not.toContain(head);
+    expect(global).not.toContain(">+1.3<");
+    expect(global).toContain('title="HMG · 표 11개 브랜드 중 1위 · 상위 9%"');
+    // the ⓘ keeps the denominator (decision 2026-11-02) and says where the gap went
+    expect(global).toContain("아래 표 11개 브랜드 중 당사 자리입니다");
+    expect(global).toContain(ko.renewal.mention.rank.tableInfoGlobal);
+  });
+
+  it("the share tab has no 당사 유형 구성 view on Global; the exposure tab's rows carry it on their tooltip", () => {
+    const two = {
+      ...rateTypes,
+      own: {
+        exposure: rateTypes.own.exposure,
+        sov: { rows: [{ type: "recommendation", pct: 1.8, signals: 9, spark: [], counts: [], delta: null, hasSpark: false }], maxPct: 1.8, maxCount: 9, x: [], answers: [] },
+      },
+    };
+    const over = (global: boolean) => ({ input: { rateTypes: settled(two), global } });
+    const viewOwnSov = `>${ko.renewal.mention.type.viewOwnSov}<`;
+    expect(render(<Types metric="sov" />, over(false))).toContain(viewOwnSov);
+    const sov = render(<Types metric="sov" initialView="own" />, over(true));
+    expect(sov).not.toContain(viewOwnSov);
+    expect(sov).not.toContain(ko.renewal.mention.type.footSov);
+    const exposure = render(<Types metric="exposure" initialView="own" />, over(true));
+    expect(exposure).toContain('title="추천 · 당사 유형 신호 9건 · 당사 유형 구성 1.8%(당사 유형 신호 합 대비)"');
+    expect(exposure).toContain(ko.renewal.mention.type.footMix);
+    expect(render(<Types metric="exposure" initialView="own" />, over(false))).not.toContain("당사 유형 구성 1.8%");
   });
 });

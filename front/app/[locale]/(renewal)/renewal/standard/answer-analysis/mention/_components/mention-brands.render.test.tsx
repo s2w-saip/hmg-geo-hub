@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { MentionProvider } = await import("./mention-context");
-const { BrandDrawer, BrandRanking, CitationDetail, CitationList, CitationRow, PromptList, RANK_TABLE_STEP, brandDrillPaths, rankTableRows } = await import("./mention-brands");
+const { BrandDrawer, BrandRanking, CITE_SORTS, CitationDetail, CitationList, CitationRow, PROMPT_SORTS, PromptList, RANK_TABLE_STEP, brandDrillPaths, citationNos, rankTableRows, rowsInOrder } = await import("./mention-brands");
 
 const settled = <T,>(v: T): Promise<T> => Object.assign(Promise.resolve(v), { status: "fulfilled", value: v });
 
@@ -269,5 +269,107 @@ describe("renewal Mention treemap", () => {
     expect(groupTile(group("Toyota", ["Toyota", "Lexus"]), groupName)).toEqual({ key: "Toyota", title: "Toyota 그룹", short: "Toyota" });
     expect(groupTile(group("__rest", ["Tesla"]), groupName)).toEqual({ key: "__rest", title: "그 외", short: undefined });
     expect(groupTile(group("__rest", ["Tesla", "BMW"]), groupName)).toEqual({ key: "__rest", title: "그 외", short: undefined });
+  });
+});
+
+// Global 지표 정리 (2026-11-05): the 복수 언급 toggle goes on Global (turned on, the top 10 stayed the same 10); its values sit
+// on each row's tooltip and in the CSV, and each column's ⓘ names both bases. Project and Website keep the toggle.
+describe("renewal Mention brand ranking: Global has no 복수 언급 toggle", () => {
+  const multi = (i: number): RankingRow => ({ ...row(i), on: { mentions: 40 - i, prompts: 3, share: 2.5, mentionRate: 0.7, delta: null, covered: false } });
+  const two = { ...ranking, rows: [multi(1), multi(2)], count: 2, orders: { off: { ...orders, rank: { asc: [0, 1], desc: [1, 0] } }, on: orders } as RnRankingVM["orders"] };
+  const at = (global: boolean) => {
+    const inp = { ...(input as object), ranking: settled(two), global } as never;
+    return render(
+      <MentionProvider value={{ ...ctx, input: inp }}>
+        <BrandRanking initialView="table" />
+      </MentionProvider>,
+    );
+  };
+  const c = ko.answerAnalysis.mentions.table;
+  const b = ko.renewal.mention.brands;
+
+  it("Project and Website keep the toggle and a plain row tooltip", () => {
+    const html = at(false);
+    expect(html).toContain('role="switch"');
+    expect(html).toContain(`${c.multiToggle}</button>`);
+    expect(html).not.toContain("복수 언급 기준 —");
+  });
+
+  it("Global: no toggle; each row names its 복수 언급 values, each head both definitions", () => {
+    const html = at(true);
+    expect(html).not.toContain('role="switch"');
+    expect(html).not.toContain(`${c.multiToggle}</button>`);
+    expect(html).toContain(`${b.rowTip}\n복수 언급 기준 — 브랜드 복수 언급 수 39 · 복수 언급 점유율 2.5% · 복수 언급 프롬프트 3 · 복수 언급률 0.7%`);
+    const head = tips(html);
+    expect(head.find((h) => h.includes(c.colDefinition.mentions))).toContain(c.colDefinition.multiMentions);
+    expect(head.find((h) => h.includes(c.colDefinition.share))).toContain(b.multiShareFormula);
+    expect(head.find((h) => h.includes(c.colDefinition.prompts))).toContain(b.multiPromptsDef);
+    expect(head.find((h) => h.includes(c.colDefinition.rate))).toContain(b.multiRateFormula);
+  });
+});
+
+// Restored 2026-11-05 (the original drawer's sorts, every page): the prompt table's six keys and the citation sources'
+// five with the '#' citation rank, from the route's orders, one direction each.
+describe("renewal Mention brand drawer sorts", () => {
+  const prompt = (id: string, text: string, mentions: number) => ({ id, promptText: text, mentions, share: mentions / 2, providers: ["chatgpt"], funnelStage: null, answers: [], bestRank: 2, topRank: false }) as never;
+  const list = [prompt("p1", "b prompt", 3), prompt("p2", "a prompt", 9), prompt("p3", "c prompt", 5)];
+  // the route's orders (indices into the list), as mention_drilldown.prompt_orders sends them
+  const promptOrders = {
+    mentions: { asc: [0, 2, 1], desc: [1, 2, 0] },
+    prompt: { asc: [1, 0, 2], desc: [2, 0, 1] },
+    rank: { asc: [0, 1, 2], desc: [0, 1, 2] },
+    share: { asc: [0, 2, 1], desc: [1, 2, 0] },
+    funnel: { asc: [0, 1, 2], desc: [0, 1, 2] },
+    providers: { asc: [0, 1, 2], desc: [0, 1, 2] },
+  };
+  const ids = (html: string) => [...html.matchAll(/data-rn-prompt="(\w+)"/g)].map((m) => m[1]);
+
+  it("each key has one direction: names, the funnel and the best rank ascending, the counts descending", () => {
+    expect(PROMPT_SORTS).toEqual({ mentions: "desc", rank: "asc", share: "desc", prompt: "asc", funnel: "asc", providers: "desc" });
+    expect(CITE_SORTS).toEqual({ citations: "desc", domain: "asc", share: "desc", prompts: "desc", coverageRate: "desc" });
+    expect(rowsInOrder(["x", "y", "z"], promptOrders, "prompt", "asc")).toEqual(["y", "x", "z"]);
+    // no orders (or a stale order of another length): as received
+    expect(rowsInOrder(["x", "y"], undefined, "prompt", "asc")).toEqual(["x", "y"]);
+    expect(rowsInOrder(["x", "y"], promptOrders, "prompt", "asc")).toEqual(["x", "y"]);
+  });
+
+  it("the prompt list opens on mentions, names its six sorts, and sorts by the route's order", () => {
+    const state = { status: "ready" as const, list, orders: promptOrders };
+    const html = render(<PromptList state={state} onAnswer={() => {}} />);
+    expect(ids(html)).toEqual(["p2", "p3", "p1"]);
+    const p = ko.renewal.mention.brands.promptSort;
+    for (const k of Object.keys(PROMPT_SORTS)) expect(html).toContain(`>${p[k as keyof typeof p]}</option>`);
+    expect(html).toContain(`aria-label="${ko.renewal.mention.brands.sortLabel}"`);
+    // the heads of the keys with a column sort; the active one is pressed
+    expect([...html.matchAll(/<button type="button" aria-pressed="(\w+)"/g)].map((m) => m[1])).toEqual(["false", "false", "true", "false"]);
+    expect(ids(render(<PromptList state={state} onAnswer={() => {}} initialSort="prompt" />))).toEqual(["p2", "p1", "p3"]);
+    // without the route's orders: no sort controls, the order received
+    const plain = render(<PromptList state={{ status: "ready", list }} onAnswer={() => {}} />);
+    expect(ids(plain)).toEqual(["p1", "p2", "p3"]);
+    expect(plain).not.toContain("<select");
+    expect(plain).not.toContain("aria-pressed");
+  });
+
+  const domain = (name: string, citations: number) =>
+    ({ domain: name, skey: name, citations, share: citations / 10, prompts: 4, coverageRate: 5, urls: [], promptList: [], isOurs: false, category: null, subcategory: null }) as never;
+  const sources = [domain("kia.com", 50), domain("bmw.com", 80), domain("audi.com", 20)];
+  const citeOrders = {
+    citations: { asc: [2, 0, 1], desc: [1, 0, 2] },
+    domain: { asc: [2, 1, 0], desc: [0, 1, 2] },
+    share: { asc: [2, 0, 1], desc: [1, 0, 2] },
+    prompts: { asc: [0, 1, 2], desc: [0, 1, 2] },
+    coverageRate: { asc: [0, 1, 2], desc: [0, 1, 2] },
+  };
+  const cites = (html: string) => [...html.matchAll(/data-rn-cite="([^"]+)"[^>]*>\s*<button[\s\S]*?data-rn-cite-no="">(\d*)</g)].map((m) => `${m[2]} ${m[1]}`);
+
+  it("the citation sources sort by the route's order, and '#' stays the citation rank", () => {
+    expect(citationNos(3, citeOrders)).toEqual([2, 1, 3]);
+    expect(citationNos(2, undefined)).toEqual([1, 2]);
+    const state = { status: "ready" as const, list: sources, orders: citeOrders };
+    expect(cites(render(<CitationList state={state} detailQuery="mentionBrand=Toyota" onAnswer={() => {}} />))).toEqual(["1 bmw.com", "2 kia.com", "3 audi.com"]);
+    const byName = render(<CitationList state={state} detailQuery="mentionBrand=Toyota" onAnswer={() => {}} initialSort="domain" />);
+    expect(cites(byName)).toEqual(["3 audi.com", "1 bmw.com", "2 kia.com"]);
+    expect(byName).toContain(`>${ko.answerAnalysis.citations.table.col.rank}</span>`);
+    expect([...byName.matchAll(/<button type="button" aria-pressed="(\w+)"/g)].map((m) => m[1])).toEqual(["true", "false", "false", "false", "false"]);
   });
 });

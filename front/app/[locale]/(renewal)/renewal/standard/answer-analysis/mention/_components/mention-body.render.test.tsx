@@ -100,3 +100,53 @@ describe("renewal Mention body: nothing measured", () => {
     expect(html).not.toContain("측정 없음");
   });
 });
+
+// Global 지표 정리 (2026-11-05, the user's choice C): Global has no 이번 회차 요약 card — no navy card at all, the view rail
+// right under the control bar. Project (the same body) keeps the card; the Website page draws its own body.
+describe("renewal Mention body: 이번 회차 요약 on Global and Project", () => {
+  const pending = <T,>(): Promise<T> => new Promise<T>(() => {});
+  const MEASURED = { measured: true, degraded: false, ownBrands: ["Hyundai", "Kia", "Genesis"], ownSum: [], drawer: [] } as unknown as RnShellVM;
+  const page = (global: boolean, shell: Promise<RnShellVM>) => {
+    nav.path = global ? "/ko/renewal/standard/answer-analysis/mention" : "/ko/renewal/projects/p1/analysis/mention";
+    nav.search = "";
+    const tabValue = Object.fromEntries(["exposure", "sov", "favorability", "first-rank"].map((k) => [k, pending()]));
+    const reads = Object.fromEntries(["tabDeltas", "compare", "summary", "rateValue", "rateHero", "rateEngines", "rateTypes", "favorHero", "favorDist", "favorMatrix", "rank", "bump", "ranking"].map((k) => [k, pending()]));
+    const input = { kpi: "exposure", view: "brands", ownLabel: "HMG", period: null, filtered: false, shell, tabValue, ...reads, ...(global ? { brandsFirst: true, global: true } : {}) } as never;
+    const html = renderToStaticMarkup(
+      <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
+        <ServiceWeek.Provider value={null}>
+          <RnFilterRuntime>
+            <RnOverviewFilters props={{ stage: "mention", scope: { all: true } }} savedFilters={{ page: "mention", userId: "test", initial: [] }}>
+              <RnMentionPageProvider input={input}>
+                <RnMentionBody />
+              </RnMentionPageProvider>
+            </RnOverviewFilters>
+          </RnFilterRuntime>
+        </ServiceWeek.Provider>
+      </NextIntlClientProvider>,
+    );
+    nav.path = "/ko/renewal/website/answer-analysis/mention";
+    return html;
+  };
+
+  it("Project keeps the card (its skeleton while it reads); Global has none, measured or loading", () => {
+    for (const shell of [settled(MEASURED), pending<RnShellVM>()]) {
+      const project = page(false, shell);
+      expect(project).toContain('id="sec-summary"');
+      const global = page(true, shell);
+      expect(global).not.toContain('id="sec-summary"');
+      expect(project).toMatch(/rounded-rn-card rn-hero/);
+      expect(global).not.toMatch(/rounded-rn-card rn-hero/);
+      expect(global).toContain('id="rn-kpi-tabs"');
+    }
+  });
+
+  it("on Global the view rail follows the control bar", () => {
+    const html = page(true, settled(MEASURED));
+    const bar = html.indexOf("data-rn-cbar");
+    const rail = html.indexOf('id="rn-kpi-tabs"');
+    expect(bar).toBeGreaterThan(-1);
+    expect(rail).toBeGreaterThan(bar);
+    expect(html.slice(bar, rail)).not.toContain("rounded-rn-card");
+  });
+});
