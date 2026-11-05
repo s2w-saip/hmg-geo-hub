@@ -26,6 +26,8 @@ import { rhqLabel } from "@/lib/rhq";
 import type { GeoCountryView, GeoRegionView, GeoView } from "../_data/screen-types";
 import { OVERVIEW_KPI_KEYS, type OverviewKpiKey } from "../_data/overview-metrics";
 import { GeoMapLazy } from "./geo-map-lazy";
+import { RnSegmented } from "@/components/renewal-ui";
+import { DEFAULT_MARKET_VIEW, GeoMarketTable, marketViewQuery, type MarketView } from "./geo-market-table";
 
 // "빈 집합 = 전체" 는 내부 의미(및 있다면 URL 파라미터)의 정본이라 바꾸지 않는다
 // (QA #9). 다만 사용자가 **명시적으로 전부 해제**했다는 상태는 빈 집합으로 표현할
@@ -105,6 +107,7 @@ export function GeoOverview({
   initialCountries,
   title,
   renewal = false,
+  initialMarketView,
 }: {
   geo: GeoView;
   /** 렌더 테스트 seam. */
@@ -113,14 +116,27 @@ export function GeoOverview({
   title?: string;
   /** 리뉴얼 Overview(2026-10-28): 리뉴얼 카드 틀·카드 제목 크기(rn 토큰), 위아래 여백을 줄인다.
    *  2026-11-05: 지도 툴팁 순위 배지는 점유율 지표에서만(GeoMap rankOnShare). 권역은 닫힌 채로 시작하고(사용자),
-   *  지도에서 가리킨 나라와 메뉴에서 새로 고른 나라의 권역만 연다. 원본은 모두 열린 채로 시작한다. */
+   *  지도에서 가리킨 나라와 메뉴에서 새로 고른 나라의 권역만 연다. 원본은 모두 열린 채로 시작한다.
+   *  2026-11-05 D-12: 표는 GeoMarketTable(5개 지표 · 답변 수 · 열 머리로 지표 · 정렬, 권역별 / 국가 전체), KPI 칩은
+   *  열 머리로 합쳤다. 지도는 고른 열의 지표로 칠한다. */
   renewal?: boolean;
+  /** The renewal table's view as the URL asks (?mkt · mktDir · mktView); absent = the default. */
+  initialMarketView?: MarketView;
 }) {
   const t = useTranslations("dashboard.overview");
   const tKpi = useTranslations("dashboard.kpi.name");
   const tUnit = useTranslations("metricUnit");
+  const tM = useTranslations("renewal.overview.markets");
   const locale = useLocale();
-  const [metric, setMetric] = useState<OverviewKpiKey>(initialMetric);
+  const [legacyMetric, setMetric] = useState<OverviewKpiKey>(initialMetric);
+  const [marketView, setMarketView] = useState<MarketView>(() => initialMarketView ?? { ...DEFAULT_MARKET_VIEW, metric: initialMetric });
+  // the renewal table's head picks the KPI; the original keeps its chips
+  const metric = renewal ? marketView.metric : legacyMetric;
+  // the view is only the URL (no server read): the reload or a copied link opens the same table
+  const changeMarketView = useCallback((v: MarketView) => {
+    setMarketView(v);
+    window.history.replaceState(null, "", `${window.location.pathname}${marketViewQuery(new URLSearchParams(window.location.search), v)}`);
+  }, []);
   const [picked, setPicked] = useState<Set<string>>(new Set(initialCountries ?? []));
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Set<string>>(() => new Set(renewal ? [] : geo.markets.map((m) => m.region)));
@@ -214,6 +230,17 @@ export function GeoOverview({
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
+      {renewal ? (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <RnSegmented
+            label={tM("layout")}
+            value={marketView.layout}
+            onChange={(layout) => changeMarketView({ ...marketView, layout })}
+            items={[{ value: "region", label: tM("layoutRegion") }, { value: "flat", label: tM("layoutFlat") }]}
+          />
+          <span className="text-rn-12 text-rn-muted">{tM("hint")}</span>
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label={t("geo.kpiSelector")}>
         {OVERVIEW_KPI_KEYS.map((k) => (
           <button
@@ -233,6 +260,7 @@ export function GeoOverview({
           </button>
         ))}
       </div>
+      )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" size="sm" className="h-8 w-32 justify-between rounded-md pl-2.5 pr-2 text-xs font-medium text-foreground">
@@ -291,10 +319,23 @@ export function GeoOverview({
         </DropdownMenu>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <div className={cn("grid gap-4", renewal ? "lg:grid-cols-[0.68fr_1.32fr]" : "lg:grid-cols-[1.1fr_1fr]")}>
         <GeoMapLazy geo={filteredGeo} metric={metric} metricLabel={metricLabel} bare level="country" domain={mapDomain ?? undefined} activeCountry={activeCountry} onCountryHover={hoverCountryFromMap} rankOnShare={renewal} />
         <div className="min-h-0 lg:relative" data-geo-list-frame>
         <div ref={countryListRef} role="region" aria-label={t("geo.countryList")} tabIndex={0} className="max-h-[360px] overflow-auto overscroll-contain [scrollbar-gutter:stable] lg:absolute lg:inset-0 lg:max-h-none" data-geo-country-list>
+          {renewal ? (
+            <GeoMarketTable
+              markets={filteredGeo.markets}
+              view={marketView}
+              onView={changeMarketView}
+              open={open}
+              onToggle={(region) => setOpen((cur) => { const n = new Set(cur); if (n.has(region)) n.delete(region); else n.add(region); return n; })}
+              label={label}
+              countryLabel={(code) => countryName(code, locale)}
+              activeCountry={activeCountry}
+              onCountryHover={hoverCountryFromList}
+            />
+          ) : (
           <table className="w-full text-xs" data-geo-table>
             <thead className="sticky top-0 z-10">
               <tr className="h-[30px] border-b border-border bg-bg-soft text-left text-[11px] text-foreground">
@@ -321,6 +362,7 @@ export function GeoOverview({
               ))}
             </tbody>
           </table>
+          )}
         </div>
         </div>
       </div>

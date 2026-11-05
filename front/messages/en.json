@@ -5493,7 +5493,18 @@
       "brandsFoot": "‘—’ = not among that KPI's compared competitors (top 4) · Citation Share has its own citation-based competitors (with a period picked, their values count every answer) · Sentiment and Citation Share have no competitor Δ",
       "ownBrandNoValue": "{kpi}: no value for this brand · Citation Share exists only for the three HMG brands together",
       "brandsFootOwnBrands": "Brand rows under Ours are counted on the same answers brand by brand, as a competitor row is · they have no change and no citation share",
-      "marketsTitle": "Markets"
+      "marketsTitle": "Markets",
+      "markets": {
+        "layout": "Table view",
+        "layoutRegion": "By region",
+        "layoutFlat": "All countries",
+        "hint": "Press a column head to map and sort by that KPI · press it again to flip the sort",
+        "colRegion": "Region / country",
+        "colCountry": "Country",
+        "colAnswers": "Answers",
+        "headTip": "{name} — press to map and sort",
+        "countries": "{n} countries"
+      }
     },
     "prompts": {
       "subtitle": "Browse the global prompts currently tracked.",

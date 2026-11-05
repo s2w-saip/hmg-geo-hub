@@ -5493,7 +5493,18 @@
       "brandsFoot": "‘—’ = 그 지표의 비교 경쟁사(상위 4)에 없는 브랜드 · 인용 점유율은 인용 기준 경쟁사가 따로 있습니다(기간을 고르면 경쟁사 값은 전체 답변 기준) · 우호도 · 인용 점유율은 경쟁사 증감을 제공하지 않습니다",
       "ownBrandNoValue": "{kpi}: 이 브랜드의 값이 없습니다 · 인용 점유율은 공식(HMG) 3사 합만 있습니다",
       "brandsFootOwnBrands": "당사 아래 브랜드 행 = 같은 답변에서 브랜드마다 경쟁사와 같은 방식으로 센 값 · 증감과 인용 점유율은 없습니다",
-      "marketsTitle": "시장별 현황"
+      "marketsTitle": "시장별 현황",
+      "markets": {
+        "layout": "표 보기",
+        "layoutRegion": "권역별",
+        "layoutFlat": "국가 전체",
+        "hint": "열 머리를 누르면 지도와 정렬이 그 지표로 바뀝니다 · 다시 누르면 정렬이 뒤집힙니다",
+        "colRegion": "권역 / 국가",
+        "colCountry": "국가",
+        "colAnswers": "답변",
+        "headTip": "{name} — 누르면 지도 · 정렬",
+        "countries": "{n}개국"
+      }
     },
     "prompts": {
       "subtitle": "현재 추적 중인 글로벌 프롬프트를 열람합니다.",

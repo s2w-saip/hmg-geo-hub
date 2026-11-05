@@ -48,6 +48,7 @@ import type {
 } from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
 import { periodChipText } from "@/lib/period-chip-text";
 import { GeoOverview } from "@/app/[locale]/(dash)/dashboard/_components/geo-overview";
+import { marketViewOf } from "@/app/[locale]/(dash)/dashboard/_components/geo-market-table";
 import { SUPPORT } from "@/lib/support-contact";
 
 /** overview/brand-matrix with the old labels of the parts that failed transiently (absent = none failed). */
@@ -102,7 +103,7 @@ export function RnOverviewBody({
       </Suspense>
       {geo ? (
         <Suspense fallback={<CardSkeleton rows={8} />}>
-          <MarketMatrix geo={geo} />
+          <MarketMatrix geo={geo} qs={qs} />
         </Suspense>
       ) : null}
     </>
@@ -456,9 +457,10 @@ function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrix
 
 // ─── 시장별 현황 (권역 › 국가 × KPIs) ───────────────────────────────────────
 
-function MarketMatrix({ geo: geoP }: { geo: Promise<OverviewGeoView> }) {
+function MarketMatrix({ geo: geoP, qs }: { geo: Promise<OverviewGeoView>; qs: string }) {
   const geo = use(geoP).geo;
   const t = useTranslations("renewal.overview");
   if (!geo) return null;
-  return <GeoOverview geo={geo} title={t("marketsTitle")} renewal />;
+  // the table's view as the URL asks (a reload or a copied link opens the same table)
+  return <GeoOverview geo={geo} title={t("marketsTitle")} renewal initialMarketView={marketViewOf(new URLSearchParams(qs))} />;
 }
