@@ -394,7 +394,7 @@ class Screens(unittest.IsolatedAsyncioTestCase):
 
     async def test_transient_failures_degrade(self):
         with mock.patch("bff.api.get", await _failing_get(503)):
-            self.assertEqual(await self.build("mention/rn-shell"), {"measured": False, "degraded": True, "ownBrands": [], "ownSum": [], "drawer": []})
+            self.assertEqual(await self.build("mention/rn-shell"), {"measured": False, "degraded": True, "ownBrands": [], "ownSum": [], "drawer": [], "favStanding": None})
             value = await self.build("mention/rn-rate-value")
             self.assertTrue(value["degraded"])
             self.assertIsNone(value["exposure"]["pct"])
@@ -1087,3 +1087,60 @@ class BumpZeroIsGold(unittest.TestCase):
         self.assertEqual(d["x"], ["2026-09-07", "2026-09-14", "2026-09-21"])
         tesla = next(s for s in d["series"] if s["key"] == "Tesla")
         self.assertEqual((tesla["mentions"], tesla["ranks"]), ([30, None, 0], [3, None, 3]))
+
+
+class RedesignValues(unittest.IsolatedAsyncioTestCase):
+    """Global Mention 개편 (2026-11-05, docs/handoff/global-mention-redesign.md): the values the new page adds. Each is the
+    page's own definition read again under an existing filter axis, or values the screens already send lined up."""
+
+    def test_gap_series_reads_plus_as_ahead(self):
+        self.assertEqual(rn.gap_series([40.0, 38.5, None], [10.0, 40.0, 5.0]), [30.0, -1.5, None])
+        # first-rank: smaller is mentioned first, so a rival at 3.9 behind 당사's 2.4 is +1.5
+        self.assertEqual(rn.gap_series([2.4, 3.0], [3.9, 2.5], lower_is_better=True), [1.5, -0.5])
+
+    def test_fav_standing_ranks_the_perspective_among_rivals(self):
+        def row(brand, pos, tracked=False):
+            return {"brand": brand, "isTracked": tracked, "sibling": False, "sentimentPct": None if pos is None else {"positive": pos}}
+        drawer = [row("HMG", 54.0, True), row("Toyota", 72.0), row("BMW", 60.0), row("Tesla", 50.0), row("Rivian", None), row("Kia", 53.0, True)]
+        self.assertEqual(rn.fav_standing(drawer), {"rank": 3, "n": 4})
+        self.assertIsNone(rn.fav_standing([row("Toyota", 70.0)]))
+
+    async def build(self, name: str, query: str = "") -> dict:
+        return await screens.build(name, QueryParams(query))
+
+    async def test_presence_split_reads_each_presence(self):
+        seen: list = []
+        real = rn._md().load_kpi_hero_sub_kpis
+
+        async def spy(filters, ctx, metric):
+            seen.append((tuple(filters.get("brandPresence") or ()), metric))
+            return await real(filters, ctx, metric)
+
+        with mock.patch("bff.api.get", await _failing_get(503)), mock.patch.object(rn._md(), "load_kpi_hero_sub_kpis", spy):
+            out = await self.build("mention/rn-presence-split")
+        self.assertFalse(out["applied"])
+        self.assertEqual(set(out["presences"]), {"unbranded", "branded"})
+        self.assertEqual({p for p, _ in seen}, {("unbranded",), ("branded",)})
+        self.assertEqual({m for _, m in seen}, set(rn.HERO_METRICS))
+        # a failed read leaves the values empty, not made up
+        self.assertIsNone(out["presences"]["unbranded"]["own"]["exposure"])
+        self.assertEqual(out["presences"]["branded"]["brands"], {})
+
+    async def test_presence_split_says_when_the_page_picks_a_presence(self):
+        self.assertEqual(await self.build("mention/rn-presence-split", "brandPresence=branded"), {"applied": True, "presences": {}})
+
+    async def test_engine_extra_reads_each_engine(self):
+        seen: list = []
+        real = rn._md().load_first_position
+
+        async def spy(filters, ctx, **kw):
+            seen.append(tuple(filters.get("engine") or ()))
+            return await real(filters, ctx, **kw)
+
+        with mock.patch("bff.api.get", await _failing_get(503)), mock.patch.object(rn._md(), "load_first_position", spy):
+            out = await self.build("mention/rn-engine-extra", "engine=chatgpt&engine=gemini")
+        self.assertEqual([e["engine"] for e in out["engines"]], ["chatgpt", "gemini"])
+        self.assertEqual(sorted(seen), [("chatgpt",), ("gemini",)])
+        # a failed read leaves the values empty (no number made up) and marks the section degraded
+        self.assertTrue(out["degraded"])
+        self.assertTrue(all((e["favorability"] or {}).get("pct") is None and e["firstRank"] is None for e in out["engines"]))

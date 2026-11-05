@@ -951,7 +951,7 @@ def shell_payload(data: Any, degraded: bool, types_by_brand: Any, own_sum: list[
     rows (the treemap, the boards); a ranking row past them carries its own drawer row (ranking_payload)."""
     measured = bool(data) and len(data["brands"]) > 0
     if not measured:
-        return {"measured": False, "degraded": bool(degraded), "ownBrands": [], "ownSum": [], "drawer": []}
+        return {"measured": False, "degraded": bool(degraded), "ownBrands": [], "ownSum": [], "drawer": [], "favStanding": None}
     brands = data["brands"]
     tb_by: dict = {}
     if types_by_brand:
@@ -965,7 +965,7 @@ def shell_payload(data: Any, degraded: bool, types_by_brand: Any, own_sum: list[
         seen.add(row["brand"])
         drawer.append(_drawer_row(row, i + 1, tb_by.get(row["brand"])))
     return {"measured": True, "degraded": bool(degraded), "ownBrands": [b["brand"] for b in brands if b["isTracked"]],
-            "ownSum": own_sum or [], "drawer": drawer}
+            "ownSum": own_sum or [], "drawer": drawer, "favStanding": fav_standing(drawer)}
 
 
 def compare_payload(brands: list[dict], trend: Any) -> dict:
@@ -1103,7 +1103,7 @@ def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any
         "standing": standing,
         "trend": {"missing": hero["trendMissing"], "x": base["x"], "own": base["own"],
                   "ownNum": [c[0] for c in counts], "ownDen": [c[1] for c in counts],
-                  "competitors": uniq, "values": values},
+                  "competitors": uniq, "values": values, "gaps": [gap_series(base["own"], v) for v in values]},
         "board": {"rows": board_rows, "axis": b["axis"], "measuredCycles": b["measuredCycles"],
                   "barMax": _max_from_one(r["pct"] if r["pct"] is not None else 0 for r in rows)},
     }
@@ -1215,6 +1215,7 @@ def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded:
         "track": {"lo": min(pts), "hi": max(pts)} if pts else None,
         "covered": covered,
         "series": series,
+        "gaps": [gap_series(hero["series"], s, lower_is_better=True) for s in series],
         "hasValue": [_has_value(s) for s in series],
         "options": options,
         "ticks": ticks,
@@ -1565,3 +1566,106 @@ async def rn_ranking(q) -> dict:
     data, trend, prev_brands = await asyncio.gather(md.load_mentions_live(filters, ctx, pin_top=True), md.load_brand_share_lines(filters, ctx),
                                                     md.load_prev_period_brands(filters, ctx))
     return ranking_payload(data, trend, prev_brands)
+
+
+# ── Global Mention 개편 (2026-11-05, docs/handoff/global-mention-redesign.md): values the new page shows that no screen
+# sent yet. Each reads the page's own definitions again under an existing filter axis (engine · brandPresence) or
+# lines up values the other screens already send; 분석팀 리뷰 필요 (the decision record of that file).
+
+PRESENCES = ("unbranded", "branded")
+
+
+def gap_series(own: list, values: list, lower_is_better: bool = False) -> list:
+    """The comparison chart's 격차 per round: 당사 − rival (first-rank: rival − 당사, smaller = mentioned first), so +
+    always means 당사 is ahead; None where either has no value."""
+    return [None if o is None or v is None else (delta_pp(v, o) if lower_is_better else delta_pp(o, v)) for o, v in zip(own, values, strict=False)]
+
+
+def fav_standing(drawer: list[dict]) -> dict | None:
+    """Where 당사's positive share stands among the brands of the drawer rows (the first BRANDS_TOP body brands): the
+    competitors with a sentiment (tracked rows left out, as the boards do) ranked by their positive share, 당사 = the
+    perspective row. None without a 당사 share."""
+    own = next((r for r in drawer if r["isTracked"] and r.get("sentimentPct") and not r.get("sibling")), None)
+    perspective = next((r for r in drawer if r["brand"] == "HMG" and r.get("sentimentPct")), None) or own
+    if perspective is None:
+        return None
+    mine = perspective["sentimentPct"]["positive"]
+    rivals = [r["sentimentPct"]["positive"] for r in drawer if not r["isTracked"] and r.get("sentimentPct")]
+    return {"rank": 1 + sum(1 for v in rivals if v > mine), "n": 1 + len(rivals)}
+
+
+def engine_extra_payload(engines: list[str], reads: dict, degraded: bool) -> dict:
+    """엔진별 우호도 · 우선 노출도: per engine, the favorability hero and the first-rank hero of the page built from the
+    page's reads under that engine (`reads[engine]` = sub · prev · engine trend · first position · period)."""
+    rows = []
+    for e in engines:
+        r = reads.get(e) or {}
+        fav = favor_hero(r.get("sub"), r.get("prev"), r.get("engine"), r.get("period")) if r.get("sub") is not None else None
+        rank = rank_hero(_mv().overlay_first_position_values(r.get("fp"), None), r.get("period")) if r.get("fp") is not None else None
+        rows.append({
+            "engine": e,
+            "favorability": None if fav is None else {"pct": fav["positivePct"], "delta": fav["positiveDelta"],
+                                                       "x": [p["key"] for p in fav["points"]], "series": [p["positive"] for p in fav["points"]]},
+            "firstRank": None if rank is None else {"avg": rank["avgPosition"], "delta": rank["delta"], "x": rank["axis"], "series": rank["series"]},
+        })
+    return {"engines": rows, "degraded": bool(degraded)}
+
+
+def presence_split_payload(reads: dict) -> dict:
+    """브랜드 미포함 · 포함 질문 (the catalog's brand-presence label, the filter panel's '브랜드 포함 여부'): 당사's four KPIs and
+    each competitor's exposure · share · first-rank under each presence, from the page's reads under that filter."""
+    mv = _mv()
+    out = {}
+    for p in PRESENCES:
+        r = reads.get(p)
+        if r is None:
+            out[p] = None
+            continue
+        subs, fp, brands = r["subs"], r["fp"], r["brands"] or []
+        exp = mv.kpi_hero(subs.get("exposure"), "exposure")
+        own = {"exposure": exp["pct"], "answers": exp["denominator"], "sov": mv.kpi_hero(subs.get("sov"), "sov")["pct"],
+               "favorability": mv.favorability_hero(subs.get("favorability"))["positivePct"],
+               "firstRank": mv.first_rank_hero(fp).get("avgPosition") if fp is not None else None}
+        ek, sk = mv.overview_key_of("exposure"), mv.overview_key_of("sov")
+        rivals = {}
+        for b in brands[:BRANDS_TOP]:
+            if b["isTracked"] or b["brand"] in rivals:
+                continue
+            rivals[b["brand"]] = {"exposure": competitor_value_of(b, ek), "sov": competitor_value_of(b, sk), "firstRank": b.get("avgPosition")}
+        out[p] = {"own": own, "brands": rivals}
+    return {"applied": False, "presences": out}
+
+
+@screen("mention/rn-engine-extra")
+async def rn_engine_extra(q) -> dict:
+    _, filters, ctx = _begin(q)
+    md = _md()
+    trend = await md.load_engine_kpi_trend(filters, ctx)
+    engines = list(filters.get("engine") or [b["engine"] for b in _mv().engine_competitor_bars(trend, "exposure")])
+
+    async def one(e: str) -> dict:
+        f = {**filters, "engine": [e]}
+        sub, prev, eng, fp, period = await asyncio.gather(
+            md.load_kpi_hero_sub_kpis(f, ctx, "favorability"), md.load_kpi_hero_sub_kpis_prev(f, ctx, "favorability"),
+            md.load_engine_kpi_trend(f, ctx), md.load_first_position(f, ctx, pin_top=True), md.load_period_compare(f, ctx))
+        return {"sub": sub, "prev": prev, "engine": eng, "fp": fp, "period": period}
+
+    got = await asyncio.gather(*(one(e) for e in engines))
+    return engine_extra_payload(engines, dict(zip(engines, got, strict=True)), md.was_kpi_tab_degraded("hero"))
+
+
+@screen("mention/rn-presence-split")
+async def rn_presence_split(q) -> dict:
+    _, filters, ctx = _begin(q)
+    # the page already picks a presence: the split would only restate it
+    if filters.get("brandPresence"):
+        return {"applied": True, "presences": {}}
+    md = _md()
+
+    async def one(p: str) -> dict:
+        f = {**filters, "brandPresence": [p]}
+        subs, fp, brands = await asyncio.gather(_subs(md, f, ctx), md.load_first_position(f, ctx, pin_top=True), _body_brands(md, f, ctx))
+        return {"subs": subs, "fp": fp, "brands": brands}
+
+    got = await asyncio.gather(*(one(p) for p in PRESENCES))
+    return presence_split_payload(dict(zip(PRESENCES, got, strict=True)))
