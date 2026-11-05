@@ -531,6 +531,43 @@ class GeoRivalCitation(unittest.TestCase):
         self.assertIsNone(ov.geo_metrics({}, rival)["citationShare"]["rival"])
 
 
+class GeoBrandedShare(unittest.TestCase):
+    """2026-11-05 D-12 step 2: the renewal market table shows each market's share of answers from branded prompts
+    (the prompt mix differs by country: 45.7 ~ 88.1 % on 10-05), read with the markets in one /v1/geo call. Only the
+    renewal page asks (ctx.view=renewal), and not under a 브랜드 포함 여부 pick, where the share would restate it."""
+
+    @staticmethod
+    def geo_row(code, answers, branded):
+        own = {"visibility": {"num": 1, "den": answers}, "share_of_voice": {"num": 1, "den": 10}}
+        return {"code": code, "answers": answers, "own": own, "rank": {"our": 1, "field_size": 2}, "top_own_brand": None,
+                "top_rival": None, **({"branded_answers": branded} if branded is not None else {})}
+
+    def body(self, with_branded: bool):
+        b = (lambda n: n) if with_branded else (lambda n: None)
+        jp, kr = self.geo_row("JP", 569, b(298)), self.geo_row("KR", 1234, b(742))
+        region = {**self.geo_row("Asia", 1803, b(1040)), "region_id": "Asia", "region_label": "Asia", "country_count": 2,
+                  "countries": [jp, kr]}
+        return {"data": {"markets": [region], "pending": [], "own_label": "HMG"}, "meta": META}
+
+    def read(self, qs: str, with_branded: bool):
+        router = Router({"kpi/summary": summary(), "geo": self.body(with_branded)})
+        return screen("overview/geo", qs, router), dict(next(q for p, q in router.calls if p == "geo"))
+
+    def test_the_renewal_page_asks_and_gets_each_markets_share(self):
+        out, q = self.read("ctx.view=renewal", True)
+        self.assertEqual(q.get("branded_share"), "true")
+        asia = out["geo"]["markets"][0]
+        self.assertEqual(asia["brandedShare"], 57.7)
+        self.assertEqual([c["brandedShare"] for c in asia["countries"]], [52.4, 60.1])
+
+    def test_the_original_page_and_a_brand_presence_pick_do_not_ask(self):
+        for qs in ("", "ctx.view=renewal&brandPresence=unbranded"):
+            with self.subTest(qs=qs):
+                out, q = self.read(qs, False)
+                self.assertNotIn("branded_share", q)
+                self.assertNotIn("brandedShare", out["geo"]["markets"][0])
+
+
 class CompareLabels(unittest.TestCase):
     """Renewal audit 3-4 · 3-5 (2026-10-31). The renewal Overview header named compare[0]'s label for every card, though
     a window compare counts its rounds per metric (현재 3회차 / 직전 0회차 on one card, 2 / 1 on the next); the website

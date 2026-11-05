@@ -104,6 +104,9 @@ interface GeoRowView extends MarketCompetition {
   rivals: Record<OverviewKpiKey, { name: string; value: number | null } | null>;
   /** Tooltip shows the lead brand line (it is not the own label). */
   showLead: boolean;
+  /** The renewal table's 브랜드 포함 column (D-12): the % of the market's answers from branded prompts; absent when the
+   * screen was not asked for it or the filters pick branded / unbranded prompts. */
+  brandedShare?: number | null;
 }
 
 export interface GeoCountryView extends GeoRowView {

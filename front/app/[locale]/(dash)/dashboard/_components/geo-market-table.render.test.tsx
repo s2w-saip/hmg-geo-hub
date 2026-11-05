@@ -91,6 +91,20 @@ describe("renewal market table", () => {
   });
 });
 
+describe("renewal market table — 브랜드 포함 (step 2)", () => {
+  it("shows each market's branded-answer share when the screen sent it, no column otherwise", () => {
+    const withMix: GeoView = { ...GEO, markets: GEO.markets.map((m) => ({ ...m, brandedShare: m.region === "Asia" ? 57.7 : 57.5, countries: m.countries.map((c) => ({ ...c, brandedShare: c.code === "JP" ? 52.4 : 60.1 })) })) };
+    const html = render(<GeoOverview geo={withMix} renewal initialMarketView={{ ...DEFAULT_MARKET_VIEW, layout: "flat" }} />);
+    expect(html).toContain(M.colMix);
+    expect(html).toContain(`title="${M.colMixTip}"`);
+    const jp = html.slice(html.indexOf('data-geo-country="JP"'), html.indexOf("</tr>", html.indexOf('data-geo-country="JP"')));
+    expect(jp).toMatch(/data-rn-mkt-mix=""[^>]*>52\.4%</);
+    const plain = render(<GeoOverview geo={GEO} renewal />);
+    expect(plain).not.toContain(M.colMix);
+    expect(plain).not.toContain("data-rn-mkt-mix");
+  });
+});
+
 describe("market view helpers", () => {
   it("the URL round-trips the view and leaves the defaults out", () => {
     const view: MarketView = { metric: "sentiment", dir: "worst", layout: "flat" };

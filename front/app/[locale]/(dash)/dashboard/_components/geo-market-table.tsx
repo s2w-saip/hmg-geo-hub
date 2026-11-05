@@ -6,6 +6,7 @@
 // merged into them), the same head again flips the sort. Only the picked column is drawn: its bar starts at zero (a
 // rate's own value, a rank 1번째 = full), so a small gap stays small. 권역별 keeps the region tree (regions start
 // closed); 국가 전체 lists every country in the sort order. The view lives in the URL (?mkt · mktDir · mktView).
+// 브랜드 포함 (step 2): each market's share of answers from branded prompts, so two markets are read with their prompt mix.
 // The original /dashboard keeps its own table (geo-overview.tsx).
 
 import { Fragment, type ReactNode } from "react";
@@ -109,6 +110,8 @@ export function GeoMarketTable({
   const tGeo = useTranslations("dashboard.overview.geo");
   const fmt = (k: OverviewKpiKey, v: number | null) => (v == null ? "—" : k === "position" ? tUnit("position", { n: v.toFixed(1) }) : `${v.toFixed(1)}%`);
   const flat = view.layout === "flat";
+  // the 브랜드 포함 column when the screen sent it (not under a 브랜드 포함 여부 pick)
+  const mix = markets.some((m) => m.brandedShare !== undefined);
   const rows = flat ? sortMarketRows(markets.flatMap((m) => m.countries.map((c) => ({ ...c, region: m.region }))), view) : null;
 
   const cells = (u: GeoRegionView | GeoCountryView, region: boolean) => {
@@ -116,6 +119,7 @@ export function GeoMarketTable({
     return (
       <>
         <td className="border-b border-rn-line px-2 text-right text-rn-muted tabular-nums">{u.answers != null ? u.answers.toLocaleString("ko-KR") : "—"}</td>
+        {mix ? <td data-rn-mkt-mix="" className="border-b border-rn-line px-2 text-right text-rn-muted tabular-nums">{u.brandedShare != null ? `${u.brandedShare.toFixed(1)}%` : "—"}</td> : null}
         {OVERVIEW_KPI_KEYS.map((k) => {
           const v = u.values[k];
           const picked = k === view.metric;
@@ -172,6 +176,7 @@ export function GeoMarketTable({
       <colgroup>
         <col className={flat ? "w-[118px]" : "w-[126px]"} />
         <col className="w-[50px]" />
+        {mix ? <col className="w-[64px]" /> : null}
         {OVERVIEW_KPI_KEYS.map((k) => (
           <col key={k} className={k === view.metric ? "w-[98px]" : "w-[58px]"} />
         ))}
@@ -181,6 +186,11 @@ export function GeoMarketTable({
         <tr className="text-rn-11 text-rn-ink-2">
           <th scope="col" className="h-[30px] border-b border-rn-line bg-rn-head pl-3 text-left font-semibold">{flat ? t("colCountry") : t("colRegion")}</th>
           <th scope="col" className="border-b border-rn-line bg-rn-head px-2 text-right font-semibold">{t("colAnswers")}</th>
+          {mix ? (
+            <th scope="col" title={t("colMixTip")} className="border-b border-rn-line bg-rn-head px-2 text-right font-semibold whitespace-nowrap">
+              {t("colMix")}
+            </th>
+          ) : null}
           {OVERVIEW_KPI_KEYS.map((k) => {
             const picked = k === view.metric;
             return (

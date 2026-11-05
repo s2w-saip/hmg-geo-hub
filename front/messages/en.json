@@ -5502,6 +5502,8 @@
         "colRegion": "Region / country",
         "colCountry": "Country",
         "colAnswers": "Answers",
+        "colMix": "Branded",
+        "colMixTip": "Share of the market's answers from branded prompts — the prompt mix differs by country, so read it when comparing values",
         "headTip": "{name} — press to map and sort",
         "countries": "{n} countries"
       }

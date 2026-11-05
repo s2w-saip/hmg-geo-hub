@@ -277,8 +277,8 @@ async def fetch_engine_rows(common: dict, surface: str) -> dict:
     return await api.get("kpi/engines", {**common, **extra})
 
 
-async def fetch_geo(common: dict) -> dict:
-    return await api.get("geo", {**common, "card": True})
+async def fetch_geo(common: dict, branded_share: bool = False) -> dict:
+    return await api.get("geo", {**common, "card": True, **({"branded_share": True} if branded_share else {})})
 
 
 async def load_live_trend(common: dict, surface: str, metrics, unit: str) -> dict | None:
@@ -524,6 +524,9 @@ def market_of(row: dict) -> dict:
         "metrics": geo_metrics(row["own"], top_rival),
         "answers": row["answers"],
     }
+    # the renewal table's 브랜드 포함 column (D-12): the share of the market's answers from branded prompts, one decimal
+    if "branded_answers" in row:
+        out["brandedShare"] = pct1_or_null({"num": row["branded_answers"], "den": row["answers"]})
     if not (isinstance(sov, dict) and is_num(sov.get("den")) and sov["den"] > 0):
         out["noMentions"] = True
     return out
@@ -924,11 +927,15 @@ async def geo(q) -> dict:
     transient failure of the summary or /v1/geo -> degraded (old label standardGeoCompetition). A failed summary
     is not an empty one: it went blank with no note when Gold's 15 s limit cut it (2026-11-02)."""
     ctx, sp = split_context(q)
-    common = common_params(global_filters(sp), "global")
+    filters = global_filters(sp)
+    common = common_params(filters, "global")
+    # The renewal table (ctx.view=renewal) also shows each market's branded-answer share (D-12), unless the filters
+    # already pick branded or unbranded prompts (the share would only restate the pick).
+    branded_share = ctx.get("view") == "renewal" and not filters.get("brandPresence")
     # The markets read leaves with the summary instead of after it (1.9 s later); its outcome counts only
     # when the summary has answers.
     summary, markets = await asyncio.gather(or_none_on_transient(fetch_dashboard_summary(common, "global")),
-                                            fetch_geo(common), return_exceptions=True)
+                                            fetch_geo(common, branded_share), return_exceptions=True)
     if isinstance(summary, BaseException):
         raise summary
     if summary is None:

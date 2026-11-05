@@ -5502,6 +5502,8 @@
         "colRegion": "권역 / 국가",
         "colCountry": "국가",
         "colAnswers": "답변",
+        "colMix": "브랜드 포함",
+        "colMixTip": "그 시장 답변 중 브랜드 포함 질문의 답변 비중 — 나라마다 질문 구성이 달라, 값끼리 비교할 때 함께 봅니다",
         "headTip": "{name} — 누르면 지도 · 정렬",
         "countries": "{n}개국"
       }

@@ -11,8 +11,24 @@ from bff.gold_reader.metrics import COUNTS, TYPES, brand_rows, counts, metric_va
 SENTIMENTS = (("positive", "s_pos"), ("neutral", "s_neu"), ("negative", "s_neg"), ("mixed", "s_mix"))
 
 
+async def branded_answers(ctx: Context) -> dict[int, int]:
+    """?branded_share (the renewal market table, 2026-11-05 D-12): per country, the answers of the prompts the
+    brand_presence=branded pick selects (Context.create's catalog rule: a catalog row of the perspective's brands or
+    the shared rows, coded branded), within the read's own population (its picks and filters). Gold's labels, counted
+    as the cards count answers."""
+    b = SQL()
+    keys = [r["prompt_key"] for r in await ctx.conn.fetch(f"""SELECT DISTINCT ce.prompt_key FROM gold.catalog_entry ce
+        WHERE ce.build_id=ANY({b.bind(ctx.builds.get('fact', []), 'bigint[]')}) AND (ce.brand_bit & {b.bind(ctx.bits | 8)})<>0
+        AND ce.presence_key IN (SELECT taxon_key FROM gold.dim_taxon WHERE lower(code)='branded')""", *b.args)]
+    b = SQL()
+    where = ctx.predicate(b, population="mentions", perspective=True) + f" AND f.prompt_key=ANY({b.bind(keys, 'int[]')})"
+    return {r["geo_key"]: r["answers"] for r in await ctx.conn.fetch(f"""SELECT f.geo_key,coalesce(sum(f.answers),0)::bigint AS answers
+        FROM gold.kpi_cell f WHERE {where} GROUP BY f.geo_key""", *b.args)}
+
+
 async def geo(ctx: Context) -> dict:
     cs = await counts(ctx, group="country", prompts=False)
+    branded = await branded_answers(ctx) if flag(ctx.q, "branded_share") else None
     citations = {r["geo_key"]: r for r in await counts(ctx, group="country", family="citations", prompts=False)}
     for c in cs:
         c.update({k: v for k, v in citations.get(c["geo_key"], {}).items() if k.startswith("cit_")})
@@ -47,6 +63,8 @@ async def geo(ctx: Context) -> dict:
                "rank": {"our": 1 + sum(r["mentions"] > c["own_mentions"] for r in rivals), "field_size": len(rivals) + 1},
                "top_own_brand": {"brand": ours[0]["name"], "share_of_voice": ratio(ours[0]["mentions"], c["total_mentions"])} if ours else None,
                "top_rival": rival_view(rivals[0], c, rival_cited[(c["geo_key"], rivals[0]["name"])]) if rivals else None}
+        if branded is not None:
+            row["branded_answers"] = branded.get(c["geo_key"], 0)
         regions[dim["area"] or ""].append((row, c))
     markets = []
     region_totals = {}
@@ -56,6 +74,7 @@ async def geo(ctx: Context) -> dict:
         countries = [r for r, _ in rows]
         markets.append({"region_id": region, "region_label": region, "country_count": len(rows),
                         "answers": total["answers"], "own": row_metrics(total),
+                        **({"branded_answers": sum(r["branded_answers"] for r in countries)} if branded is not None else {}),
                         "rank": None,
                         "top_own_brand": None, "top_rival": None, "countries": countries})
     # Region ranking needs region-wide brand sums, not averages of country ranks.

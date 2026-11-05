@@ -385,6 +385,37 @@ class BrandsSplitOwn(unittest.TestCase):
                 self.assertNotIn("own_brand_code", own[0])
 
 
+class GeoBrandedAnswers(unittest.TestCase):
+    """advanced.branded_answers (?branded_share, 2026-11-05 D-12): the answers of branded prompts per country, the
+    prompts the brand_presence=branded pick selects (a catalog row of the perspective's brands or the shared rows),
+    counted on the read's own cells."""
+
+    class Conn:
+        def __init__(self):
+            self.sql = []
+
+        async def fetch(self, sql, *args):
+            self.sql.append((sql, args))
+            if "FROM gold.catalog_entry" in sql:
+                return [{"prompt_key": 7}, {"prompt_key": 9}]
+            if "FROM gold.kpi_cell" in sql:
+                return [{"geo_key": 1, "answers": 298}, {"geo_key": 2, "answers": 742}]
+            raise AssertionError(sql[:80])
+
+    def test_branded_prompts_of_the_perspective_then_their_answers_per_country(self):
+        from bff.gold_reader import advanced
+        conn = self.Conn()
+        ctx = context(conn, "surface=global&card=true")
+        self.assertEqual(asyncio.run(advanced.branded_answers(ctx)), {1: 298, 2: 742})
+        (catalog, cargs), (cells, kargs) = conn.sql
+        self.assertIn("lower(code)='branded'", catalog)
+        self.assertIn("ce.brand_bit &", catalog)
+        self.assertIn(15, cargs)  # the perspective's bits (HMG 7) | the shared rows (8)
+        self.assertIn("f.prompt_key=ANY(", cells)
+        self.assertIn([7, 9], kargs)
+        self.assertIn("f.perspective_key=", cells)
+
+
 def geo_row(country, lang, **flags) -> dict:
     return {"bgrp": 1, "country": country, "kind": "market", "area": "EU", "lang": lang, "engine": "chatgpt",
             "is_default": True, "kept": True, "orphan": False, **flags}

@@ -170,7 +170,8 @@ function bodyReads(sp: SP, locale: string, showGeo: boolean) {
     matrix: handled(onTransient(screenGet<RnBrandMatrixRead>("overview/brand-matrix", q), "failed")),
     geo: showGeo
       ? handled(
-          screenGet<OverviewGeoView>("overview/geo", { ...q, "ctx.locale": locale }).catch((e: unknown) =>
+          // ctx.view=renewal: the market table's 브랜드 포함 column too (D-12)
+          screenGet<OverviewGeoView>("overview/geo", { ...q, "ctx.locale": locale, "ctx.view": "renewal" }).catch((e: unknown) =>
             isTransientScreenError(e) ? { geo: null, degraded: true } : throwForPage(e, locale),
           ),
         )

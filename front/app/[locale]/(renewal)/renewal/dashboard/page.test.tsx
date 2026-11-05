@@ -112,7 +112,8 @@ describe("renewal overview page", () => {
     for (const c of st.calls) counts[c.name] = (counts[c.name] ?? 0) + 1;
     expect(counts).toEqual({ "overview/as-of": 1, "overview/filters": 1, ...Object.fromEntries(BODY_SCREENS.map((n) => [n, 1])) });
     const query = (name: string) => st.calls.find((c) => c.name === name)!.query;
-    expect(query("overview/geo")).toEqual({ geography: "US", "ctx.locale": "ko" });
+    // ctx.view=renewal: the market table's 브랜드 포함 column too (D-12 step 2)
+    expect(query("overview/geo")).toEqual({ geography: "US", "ctx.locale": "ko", "ctx.view": "renewal" });
     const body = got.get("RnOverviewBody")!;
     expect(body.cards).toEqual([{ key: "visibility" }]);
     const deferred = body.deferred as Record<string, Promise<unknown>>;
