@@ -37,6 +37,7 @@ import {
   type RnCitationInput,
   type RnCitationVm,
   type RnCitationWebsite,
+  type RnMatrixView,
   type RnShareTile,
 } from "./citation-input";
 import { CitationCardActions, CitationProvider, DIV_LEGEND, DIV_LESS, DIV_MORE, divBg, engineLabel, useCatLabel, useCitation, type CitationCtx, type MatrixAxis } from "./citation-context";
@@ -130,9 +131,13 @@ function Measured({ input, live }: { input: RnCitationInput; live: CitationsLive
   return (
     <CitationProvider value={ctx}>
       <div className="@container/rnpage flex flex-col gap-2.5">
-        <Suspense fallback={<SummarySkeleton />}>
-          <Summary />
-        </Suspense>
+        {/* Global (2026-11-05 지표 정리): no 이번 회차 요약 — its sentence and findings restated the tiles, 출처 구성 and the
+            matrix; the KPI card below is the page's navy card */}
+        {input.global ? null : (
+          <Suspense fallback={<SummarySkeleton />}>
+            <Summary />
+          </Suspense>
+        )}
         {input.website ? (
           // The website page (2026-10-30): per prompt first (the URL funnel, then the 공식(당사) URL prompt lists),
           // then per citation (the shares and the sections below)
@@ -352,12 +357,21 @@ function WebsiteHeadline({ website, hmg, dealer }: { website: Promise<RnCitation
   );
 }
 
-// ── 개요: four tiles + totals + the month line ───────────────────────────────
+// ── 개요: four tiles + totals + the month line (Global: the navy KPI card + the month line) ──────────────
 
 function Overview() {
   const { input, live } = useCitation();
   const t = useTranslations("renewal.citation");
   const isPeriod = Boolean(input.period);
+  if (input.global)
+    return (
+      <>
+        <HeroKpis />
+        <Suspense fallback={null}>
+          <MonthLine />
+        </Suspense>
+      </>
+    );
   return (
     <>
       <div className="grid grid-cols-1 gap-2.5 @min-[520px]/rnpage:grid-cols-2 @min-[960px]/rnpage:grid-cols-4" role="group" aria-label={t("lens.label")}>
@@ -511,6 +525,146 @@ function PromptTile({ kind }: { kind: "owned" | "uncited" }) {
   );
 }
 
+// ── 인용 KPI (Global): the page's one navy card ─────────────────────────────
+
+// one cell of the navy card (the Overview KPI card's): white values, a hairline between cells
+const HERO_CELL = "relative flex min-w-0 flex-col gap-[7px] border-l border-white/14 px-4 py-1 first:border-l-0";
+const HERO_VALUE = "text-rn-34 font-bold tracking-[-0.03em] whitespace-nowrap text-rn-on-dark tabular-nums";
+const HERO_UNIT = "ml-px text-[14px] font-semibold text-rn-on-dark/80";
+
+function HeroCellSkeleton() {
+  return (
+    <div className={HERO_CELL}>
+      <RnSkeleton className="h-4 w-32" />
+      <RnSkeleton className="h-9 w-24" />
+      <RnSkeleton className="h-5 w-16" />
+    </div>
+  );
+}
+
+/** The Global KPIs (2026-11-05 지표 정리): the two shares and the 공식(당사) URL prompt split on the navy card, with the
+ * basis chip of the chip row it replaces (the totals moved to the domain table's chip). No tile line: the 출처 구성
+ * rows draw the same rounds. */
+function HeroKpis() {
+  const { input, live } = useCitation();
+  const t = useTranslations("renewal.citation.lens");
+  return (
+    <RnCard tone="hero" aria-label={t("label")} data-rn-kpis="">
+      <RnCardHead title={t("label")} chips={<RnBasisChip>{input.period ? t("basisPeriod") : t("basisSnapshot", { date: live.asOf?.slice(0, 10) ?? "—" })}</RnBasisChip>} />
+      <div className="grid grid-cols-3 px-2.5 pb-4 [.rn-dense_&]:pb-3">
+        <Suspense fallback={<HeroCellSkeleton />}>
+          <HeroShare kind="hmg" />
+        </Suspense>
+        <Suspense fallback={<HeroCellSkeleton />}>
+          <HeroShare kind="dealer" />
+        </Suspense>
+        <Suspense fallback={<HeroCellSkeleton />}>
+          <HeroPrompts />
+        </Suspense>
+      </div>
+    </RnCard>
+  );
+}
+
+/** A share on the navy card: value, Δ chip + basis; it lights its category across the page as the tile did. */
+function HeroShare({ kind }: { kind: "hmg" | "dealer" }) {
+  const { hover, lit } = useCitation();
+  const t = useTranslations("renewal.citation.lens");
+  const basis = useDeltaBasis();
+  const { lens: l } = useModel();
+  const tile = l[kind];
+  const litKey = kind === "hmg" ? OFFICIAL_HMG_CATEGORY : DEALER_CATEGORY;
+  const name = t(`${kind}.name`);
+  const b = basis(tile.delta);
+  return (
+    <div
+      className={cx(HERO_CELL, lit === litKey && "shadow-[inset_0_-3px_0_var(--color-rn-sky)]")}
+      data-rn-b={litKey}
+      data-rn-tile={kind}
+      onPointerEnter={() => hover(litKey)}
+      onPointerLeave={() => hover(null)}
+    >
+      <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-on-dark/86">
+        {name}
+        <InfoTip label={name} items={[[t("defLabel"), t(`${kind}.def`)], [t("formulaLabel"), t(`${kind}.formula`)]]} />
+      </span>
+      {tile.value == null ? (
+        <>
+          <span className={HERO_VALUE}>—</span>
+          <span className="text-rn-12 break-keep text-rn-on-dark/72">{t(`${kind}.excluded`)}</span>
+        </>
+      ) : (
+        <>
+          <span className={HERO_VALUE}>
+            {tile.value.toFixed(1)}
+            <small className={HERO_UNIT}>%</small>
+          </span>
+          <span className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <DeltaChip value={tile.delta.value} onDark />
+            {b ? <span className="text-rn-11 text-rn-on-dark/72">{b}</span> : null}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 공식(당사) URL 인용 · 미인용 프롬프트 in one cell: both counts, each opening its prompt list, and the cited share once
+ * (the two shares always add up to 100). */
+function HeroPrompts() {
+  const t = useTranslations("renewal.citation.lens");
+  const dg = useDegradedText();
+  const href = useSubpageHref();
+  const { lens: l } = useModel();
+  const s = l.split;
+  const name = t("prompts.name");
+  const head = (
+    <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-on-dark/86">
+      {name}
+      <InfoTip label={name} align="end" items={[[t("defLabel"), t("prompts.def")], [t("formulaLabel"), t("prompts.formula")]]} />
+    </span>
+  );
+  if (s.kind !== "ok") {
+    const reason = s.kind === "degraded" ? dg.all : t(`split.${s.kind}`);
+    return (
+      <div className={HERO_CELL} data-rn-tile="prompts" aria-disabled="true">
+        {head}
+        <span className={HERO_VALUE}>—</span>
+        <span className="text-rn-12 break-keep text-rn-on-dark/72">{reason}</span>
+      </div>
+    );
+  }
+  const part = (kind: "owned" | "uncited", n: number, pct?: number | null) => (
+    <Link
+      prefetch={false}
+      href={href("prompts", { tab: kind })}
+      data-rn-link={kind}
+      className="-mx-1.5 flex min-w-0 flex-col gap-[7px] rounded-lg px-1.5 no-underline transition-colors hover:bg-white/6 focus-visible:outline-2 focus-visible:outline-rn-sky"
+    >
+      <span className="flex items-baseline gap-2">
+        <span className={HERO_VALUE}>
+          {numTxt(n)}
+          <small className={HERO_UNIT}>{t("unit")}</small>
+        </span>
+        {pct !== undefined ? <span className="text-rn-13 font-bold text-rn-on-dark/72 tabular-nums">{pct != null ? `${pct}%` : "—"}</span> : null}
+      </span>
+      <span className="inline-flex min-h-6 items-center gap-0.5 text-rn-12 font-semibold text-rn-sky">
+        {t(`prompts.${kind}`)}
+        <ChevronRight className="size-3.5" aria-hidden />
+      </span>
+    </Link>
+  );
+  return (
+    <div className={HERO_CELL} data-rn-tile="prompts">
+      {head}
+      <div className="grid grid-cols-2 gap-x-4">
+        {part("owned", s.owned, s.ownedPct ?? null)}
+        {part("uncited", s.uncited)}
+      </div>
+    </div>
+  );
+}
+
 // ── 인용 비중 (website page): 공식(HMG) · 공식(당사) · 딜러 + the totals ────────────
 
 const NO_TILE: RnShareTile = { value: null, delta: { value: null, basis: null, date: null }, spark: [], sparkOn: false };
@@ -562,6 +716,8 @@ function WebsiteShareRow({ website }: { website: Promise<RnCitationWebsite> }) {
 // grid: name | share bar | share · citations | Δ bar (0 at the centre) | Δ value | weekly trend
 const ROW_GRID =
   "grid-cols-[minmax(108px,150px)_minmax(64px,1fr)_76px_minmax(88px,132px)_64px_92px] @max-[640px]/rnpage:grid-cols-[minmax(96px,130px)_minmax(48px,1fr)_68px_minmax(64px,96px)_60px]";
+// Global (2026-11-05 지표 정리): no Δ bar — the Δ value column says the change
+const ROW_GRID_PLAIN = "grid-cols-[minmax(108px,150px)_minmax(64px,1fr)_76px_88px_92px] @max-[640px]/rnpage:grid-cols-[minmax(96px,130px)_minmax(48px,1fr)_68px_80px]";
 
 /** One 출처 구성 row per round as the category trend read gives it: the screen's share (null in a round without a
  * value) and the trend's citations (the original chart's tooltip count; null in a gap). */
@@ -660,6 +816,10 @@ function CompositionCard() {
   const { rn, rows, prev, sections } = useModel();
   const isPeriod = Boolean(input.period);
   const { trendOn, maxPct: max, cap, oneSource } = rn;
+  // Global: the Δ value column only (no bar, axis or up / down legend) and no top-domain tooltip (2026-11-05 지표 정리)
+  const bars = !input.global;
+  const grid = bars ? ROW_GRID : ROW_GRID_PLAIN;
+  const deltaHead = t(prev?.period ? "col.deltaAxisPeriod" : "col.deltaAxis");
   const keys = rows.map((r) => r.name);
   const rounds = useMemo(() => compositionRounds(rows, live.categoryTrend), [rows, live.categoryTrend]);
   const tableOn = tables.has("comp");
@@ -673,7 +833,7 @@ function CompositionCard() {
     <>
       <RnCardHead
         title={t("title")}
-        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t("info", { cap: DELTA_AXIS_MIN, span: SPARK_MIN_SPAN })]]} />}
+        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), bars ? t("info", { cap: DELTA_AXIS_MIN, span: SPARK_MIN_SPAN }) : t("infoGlobal", { span: SPARK_MIN_SPAN })]]} />}
         chips={
           <>
             <RnBasisChip>{isPeriod ? t("chipPeriod") : t("chipSnapshot")}</RnBasisChip>
@@ -689,19 +849,25 @@ function CompositionCard() {
         <CompositionTable rows={rows} rounds={rounds} period={Boolean(prev?.period)} />
       ) : (
         <div role="group" aria-label={t("title")} className="flex flex-col pb-3" onPointerLeave={() => hover(null)}>
-          <div aria-hidden className={cx("grid min-h-7 items-end gap-2.5 px-6 pb-1 text-rn-11 font-semibold text-rn-muted [.rn-dense_&]:px-4.5", ROW_GRID)}>
+          <div aria-hidden className={cx("grid min-h-7 items-end gap-2.5 px-6 pb-1 text-rn-11 font-semibold text-rn-muted [.rn-dense_&]:px-4.5", grid)}>
             <span>{t("col.category")}</span>
             <span>{t("col.share")}</span>
             <span className="text-right">{t("col.pctCount")}</span>
-            <span className="flex flex-col gap-0.5">
-              <span className="text-center">{t(prev?.period ? "col.deltaAxisPeriod" : "col.deltaAxis")}</span>
-              <span className="flex justify-between font-medium tabular-nums" data-rn-daxis="">
-                <span>−{cap}</span>
-                <span>0</span>
-                <span>+{cap}</span>
-              </span>
-            </span>
-            <span />
+            {bars ? (
+              <>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-center">{deltaHead}</span>
+                  <span className="flex justify-between font-medium tabular-nums" data-rn-daxis="">
+                    <span>−{cap}</span>
+                    <span>0</span>
+                    <span>+{cap}</span>
+                  </span>
+                </span>
+                <span />
+              </>
+            ) : (
+              <span className="text-right">{deltaHead}</span>
+            )}
             {trendOn ? (
               <span className="flex flex-col items-end gap-0.5 @max-[640px]/rnpage:hidden">
                 <span>{t(oneSource ? "col.trendCount" : "col.trend")}</span>
@@ -721,20 +887,28 @@ function CompositionCard() {
               pressed={active.includes(r.name)}
               lit={lit}
               keys={keys}
+              bars={bars}
+              grid={grid}
               onToggle={() => toggle("source", r.name)}
             />
           ))}
-          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-6 pt-2.5 text-rn-12 text-rn-ink-2 [.rn-dense_&]:px-4.5" data-rn-dlg="">
-            <span className="inline-flex items-center gap-1.5">
-              <i aria-hidden className="h-2.5 w-3 rounded-[2px]" style={{ background: DELTA_UP }} />
-              {t("up")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <i aria-hidden className="h-2.5 w-3 rounded-[2px]" style={{ background: DELTA_DOWN }} />
-              {t("down")}
-            </span>
-            <span className="text-rn-muted">{t(oneSource ? "axisNoteCount" : "axisNote", { cap: DELTA_AXIS_MIN, span: SPARK_MIN_SPAN })}</span>
-          </div>
+          {bars ? (
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-6 pt-2.5 text-rn-12 text-rn-ink-2 [.rn-dense_&]:px-4.5" data-rn-dlg="">
+              <span className="inline-flex items-center gap-1.5">
+                <i aria-hidden className="h-2.5 w-3 rounded-[2px]" style={{ background: DELTA_UP }} />
+                {t("up")}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <i aria-hidden className="h-2.5 w-3 rounded-[2px]" style={{ background: DELTA_DOWN }} />
+                {t("down")}
+              </span>
+              <span className="text-rn-muted">{t(oneSource ? "axisNoteCount" : "axisNote", { cap: DELTA_AXIS_MIN, span: SPARK_MIN_SPAN })}</span>
+            </div>
+          ) : trendOn ? (
+            <p className="m-0 px-6 pt-2.5 text-rn-12 text-rn-muted [.rn-dense_&]:px-4.5" data-rn-trendnote="">
+              {t(oneSource ? "trendNoteCount" : "trendNote", { span: SPARK_MIN_SPAN })}
+            </p>
+          ) : null}
           {!trendOn && sections?.categoryTrend ? (
             <div className="px-6 pt-2">
               <DegradedNote>{dg.all}</DegradedNote>
@@ -761,6 +935,8 @@ function CategoryLine({
   pressed,
   lit,
   keys,
+  bars,
+  grid,
   onToggle,
 }: {
   r: RnCitationVm["rows"][number];
@@ -772,6 +948,9 @@ function CategoryLine({
   pressed: boolean;
   lit: string | null;
   keys: string[];
+  /** the Δ bar and the top-domain tooltip line (off on Global: the domain table's category select lists them) */
+  bars: boolean;
+  grid: string;
   onToggle: () => void;
 }) {
   const { hover, input } = useCitation();
@@ -787,7 +966,7 @@ function CategoryLine({
   const tip = [
     `${cat(r.name)} · ${t("tipCitations", { n: numTxt(r.value) })} · ${pctTxt(r.pct)}`,
     d == null ? null : t(input.period ? "tipDeltaPeriod" : "tipDelta", { delta: deltaTxt(d), prev: pctTxt(r.prevPct) }),
-    t("tipTop", { list: top || "—" }),
+    bars ? t("tipTop", { list: top || "—" }) : null,
     t("tipToggle"),
   ]
     .filter(Boolean)
@@ -805,7 +984,7 @@ function CategoryLine({
       onPointerEnter={() => hover(r.name)}
       className={cx(
         "grid min-h-[38px] items-center gap-2.5 px-6 text-left text-rn-13 transition-[background-color,opacity] hover:bg-rn-navy-25 [.rn-dense_&]:min-h-8 [.rn-dense_&]:px-4.5",
-        ROW_GRID,
+        grid,
         (pressed || on) && "bg-rn-navy-25 shadow-[inset_3px_0_0_var(--color-rn-navy)]",
         dim && "opacity-55",
       )}
@@ -818,7 +997,10 @@ function CategoryLine({
         aria-pressed={pressed}
         onClick={onToggle}
         title={tip}
-        className="col-span-5 grid min-h-[38px] cursor-pointer grid-cols-subgrid items-center rounded-[3px] text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8"
+        className={cx(
+          "grid min-h-[38px] cursor-pointer grid-cols-subgrid items-center rounded-[3px] text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-navy [.rn-dense_&]:min-h-8",
+          bars ? "col-span-5" : "col-span-4",
+        )}
       >
         <span className={cx("truncate", own ? "font-bold text-rn-navy" : "text-rn-ink-2")}>{cat(r.name)}</span>
         <span className="relative h-2 rounded-full bg-rn-inset">
@@ -828,10 +1010,12 @@ function CategoryLine({
           <b className={cx("font-bold", own ? "text-rn-navy" : "text-rn-ink")}>{pctTxt(r.pct)}</b>
           <small className="text-rn-11 text-rn-muted">{numTxt(r.value)}</small>
         </span>
-        <span className="relative h-3" aria-hidden data-rn-dbar={!moved ? "flat" : d! > 0 ? "up" : "down"}>
-          <i className="absolute inset-y-0 left-1/2 w-px bg-rn-line-2" />
-          {moved ? <i className="absolute top-0.5 bottom-0.5 rounded-[2px]" style={{ left: d! > 0 ? "50%" : `${50 - half}%`, width: `${half}%`, background: d! > 0 ? DELTA_UP : DELTA_DOWN }} /> : null}
-        </span>
+        {bars ? (
+          <span className="relative h-3" aria-hidden data-rn-dbar={!moved ? "flat" : d! > 0 ? "up" : "down"}>
+            <i className="absolute inset-y-0 left-1/2 w-px bg-rn-line-2" />
+            {moved ? <i className="absolute top-0.5 bottom-0.5 rounded-[2px]" style={{ left: d! > 0 ? "50%" : `${50 - half}%`, width: `${half}%`, background: d! > 0 ? DELTA_UP : DELTA_DOWN }} /> : null}
+          </span>
+        ) : null}
         <span className={cx("text-right text-rn-12 whitespace-nowrap tabular-nums", own ? "font-bold text-rn-ink" : "text-rn-ink-2")} data-rn-dc="">
           {d == null ? "—" : deltaTxt(d)}
         </span>
@@ -902,6 +1086,15 @@ function useColName(): (key: string) => string {
   return (key) => (axis === "type" ? tType(key as "mention") : engineLabel(key));
 }
 
+/** 출처 선호 매트릭스 CSV: 전체, then each column's share, the cell's citations (the original's tooltip count, Gold's as
+ * sent: a rounded share × the column total is not it) and the gap to 전체. */
+export function matrixCsvRows(m: RnMatrixView, head: { category: string; all: string; count: string; gap: string }, col: (key: string) => string, cat: (name: string) => string): CsvCell[][] {
+  return [
+    [head.category, head.all, ...m.cols.flatMap((c) => [col(c.key), `${col(c.key)} ${head.count}`, `${col(c.key)} ${head.gap}`])],
+    ...m.rows.map((k) => [cat(k), m.base[k].toFixed(1), ...m.cols.flatMap((c) => [c.shares[k]?.toFixed(1) ?? null, c.counts[k] ?? null, m.gaps[c.key][k]?.toFixed(1) ?? null])]),
+  ];
+}
+
 function MatrixActions() {
   const t = useTranslations("renewal.citation.matrix");
   const cat = useCatLabel();
@@ -909,9 +1102,7 @@ function MatrixActions() {
   const { m } = useMatrix();
   const csv = () => ({
     name: "citation-source-matrix",
-    rows: m
-      ? [[t("colCategory"), t("colAll"), ...m.cols.flatMap((c) => [col(c.key), `${col(c.key)} ${t("csvGap")}`])], ...m.rows.map((k) => [cat(k), m.base[k].toFixed(1), ...m.cols.flatMap((c) => [c.shares[k]?.toFixed(1) ?? null, m.gaps[c.key][k]?.toFixed(1) ?? null])])]
-      : [],
+    rows: m ? matrixCsvRows(m, { category: t("colCategory"), all: t("colAll"), count: t("csvCount"), gap: t("csvGap") }, col, cat) : [],
   });
   return <CitationCardActions section="sec-mix" csv={csv} />;
 }
@@ -967,7 +1158,7 @@ function MatrixBody() {
                       <td
                         key={c.key}
                         data-rn-cell={`${c.key}|${k}`}
-                        title={`${col(c.key)} · ${cat(k)}\n${t("tipShare", { share: pctTxt(c.shares[k]), base: pctTxt(m.base[k]), gap: deltaTxt(gap) })}`}
+                        title={`${col(c.key)} · ${cat(k)}\n${t("tipShare", { share: pctTxt(c.shares[k]), base: pctTxt(m.base[k]), gap: deltaTxt(gap) })}\n${t("tipCount", { n: numTxt(c.counts[k]) })}`}
                         className={cx("h-[34px] rounded px-2.5 text-right whitespace-nowrap text-rn-ink tabular-nums", own && "font-bold", on && "outline-2 -outline-offset-2 outline-rn-navy")}
                         style={paint ? { background: divBg(gap!, m.cap) } : undefined}
                       >

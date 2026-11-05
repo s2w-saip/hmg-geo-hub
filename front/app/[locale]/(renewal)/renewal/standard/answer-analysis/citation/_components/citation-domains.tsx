@@ -10,6 +10,7 @@ import {
   RnDrawer,
   RnEmpty,
   RnSearchField,
+  RnSegmented,
   RnSelect,
   RnTabs,
   cx,
@@ -31,9 +32,9 @@ export const DETAIL_ANSWERS_CAP = 8;
 
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K` : String(Math.round(n)));
 
-function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
+function useWidth<T extends HTMLElement>(initial = 0): [React.RefObject<T | null>, number] {
   const ref = useRef<T>(null);
-  const [w, setW] = useState(0);
+  const [w, setW] = useState(initial);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -47,7 +48,8 @@ function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] 
 
 // ── 주별 도메인 인용 순위 (emphasis bump) ────────────────────────────────────────
 
-export function DomainBumpCard() {
+/** `initialWidth` draws the chart before the first measure (render tests). */
+export function DomainBumpCard({ initialWidth = 0 }: { initialWidth?: number }) {
   const { input, live, tables } = useCitation();
   const t = useTranslations("renewal.citation.bump");
   const tA = useTranslations("answerAnalysis");
@@ -64,7 +66,7 @@ export function DomainBumpCard() {
     <>
       <RnCardHead
         title={t("title")}
-        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t(input.website ? "infoWebsite" : "info")]]} />}
+        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t(input.website ? "infoWebsite" : input.global ? "infoGlobal" : "info")]]} />}
         chips={d ? <RnBasisChip>{t("chip", { n: d.series.length, weeks: measured })}</RnBasisChip> : null}
         actions={<CitationCardActions tableId="bump" section="sec-dom" csv={csv} />}
       />
@@ -76,7 +78,7 @@ export function DomainBumpCard() {
         ) : tableOn ? (
           <TwinTable head={[t("colDomain"), ...d.x.map(slotLabel)]} rows={d.series.map((s) => [s.key, ...s.ranks.map((r, i) => (r == null ? "—" : t("twin", { rank: r, n: numTxt(s.values[i]) })))])} />
         ) : (
-          <BumpChart d={d} />
+          <BumpChart d={d} initialWidth={initialWidth} />
         )}
       </div>
     </>
@@ -94,17 +96,19 @@ export function bumpMoveFill(own: boolean, move: number): string {
   return move > 0 ? "var(--color-rn-up-ink)" : "var(--color-rn-danger-ink)";
 }
 
-function BumpChart({ d }: { d: BumpView }) {
+function BumpChart({ d, initialWidth }: { d: BumpView; initialWidth: number }) {
   const { lit, hover, live, openDomain, input } = useCitation();
   const t = useTranslations("renewal.citation.bump");
-  const [ref, width] = useWidth<HTMLDivElement>();
+  const [ref, width] = useWidth<HTMLDivElement>(initialWidth);
   const movers = new Map(d.movers.map((m, i) => [m.key, i]));
   const colorOf = (key: string, own: boolean) => (own ? OWN_COLOR : movers.has(key) ? MOVER_COLORS[movers.get(key)!] : CONTEXT_COLOR);
   const n = d.series.length;
   const top = 14;
   const h = n * ROW + top + 30;
   const left = 30;
-  const plotW = Math.max(120, width - left - LABEL_W);
+  // Global (2026-11-05 지표 정리): no last-round citations beside the label — each point's tooltip has the round's count
+  const countLabel = !input.global;
+  const plotW = Math.max(120, width - left - (countLabel ? LABEL_W : LABEL_W - 40));
   const xs = d.x.map((_, i) => left + (d.x.length > 1 ? (i / (d.x.length - 1)) * plotW : plotW / 2));
   const y = (rank: number) => top + (rank - 0.5) * ROW;
   const keys = d.series.map((s) => s.key);
@@ -210,11 +214,13 @@ function BumpChart({ d }: { d: BumpView }) {
                     {s.key.length > 18 ? `${s.key.slice(0, 17)}…` : s.key}
                     {s.key.length > 18 ? <title>{s.key}</title> : null}
                   </text>
-                  <text x={x0 + 184} y={y(r1) + 4} fontSize={11} textAnchor="end" fill="var(--color-rn-ink-2)" className="tabular-nums">
-                    {s.values[d.last] == null ? "—" : fmtK(s.values[d.last]!)}
-                  </text>
+                  {countLabel ? (
+                    <text x={x0 + 184} y={y(r1) + 4} fontSize={11} textAnchor="end" fill="var(--color-rn-ink-2)" className="tabular-nums" data-rn-bumpn="">
+                      {s.values[d.last] == null ? "—" : fmtK(s.values[d.last]!)}
+                    </text>
+                  ) : null}
                   {move ? (
-                    <text x={x0 + 192} y={y(r1) + 4} fontSize={11} fontWeight={700} fill={bumpMoveFill(s.own, move)}>
+                    <text x={x0 + (countLabel ? 192 : 152)} y={y(r1) + 4} fontSize={11} fontWeight={700} fill={bumpMoveFill(s.own, move)}>
                       {move > 0 ? "▲" : "▼"}
                       {Math.abs(move)}
                     </text>
@@ -244,12 +250,15 @@ type SortKey = DomainTableSortKey;
  * `initialAll` starts with every loaded row shown (render tests).
  */
 export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }) {
-  const { input, lit, hover, openDomain } = useCitation();
+  const { input, live, lit, hover, openDomain } = useCitation();
   const t = useTranslations("renewal.citation.table");
   const tC = useTranslations("answerAnalysis.citations.table");
   const cat = useCatLabel();
   const source = use(input.tableSource);
   const website = Boolean(input.website);
+  // Global (2026-11-05 지표 정리): the share sits small inside the citations cell (a constant multiple of it, so one sort),
+  // and the chip names the table's population and denominator (the totals the KPI row's chips had)
+  const shareInCitations = Boolean(input.global);
   const [q, setQ] = useState("");
   const deferred = useDeferredValue(q);
   const [sortKey, setSortKey] = useState<SortKey>("citations");
@@ -287,7 +296,7 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
     name: "citation-domains",
     rows: [[tC("col.rank"), tC("col.domain"), tC("col.category"), tC("col.citations"), tC("col.share"), tC("col.prompts"), tC("col.coverage")], ...rows.map((r) => [r.no, r.domain, r.category ? cat(r.category) : "", r.citations, r.share.toFixed(1), r.prompts, r.coverageRate.toFixed(1)])],
   });
-  const th = (k: SortKey | null, label: string, right: boolean, info?: { def: string; formula: string }) => (
+  const th = (k: SortKey | null, label: string, right: boolean, info?: { def: string; formula: string; more?: [string, string] }) => (
     <th scope="col" className={cx("px-2.5 py-2 text-rn-12 font-semibold whitespace-nowrap text-rn-muted", right ? "text-right" : "text-left")} aria-sort={k && sortKey === k ? (asc ? "ascending" : "descending") : undefined}>
       <span className={cx("inline-flex items-center gap-1", right && "justify-end")}>
         {k ? (
@@ -298,16 +307,22 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
         ) : (
           label
         )}
-        {info ? <InfoTip label={label} align={right ? "end" : undefined} items={[[t("defLabel"), info.def], [t("formulaLabel"), info.formula]]} /> : null}
+        {info ? <InfoTip label={label} align={right ? "end" : undefined} items={[[t("defLabel"), info.def], [t("formulaLabel"), info.formula], ...(info.more ? [info.more] : [])]} /> : null}
       </span>
     </th>
   );
+  const chip = shareInCitations
+    ? t("chipGlobal", { n: LIMIT, domains: numTxt(live.summary.uniqueDomains), total: numTxt(live.summary.total) })
+    : website && source?.total != null
+      ? t("chipAll", { n: numTxt(source.total) })
+      : t("chip", { n: LIMIT });
+  const cols = shareInCitations ? 6 : 7;
   return (
     <>
       <RnCardHead
         title={t("title")}
-        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t("info")]]} />}
-        chips={<RnBasisChip>{website && source?.total != null ? t("chipAll", { n: numTxt(source.total) }) : t("chip", { n: LIMIT })}</RnBasisChip>}
+        info={<InfoTip label={t("infoLabel")} items={[[t("infoLabel"), t(shareInCitations ? "infoGlobal" : "info")]]} />}
+        chips={<RnBasisChip>{chip}</RnBasisChip>}
         actions={<CitationCardActions section="sec-dom" csv={csv} />}
       />
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 px-6 pb-3 [.rn-dense_&]:px-4.5">
@@ -332,8 +347,8 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
             <col className="w-12" />
             <col />
             <col className="w-[120px]" />
-            <col className="w-[15%]" />
-            <col className="w-[64px]" />
+            <col className={shareInCitations ? "w-[20%]" : "w-[15%]"} />
+            {shareInCitations ? null : <col className="w-[64px]" />}
             <col className="w-[72px]" />
             <col className="w-[15%]" />
           </colgroup>
@@ -342,8 +357,14 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
               {th(null, tC("col.rank"), false)}
               {th("domain", tC("col.domain"), false)}
               {th(null, tC("col.category"), false)}
-              {th("citations", tC("col.citations"), true, { def: tC("colDefinition.citations"), formula: tC("colFormula.citations") })}
-              {th("share", tC("col.share"), true, { def: tC("colDefinition.share"), formula: tC("colFormula.share") })}
+              {shareInCitations
+                ? th("citations", `${tC("col.citations")} · ${tC("col.share")}`, true, {
+                    def: tC("colDefinition.citations"),
+                    formula: tC("colFormula.citations"),
+                    more: [tC("col.share"), `${tC("colDefinition.share")} ${tC("colFormula.share")}`],
+                  })
+                : th("citations", tC("col.citations"), true, { def: tC("colDefinition.citations"), formula: tC("colFormula.citations") })}
+              {shareInCitations ? null : th("share", tC("col.share"), true, { def: tC("colDefinition.share"), formula: tC("colFormula.share") })}
               {th("prompts", tC("col.prompts"), true)}
               {th("coverageRate", tC("col.coverage"), true, { def: tC("colDefinition.coverage"), formula: tC("colFormula.coverage") })}
             </tr>
@@ -351,7 +372,7 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
           <tbody>
             {shown.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-7 text-center text-rn-13 text-rn-muted">
+                <td colSpan={cols} className="px-3 py-7 text-center text-rn-13 text-rn-muted">
                   <TableStatus table={table} empty={tC("empty")} />
                 </td>
               </tr>
@@ -384,15 +405,16 @@ export function DomainTableCard({ initialAll = false }: { initialAll?: boolean }
                     </span>
                   </td>
                   <td className="truncate px-2.5 py-2.5 text-rn-12 text-rn-ink-2">{r.category ? cat(r.category) : "—"}</td>
-                  <td className="px-2.5 py-2.5">
-                    <span className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-2">
+                  <td className="px-2.5 py-2.5" data-rn-cit="">
+                    <span className={cx("grid items-center gap-2", shareInCitations ? "grid-cols-[52px_40px_minmax(0,1fr)]" : "grid-cols-[52px_minmax(0,1fr)]")}>
                       <b className="text-right font-semibold text-rn-ink tabular-nums">{numTxt(r.citations)}</b>
+                      {shareInCitations ? <small className="text-right text-rn-11 text-rn-muted tabular-nums">{pctTxt(r.share)}</small> : null}
                       <span className="h-2 rounded-full bg-rn-inset">
                         <i className="block h-full rounded-full" style={{ width: `${(100 * r.citations) / maxCit}%`, background: r.isOurs ? "var(--color-rn-navy)" : "var(--color-rn-navy-300)" }} />
                       </span>
                     </span>
                   </td>
-                  <td className="px-2.5 py-2.5 text-right text-rn-ink-2 tabular-nums">{pctTxt(r.share)}</td>
+                  {shareInCitations ? null : <td className="px-2.5 py-2.5 text-right text-rn-ink-2 tabular-nums">{pctTxt(r.share)}</td>}
                   <td className="px-2.5 py-2.5 text-right text-rn-ink-2 tabular-nums">{numTxt(r.prompts)}</td>
                   <td className="px-2.5 py-2.5">
                     <span className="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-2">
@@ -479,6 +501,22 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
   const urls = lazy ? (loaded?.urls ?? []) : row.urls;
   const prompts = lazy ? (loaded?.promptList ?? []) : row.promptList;
   const pending = lazy && detail?.status !== "ready" ? (detail?.status === "error" ? tC("drilldown.loadFailed") : tC("drilldown.loading")) : null;
+  // the domain's URLs and prompts (the lists below hold the first 100 and 12 of them)
+  const urlCount = pending ? undefined : numTxt(loaded?.urlTotal ?? urls.length, locale);
+  // Global (2026-11-05 지표 정리): the row's numbers and the URL count on the subtitle line — the same numbers stood in the
+  // table row, four head cells and the tab counts (the prompt count is the row's)
+  const oneLine = Boolean(input.global);
+  const subtitle = oneLine
+    ? [
+        row.category ? cat(row.category) : null,
+        t("subStats", { citations: numTxt(row.citations, locale), share: pctTxt(row.share), prompts: numTxt(row.prompts, locale), coverage: pctTxt(row.coverageRate) }),
+        urlCount != null ? t("subUrls", { n: urlCount }) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : row.category
+      ? cat(row.category)
+      : undefined;
   return (
     <RnDrawer
       open={!hidden}
@@ -490,30 +528,31 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
           <OwnTag own={row.isOurs} />
         </span>
       }
-      subtitle={row.category ? cat(row.category) : undefined}
+      subtitle={subtitle}
     >
-      <dl className="m-0 grid grid-cols-4 gap-3 rounded-xl bg-rn-page px-4 py-3">
-        {[
-          [tC("table.col.citations"), numTxt(row.citations, locale)],
-          [tC("table.col.share"), pctTxt(row.share)],
-          [tC("table.col.prompts"), numTxt(row.prompts, locale)],
-          [tC("table.col.coverage"), pctTxt(row.coverageRate)],
-        ].map(([l, v]) => (
-          <div key={l}>
-            <dt className="text-rn-11 text-rn-muted">{l}</dt>
-            <dd className="m-0 text-rn-15 font-bold text-rn-ink tabular-nums">{v}</dd>
-          </div>
-        ))}
-      </dl>
+      {oneLine ? null : (
+        <dl className="m-0 grid grid-cols-4 gap-3 rounded-xl bg-rn-page px-4 py-3">
+          {[
+            [tC("table.col.citations"), numTxt(row.citations, locale)],
+            [tC("table.col.share"), pctTxt(row.share)],
+            [tC("table.col.prompts"), numTxt(row.prompts, locale)],
+            [tC("table.col.coverage"), pctTxt(row.coverageRate)],
+          ].map(([l, v]) => (
+            <div key={l}>
+              <dt className="text-rn-11 text-rn-muted">{l}</dt>
+              <dd className="m-0 text-rn-15 font-bold text-rn-ink tabular-nums">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <RnTabs
-        className="mt-5"
+        className={oneLine ? "mt-3" : "mt-5"}
         label={t("tabs")}
         value={tab}
         onChange={setTab}
         items={[
-          // the domain's URLs and prompts (the lists below hold the first 100 and 12 of them)
-          { value: "urls", label: t("urls"), count: pending ? undefined : numTxt(loaded?.urlTotal ?? urls.length, locale) },
-          { value: "prompts", label: t("prompts"), count: pending ? undefined : numTxt(loaded?.promptTotal ?? prompts.length, locale) },
+          { value: "urls", label: t("urls"), count: oneLine ? undefined : urlCount },
+          { value: "prompts", label: t("prompts"), count: oneLine || pending ? undefined : numTxt(loaded?.promptTotal ?? prompts.length, locale) },
         ]}
       />
       <div className="mt-3" data-rn-dpanel={tab}>
@@ -522,7 +561,7 @@ function DomainSheet({ row, hidden, onClose, onAnswer }: { row: CitationDomainLi
         ) : tab === "urls" ? (
           <UrlList row={row} urls={urls} total={loaded?.urlTotal} />
         ) : (
-          <PromptList row={row} prompts={prompts} total={loaded?.promptTotal} answersCap={lazy ? DETAIL_ANSWERS_CAP : null} onAnswer={onAnswer} />
+          <PromptList row={row} prompts={prompts} total={loaded?.promptTotal} answersCap={lazy ? DETAIL_ANSWERS_CAP : null} onAnswer={onAnswer} orders={loaded?.promptOrders} />
         )}
       </div>
     </RnDrawer>
@@ -566,8 +605,20 @@ export function UrlList({ row, urls, total }: { row: CitationDomainLive; urls: C
   );
 }
 
+/** The prompt list's two sorts (the original table's headers): 인용 수, most first (the server's order), and 프롬프트,
+ * by name. One direction each, as the renewal ACR lists; no share sort — the source's citations are its one
+ * denominator, so it is the citations order. */
+export type PromptSort = "citations" | "prompt";
+
+/** The prompts in a sort's order (the server's `promptOrders`, indices into `prompts`); as received without orders. */
+export function promptsInOrder<T>(prompts: readonly T[], orders: DomainDetailView["promptOrders"] | undefined, sort: PromptSort): T[] {
+  const order = orders?.[sort]?.[sort === "prompt" ? "asc" : "desc"];
+  return order && order.length === prompts.length ? order.map((i) => prompts[i]).filter((p) => p !== undefined) : [...prompts];
+}
+
 /** A source's citing prompts (a click opens the answers). `share = false`: no share column (the Mention brand drawer's
- * detail carries none, as the original drawer showed none). */
+ * detail carries none, as the original drawer showed none). `orders`: the server's sort orders (the domain sheet's
+ * detail read) — the list then sorts by citations or by prompt (2026-11-05, the original's sort headers). */
 export function PromptList({
   row,
   prompts,
@@ -575,6 +626,7 @@ export function PromptList({
   answersCap,
   onAnswer,
   share = true,
+  orders,
 }: {
   row: CitationDomainLive;
   prompts: DomainDetailView["promptList"];
@@ -582,21 +634,36 @@ export function PromptList({
   answersCap: number | null;
   onAnswer: (p: CitationPromptLive) => void;
   share?: boolean;
+  orders?: DomainDetailView["promptOrders"];
 }) {
   const tC = useTranslations("answerAnalysis.citations");
   const tMd = useTranslations("answerAnalysis.mentions.drilldown");
   const t = useTranslations("renewal.citation.drawer");
   const locale = useLocale();
+  const [sort, setSort] = useState<PromptSort>("citations");
   if (!prompts.length) return <p className="m-0 rounded-lg bg-rn-page px-4 py-6 text-center text-rn-12 text-rn-muted">{tC(citationDrilldownEmptyKey(row, "prompts"))}</p>;
-  // the server's order (citations desc) and each prompt's share of the source's citations
-  const list = prompts;
+  // the server's order (citations desc) or the prompt order, and each prompt's share of the source's citations
+  const list = promptsInOrder(prompts, orders, sort);
   const cols = share ? "grid-cols-[minmax(0,1fr)_56px_60px]" : "grid-cols-[minmax(0,1fr)_56px]";
   return (
     <div className="flex flex-col gap-2">
-      <p className="m-0 text-rn-11 text-rn-muted">
-        {tC("v2.drilldownTabs.promptsCaption")}
-        {answersCap != null ? ` ${t("answersCap", { n: answersCap })}` : ""}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <p className="m-0 min-w-0 flex-1 text-rn-11 text-rn-muted">
+          {tC("v2.drilldownTabs.promptsCaption")}
+          {answersCap != null ? ` ${t("answersCap", { n: answersCap })}` : ""}
+        </p>
+        {orders && prompts.length > 1 ? (
+          <RnSegmented
+            label={t("sortLabel")}
+            value={sort}
+            onChange={setSort}
+            items={[
+              { value: "citations", label: t("sortCitations") },
+              { value: "prompt", label: t("sortPrompt") },
+            ]}
+          />
+        ) : null}
+      </div>
       <div className={cx("grid gap-2 border-b border-rn-line pb-1.5 text-rn-11 font-semibold text-rn-muted", cols)}>
         <span>{tMd("col.prompt")}</span>
         <span className="text-right">{tC("table.col.citations")}</span>

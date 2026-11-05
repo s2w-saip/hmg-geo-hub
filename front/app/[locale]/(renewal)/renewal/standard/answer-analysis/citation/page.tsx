@@ -103,6 +103,7 @@ export default async function RenewalCitationPage({
     tableSource: screen.then((s) => s.tableSource),
     periodView: screen.then((s) => s.periodView),
     rn: screen.then((s) => s.rn ?? null),
+    global: true,
   };
   return (
     <RnFilterRuntime>

@@ -246,4 +246,9 @@ export interface RnCitationInput {
   rn: Promise<RnCitationVm | null>;
   /** website page only: the 공식(당사) tile and the URL funnel card (absent = the standard page's layout) */
   website?: Promise<RnCitationWebsite>;
+  /** Global page only (2026-11-05 지표 정리): no 이번 회차 요약 card, the KPIs on the page's one navy card (the prompt
+   * split in one cell, no tile line), no Δ bars or top-domain tooltip in 출처 구성, the totals on the domain table's
+   * chip, its share inside the citations cell and the drawer's numbers on one subtitle line. Website and Project keep
+   * their layout. */
+  global?: boolean;
 }

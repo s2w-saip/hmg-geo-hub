@@ -6045,6 +6045,13 @@
           "name": "Prompts not citing our official URLs",
           "question": "Prompts that never cited an official URL of ours (with at least one citation)"
         },
+        "prompts": {
+          "name": "Prompts citing / not citing our official URLs",
+          "def": "Citing = prompts that cited an official URL of ours at least once; not citing = prompts with at least one citation that never cited one. Click a count to open those prompts.",
+          "formula": "Citing prompts ÷ (citing + not citing prompts) × 100 — the not-citing share is 100 minus it",
+          "owned": "Citing",
+          "uncited": "Not citing"
+        },
         "split": {
           "noOwnCategory": "Counted only while Official (HMG) is in the source filter",
           "notComputed": "Not computed while a source filter is on",
@@ -6055,6 +6062,7 @@
         "title": "Source category mix",
         "infoLabel": "How to read",
         "info": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp), drawn as a bar around 0 on one axis for every row (the largest change on screen, at least ±{cap}pp), so bar lengths compare. Blue = up, orange = down (direction, not good or bad). Trend = share per round — each small line spans at least {span}pp vertically, so smaller moves draw gently. Hover a point of the line for that round's share and citations; a break is a round without citations. With one source picked the share is always 100%, so the line shows citations per round. Hover a row to see the category's top 3 domains and their share.",
+        "infoGlobal": "Citations of AI answers grouped by source category — share and count (citations, not domains). Change = vs the previous round (or the equal period just before, when a period is selected) (pp). Trend = share per round — each small line spans at least {span}pp vertically, so smaller moves draw gently. Hover a point of the line for that round's share and citations; a break is a round without citations. With one source picked the share is always 100%, so the line shows citations per round. To see a category's domains, filter the domain table below by category.",
         "chipSnapshot": "Snapshot as of the measurement date",
         "chipPeriod": "Cumulative over the selected period",
         "chipDelta": "Change = vs the previous round ({date})",
@@ -6086,13 +6094,15 @@
         "tipDeltaPeriod": "change {delta} (previous period {prev})",
         "tipPoint": "{day} · share {pct} · {n} citations",
         "tipGap": "{day} · citation gap",
-        "axisNoteCount": "Change bars share one axis (at least ±{cap}pp) · one source picked, so the trend lines show citations per round"
+        "axisNoteCount": "Change bars share one axis (at least ±{cap}pp) · one source picked, so the trend lines show citations per round",
+        "trendNote": "Trend lines span at least {span}pp",
+        "trendNoteCount": "One source picked, so the trend lines show citations per round"
       },
       "matrix": {
         "title": "Source preference matrix",
         "infoLabel": "How to read",
-        "infoEngine": "The category mix of the sources each AI engine cited (each column sums to 100%). Number = that engine's share, colour = the gap to the All column — blue sources are cited more than average by that engine, orange less. All = the sum of the engines in the table. Read each column's sample size from the citation count in its head.",
-        "infoType": "The category mix of the sources cited by answers whose mention of us carries that type signal (final choice · recommendation · comparison · definition · mention; each column sums to 100%). An answer with several signals counts in each; All = the sum of the types in the table. Colours as in the engine view.",
+        "infoEngine": "The category mix of the sources each AI engine cited (each column sums to 100%). Number = that engine's share, colour = the gap to the All column — blue sources are cited more than average by that engine, orange less. All = the sum of the engines in the table. Read each column's sample size from the citation count in its head. Hover a cell for its citation count.",
+        "infoType": "The category mix of the sources cited by answers whose mention of us carries that type signal (final choice · recommendation · comparison · definition · mention; each column sums to 100%). An answer with several signals counts in each; All = the sum of the types in the table. Colours as in the engine view. Hover a cell for its citation count.",
         "chip": "Colour = gap vs all",
         "axisLabel": "Columns",
         "axisEngine": "AI engine",
@@ -6102,8 +6112,10 @@
         "colCategory": "Source category",
         "colAll": "All",
         "n": "{n}",
+        "csvCount": "citations",
         "csvGap": "gap vs all (pp)",
         "tipShare": "share {share} · all {base} ({gap})",
+        "tipCount": "{n} citations",
         "single": "Only one column has citations — nothing to compare. Try the other view or widen the filters.",
         "oneSource": "One source picked, so every column is 100% — the cells show citation counts.",
         "less": "Cited less than all",
@@ -6133,6 +6145,7 @@
         "infoLabel": "How to read",
         "info": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
         "infoWebsite": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = our domains (navy, the ones the domain table tags Ours) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · citations · rank change (▲▼).",
+        "infoGlobal": "Only the most cited domains over the drawn weeks (the count on the chip), ranked against each other by citations each week — a rank within them, not among all domains, so it can differ from the domain table below. Coloured = Official (HMG) domains (navy) and the 3 domains whose rank changed most since the first week; the rest is grey — hover a line or a legend item to isolate it, click to open the domain. Right = last week's rank · rank change (▲▼); hover a point for that week's citations.",
         "chip": "Top {n} domains · {weeks} rounds",
         "colRank": "rank",
         "colCitations": "citations",
@@ -6149,7 +6162,9 @@
         "title": "Domain citation ranking",
         "infoLabel": "How to read",
         "info": "The most cited domains. Click a row to go down to its cited URLs, prompts and the real answers. To see how concentrated a category is, hover its row in the source mix or filter by category here.",
+        "infoGlobal": "The most cited domains. Click a row to go down to its cited URLs, prompts and the real answers. To see how concentrated a category is, filter by category here.",
         "chip": "Top {n} · by citations",
+        "chipGlobal": "Top {n} by citations · {domains} domains · {total} citations",
         "defLabel": "Definition",
         "formulaLabel": "Formula",
         "search": "Search domains",
@@ -6173,7 +6188,12 @@
         "urls": "Cited URLs",
         "prompts": "Prompts",
         "noAnswer": "No linked answer",
-        "answersCap": "Click a prompt to see the answers citing this domain, most citations first, up to {n}."
+        "answersCap": "Click a prompt to see the answers citing this domain, most citations first, up to {n}.",
+        "subStats": "{citations} citations · share {share} · {prompts} prompts · coverage {coverage}",
+        "subUrls": "{n} cited URLs",
+        "sortLabel": "Sort",
+        "sortCitations": "Most cited",
+        "sortPrompt": "Prompt A–Z"
       },
       "sub": {
         "promptsDescription": "Within the current citation data, prompts that cited an official (own) domain URL at least once, apart from those that did not.",

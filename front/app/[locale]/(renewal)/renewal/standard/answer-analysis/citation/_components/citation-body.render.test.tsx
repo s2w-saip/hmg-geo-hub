@@ -92,11 +92,22 @@ type Parts = {
   typeCategories: import("@/lib/db/repositories/scope-aggregates").CitationTypeCategoryRow[] | null;
 };
 const input = parts;
+// The standard body renders the Global page (`global`, 2026-11-05 지표 정리) unless `asProject` runs it as the Project
+// page, which keeps the layout the Global page had (the same body without `website` or `global`)
+let PROJECT = false;
+const asProject = <T,>(fn: () => T): T => {
+  PROJECT = true;
+  try {
+    return fn();
+  } finally {
+    PROJECT = false;
+  }
+};
 // `website`: the website page's parts; its tests reuse the frozen model of the bare URL (`rnSearch`) and parts (`rnBase`)
 type Vm = import("./citation-input").RnCitationVm;
 const render = (p: Parts, search = "", website?: Input["website"], rnSearch = website ? "" : search, rnBase: Parts = p, rnEdit?: (vm: Vm) => Vm) => {
   SEARCH = search;
-  PATH = website ? "/ko/renewal/website/answer-analysis/citation" : "/ko/renewal/standard/answer-analysis/citation";
+  PATH = website ? "/ko/renewal/website/answer-analysis/citation" : PROJECT ? "/ko/renewal/projects/p1/analysis/citation" : "/ko/renewal/standard/answer-analysis/citation";
   const i: Input = {
     api: p.api,
     period: null,
@@ -110,6 +121,7 @@ const render = (p: Parts, search = "", website?: Input["website"], rnSearch = we
     periodView: settled(null),
     rn: settled(((vm) => (vm && rnEdit ? rnEdit(vm) : vm))(rnVmFor({ live: rnBase.data, prev: rnBase.prevCategories, card: rnBase.officialDelta, typeRows: rnBase.typeCategories, sections: null, search: rnSearch }))),
     website,
+    ...(website || PROJECT ? {} : { global: true }),
   };
   return renderToStaticMarkup(
     <NextIntlClientProvider locale="ko" messages={ko} timeZone="Asia/Seoul">
@@ -124,15 +136,15 @@ const render = (p: Parts, search = "", website?: Input["website"], rnSearch = we
 const T = ko.renewal.citation;
 
 describe("renewal Citation body", () => {
-  it("prompt tiles: counts, share of all and links to the sub page with the filters", () => {
-    const html = render(input(), "geography=US");
-    expect(html).toContain('href="/ko/renewal/standard/answer-analysis/citation/prompts?geography=US&amp;tab=owned"');
-    expect(html).toContain('href="/ko/renewal/standard/answer-analysis/citation/prompts?geography=US&amp;tab=uncited"');
+  it("prompt tiles: counts, share of all and links to the sub page with the filters (Project)", () => {
+    const html = asProject(() => render(input(), "geography=US"));
+    expect(html).toContain('href="/ko/renewal/projects/p1/analysis/citation/prompts?geography=US&amp;tab=owned"');
+    expect(html).toContain('href="/ko/renewal/projects/p1/analysis/citation/prompts?geography=US&amp;tab=uncited"');
     expect(html).toMatch(/57<small[^>]*>개<\/small><\/span><span[^>]*>59%/); /* i18n-ignore */
     expect(html).toContain("41%");
   });
-  it("findings include the uncited-prompt opportunity; the headline carries the split", () => {
-    const html = render(input());
+  it("findings include the uncited-prompt opportunity; the headline carries the split (Project)", () => {
+    const html = asProject(() => render(input()));
     expect(html).toContain("공식(당사) URL이 한 번도 인용되지 않은 프롬프트 39개 (41%)");
     expect(html).toContain("공식(당사) URL 인용 프롬프트 57개 / 미인용 39개");
   });
@@ -183,8 +195,8 @@ describe("renewal Citation body", () => {
     expect(empty).toContain(ko.answerAnalysis.citations.v2.typeCategory.empty);
     expect(empty).not.toContain("data-rn-matrix=");
   });
-  it("출처 구성: Δ bars on one axis (largest change), direction only, no tick", () => {
-    const html = render(input());
+  it("출처 구성: Δ bars on one axis (largest change), direction only, no tick (Project)", () => {
+    const html = asProject(() => render(input()));
     const row = (name: string) => {
       const at = html.indexOf(`data-rn-src="${name.replace(/&/g, "&amp;")}"`);
       return at < 0 ? "" : html.slice(at, html.indexOf("</button>", at));
@@ -248,20 +260,26 @@ describe("renewal Citation body", () => {
       }
     };
     const headlineNoHmg = T.summary.headlineNoHmg.split(" — ")[0];
+    // the measured page: the Website's chip row, the Global KPI card (2026-11-05: the chip row's totals moved to the
+    // domain table, the HMG cell says why it has no value)
+    const measured = (website: boolean) => (website ? 'data-rn-cmeta=""' : 'data-rn-kpis=""');
     for (const website of [false, true]) {
       for (const p of [input({ data: none }), input({ data: null, filtered: true })]) {
         const html = at(website, "time=2026-08-03..2026-08-09", p);
         expect(html, String(website)).toContain("아직 보이지 않는 기간");
         expect(html, String(website)).toContain("고른 기간(2026-08-03 ~ 2026-08-09)은 서비스 기준 주 7월 5주차(7/27~8/2) 뒤입니다.");
         expect(html, String(website)).not.toContain(headlineNoHmg);
-        expect(html, String(website)).not.toContain('data-rn-cmeta=""');
+        expect(html, String(website)).not.toContain(T.lens.hmg.excluded);
+        expect(html, String(website)).not.toContain(measured(website));
         expect(html, String(website)).not.toContain(T.states.noResultTitle);
       }
     }
-    // a period that reaches into the week reads its rounds: the page as before (the model draws the headline the review saw)
-    expect(at(false, "time=2026-07-27..2026-08-09")).toContain(headlineNoHmg);
-    expect(at(false, "time=2026-07-27..2026-08-09")).toContain('data-rn-cmeta=""');
-    expect(at(true, "time=2026-07-27..2026-08-09")).toContain('data-rn-cmeta=""');
+    // a period that reaches into the week reads its rounds: the page as before (the model draws the headline the review
+    // saw on the Project page; the Global KPI card's HMG cell says the same)
+    expect(asProject(() => at(false, "time=2026-07-27..2026-08-09"))).toContain(headlineNoHmg);
+    expect(at(false, "time=2026-07-27..2026-08-09")).toContain(T.lens.hmg.excluded);
+    expect(at(false, "time=2026-07-27..2026-08-09")).toContain(measured(false));
+    expect(at(true, "time=2026-07-27..2026-08-09")).toContain(measured(true));
     expect(at(false, "time=2026-07-27..2026-08-09", input({ data: null, filtered: true }))).toContain(T.states.noResultTitle);
   });
   it("tone tiles: api vs legacy basis chip", () => {
@@ -372,10 +390,120 @@ describe("renewal Citation body — website page", () => {
     expect(legend).toMatch(/[▲▼]/);
     expect(legend).not.toMatch(/text-rn-(up|danger)-ink/);
   });
-  it("the standard page keeps its layout", () => {
+  it("the standard pages keep their layout: the Global KPI card's three cells, the Project page's four tiles", () => {
+    const tiles = (html: string) => [...html.matchAll(/data-rn-tile="([a-zA-Z]+)"/g)].map((m) => m[1]);
     const html = render(input());
-    expect([...html.matchAll(/data-rn-tile="([a-zA-Z]+)"/g)].map((m) => m[1])).toEqual(["hmg", "dealer", "owned", "uncited"]);
+    expect(tiles(html)).toEqual(["hmg", "dealer", "prompts"]);
     expect(html).not.toContain('id="sec-reach"');
+    const project = asProject(() => render(input()));
+    expect(tiles(project)).toEqual(["hmg", "dealer", "owned", "uncited"]);
+    expect(project).not.toContain('id="sec-reach"');
+  });
+});
+
+// 2026-11-05 Global 지표 정리 (user approved): the Global page says each number once. Removed what restated another
+// card, merged what said one thing twice, and the navy card moved to the KPIs. Website and Project keep their layout;
+// the restored original values (matrix cell citations) are on every page.
+describe("renewal Citation body — Global 지표 정리 (2026-11-05)", () => {
+  const hero = (html: string) => between(html, 'data-rn-kpis=""', "</section>");
+  const heroes = (html: string) => (html.match(/data-rn-tone="hero"/g) ?? []).length;
+  it("no 이번 회차 요약 on Global: one navy card, the KPI card; Website and Project keep the summary", () => {
+    const html = render(input());
+    expect(html).not.toContain('id="sec-summary"');
+    expect(html).not.toContain(T.summary.title);
+    expect(html).not.toContain("공식(당사) URL이 한 번도 인용되지 않은 프롬프트");
+    expect(heroes(html)).toBe(1);
+    expect(html).toMatch(/data-rn-tone="hero"[^>]*data-rn-kpis=""/);
+    for (const other of [asProject(() => render(input())), render(input(), "", site())]) {
+      expect(other).toContain('id="sec-summary"');
+      expect(heroes(other)).toBe(1);
+      expect(other).not.toContain('data-rn-kpis=""');
+    }
+  });
+  it("the KPI card: the shares with their Δ and basis, no tile line; the chip row's basis on the card", () => {
+    const html = render(input());
+    const card = hero(html);
+    expect(between(card, 'data-rn-tile="hmg"', 'data-rn-tile="dealer"')).toMatch(/25\.0<small[^>]*>%<\/small>/);
+    expect(card).toContain(T.delta.basisPrev.replace("{date}", "2026-10-05"));
+    expect(card).not.toContain('preserveAspectRatio="none"');
+    expect(card).toContain(fill(T.lens.basisSnapshot, { date: "2026-10-12" }));
+    // the Project page's tiles still draw the line
+    expect(between(asProject(() => render(input())), 'data-rn-tile="hmg"', 'data-rn-tile="dealer"')).toContain('preserveAspectRatio="none"');
+  });
+  it("the prompt split in one cell: both counts, both links, the cited share once", () => {
+    const html = render(input(), "geography=US");
+    const cell = between(hero(html), 'data-rn-tile="prompts"', "</section>");
+    const L = T.lens as typeof T.lens & { prompts: Record<string, string> };
+    expect(cell).toContain(L.prompts.name);
+    const owned = between(cell, 'data-rn-link="owned"', "</a>");
+    const uncited = between(cell, 'data-rn-link="uncited"', "</a>");
+    const tag = (kind: string) => cell.match(new RegExp(`<a [^>]*data-rn-link="${kind}"[^>]*>`))?.[0] ?? "";
+    expect(tag("owned")).toContain('href="/ko/renewal/standard/answer-analysis/citation/prompts?geography=US&amp;tab=owned"');
+    expect(tag("uncited")).toContain('href="/ko/renewal/standard/answer-analysis/citation/prompts?geography=US&amp;tab=uncited"');
+    expect(owned).toMatch(/57<small[^>]*>개<\/small><\/span><span[^>]*>59%/); /* i18n-ignore */
+    expect(owned).toContain(L.prompts.owned);
+    expect(uncited).toMatch(/39<small[^>]*>개<\/small>/); /* i18n-ignore */
+    expect(uncited).toContain(L.prompts.uncited);
+    expect(uncited).not.toContain("%");
+    expect(html).not.toContain("41%");
+    // a split the page does not compute says why, once
+    const off = render(input({ data: live({ promptSplit: undefined }) }), `source=${encodeURIComponent(HMG)}`);
+    expect(off.split(T.lens.split.notComputed).length - 1).toBe(1);
+    expect(off).not.toContain('data-rn-link="');
+  });
+  it("the chip row's totals name the domain table's population and denominator", () => {
+    const html = render(input());
+    expect(html).not.toContain('data-rn-cmeta=""');
+    expect(html).not.toContain(fill(T.lens.total, { n: "1,000" }));
+    expect(html).not.toContain(fill(T.lens.domains, { n: "9" }));
+    const TT = T.table as typeof T.table & Record<string, string>;
+    expect(between(html, `aria-label="${T.table.title}"`, "</table>")).toContain(fill(TT.chipGlobal, { n: "100", domains: "9", total: "1,000" }));
+    // the Project page keeps its chip row
+    const project = asProject(() => render(input()));
+    expect(project).toContain(fill(T.lens.total, { n: "1,000" }));
+    expect(project).not.toContain(fill(TT.chipGlobal, { n: "100", domains: "9", total: "1,000" }));
+  });
+  it("출처 구성: the Δ values without the bar, its axis or the up / down legend; no top domains in the row tooltip", () => {
+    const C = T.comp as typeof T.comp & Record<string, string>;
+    const topLine = C.tipTop.split("{list}")[0];
+    const html = render(input());
+    expect(html).not.toContain("data-rn-daxis");
+    expect(html).not.toContain("data-rn-dbar");
+    expect(html).not.toContain('data-rn-dlg=""');
+    expect(html).not.toContain(topLine);
+    // the Δ value column stays, under the head the axis had
+    expect((html.match(/data-rn-dc=""/g) ?? []).length).toBe(4);
+    expect(between(html, `data-rn-src="${AUTO.replace(/&/g, "&amp;")}"`, "</button>")).toContain("▲2.0pp");
+    expect(between(html, `aria-label="${T.comp.title}"`, 'data-rn-src="')).toContain(C.col.deltaAxis);
+    expect(html).toContain(fill(C.trendNote, { span: "2" }));
+    // Project keeps them
+    const project = asProject(() => render(input()));
+    expect(project).toContain("data-rn-daxis");
+    expect(project).toContain('data-rn-dlg=""');
+    expect(project).toContain(topLine);
+  });
+});
+
+// 2026-11-05: the original's per-cell citations in the source preference matrix (tooltip and CSV), on every page.
+describe("renewal Citation body — matrix cell citations (restored, every page)", () => {
+  const M = T.matrix as typeof T.matrix & Record<string, string>;
+  const cellTitle = (html: string, cell: string) => between(html, `data-rn-cell="${cell}"`, ">").replace(/&#x27;/g, "'");
+  it("each cell's tooltip names its citations as Gold has them, on Global, Project and Website", () => {
+    for (const html of [render(input()), asProject(() => render(input())), render(input(), "", site())]) {
+      // chatgpt: 공식(HMG) 60 of 400, 자동차 미디어 200; gemini 공식(HMG) 190
+      expect(cellTitle(html, `chatgpt|${HMG}`)).toContain(fill(M.tipCount, { n: "60" }));
+      expect(cellTitle(html, `chatgpt|${AUTO}`)).toContain(fill(M.tipCount, { n: "200" }));
+      expect(cellTitle(html, `gemini|${HMG}`)).toContain(fill(M.tipCount, { n: "190" }));
+    }
+  });
+  it("the CSV: each column's share, citations and gap", async () => {
+    const { matrixCsvRows } = await import("./citation-body");
+    const p = input();
+    const vm = rnVmFor({ live: p.data, prev: p.prevCategories, card: p.officialDelta, typeRows: p.typeCategories, sections: null, search: "" })!;
+    const rows = matrixCsvRows(vm.engineMatrix.m!, { category: "c", all: "a", count: "n", gap: "g" }, (k) => k, (k) => k);
+    expect(rows[0]).toEqual(["c", "a", "chatgpt", "chatgpt n", "chatgpt g", "gemini", "gemini n", "gemini g"]);
+    // 공식(HMG): 60 / 400 = 15.0% and 190 / 600 = 31.7% of 전체 250 / 1,000 = 25.0%
+    expect(rows.find((r) => r[0] === HMG)).toEqual([HMG, "25.0", "15.0", 60, "-10.0", "31.7", 190, "6.7"]);
   });
 });
 
