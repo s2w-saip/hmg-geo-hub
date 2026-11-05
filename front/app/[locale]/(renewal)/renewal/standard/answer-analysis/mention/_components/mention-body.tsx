@@ -40,7 +40,7 @@ export function RnMentionBody() {
       fallback={
         <div className="rn-dense flex flex-col gap-2.5">
           <SummarySkeleton />
-          {input.body ? null : <RnMentionTabsFallback kpi={kpi} view={view} />}
+          {input.body ? null : <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst={input.brandsFirst} />}
           <RnCard className="p-6">
             <RnSkeleton className="h-40 w-full" />
           </RnCard>

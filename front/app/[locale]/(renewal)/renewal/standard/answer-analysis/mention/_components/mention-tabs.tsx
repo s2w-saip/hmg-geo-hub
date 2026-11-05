@@ -11,7 +11,12 @@
 // view it names. It used to head the content column and frame the whole page, which made the
 // summary and 브랜드 상세 read as if they changed with the tab.
 //
-// A tab is a link (`?kpi=` the KPI tab, `?view=brands` 브랜드 상세; aria-current marks the view);
+// 2026-11-05 (the user's call): on Global 브랜드 상세 comes first — it leads the rail, the
+// divider after it, and the page opens on it (input.brandsFirst; Project and Website keep the
+// KPI view first).
+//
+// A tab is a link (`?kpi=` the KPI tab, `?view=brands` 브랜드 상세; brands-first: no `?view=`
+// 브랜드 상세, `?view=kpi` the KPI view; aria-current marks the view);
 // a plain click swaps the body in place (every view reads the same data here). A switch with the
 // rail stuck brings the new view's top under the rail, else the scroll stays.
 //
@@ -21,7 +26,7 @@ import { Suspense, createContext, use, useCallback, useContext, useEffect, useLa
 import { useTranslations } from "next-intl";
 import { usePathname, useSearchParams } from "next/navigation";
 import { RnSkeleton, cx } from "@/components/renewal-ui";
-import { kpiTabQuery, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
+import { KPI_TAB_PARAM, kpiTabQuery, type KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import { MENTION_VIEW_PARAM, type MentionView, type RnMentionInput } from "./mention-input";
 import { posTxt } from "./mention-context";
 import { useDeltaBasis } from "./mention-kit";
@@ -43,15 +48,20 @@ interface PageCtx {
 
 const Ctx = createContext<PageCtx | null>(null);
 
-/** The rail link's query: the URL's params with the view's own swapped in. */
-function viewQuery(current: URLSearchParams, view: MentionView, kpi: KpiTab): string {
+/** The rail link's query: the URL's params with the view's own swapped in. Exported for the test. */
+export function viewQuery(current: URLSearchParams, view: MentionView, kpi: KpiTab, brandsFirst = false): string {
   const next = new URLSearchParams(current.toString());
   if (view === "brands") {
-    next.set(MENTION_VIEW_PARAM, "brands");
+    // brands-first: the landing URL (a `?kpi=` left behind would open the KPI view)
+    if (brandsFirst) {
+      next.delete(MENTION_VIEW_PARAM);
+      next.delete(KPI_TAB_PARAM);
+    } else next.set(MENTION_VIEW_PARAM, "brands");
     const s = next.toString();
     return s ? `?${s}` : "";
   }
-  next.delete(MENTION_VIEW_PARAM);
+  if (brandsFirst) next.set(MENTION_VIEW_PARAM, "kpi");
+  else next.delete(MENTION_VIEW_PARAM);
   return kpiTabQuery(next, kpi);
 }
 
@@ -62,9 +72,13 @@ export function RnMentionPageProvider({ input, children }: { input: RnMentionInp
   useEffect(() => setKpiState(input.kpi), [input.kpi]);
   useEffect(() => setViewState(input.view), [input.view]);
   // every view reads the same data on this page, so the view is only the URL (no server round trip)
-  const go = useCallback((v: MentionView, k: KpiTab) => {
-    window.history.replaceState(null, "", `${window.location.pathname}${viewQuery(new URLSearchParams(window.location.search), v, k)}`);
-  }, []);
+  const brandsFirst = Boolean(input.brandsFirst);
+  const go = useCallback(
+    (v: MentionView, k: KpiTab) => {
+      window.history.replaceState(null, "", `${window.location.pathname}${viewQuery(new URLSearchParams(window.location.search), v, k, brandsFirst)}`);
+    },
+    [brandsFirst],
+  );
   const setKpi = useCallback(
     (k: KpiTab) => {
       setKpiState(k);
@@ -100,14 +114,14 @@ export function KpiBasisChip() {
 
 const plainClick = (e: MouseEvent<HTMLAnchorElement>) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
-/** The view rail under 이번 회차 요약: the four KPI tabs, then 브랜드 상세. */
+/** The view rail under 이번 회차 요약: the four KPI tabs, then 브랜드 상세 (brands-first: the other way round). */
 export function RnMentionTabs() {
-  const { kpi, view, setKpi, showBrands } = useMentionPage();
+  const { input, kpi, view, setKpi, showBrands } = useMentionPage();
   const t = useTranslations("renewal.mention.tabs");
   const pathname = usePathname();
   const search = useSearchParams();
   const rail = useRail();
-  const href = (v: MentionView, k: KpiTab) => `${pathname}${viewQuery(new URLSearchParams(search.toString()), v, k)}`;
+  const href = (v: MentionView, k: KpiTab) => `${pathname}${viewQuery(new URLSearchParams(search.toString()), v, k, input.brandsFirst)}`;
   // modified clicks open the link as usual (new tab / window)
   const onKpi = (k: KpiTab) => (e: MouseEvent<HTMLAnchorElement>) => {
     if (!plainClick(e)) return;
@@ -125,36 +139,61 @@ export function RnMentionTabs() {
   };
   return (
     <TabRail rail={rail}>
-      {KPI_TABS.map((k) => (
-        <TabLink key={k} id={k} title={k} on={view === "kpi" && k === kpi} href={href("kpi", k)} onClick={onKpi(k)}>
-          <Suspense fallback={<RnSkeleton className="h-3.5 w-16" />}>
-            <TabValue k={k} />
-          </Suspense>
-        </TabLink>
-      ))}
-      <TabDivider />
-      <TabLink id="brands" name={t("brands")} on={view === "brands"} href={href("brands", kpi)} onClick={onBrands}>
-        {t("brandsHint")}
-      </TabLink>
+      <RailOrder
+        brandsFirst={input.brandsFirst}
+        kpis={KPI_TABS.map((k) => (
+          <TabLink key={k} id={k} title={k} on={view === "kpi" && k === kpi} href={href("kpi", k)} onClick={onKpi(k)}>
+            <Suspense fallback={<RnSkeleton className="h-3.5 w-16" />}>
+              <TabValue k={k} />
+            </Suspense>
+          </TabLink>
+        ))}
+        brands={
+          <TabLink id="brands" name={t("brands")} on={view === "brands"} href={href("brands", kpi)} onClick={onBrands}>
+            {t("brandsHint")}
+          </TabLink>
+        }
+      />
     </TabRail>
   );
 }
 
 /** The rail before the body's reads land (names only). */
-export function RnMentionTabsFallback({ kpi, view }: { kpi: KpiTab; view: MentionView }) {
+export function RnMentionTabsFallback({ kpi, view, brandsFirst }: { kpi: KpiTab; view: MentionView; brandsFirst?: boolean }) {
   const t = useTranslations("renewal.mention.tabs");
   return (
     <TabRail>
-      {KPI_TABS.map((k) => (
-        <TabLink key={k} id={k} title={k} on={view === "kpi" && k === kpi}>
-          <RnSkeleton className="h-3.5 w-16" />
-        </TabLink>
-      ))}
-      <TabDivider />
-      <TabLink id="brands" name={t("brands")} on={view === "brands"}>
-        {t("brandsHint")}
-      </TabLink>
+      <RailOrder
+        brandsFirst={brandsFirst}
+        kpis={KPI_TABS.map((k) => (
+          <TabLink key={k} id={k} title={k} on={view === "kpi" && k === kpi}>
+            <RnSkeleton className="h-3.5 w-16" />
+          </TabLink>
+        ))}
+        brands={
+          <TabLink id="brands" name={t("brands")} on={view === "brands"}>
+            {t("brandsHint")}
+          </TabLink>
+        }
+      />
     </TabRail>
+  );
+}
+
+/** The four KPI tabs and 브랜드 상세, the divider between them. */
+function RailOrder({ brandsFirst, kpis, brands }: { brandsFirst?: boolean; kpis: ReactNode; brands: ReactNode }) {
+  return brandsFirst ? (
+    <>
+      {brands}
+      <TabDivider />
+      {kpis}
+    </>
+  ) : (
+    <>
+      {kpis}
+      <TabDivider />
+      {brands}
+    </>
   );
 }
 

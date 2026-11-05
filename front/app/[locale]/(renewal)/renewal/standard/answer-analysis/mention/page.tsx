@@ -90,10 +90,12 @@ export default async function RenewalMentionPage({
   );
   const body: RnMentionInput = {
     kpi: resolveKpiTab(sp[KPI_TAB_PARAM]),
-    view: resolveMentionView(sp[MENTION_VIEW_PARAM]),
+    // 브랜드 상세 first (2026-11-05, the user's call): the landing view unless a `?kpi=` link asks for a KPI
+    view: resolveMentionView(sp[MENTION_VIEW_PARAM], { kpi: sp[KPI_TAB_PARAM] }),
     ownLabel: head.ownLabel,
     period,
     filtered,
+    brandsFirst: true,
     ...sectionReads(q, locale),
   };
   return (
@@ -207,7 +209,7 @@ function PageSkeleton({ header, kpi, view }: { header: ReactNode; kpi: KpiTab; v
         <RnSkeleton className="h-4 w-40" />
         <RnSkeleton className="h-16 w-full" />
       </RnCard>
-      <RnMentionTabsFallback kpi={kpi} view={view} />
+      <RnMentionTabsFallback kpi={kpi} view={view} brandsFirst />
       <RnCard className="h-[320px]" />
     </RnFilterSplit>
   );

@@ -28,12 +28,20 @@ export type HeroMetric = "exposure" | "sov" | "favorability";
 
 /** What sits under the rail: the KPI tab's analysis, or 브랜드 상세 (no KPI: mention counts and shares). */
 export type MentionView = "kpi" | "brands";
-/** `?view=brands` opens 브랜드 상세; no param = the KPI view (`?kpi=` keeps the tab either way). */
+/** `?view=brands` opens 브랜드 상세; no param = the KPI view (`?kpi=` keeps the tab either way). A brands-first page
+ * (Global, 2026-11-05) opens 브랜드 상세 with no param; `?view=kpi` or a `?kpi=` link (the dashboard KPI cards') opens the
+ * KPI view. */
 export const MENTION_VIEW_PARAM = "view";
 
-export function resolveMentionView(raw: string | string[] | undefined | null): MentionView {
-  const v = Array.isArray(raw) ? raw[0] : raw;
-  return v === "brands" ? "brands" : "kpi";
+type Raw = string | string[] | undefined | null;
+
+const first = (raw: Raw) => (Array.isArray(raw) ? raw[0] : raw);
+
+export function resolveMentionView(raw: Raw, brandsFirst?: { kpi: Raw }): MentionView {
+  const v = first(raw);
+  if (!brandsFirst) return v === "brands" ? "brands" : "kpi";
+  if (v === "brands" || v === "kpi") return v;
+  return first(brandsFirst.kpi) ? "kpi" : "brands";
 }
 
 /** The period compare block of the original KPI body (the old view model's input). */
@@ -53,6 +61,8 @@ export interface RnMentionInput {
   period: { from: string | null; to: string | null } | null;
   /** any filter axis in the URL (decides "결과 없음" vs "측정 대기"). */
   filtered: boolean;
+  /** 브랜드 상세 leads the rail and is the landing view (Global, 2026-11-05 the user's call); else it closes the rail. */
+  brandsFirst?: boolean;
   /** The page's own sections in place of the standard bar, rail and views (the Website page, 2026-11-02: its prompts aim
    * at its own pages, so the page reads differently), inside the same providers. */
   body?: ReactNode;
