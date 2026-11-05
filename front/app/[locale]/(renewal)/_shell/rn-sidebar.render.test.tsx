@@ -126,11 +126,13 @@ describe("renewal sidebar", () => {
     for (const path of Object.keys(ACCOUNT_PAGES)) expect(RENEWAL_PAGES.has(path), path).toBe(true);
   });
 
+  const ROUTE_PAGE = /(^|[\\/])page\.tsx$/;
   it("knows exactly the renewal pages there are", () => {
     const root = fileURLToPath(new URL("../renewal/", import.meta.url));
     const pages = readdirSync(root, { recursive: true, encoding: "utf8" })
-      // a project tab's pages (projects/[id]/…) are no menu item: renewal-pages RENEWAL_PROJECT_PAGES lists them
-      .filter((f) => f.endsWith("page.tsx") && !f.includes("[...slug]") && !f.includes("[id]"))
+      // a project tab's pages (projects/[id]/…) are no menu item: renewal-pages RENEWAL_PROJECT_PAGES lists them.
+      // A route is a file named page.tsx, not one ending in it (2026-11-05: admin/_components/admin-list-page.tsx).
+      .filter((f) => ROUTE_PAGE.test(f) && !f.includes("[...slug]") && !f.includes("[id]"))
       .map((f) => "/" + f.replace(/\\/g, "/").replace(/\/?page\.tsx$/, ""));
     expect([...RENEWAL_PAGES].sort()).toEqual(pages.sort());
   });
@@ -138,7 +140,7 @@ describe("renewal sidebar", () => {
   it("knows exactly the project pages there are", () => {
     const root = fileURLToPath(new URL("../renewal/projects/[id]/", import.meta.url));
     const pages = readdirSync(root, { recursive: true, encoding: "utf8" })
-      .filter((f) => f.endsWith("page.tsx") && !f.includes("[...sub]"))
+      .filter((f) => ROUTE_PAGE.test(f) && !f.includes("[...sub]"))
       .map((f) => f.replace(/\\/g, "/").replace(/\/?page\.tsx$/, ""));
     expect([...RENEWAL_PROJECT_PAGES].sort()).toEqual(pages.sort());
   });
