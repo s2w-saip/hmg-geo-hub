@@ -5182,10 +5182,9 @@
         "change": "Change",
         "add": "Add brand",
         "dialog": "Choose brands to compare",
-        "hint": "Up to {max} rivals with a trend · orange, teal, violet in pick order. Every chart on the page uses the same colours.",
+        "hint": "Pick any number of rivals with a trend · competitor colours in pick order (orange, pink, purple, yellow, then their lighter steps). Every chart on the page uses the same colours.",
         "reset": "Default (the top rival by Top1 ACR)",
         "close": "Close",
-        "max": "You can compare up to {max} brands",
         "remove": "Stop comparing {brand}",
         "search": "Search brands",
         "none": "No matching brand",
@@ -5559,11 +5558,10 @@
         "change": "Change",
         "add": "Add brand",
         "dialog": "Choose compare brands",
-        "hint": "Up to {max} of the top brands with a trend · orange, teal, violet in pick order. Every chart on the page uses the same colours.",
+        "hint": "Pick any number of the top brands with a trend · competitor colours in pick order (orange, pink, purple, yellow, then their lighter steps). Every chart on the page uses the same colours.",
         "empty": "No competitor has a trend",
         "reset": "Default (top competitor by share)",
-        "close": "Close",
-        "max": "You can compare up to {max} brands"
+        "close": "Close"
       },
       "delta": {
         "up": "Improved",

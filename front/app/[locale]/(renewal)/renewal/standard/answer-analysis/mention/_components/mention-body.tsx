@@ -24,7 +24,7 @@ import {
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { OWN_KEY, firstPicked, pickKey, type Finding, type RnShellVM, type TypeFinding } from "../_data/screen-types";
-import { COMPARE_COLORS, MentionProvider, type DrawerTarget, deltaTxt, pctTxt, posTxt, useCompare, useMention, type ComparePick, type MentionCtx } from "./mention-context";
+import { MentionProvider, compareColor, type DrawerTarget, deltaTxt, pctTxt, posTxt, useCompare, useMention, type ComparePick, type MentionCtx } from "./mention-context";
 import { CardSkeleton, EmptyRead, InfoTip, StateCard, useDegradedText } from "./mention-kit";
 import { RateBody } from "./mention-rate";
 import { FavorBody } from "./mention-favor";
@@ -193,7 +193,7 @@ export function ComparePicker() {
       <span className="mr-0.5 text-rn-12 font-semibold text-rn-muted">{t("label")}</span>
       {compare.map((b, i) => (
         <span key={b} data-rn-cchip={b} className="inline-flex h-7 items-center gap-1.5 rounded-full bg-rn-surface pr-1 pl-2.5 text-rn-12 font-bold text-rn-ink-2 shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">
-          <i aria-hidden className="size-2 rounded-full" style={{ background: COMPARE_COLORS[i] }} />
+          <i aria-hidden className="size-2 rounded-full" style={{ background: compareColor(i) }} />
           {b}
           {pick.auto ? <span className="font-medium text-rn-muted">· {t("auto")}</span> : null}
           <button type="button" aria-label={t("remove", { brand: b })} onClick={() => setPick({ auto: false, brands: compare.filter((x) => x !== b) })} className="grid size-5 cursor-pointer place-items-center rounded-full text-rn-muted hover:bg-rn-inset hover:text-rn-ink">
@@ -213,7 +213,7 @@ export function ComparePicker() {
       </button>
       {open ? (
         <div role="dialog" aria-label={t("dialog")} className="absolute top-[calc(100%+6px)] right-0 z-40 w-[260px] rounded-xl bg-rn-surface p-2 shadow-[var(--shadow-rn-3),0_0_0_1px_var(--color-rn-line)]">
-          <p className="m-0 px-2 pt-1 pb-1.5 text-rn-11 text-rn-muted">{t("hint", { max: COMPARE_COLORS.length })}</p>
+          <p className="m-0 px-2 pt-1 pb-1.5 text-rn-11 text-rn-muted">{t("hint")}</p>
           {covered.length ? (
             <div role="group" aria-label={t("label")} className="max-h-[300px] overflow-y-auto">
               {covered.map((b) => (

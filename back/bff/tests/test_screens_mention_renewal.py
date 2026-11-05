@@ -225,7 +225,7 @@ class Helpers(unittest.TestCase):
     def test_subsets_cover_every_pick_once(self):
         covered = [f"b{i}" for i in range(10)]
         keys = [k for k, _ in rn.compare_subsets(covered)]
-        self.assertEqual(len(keys), 1 + 10 + 45 + 120)
+        self.assertEqual(len(keys), 2 ** 10)  # every pick, any number of brands (no cap, 2026-11-05)
         self.assertEqual(len(set(keys)), len(keys))
         for k, pick in rn.compare_subsets(covered):
             self.assertEqual(k, pick_key(list(reversed(pick)), covered))

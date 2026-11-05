@@ -1,8 +1,9 @@
 // The service palette (2026-11-05, the user's final palette). Charts need colours as strings (recharts, inline
 // styles, color-mix, the label-contrast check), so the hex values live here; app/renewal-theme.css holds the same
 // values as rn-* tokens for the classes. A colour follows its role, never the series' rank:
-//   당사 = Chart - Own (the base; tiers run down the ramp), compare brands and other hued series = the
-//   Chart - Other bases, a series that is only context = the light grey, good · warn · bad = System.
+//   당사 = Chart - Own (the base; tiers run down the ramp), competitor brands = every Chart - Other colour
+//   (RN_COMPARE), other hued series = its first three (RN_SERIES), a series that is only context = the light grey,
+//   good · warn · bad = System.
 // System green and yellow do not read as text or small icons on white: those use rn-up-ink · rn-warn-ink (the
 // tokens; the same hue mixed with the text black to 4.5:1).
 
@@ -12,15 +13,22 @@ export const RN_OWN = RN_OWN_RAMP[3];
 /** 당사 on the ink tooltips and legends (the base is 2.7:1 there). */
 export const RN_OWN_ON_DARK = RN_OWN_RAMP[4];
 
-/** Chart - Other, four hue families, each dark to light. */
+/** Chart - Other: the 15 competitor colours of the palette (the user's list, 2026-11-05), grouped by hue, dark to
+ * light. Orange has three; the fourth orange read off the image earlier is not in the palette. */
 export const RN_OTHER = {
   yellow: ["#ffbe42", "#ffce71", "#ffdfa0", "#ffebc6"],
-  orange: ["#ff7651", "#ff9174", "#ffb49f", "#ffd6cb"],
+  orange: ["#ff7651", "#ff9174", "#ffb49f"],
   pink: ["#ff0082", "#ff59ae", "#ff99cd", "#ffbfe0"],
   purple: ["#c00ced", "#d355f3", "#ecb6fa", "#f2cefb"],
 } as const;
-/** The hued series beside 당사, in this order (the compare brands, the engines after the first). Purple sits
- * closest to the own blue, yellow is the faintest line on white: each comes after the other two. */
+/** Every Chart - Other colour for competitor brands, in pick order: each hue's base, then each hue's next step, and
+ * so on. Purple sits closest to the own blue and yellow is the faintest line on white, so each comes after the other
+ * two at every step. A pick past the fifteenth starts the list again. */
+export const RN_COMPARE = [0, 1, 2, 3].flatMap((i) => [RN_OTHER.orange, RN_OTHER.pink, RN_OTHER.purple, RN_OTHER.yellow].flatMap((hue) => (i < hue.length ? [hue[i]] : [])));
+/** A competitor's colour by its pick order (0-based). */
+export const rnCompareColor = (i: number): string => RN_COMPARE[i % RN_COMPARE.length];
+/** The hued series beside 당사 that are not competitors (engines after the first, segments): the first three
+ * competitor colours. */
 export const RN_SERIES = [RN_OTHER.orange[0], RN_OTHER.pink[0], RN_OTHER.purple[0]] as const;
 
 /** A series left as context (brands not picked, 그 외). */

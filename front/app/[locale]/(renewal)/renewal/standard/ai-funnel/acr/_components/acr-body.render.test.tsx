@@ -250,3 +250,15 @@ describe("renewal ACR body: the brand board (renewal audit 11-4 · 11-5)", () =>
     expect(box).not.toContain("rn-dense_&]:hidden");
   });
 });
+
+// no cap on the compare rivals (the user, 2026-11-05): a pick past the third takes the next Chart - Other colour —
+// the fourth the yellow base — where it was capped at the three colours the palette was misread as
+describe("renewal ACR compare colours", () => {
+  it("colours every picked rival by pick order, 당사 navy and the rest grey", async () => {
+    const { makeColorOf, OWN_COLOR, CONTEXT_COLOR } = await import("./acr-context");
+    const colorOf = makeColorOf(["A", "B", "C", "D", "E"], (b) => b === "Kia");
+    expect(["A", "B", "C", "D", "E"].map(colorOf)).toEqual(["#ff7651", "#ff0082", "#c00ced", "#ffbe42", "#ff9174"]);
+    expect(colorOf("Kia")).toBe(OWN_COLOR);
+    expect(colorOf("F")).toBe(CONTEXT_COLOR);
+  });
+});

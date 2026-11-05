@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 
 const { MentionProvider } = await import("./mention-context");
 const { Board, Engines, HeroValue, RateHero, Types } = await import("./mention-rate");
-const { PerAnswerLine, Summary } = await import("./mention-body");
+const { ComparePicker, PerAnswerLine, Summary } = await import("./mention-body");
 const { FavorHeroCard } = await import("./mention-favor");
 const { RankBody, RankHeroCard } = await import("./mention-rank");
 const { KpiBasisChip, RnMentionPageProvider } = await import("./mention-tabs");
@@ -291,6 +291,21 @@ describe("renewal Mention heroes", () => {
     expect(html).not.toContain("좁혀졌습니다");
     expect(html).toContain("같은 값: 최종 선택 · BMW — 뒤지는 유형 없음");
     expect(html).not.toContain("모든 유형에서");
+  });
+
+  // no cap on the compare brands (the user, 2026-11-05): each pick takes the next Chart - Other colour, the fourth the
+  // yellow base and the fifth the next orange step; it was three, the count of colours the palette was misread as
+  it("picks any number of compare brands, each in its own competitor colour", () => {
+    const five = ["BMW", "Toyota", "Tesla", "Lexus", "Honda"];
+    const html = render(<ComparePicker />, { input: { compare: settled({ covered: five }) }, pick: { auto: false, brands: five } });
+    const chips = [...html.matchAll(/data-rn-cchip="([^"]+)"[^>]*><i aria-hidden="true" class="[^"]*" style="background:([^"]+)"/g)].map((m) => [m[1], m[2]]);
+    expect(chips).toEqual([
+      ["BMW", "#ff7651"],
+      ["Toyota", "#ff0082"],
+      ["Tesla", "#c00ced"],
+      ["Lexus", "#ffbe42"],
+      ["Honda", "#ff9174"],
+    ]);
   });
 
   // renewal audit 5-2: a calendar month shows the 답변당 언급 수 line, as the original did

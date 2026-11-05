@@ -28,11 +28,10 @@ import {
   rnHighlightState,
   useRnHighlight,
   useRnHighlightKey,
-  useRnToast,
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { RnAcrInput, RnAcrView } from "../_data/screen-types";
-import { AcrCardActions, AcrProvider, COMPARE_COLORS, CONTEXT_COLOR, OWN_COLOR, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
+import { AcrCardActions, AcrProvider, CONTEXT_COLOR, OWN_COLOR, compareColor, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
 import { AcrConversion, AcrDuels } from "./acr-funnel";
 
@@ -83,20 +82,19 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
   const [battle, setBattle] = useState<AcrCtx["battle"]>("all");
   const [sheet, setSheet] = useState<string | null>(null);
   const [distState, setDistState] = useState<AcrCtx["distState"]>("all");
-  const toast = useRnToast();
   const key = useRnHighlightKey();
   const { hover } = useRnHighlight();
   const compare = useMemo(() => (pick.auto ? view.defaultCompare : pick.brands.filter((b) => view.rivals.includes(b))), [pick, view.defaultCompare, view.rivals]);
   const isOwn = useCallback((b: string) => view.ownBrands.includes(b), [view.ownBrands]);
   const lit = useMemo(() => (!key ? [] : key === "__own" ? ["__own", ...view.ownBrands] : view.ownBrands.includes(key) ? [key, "__own"] : [key]), [key, view.ownBrands]);
+  // any number of rivals can be picked (the user, 2026-11-05: no cap); colours follow the pick order
   const toggleCompare = useCallback(
     (b: string) => {
       const cur = compare;
       if (cur.includes(b)) setPick({ auto: false, brands: cur.filter((x) => x !== b) });
-      else if (cur.length >= COMPARE_COLORS.length) toast(t("compare.max", { max: COMPARE_COLORS.length }));
       else setPick({ auto: false, brands: [...cur, b] });
     },
-    [compare, t, toast],
+    [compare],
   );
   const ctx: AcrCtx = {
     view,
@@ -180,7 +178,7 @@ function ComparePicker({ pick, setPick }: { pick: { auto: boolean; brands: strin
       <span className="mr-0.5 text-rn-12 font-semibold text-rn-muted">{t("label")}</span>
       {compare.map((b, i) => (
         <span key={b} data-rn-cchip={b} className="inline-flex h-7 items-center gap-1.5 rounded-full bg-rn-surface pr-1 pl-2.5 text-rn-12 font-bold text-rn-ink-2 shadow-[inset_0_0_0_1px_var(--color-rn-line-2)]">
-          <i aria-hidden className="size-2 rounded-full" style={{ background: COMPARE_COLORS[i] }} />
+          <i aria-hidden className="size-2 rounded-full" style={{ background: compareColor(i) }} />
           {b}
           {pick.auto ? <span className="font-medium text-rn-muted">· {t("auto")}</span> : null}
           <button type="button" aria-label={t("remove", { brand: b })} onClick={() => setPick({ auto: false, brands: compare.filter((x) => x !== b) })} className="grid size-5 cursor-pointer place-items-center rounded-full text-rn-muted hover:bg-rn-inset hover:text-rn-ink">
@@ -200,7 +198,7 @@ function ComparePicker({ pick, setPick }: { pick: { auto: boolean; brands: strin
       </button>
       {open ? (
         <div role="dialog" aria-label={t("dialog")} className="absolute top-[calc(100%+6px)] right-0 z-40 w-[260px] rounded-xl bg-rn-surface p-2 shadow-[var(--shadow-rn-3),0_0_0_1px_var(--color-rn-line)]">
-          <p className="m-0 px-2 pt-1 pb-1.5 text-rn-11 text-rn-muted">{t("hint", { max: COMPARE_COLORS.length })}</p>
+          <p className="m-0 px-2 pt-1 pb-1.5 text-rn-11 text-rn-muted">{t("hint")}</p>
           {view.rivals.length ? (
             <div role="group" aria-label={t("label")}>
               {view.rivals.map((b) => (

@@ -3,7 +3,7 @@
 import { createContext, use, useContext, useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
-import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
+import { RN_CONTEXT, RN_OWN, rnCompareColor } from "@/components/renewal-ui/palette";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { RnMentionInput } from "./mention-input";
@@ -15,7 +15,8 @@ import { OWN_KEY, type RnDrawerBrand } from "../_data/screen-types";
 // lit keys of the linked highlight, which cards show their table twin, and the brand drawer.
 
 export const OWN_COLOR = RN_OWN;
-export const COMPARE_COLORS = RN_SERIES;
+/** A compare brand's colour by its pick order: every Chart - Other colour, the list again past the fifteenth */
+export const compareColor = rnCompareColor;
 export const CONTEXT_COLOR = RN_CONTEXT;
 
 /** A signal the drawer lists the prompts of: a sentiment, or a mention type (renewal audit 7-3, the original type
@@ -64,28 +65,26 @@ export function useMention(): MentionCtx {
 /**
  * Compare brands, resolved against the covered competitors (only brands with a round trend can
  * be compared; the API orders them by share of voice). Suspends on that read — call inside a
- * card's <Suspense>. The pick is UI state: auto = the first covered brand.
+ * card's <Suspense>. The pick is UI state: auto = the first covered brand. Any number of covered brands can be
+ * picked (the user, 2026-11-05: no cap).
  */
 export function useCompare(): { compare: string[]; covered: string[]; colorOf: (brand: string) => string; toggle: (brand: string) => void } {
   const { input, pick, setPick, ownBrands } = useMention();
   const { covered } = use(input.compare);
-  const t = useTranslations("renewal.mention.compare");
-  const toast = useRnToast();
   return useMemo(() => {
     const compare = pick.auto ? covered.slice(0, 1) : pick.brands.filter((b) => covered.includes(b));
     const colorOf = (brand: string) => {
       if (brand === OWN_KEY || ownBrands.includes(brand)) return OWN_COLOR;
       const i = compare.indexOf(brand);
-      return i >= 0 ? COMPARE_COLORS[i] : CONTEXT_COLOR;
+      return i >= 0 ? compareColor(i) : CONTEXT_COLOR;
     };
     const toggle = (brand: string) => {
       if (!covered.includes(brand)) return;
       if (compare.includes(brand)) setPick({ auto: false, brands: compare.filter((x) => x !== brand) });
-      else if (compare.length >= COMPARE_COLORS.length) toast(t("max", { max: COMPARE_COLORS.length }));
       else setPick({ auto: false, brands: [...compare, brand] });
     };
     return { compare, covered, colorOf, toggle };
-  }, [covered, ownBrands, pick, setPick, t, toast]);
+  }, [covered, ownBrands, pick, setPick]);
 }
 
 export const pctTxt = (v: number | null | undefined) => (v == null ? "—" : `${v.toFixed(1)}%`);

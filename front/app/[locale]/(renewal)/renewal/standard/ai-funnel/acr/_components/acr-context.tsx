@@ -3,7 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
-import { RN_CONTEXT, RN_OWN, RN_SERIES } from "@/components/renewal-ui/palette";
+import { RN_CONTEXT, RN_OWN, rnCompareColor } from "@/components/renewal-ui/palette";
 import type { StandardAcr } from "@/lib/db/repositories/scope-aggregates";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { AcrDistState, RnAcrView } from "../_data/screen-types";
@@ -13,7 +13,8 @@ import type { AcrDistState, RnAcrView } from "../_data/screen-types";
 // lit keys of the linked highlight, and which cards show their table twin.
 
 export const OWN_COLOR = RN_OWN;
-export const COMPARE_COLORS = RN_SERIES;
+/** A compare rival's colour by its pick order: every Chart - Other colour, the list again past the fifteenth */
+export const compareColor = rnCompareColor;
 export const CONTEXT_COLOR = RN_CONTEXT;
 
 export interface AcrCtx {
@@ -54,7 +55,7 @@ export function makeColorOf(compare: readonly string[], isOwn: (b: string) => bo
   return (brand: string) => {
     if (brand === "__own" || isOwn(brand)) return OWN_COLOR;
     const i = compare.indexOf(brand);
-    return i >= 0 ? COMPARE_COLORS[i] : CONTEXT_COLOR;
+    return i >= 0 ? compareColor(i) : CONTEXT_COLOR;
   };
 }
 

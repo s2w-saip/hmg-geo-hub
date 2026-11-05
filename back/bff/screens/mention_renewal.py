@@ -53,8 +53,6 @@ FINDING_ORDER = {"standingLead": 6, "standingTrail": 6, "engine": 5, "typeTrail"
 BOARD_COMPETITORS = 12
 #: board rows shown before "more" (mention-rate BOARD_TOP)
 BOARD_TOP = 5
-#: max compare brands (mention-context COMPARE_COLORS.length)
-COMPARE_MAX = 3
 #: the treemap's brands and the shell's drawer rows; the ranking table shows this many first (mention-brands TOP)
 BRANDS_TOP = 100
 TREEMAP_FOLD = "__rest"
@@ -817,10 +815,11 @@ def covered_brands(brands: list[dict], trend: Any) -> list[str]:
 
 
 def compare_subsets(covered: list[str]) -> list[tuple[str, list[str]]]:
-    """Every pick of up to three covered brands: (key, the brands in covered order). The key is the
-    bit mask of their covered positions (Next builds it from the picked brands)."""
+    """Every pick of the covered brands, any number of them (no cap, the user 2026-11-05; the covered brands are the
+    brand trend's, at most 11): (key, the brands in covered order). The key is the bit mask of their covered positions
+    (Next builds it from the picked brands)."""
     out = []
-    for size in range(COMPARE_MAX + 1):
+    for size in range(len(covered) + 1):
         for idx in combinations(range(len(covered)), size):
             out.append((str(sum(1 << i for i in idx)), [covered[i] for i in idx]))
     return out
