@@ -7541,7 +7541,7 @@
       "unauthorized": "Your session has expired.",
       "forbidden": "Top-level administrators only.",
       "source_unavailable": "The input store could not be read. Try again shortly.",
-      "failed": "The list could not be loaded."
+      "failed": "The list could not be loaded. If this continues, tell the contact: {contact}"
     },
     "addErrors": {
       "invalid": "Check the values. A domain cannot contain spaces.",

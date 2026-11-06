@@ -6,6 +6,7 @@ import { canAccessRoute } from "@/lib/auth/route-policy";
 import { isHghApiError } from "@/lib/hgh/errors";
 import { hubFetch } from "@/lib/hub/client";
 import { hubToken } from "@/lib/hub/session";
+import { SUPPORT } from "@/lib/support-contact";
 import { loadSavedFilters } from "../../../_components/saved-filters-server";
 import { RnPageFrame } from "../../../_components/filter-split";
 import type { MeasurementListing } from "./_components/measurement-model";
@@ -47,6 +48,6 @@ export default async function RenewalMeasurementPage({ params }: { params: Promi
   } catch (e) {
     if (!isHghApiError(e)) throw e;
     const code = e.status === 401 ? "unauthorized" : e.status === 403 ? "forbidden" : e.status >= 500 ? "source_unavailable" : "failed";
-    return notice(t(`error.${code}`), code);
+    return notice(t(`error.${code}`, SUPPORT), code);
   }
 }
