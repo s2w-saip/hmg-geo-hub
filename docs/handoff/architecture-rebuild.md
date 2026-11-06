@@ -20,7 +20,7 @@
 | 1d | 인증 · `accounts` 이전, 내부 토큰(계정 범위 + 1f까지 계정 ID · 역할) | 리뉴얼 · 레거시 로그인, 비밀번호 변경, 계정 중지 즉시 반영, 내부 토큰 없는 호출 거부. 끝남(`8c1a818`) |
 | 1e | 저장 필터 이전, 13.7, `operations_db` 쓰기 계정 2개 제거. 읽기 연결은 1f까지 둠 | 저장 필터 동작. 끝남(`0668401`) |
 | 1e′ | T6.5에서 당김: Project 프롬프트 · 출처 분류 · 고객 관심 · 엔티티 역할 · GA4 등록부 저장 e2e. 실패하면 이전 전 결함이니 재현 테스트부터 해서 1f 전에 고침. 테스트 행은 지움 | 다섯 화면 저장 |
-| 1e″ | T10.1 Gold 가져오기 중지(`scripts/start-hub-storage.sh` 포함, 코드 삭제는 T12.2). 1e 직후로 당김(브리프 Q1 A) | 입력이 그대로 유지. 끝남(HASH) |
+| 1e″ | T10.1 Gold 가져오기 중지(`scripts/start-hub-storage.sh` 포함, 코드 삭제는 T12.2). 1e 직후로 당김(브리프 Q1 A) | 입력이 그대로 유지. 끝남(`14bdb86`) |
 | 1f | 입력 편집 · GA4 등록부 쓰기 3경로 · 13.4 `gold_db` Admin 경로 12개 이전, 프록시 GET 전용. 작성자 이름: 입력 DB 이름 컬럼과 기존 행 채우기 → 허브 서버가 기록 → 데이터 서버의 `operations_db` 연결 제거 | 저장 · 충돌 · 이력 작성자 이름(기존 행 포함), 12경로 값 동일, 허브 서버에 `gold_db` 접속 정보 없음, 프록시가 쓰기 거부, 데이터 서버가 `operations_db` 설정 없이 기동 |
 | 1g | 입력 DB 쓰기 계정 7개를 데이터 서버에서 제거, 13.5, 목표 그림을 아키텍처 문서로 합침. 그 전에 13.8 | 데이터 서버가 쓰기 계정 없이 기동, 전 화면 값이 1a 기준선과 같음, 프록시로 늘어난 응답 시간 기록 |
 | 2a | T6.3 Website · Global 측정 설정 입력, 새 쓰기는 허브 서버에. D-25 Project 자사 URL 규칙과 `tgt_hit` 포함 | 범위표는 문서로 남기고 추천안으로 진행(등록값 0/130의 등록 시점도). T6.5 e2e, 사전 집계 재실행 |
@@ -122,7 +122,7 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 - [ ] 13.5 프록시로 늘어나는 응답 시간 재기, 값 비교, 아키텍처 문서 · ERD(목표 구조 그림을 아키텍처 문서로 합친다)
 - [x] 13.6 (`9f5e99d`) 코드 이름: `back/bff`를 `back/data_server`로, import · 스크립트 · Dockerfile까지. 프런트의 `bff` 언급은 레거시 코드가 섞여 있어 고치지 않는다. 적용한 마이그레이션(체크섬), 골든 케이스, conda 환경 `hgh-bff`, `vm.sh bff` 명령 이름, 지난 기록은 그대로 둔다
 - [x] 13.7 (`0668401`) cron job의 운영 DB 쓰기를 뺀다: `sync-gold-catalog`의 `system.project_reference`. 참조 행은 허브 서버가 프로젝트 멤버를 쓸 때 등록한다. 지금은 멤버를 쓰는 코드가 없어 쓰기만 뺀다
-- [x] 13.8 (HASH) 목표 그림의 `sync-service-week` · `sync-gold-catalog`를 T12 뒤 구조로 고친다. 1g 전, SSOT 사본은 건드리지 않는다
+- [x] 13.8 (`14bdb86`) 목표 그림의 `sync-service-week` · `sync-gold-catalog`를 T12 뒤 구조로 고친다. 1g 전, SSOT 사본은 건드리지 않는다
 
 **T14 React 전환 사전 준비** (사용자 2026-11-06: T13과 병행 준비, 실제 연결은 서버 안정화 뒤)
 
@@ -185,7 +185,7 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 **T10 입력 원본 전환** (10.1은 T9.7 앞, 2.5를 기다리지 않는다. 10.2는 '개발 순서' 5)
 
-- [x] 10.1 (HASH) Gold 가져오기(`sync-gold-catalog`) 중지. `scripts/start-hub-storage.sh` 포함, 코드 삭제는 T12.2
+- [x] 10.1 (`14bdb86`) Gold 가져오기(`sync-gold-catalog`) 중지. `scripts/start-hub-storage.sh` 포함, 코드 삭제는 T12.2
 - [ ] 10.2 Gold 키 의존(프롬프트 · 프로젝트 매핑) 정리
 
 ### P4 철거 — P3 뒤
@@ -442,4 +442,4 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 - 2026-11-07 — 1c 허브 서버 골격 + 전 경로 프록시(`cb9361f`). `back/hub_server`(:5556), `start-local.sh`가 데이터 서버 뒤에 띄우고 Next의 `HGH_API_BASE_URL`을 :5556으로 바꿨다(`front/.env.local` · `.env.example`, Next 코드 변경 없음). Next :3333을 재시작했다. 값 대조: 기준선 대 허브 서버 경유 HTTP 171건 값 · 상태 · 헤더 차이 0. 응답 시간(같은 시점 직접 대 경유 2회차): 합계 22.4 → 22.8초, 요청당 p50 +1ms, p95 +11ms. 프록시 단위 테스트 10개 통과(쿼리 문자열 그대로, 인코딩된 경로, 상태 11종, 2MB 바이너리 스트림 · 다운로드 헤더, 쓰기 메서드 · 몸체 · 토큰, 홉 헤더 제거, 데이터 서버 무응답). 실제 경로: Next와 React :3334 각각에서 로그인 · 세션 · 화면 · 필터 · 인용 · 계정 · 저장 필터 읽기 200, `/ko/renewal/dashboard` · `/ko/dashboard` 200. 실제 xlsx는 없어(보류 참고) 다운로드는 전후 동일과 스텁으로 확인했다. 실행 안 함: 프런트 전체(코드 변경 없음, 설정 값만), 브라우저 e2e, 범위 계정 경유 비교(1d에서). `httpx==0.28.1`을 `hgh-bff` 환경에 설치했다. 허브 서버 Dockerfile은 만들지 않았다(대공사 동안 Docker 제외).
 - 2026-11-07 — 1d 인증 · `accounts` 이전 + 내부 토큰(`8c1a818`). `hub_stores`의 `hub_auth` · `passwords` · `accounts`를 `back/hub_server`로, 공용은 `back/shared`(`regions` · `account` · `internal_token` · `errors`)로 옮겼다. 데이터 서버는 내부 토큰만 검증하고 계정을 읽지 않는다(`HGH_AUTH_SECRET` · `HGH_ACCOUNT_EDITOR_DB_URL`을 넘기지 않는다). 값 대조: 관리자 HTTP 171건 차이 0(요청당 p50 +1ms, p95 +27ms). 범위 계정(임시 허브 서버가 중지 계정을 활성으로 봄): `country` · `region` 171건 차이 0, `hq`는 `mention/rn-engine-extra` 2개 파일만 다르다. 기준선 `hq-2`에서 20초 시간 초과로 비어 있던 값이 채워진 것이고(추가 50 · 제거 1 · 같은 키의 파생값 3, 시간 초과 부작용), 앞으로 `hq` 비교 기준은 `t13-after-1d-scoped/hq`다. 실제 경로(Next → 허브 서버 → 데이터 서버): 관리자 로그인, `audit2-hq@local`로 임시 비밀번호 로그인 → 화면 403 `password_change_required` → 틀린 현재 비밀번호 거절 → 변경 → 화면 · `/ko/renewal/dashboard` · `/ko/dashboard` 200, 관리자 경로 403, 계정 중지 직후 같은 세션 401. 이 계정은 다시 중지했고 비밀번호는 임시 값으로 바뀌었다(감사 기록 추가). 데이터 서버 직접 호출: 토큰 없음 · 로그인 토큰 · 위조 토큰 모두 401. 테스트: 두 서버 1,035개 통과(건너뜀 34). 로그인 · 계정 테스트는 `hub_server/tests`로, 범위 테스트는 `data_server/tests/test_access.py`로 옮겼다. 실행 안 함: 프런트 전체(프런트 코드 변경 없음), 브라우저 e2e. 데이터 서버 Dockerfile은 `back/shared`를 복사하지 않아 Docker 경로에서는 뜨지 않는다(대공사 동안 Docker 제외, 사용자 2026-11-06).
 - 2026-11-07 — 1e 저장 필터 이전 · 13.7(`0668401`). `saved_filters`와 테스트를 `back/hub_server`로 옮겼고, 데이터 서버에는 `operations_db` 쓰기 계정이 없다(`HGH_SAVED_FILTER_EDITOR_DB_URL` · `HGH_ACCOUNT_EDITOR_DB_URL` · `HGH_AUTH_SECRET`을 넘기지 않음, 프로세스 환경으로 확인). 읽기 연결은 `actors()` 때문에 1f까지 남는다. `sync_catalog.py`의 `system.project_reference` 쓰기와 `manage.py sync`의 운영 DB 접속을 뺐다(참조 테이블 3개 0행 · 쓰는 코드 없음, 258행 유지). 값: 관리자 HTTP 171건 차이는 `passwordChangedAt` 1건뿐이다(1d 확인에서 `audit2-hq@local` 비밀번호를 바꾼 결과). 실제 경로: Next → 허브 서버로 저장 필터 생성 · 읽기 · 이름 변경 · 삭제, 남은 행 없음. 테스트: 두 서버 1,035개 통과(건너뜀 34). 실행 안 함: 프런트 전체(코드 변경 없음), 브라우저 e2e, `sync-gold-catalog` 실제 실행(T10.1에서 멈춘다, 단위 테스트만).
-- 2026-11-07 — T10.1 Gold 가져오기 중지 · 13.8 목표 그림(HASH). `manage.py sync-gold-catalog`는 거부하고 끝나며(실행해 확인, 종료 코드 1), `start-hub-storage.sh` · `.ps1`에서 뺐고, `vm.sh sync` · `check-sync`는 멈췄다는 기록만 남긴다(VM은 실행 안 함). 코드는 T12.2까지 둔다. 입력 DB에 쓰는 일이 없어 값 변화 없음(새로 재지 않음). 새 프로젝트를 만드는 코드가 이제 없다(`catalog.project`의 유일한 INSERT가 `sync_catalog.py`였다). 2a 범위에서 정한다. 목표 그림: `sync-gold-catalog`를 지우고, `sync-service-week`는 매니페스트를 읽어 기준 주를 판정하는 구조로 고쳤다. SSOT 사본은 건드리지 않았다. 테스트 해당 없음(스크립트 · 문서, `bash -n` 통과).
+- 2026-11-07 — T10.1 Gold 가져오기 중지 · 13.8 목표 그림(`14bdb86`). `manage.py sync-gold-catalog`는 거부하고 끝나며(실행해 확인, 종료 코드 1), `start-hub-storage.sh` · `.ps1`에서 뺐고, `vm.sh sync` · `check-sync`는 멈췄다는 기록만 남긴다(VM은 실행 안 함). 코드는 T12.2까지 둔다. 입력 DB에 쓰는 일이 없어 값 변화 없음(새로 재지 않음). 새 프로젝트를 만드는 코드가 이제 없다(`catalog.project`의 유일한 INSERT가 `sync_catalog.py`였다). 2a 범위에서 정한다. 목표 그림: `sync-gold-catalog`를 지우고, `sync-service-week`는 매니페스트를 읽어 기준 주를 판정하는 구조로 고쳤다. SSOT 사본은 건드리지 않았다. 테스트 해당 없음(스크립트 · 문서, `bash -n` 통과).
