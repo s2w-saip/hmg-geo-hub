@@ -106,7 +106,7 @@ def build(replace: bool) -> None:
 
 def migrations() -> None:
     """The migrations gold_db does not have yet, recorded as manage.py records them, so its init finds them done after the rename."""
-    for name, version in (("metrics-006.sql", "006_query_load"), ("metrics-007.sql", "007_load_projects")):
+    for name, version in (("metrics-005a.sql", "005a_query_tables"), ("metrics-006.sql", "006_query_load"), ("metrics-007.sql", "007_load_projects")):
         if psql(TARGET, f"SELECT 1 FROM gold.schema_migration WHERE version='{version}'"):
             continue
         text = (HERE / name).read_text(encoding="utf-8")

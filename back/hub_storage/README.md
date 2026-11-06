@@ -50,8 +50,9 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 - **사전 집계:** `gold.metric_row`는 필터 없는 첫 화면의 지표 행이고(회차 · 차원 조합마다 기본 집계값 + 지표 값, 상태는 `gold.metric_call`), `gold.first_screen_read`는 지표가 아닌 첫 화면 목록의 `/v1` 응답이다(`manage.py rollup`이 쓴다, 기록은 `gold.rollup_run`). 정본이 아니어서 다시 계산할 수 있다.
 - **답변 단위 테이블:** 86개(1억 8,265만 행, 40 GB). 데이터 서버는 `HGH_GOLD_DB_URL`로 읽는다.
+- **새 설치:** `metrics-005a.sql`이 조회용 테이블 69개와 서비스 코드(국가 · 언어 · 엔진 · 출처 카테고리 · 분류 · 소유 베이스 등)를 만든다. 테이블이 이미 있는 DB에서는 아무 일도 하지 않는다. 답변 · 프롬프트 · 프로젝트 · 브랜드는 `load-query-tables`가 채운다. 계약에 값이 없는 것(`docs/handoff/query-tables-scope.md` 2절: ACR 반복별 값, 제품 이름, 출처의 자사 · 경쟁사 표시, 삭제 전 카탈로그 소속)은 새 설치에서 비어 있다. 빈 DB에서 적재해 읽은 Global 10-05 값은 지금 값과 같았다(2026-11-07).
 - **조회용 테이블 적재:** `manage.py load-query-tables`(`data_server/metrics/query_load.py`)가 Silver 운영 스냅샷을 회차 트랜잭션 하나씩 조회용 테이블에 넣는다. 계정은 `hmg_query_loader`(`.env.query-loader-db.local`, API는 받지 않는다), 기록은 `gold.silver_load`다. 첫 적재는 `build_query_next.py`로 만든 `gold_next`에서 한다. 범위는 `docs/handoff/query-tables-scope.md`.
-- **복원:** `HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py`가 `.local/gold-copy/`의 최신 덤프를 복원한다(`--dump`로 파일 지정). `manage.py init`이 DB와 사전 집계 테이블을 만든 뒤에 돌리고, 복원 → 권한 · ANALYZE → 테이블 · 행 수 확인 순서다.
+- **복원:** `HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py`가 `.local/gold-copy/`의 최신 덤프를 복원한다(`--dump`로 파일 지정). 복원 → 권한 · ANALYZE → 테이블 · 행 수 확인 순서다. `metrics-005a`가 테이블을 만든 DB에는 복원을 거부하므로, 덤프의 값이 필요하면 `init` 전에 DB를 만들어 복원한다.
 - **백업:** 복원에 쓴 덤프가 `.local/gold-copy/`에 남는다(6 GB). 답변 단위 테이블은 바뀌지 않으므로 `manage.py backup`에는 넣지 않았다.
 - **설정:** 시간대는 UTC, 날짜 형식은 ISO다. 정렬은 ICU `en-US-u-ka-shifted`다(`manage.py`가 DB를 만들 때 정한다). 레이블 · 한글 정렬에서 동점 행 순서가 달라질 수 있다.
 - **권한:** `hmg_metrics_reader`는 스키마 전체를 읽기만 한다(`HGH_METRICS_DB_URL` · `HGH_GOLD_DB_URL`). `hmg_rollup_writer`는 사전 집계 테이블 4개만 쓰고 답변 단위 테이블은 쓰지 못한다(작업 전용, API는 받지 않는다). `hmg_query_loader`는 적재 잡이 채우는 테이블만 쓰고 사전 집계 테이블은 쓰지 못한다(작업 전용). `hmg_cache_writer`는 접속하지 못한다.

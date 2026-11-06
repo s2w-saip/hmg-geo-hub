@@ -580,6 +580,7 @@ def install_metrics():
     migrate('metrics-003.sql', '003_metric_rows', store='metrics')
     migrate('metrics-004.sql', '004_ga4_seo', store='metrics')
     migrate('metrics-005.sql', '005_keyword_social', store='metrics')
+    migrate('metrics-005a.sql', '005a_query_tables', store='metrics')   # 006 grants on them; does nothing where they are already (a restored database)
     migrate('metrics-006.sql', '006_query_load', store='metrics')
     migrate('metrics-007.sql', '007_load_projects', store='metrics')
     migrate('cache-001.sql', '001_cache', store='cache')
