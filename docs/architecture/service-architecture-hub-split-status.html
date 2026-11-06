@@ -7,18 +7,20 @@
 <style>
 :root {
   --bg: #F3F5F7; --panel: #FFFFFF; --soft: #E7ECF1; --fg: #17202B; --muted: #586474; --line: #B9C3CF; --edge: #3E4A59;
-  --db: #0B706B; --db-bg: #E2F2EF; --write: #BF3A22; --new: #3F4FC4; --new-bg: #E9EBFB; --data: #8135A8; --data-bg: #F4EAF9;
+  --todo: #E60000; --db: #0B706B; --db-bg: #E2F2EF; --write: #BF3A22; --new: #3F4FC4; --new-bg: #E9EBFB; --data: #8135A8; --data-bg: #F4EAF9;
   --sans: "Pretendard", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --todo: #FF3B3B;
     --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
     --db: #4FBFB6; --db-bg: #122A29; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245; --data: #D29BEF; --data-bg: #2A1B35;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
+  --todo: #FF3B3B;
   --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
   --db: #4FBFB6; --db-bg: #122A29; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245; --data: #D29BEF; --data-bg: #2A1B35;
   color-scheme: dark;
@@ -66,9 +68,9 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 .n { stroke: var(--new); stroke-width: 2; }
 .ah-e { fill: var(--edge); } .ah-w { fill: var(--write); } .ah-n { fill: var(--new); }
 
-/* 구현 대조: 지금 없는 것. tspan에는 opacity가 먹지 않아 fill-opacity를 쓴다 */
-.todo { opacity: .5; }
-.tt { fill-opacity: .5; }
+/* 구현 대조: 지금 없는 것은 빨간 테두리다 */
+.todo-frame { stroke: var(--todo); stroke-width: 2.5; }
+.todo-box { fill: none; stroke: var(--todo); stroke-width: 2; pointer-events: none; }
 
 .notes { max-width: 1500px; margin: 0 auto; padding: 32px 24px 64px; font-size: 14px; line-height: 1.55; }
 .notes h2 { font-size: 18px; margin: 32px 0 10px; }
@@ -83,8 +85,8 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 </head>
 <body>
 <figure>
-  <figcaption>허브 서버 분리안 그림에 2026-11-06 구현 상태를 겹친 사본이다. 지금 있는 것은 그대로, 아직 안 된 것은 투명도 50%로 그렸다. 판정 근거는 그림 아래 표에 있다.</figcaption>
-  <svg viewBox="0 0 1920 915" role="img" aria-label="허브 서버 분리안 그림의 구현 대조 사본. 지금 있는 것은 그대로, 아직 안 된 것은 투명도 50%로 그렸다. 안 된 것은 허브 서버 프로세스와 프록시, 호출 경계, Silver 실제 연결과 cron 가공, GA4 수집, 수집 · 분석 호출자 연결이다. 판정 근거는 그림 아래 표에 있다.">
+  <figcaption>허브 서버 분리안 그림에 2026-11-06 구현 상태를 겹친 사본이다. 지금 있는 것은 그대로, 아직 안 된 것은 빨간 테두리로 그렸다. 판정 근거는 그림 아래 표에 있다.</figcaption>
+  <svg viewBox="0 0 1920 915" role="img" aria-label="허브 서버 분리안 그림의 구현 대조 사본. 지금 있는 것은 그대로, 아직 안 된 것은 빨간 테두리로 그렸다. 안 된 것은 허브 서버 프로세스와 프록시, 호출 경계, Silver 실제 연결과 cron 가공, GA4 수집, 수집 · 분석 호출자 연결이다. 판정 근거는 그림 아래 표에 있다.">
     <defs>
       <marker id="ae" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah-e" d="M0,0L10,5L0,10z"/></marker>
       <marker id="aw" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ah-w" d="M0,0L10,5L0,10z"/></marker>
@@ -93,7 +95,7 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 
     <!-- 제목 -->
     <text class="title" x="500" y="33">서비스 아키텍처 (허브 서버 분리안) · 구현 대조 2026-11-06</text>
-    <g class="todo"><text class="sm" x="500" y="53">호출 흐름: Next.js → 허브 서버 → 데이터 서버 (단방향)</text></g>
+    <g data-g="flow"><text class="sm" x="500" y="53">호출 흐름: Next.js → 허브 서버 → 데이터 서버 (단방향)</text></g>
 
     <!-- 서비스 영역과 레인 -->
     <rect class="boundary" x="16" y="66" width="1888" height="746" rx="14"/>
@@ -145,15 +147,15 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="sm c" x="190" y="251">읽기 전용 · API 키 인증</text>
 
     <!-- 백엔드: 허브 서버 -->
-    <g class="todo"><rect class="new" x="290" y="168" width="340" height="338" rx="10"/></g>
-    <g class="todo"><text x="304" y="192"><tspan class="h" style="fill:var(--new)">허브 서버</tspan><tspan class="m" dx="10">back/hub_server · 서비스 진입점</tspan></text></g>
+    <rect class="new todo-frame" x="290" y="168" width="340" height="338" rx="10"/>
+    <text x="304" y="192"><tspan class="h" style="fill:var(--new)">허브 서버</tspan><tspan class="m" dx="10">back/hub_server · 서비스 진입점</tspan></text>
     <rect class="proc" x="302" y="202" width="316" height="46" rx="5"/>
     <text class="bs c" x="460" y="220">인증 · 계정 검증</text>
     <text class="sm c" x="460" y="238">로그인 토큰 발급 · 요청별 계정 재확인</text>
-    <g class="todo"><rect class="proc" x="302" y="254" width="316" height="62" rx="5" style="stroke:var(--new);stroke-width:1.6"/></g>
-    <g class="todo"><text class="bs c" x="460" y="272" style="fill:var(--new)">데이터 서버 프록시</text></g>
-    <g class="todo"><text class="sm c" x="460" y="290">GET 요청만 전달 · 응답 그대로 반환</text></g>
-    <g class="todo"><text class="sm c" x="460" y="306">화면 · 지표 · 입력 데이터 목록 (gold_db 값 포함)</text></g>
+    <rect class="proc todo-frame" x="302" y="254" width="316" height="62" rx="5"/>
+    <text class="bs c" x="460" y="272" style="fill:var(--new)">데이터 서버 프록시</text>
+    <text class="sm c" x="460" y="290">GET 요청만 전달 · 응답 그대로 반환</text>
+    <text class="sm c" x="460" y="306">화면 · 지표 · 입력 데이터 목록 (gold_db 값 포함)</text>
     <rect class="proc" x="302" y="322" width="316" height="46" rx="5"/>
     <text class="bs c" x="460" y="340">사용자 데이터 관리</text>
     <text class="sm c" x="460" y="358">계정 · 접근 권한 · 저장 필터</text>
@@ -167,13 +169,13 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 
     <!-- 백엔드: 데이터 서버 -->
     <rect class="data" x="720" y="168" width="1170" height="338" rx="10"/>
-    <text x="736" y="192"><tspan class="h" style="fill:var(--data)">데이터 서버</tspan><tspan class="m" dx="12"><tspan class="tt">back/data_server · 허브 서버 전용 내부 서버</tspan> · 지표 계산 · <tspan class="tt">요청 처리 중 DB 쓰기는 cache_db만</tspan></tspan></text>
+    <text x="736" y="192"><tspan class="h" style="fill:var(--data)">데이터 서버</tspan><tspan class="m" dx="12"><tspan data-g="ds-name">back/data_server · 허브 서버 전용 내부 서버</tspan> · 지표 계산 · <tspan data-g="ds-write">요청 처리 중 DB 쓰기는 cache_db만</tspan></tspan></text>
 
     <!-- 데이터 서버: 요청 처리 -->
     <rect class="proc" x="734" y="202" width="164" height="86" rx="6"/>
     <text class="b c" x="816" y="232">권한 범위 적용</text>
     <text class="ms c" x="816" y="250">access.py</text>
-    <g class="todo"><text class="sm c" x="816" y="270">내부 토큰 서명 검증</text></g>
+    <g data-g="internal-token"><text class="sm c" x="816" y="270">내부 토큰 서명 검증</text></g>
     <rect class="proc" x="916" y="202" width="164" height="86" rx="6"/>
     <text class="b c" x="998" y="238">화면 응답 조합</text>
     <text class="ms c" x="998" y="258">screens/ → api.get</text>
@@ -184,8 +186,8 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="bs" x="1112" y="244">초기 화면</text>
     <text class="sm" x="1112" y="262">gold_db의 사전 집계 값 조회</text>
     <text class="bs" x="1346" y="244">필터 조회</text>
-    <text class="sm" x="1346" y="262">캐시 조회 → 미스 시 <tspan class="tt">gold_db 조회용</tspan></text>
-    <text class="sm" x="1346" y="278"><tspan class="tt">테이블에서 집계</tspan> 후 캐시 저장</text>
+    <text class="sm" x="1346" y="262">캐시 조회 → 미스 시 <tspan data-g="filter-1">gold_db 조회용</tspan></text>
+    <text class="sm" x="1346" y="278"><tspan data-g="filter-2">테이블에서 집계</tspan> 후 캐시 저장</text>
     <text class="bs" x="1636" y="244">사전 집계 지연 · 실패 (폴백)</text>
     <text class="sm" x="1636" y="262">조회 시점에 직접 집계 후</text>
     <text class="sm" x="1636" y="278">캐시 저장</text>
@@ -207,7 +209,7 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="sm c" x="915" y="402">GA4 이벤트 목록</text>
     <text class="sm c" x="915" y="422">입력 데이터 저장 전 검증</text>
     <text class="sm c" x="915" y="456"><tspan class="rw">읽기</tspan> input_db · gold_db</text>
-    <g class="todo"><text class="sm c" x="915" y="476"><tspan class="rw">쓰기</tspan> 없음</text></g>
+    <g data-g="input-no-write"><text class="sm c" x="915" y="476"><tspan class="rw">쓰기</tspan> 없음</text></g>
 
     <rect class="proc" x="1134" y="378" width="250" height="116" rx="6"/>
     <text class="b c" x="1259" y="398">gold_db 어댑터</text>
@@ -220,7 +222,7 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="b c" x="1548" y="398">Silver 어댑터</text>
     <text class="ms c" x="1548" y="414">silver_obt</text>
     <text class="sm c" x="1548" y="436"><tspan class="rw">읽기</tspan> Silver OBT · 매니페스트 · 입력 데이터</text>
-    <g class="todo"><text class="sm c" x="1548" y="454">사전 집계 지연 · 실패 시에만 집계</text></g>
+    <g data-g="silver-late-only"><text class="sm c" x="1548" y="454">사전 집계 지연 · 실패 시에만 집계</text></g>
     <text class="sm c" x="1548" y="478"><tspan class="rw">쓰기</tspan> 없음</text>
 
     <rect class="proc" x="1686" y="378" width="190" height="116" rx="6"/>
@@ -241,32 +243,32 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <path class="e" d="M1781,288V378" marker-end="url(#ae)"/>
 
     <!-- 허브 서버 → 데이터 서버 -->
-    <g class="todo"><path class="n" d="M618,270H734" marker-end="url(#an)"/></g>
-    <g class="todo"><text class="lb lbn c" x="675" y="262">GET 프록시</text></g>
-    <g class="todo"><text class="lb lbn c" x="675" y="287">내부 토큰</text></g>
-    <g class="todo"><text class="lb lbn c" x="675" y="302">계정 범위 전달</text></g>
-    <g class="todo"><path class="n" d="M618,405H734" marker-end="url(#an)"/></g>
-    <g class="todo"><text class="lb lbn c" x="675" y="397">저장 전 검증</text></g>
-    <g class="todo"><text class="lb lbn c" x="675" y="421">읽기 전용</text></g>
+    <g data-g="hub-data-get"><path class="n" d="M618,270H734" marker-end="url(#an)"/></g>
+    <g data-g="hub-data-get"><text class="lb lbn c" x="675" y="262">GET 프록시</text></g>
+    <g data-g="hub-data-get"><text class="lb lbn c" x="675" y="287">내부 토큰</text></g>
+    <g data-g="hub-data-get"><text class="lb lbn c" x="675" y="302">계정 범위 전달</text></g>
+    <g data-g="hub-data-check"><path class="n" d="M618,405H734" marker-end="url(#an)"/></g>
+    <g data-g="hub-data-check"><text class="lb lbn c" x="675" y="397">저장 전 검증</text></g>
+    <g data-g="hub-data-check"><text class="lb lbn c" x="675" y="421">읽기 전용</text></g>
 
     <!-- 위쪽 호출 -->
-    <g class="todo"><path class="e" d="M148,50V178" marker-end="url(#ae)"/></g>
-    <g class="todo"><path class="e" d="M232,50V178" marker-end="url(#ae)"/></g>
-    <g class="todo"><text class="lb c" x="190" y="120">GET · API 키</text></g>
+    <g data-g="callers"><path class="e" d="M148,50V178" marker-end="url(#ae)"/></g>
+    <g data-g="callers"><path class="e" d="M232,50V178" marker-end="url(#ae)"/></g>
+    <g data-g="callers"><text class="lb c" x="190" y="120">GET · API 키</text></g>
     <path class="e" d="M385,50V76" marker-end="url(#ae)"/>
     <text class="lb" x="393" y="62">HTTP · 세션 쿠키</text>
-    <g class="todo"><path class="w" d="M486,128V168" marker-end="url(#aw)"/></g>
-    <g class="todo"><text class="lb lbw r" x="478" y="158">쓰기 요청 (허브 서버에서 종료)</text></g>
-    <g class="todo"><path class="n" d="M616,128V168" marker-end="url(#an)"/></g>
-    <g class="todo"><text class="lb lbn" x="624" y="158">읽기 요청</text></g>
-    <g class="todo"><text class="lb c" x="551" y="158">로그인 토큰</text></g>
+    <g data-g="next-hub"><path class="w" d="M486,128V168" marker-end="url(#aw)"/></g>
+    <g data-g="next-hub"><text class="lb lbw r" x="478" y="158">쓰기 요청 (허브 서버에서 종료)</text></g>
+    <g data-g="next-hub"><path class="n" d="M616,128V168" marker-end="url(#an)"/></g>
+    <g data-g="next-hub"><text class="lb lbn" x="624" y="158">읽기 요청</text></g>
+    <g data-g="next-hub"><text class="lb c" x="551" y="158">로그인 토큰</text></g>
 
     <!-- DB -->
     <path class="db" d="M110,556V690A145,12 0 0 0 400,690V556"/><ellipse class="db" cx="255" cy="556" rx="145" ry="12"/>
     <text class="c" x="255" y="590"><tspan class="mb">operations_db</tspan><tspan class="port" dx="8">:55437</tspan></text>
     <text class="b c" x="255" y="614">사용자 데이터</text>
     <text class="c" x="255" y="636">계정 · 접근 권한 · 저장 필터</text>
-    <g class="todo"><text class="sm c" x="255" y="656" style="font-weight:600;fill:var(--new)">허브 서버 전용</text></g>
+    <g data-g="ops-only"><text class="sm c" x="255" y="656" style="font-weight:600;fill:var(--new)">허브 서버 전용</text></g>
     <text class="m c" x="255" y="676">system.*</text>
 
     <path class="db" d="M420,556V690A210,12 0 0 0 840,690V556"/><ellipse class="db" cx="630" cy="556" rx="210" ry="12"/>
@@ -277,12 +279,12 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="m c" x="630" y="676">catalog.* · ext.* 뷰</text>
 
     <path class="db" d="M862,556V690A334,12 0 0 0 1530,690V556"/><ellipse class="db" cx="1196" cy="556" rx="334" ry="12"/>
-    <text class="c" x="1196" y="584"><tspan class="mb">gold_db</tspan><tspan class="port" dx="6">:55439</tspan><tspan class="sm tt" dx="14" style="font-weight:600;fill:var(--new)">허브 서버 미접속</tspan></text>
+    <text class="c" x="1196" y="584"><tspan class="mb">gold_db</tspan><tspan class="port" dx="6">:55439</tspan><tspan class="sm" dx="14" style="font-weight:600;fill:var(--new)" data-g="gold-no-hub">허브 서버 미접속</tspan></text>
 
     <rect class="proc" x="872" y="592" width="120" height="96" rx="5"/>
     <text class="bs" x="880" y="608">플랫폼 데이터</text>
-    <g class="todo"><text class="sm" x="880" y="624">GA4 · SEO</text></g>
-    <g class="todo"><text class="sm" x="880" y="639">키워드 · 소셜</text></g>
+    <g data-g="platform"><text class="sm" x="880" y="624">GA4 · SEO</text></g>
+    <g data-g="platform"><text class="sm" x="880" y="639">키워드 · 소셜</text></g>
     <text class="ms" x="880" y="654">analytics.*</text>
     <text class="ms" x="880" y="668">ref.*</text>
     <text class="ms" x="880" y="682">ops.*</text>
@@ -295,7 +297,7 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="ms" x="1010" y="668">metric_call</text><text class="d" x="1132" y="668">계산 이력</text>
     <text class="ms" x="1010" y="682">rollup_run</text><text class="d" x="1132" y="682">실행 이력</text>
     <path class="sep" d="M1190,614V684"/>
-    <g class="todo"><text class="sm" x="1198" y="624">필터 조회용</text></g>
+    <g data-g="filter-tables"><text class="sm" x="1198" y="624">필터 조회용</text></g>
     <text class="ms" x="1198" y="640">answer_*fact</text><text class="d" x="1294" y="640">답변 · 언급</text>
     <text class="ms" x="1198" y="654">citation_fact</text><text class="d" x="1294" y="654">인용</text>
     <text class="ms" x="1198" y="668">acr_*</text><text class="d" x="1294" y="668">ACR</text>
@@ -326,13 +328,13 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="lb" x="1123" y="520">초기 화면 목록</text>
     <text class="lb" x="1123" y="535">GA4 결과</text>
     <path class="e" d="M1290,494V544" marker-end="url(#ae)"/>
-    <g class="todo"><text class="lb" x="1298" y="520">필터 집계</text></g>
+    <g data-g="filter-label"><text class="lb" x="1298" y="520">필터 집계</text></g>
     <text class="lb" x="1298" y="535">드릴다운 · 원문</text>
     <path class="e" d="M1405,362V546" marker-end="url(#ae)"/>
     <text class="lb" x="1413" y="526">지표 행 읽기</text>
-    <g class="todo"><path class="e" d="M1565,494V825" marker-end="url(#ae)"/></g>
-    <g class="todo"><text class="lb" x="1573" y="520">폴백 시에만</text></g>
-    <g class="todo"><text class="lb" x="1573" y="535">운영 스냅샷만</text></g>
+    <g data-g="silver-arrow"><path class="e" d="M1565,494V825" marker-end="url(#ae)"/></g>
+    <g data-g="silver-labels"><text class="lb" x="1573" y="520">폴백 시에만</text></g>
+    <g data-g="silver-labels"><text class="lb" x="1573" y="535">운영 스냅샷만</text></g>
     <path class="e" d="M1765,494V544" marker-end="url(#ae)"/>
     <text class="lb r" x="1757" y="526">읽기</text>
     <path class="w" d="M1797,494V545" marker-end="url(#aw)"/>
@@ -340,7 +342,7 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 
     <!-- 배치: 데이터 서버 cron job -->
     <rect class="data" x="110" y="734" width="1430" height="70" rx="10"/>
-    <text class="h" x="124" y="765" style="fill:var(--data)">데이터 서버 <tspan class="tt">cron job</tspan></text>
+    <text class="h" x="124" y="765" style="fill:var(--data)">데이터 서버 <tspan data-g="cron">cron job</tspan></text>
     <text class="sm" x="124" y="785">잡별 독립 프로세스</text>
 
     <rect class="proc" x="424" y="742" width="200" height="54" rx="6"/>
@@ -355,45 +357,45 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 
     <rect class="proc" x="862" y="742" width="190" height="54" rx="6"/>
     <text class="mb c" x="957" y="759" style="font-size:12px">ga4_collect.py</text>
-    <g class="todo"><text class="sm c" x="957" y="775">GA4 결과 수집</text></g>
-    <g class="todo"><text class="sm c" x="957" y="790"><tspan class="ms">input_db</tspan> 속성 읽기 · 상태 쓰기</text></g>
+    <g data-g="ga4-lines"><text class="sm c" x="957" y="775">GA4 결과 수집</text></g>
+    <g data-g="ga4-lines"><text class="sm c" x="957" y="790"><tspan class="ms">input_db</tspan> 속성 읽기 · 상태 쓰기</text></g>
 
     <rect class="proc" x="1064" y="742" width="466" height="54" rx="6"/>
     <text class="mb c" x="1297" y="763">manage.py rollup</text>
-    <text class="sm c" x="1297" y="782"><tspan class="tt">Silver 가공 ·</tspan> 사전 집계 저장 · 이전 캐시 삭제</text>
+    <text class="sm c" x="1297" y="782"><tspan data-g="rollup-silver">Silver 가공</tspan> · 사전 집계 저장 · 이전 캐시 삭제</text>
 
     <!-- 배치 → DB -->
     <path class="w" d="M524,742V702" marker-end="url(#aw)"/>
     <text class="lb lbw r" x="516" y="722">서비스 기준 주</text>
     <path class="w" d="M742,742V702" marker-end="url(#aw)"/>
     <text class="lb lbw r" x="734" y="722">프롬프트 · 프로젝트 정의 · gold_db 키</text>
-    <g class="todo"><path class="w" d="M957,742V700" marker-end="url(#aw)"/></g>
-    <g class="todo"><text class="lb lbw" x="965" y="722">GA4 결과 저장</text></g>
+    <g data-g="ga4-save"><path class="w" d="M957,742V700" marker-end="url(#aw)"/></g>
+    <g data-g="ga4-save"><text class="lb lbw" x="965" y="722">GA4 결과 저장</text></g>
     <path class="w" d="M1120,742V703" marker-end="url(#aw)"/>
-    <text class="lb lbw" x="1128" y="722"><tspan class="tt">가공 결과 ·</tspan> 사전 집계 저장</text>
+    <text class="lb lbw" x="1128" y="722"><tspan data-g="rollup-label">가공 결과</tspan> · 사전 집계 저장</text>
     <path class="e" d="M1400,742V701" marker-end="url(#ae)"/>
     <text class="lb" x="1408" y="722">조회용 테이블 읽기</text>
     <path class="w" d="M1530,769H1740V704" marker-end="url(#aw)"/>
     <text class="lb lbw" x="1590" y="760">이전 캐시 삭제</text>
 
     <!-- 외부 시스템: 데이터 소스 -->
-    <g class="todo"><path class="e" d="M957,796V826" marker-end="url(#ae)"/></g>
+    <g data-g="ga4-api"><path class="e" d="M957,796V826" marker-end="url(#ae)"/></g>
     <rect class="ext" x="887" y="826" width="140" height="50" rx="6"/>
     <text class="b c" x="957" y="848">GA4 Data API</text>
     <text class="sm c" x="957" y="866">Google</text>
 
-    <g class="todo"><path class="e" d="M1480,796V826" marker-end="url(#ae)"/></g>
-    <g class="todo"><text class="lb r" x="1472" y="826">Silver OBT 읽기 · 운영 스냅샷 · 매니페스트</text></g>
-    <g class="todo"><path class="ext" d="M1420,832V878A145,7 0 0 0 1710,878V832"/><ellipse class="ext" cx="1565" cy="832" rx="145" ry="7"/></g>
-    <g class="todo"><text class="b c" x="1565" y="858">파이프라인 Silver OBT</text></g>
-    <g class="todo"><text class="sm c" x="1565" y="875">원천 데이터 · 운영 스냅샷 · 매니페스트</text></g>
+    <g data-g="silver-read"><path class="e" d="M1480,796V826" marker-end="url(#ae)"/></g>
+    <g data-g="silver-read"><text class="lb r" x="1472" y="826">Silver OBT 읽기 · 운영 스냅샷 · 매니페스트</text></g>
+    <path class="ext todo-frame" d="M1420,832V878A145,7 0 0 0 1710,878V832"/><ellipse class="ext todo-frame" cx="1565" cy="832" rx="145" ry="7"/>
+    <text class="b c" x="1565" y="858">파이프라인 Silver OBT</text>
+    <text class="sm c" x="1565" y="875">원천 데이터 · 운영 스냅샷 · 매니페스트</text>
 
     <!-- 범례 -->
     <g>
       <path class="e" d="M26,838H62" marker-end="url(#ae)"/><text class="sm" x="70" y="842">요청 · 읽기</text>
       <path class="n" d="M150,838H186" marker-end="url(#an)"/><text class="sm" x="194" y="842">허브 서버 경유</text>
       <path class="w" d="M292,838H328" marker-end="url(#aw)"/><text class="sm" x="336" y="842">쓰기</text>
-      <g class="todo"><path class="e" d="M392,838H428" marker-end="url(#ae)"/></g><text class="sm" x="436" y="842">투명도 50%: 안 된 것</text>
+      <rect class="todo-box" x="392" y="830" width="26" height="16" rx="3"/><text class="sm" x="426" y="842">빨간 테두리: 안 된 것</text>
       <path class="db" d="M26,860V872A11,4 0 0 0 48,872V860"/><ellipse class="db" cx="37" cy="860" rx="11" ry="4"/><text class="sm" x="56" y="871">DB</text>
       <rect class="new" x="86" y="858" width="26" height="18" rx="3"/><text class="sm" x="118" y="871">허브 서버</text>
       <rect class="data" x="182" y="858" width="26" height="18" rx="3"/><text class="sm" x="214" y="871">데이터 서버 · cron job</text>
@@ -405,17 +407,17 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 <section class="notes">
   <h2>판정 기준 (맥 로컬 실측, VM · Docker 제외)</h2>
   <ul>
-    <li>코드가 있고 실제로 돌거나 연결되는 것은 그대로, 없거나 실행된 적 없는 것은 50%다. 테이블이 있어도 0행이면 데이터 줄은 50%다.</li>
-    <li>허브 서버 몫의 기능과 DB 연결은 지금 <code>back/bff</code>가 함께 맡으므로 그대로 뒀다. 프로세스 틀 · 프록시 · 호출 경계만 50%다. 옮기면 되는 것과 새로 만들 것을 구분하기 위해서다.</li>
-    <li>외부 시스템 박스는 그대로 두고 연결만 판정했다. Silver만 접속 정보를 받은 적이 없어 박스까지 50%다.</li>
-    <li>집계: 박스 40개 중 37개 있음(이 중 12개는 문구 일부가 50%). 화살표 36개 중 26개 연결(이 중 2개는 라벨 일부가 50%).</li>
+    <li>코드가 있고 실제로 돌거나 연결되는 것은 그대로, 없거나 실행된 적 없는 것은 빨간 테두리다. 테이블이 있어도 0행이면 데이터 줄에 빨간 테두리를 그었다.</li>
+    <li>허브 서버 몫의 기능과 DB 연결은 지금 <code>back/bff</code>가 함께 맡으므로 그대로 뒀다. 프로세스 틀 · 프록시 · 호출 경계만 빨간 테두리다. 옮기면 되는 것과 새로 만들 것을 구분하기 위해서다.</li>
+    <li>외부 시스템 박스는 그대로 두고 연결만 판정했다. Silver만 접속 정보를 받은 적이 없어 박스까지 빨간 테두리다.</li>
+    <li>집계: 박스 40개 중 37개 있음(이 중 12개는 문구 일부에 빨간 테두리). 화살표 36개 중 26개 연결(이 중 2개는 라벨 일부에 빨간 테두리).</li>
   </ul>
 
-  <h2>50%로 표시한 것</h2>
+  <h2>빨간 테두리로 표시한 것</h2>
   <table>
     <thead><tr><th>항목</th><th>지금 상태와 근거</th><th>태스크</th></tr></thead>
     <tbody>
-      <tr><td>허브 서버 틀 · 제목, 호출 흐름 줄</td><td><code>back/hub_server</code> 폴더가 없다. Next가 부르는 서버 프로세스는 <code>:5555</code>의 <code>bff.app</code> 하나다.</td><td class="task">T13.2</td></tr>
+      <tr><td>허브 서버 틀, 호출 흐름 줄</td><td><code>back/hub_server</code> 폴더가 없다. Next가 부르는 서버 프로세스는 <code>:5555</code>의 <code>bff.app</code> 하나다.</td><td class="task">T13.2</td></tr>
       <tr><td>데이터 서버 프록시, Next → 허브 서버 화살표 2개 · 로그인 토큰</td><td>프록시 코드가 없다. Next가 <code>HGH_API_BASE_URL=:5555</code>로 <code>back/bff</code>를 직접 호출한다.</td><td class="task">T13.2</td></tr>
       <tr><td>허브 서버 → 데이터 서버 화살표 2개</td><td>같은 프로세스 안의 함수 호출이다. HTTP 경계가 없다.</td><td class="task">T13.3 · 13.4</td></tr>
       <tr><td>내부 토큰 서명 검증</td><td><code>access.py</code>는 있으나 요청 계정 범위를 같은 프로세스의 <code>hub_auth.Principal</code>에서 받는다. 내부 토큰은 없다.</td><td class="task">T13.3</td></tr>
@@ -456,5 +458,34 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     </tbody>
   </table>
 </section>
+<script>
+// 같은 data-g 요소를 묶어 빨간 테두리를 그린다. 글꼴에 따라 글자 폭이 달라서 글꼴을 불러온 뒤 잰다.
+(function () {
+  var svg = document.querySelector("svg");
+  function draw() {
+    var toSvg = svg.getScreenCTM().inverse(), boxes = {}, vertical = {};
+    document.querySelectorAll("[data-g]").forEach(function (el) {
+      var r = el.getBoundingClientRect(), g = el.getAttribute("data-g");
+      var a = new DOMPoint(r.left, r.top).matrixTransform(toSvg), b = new DOMPoint(r.right, r.bottom).matrixTransform(toSvg);
+      var box = boxes[g];
+      if (r.width < 4) vertical[g] = true;   // 세로 화살표: 테두리와 겹치지 않게 옆을 띄운다
+      boxes[g] = box ? [Math.min(box[0], a.x), Math.min(box[1], a.y), Math.max(box[2], b.x), Math.max(box[3], b.y)] : [a.x, a.y, b.x, b.y];
+    });
+    Object.keys(boxes).forEach(function (g) {
+      var box = boxes[g], w = box[2] - box[0], h = box[3] - box[1];
+      var padX = vertical[g] ? 6 : 2, padY = 0;
+      var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("class", "todo-box");
+      rect.setAttribute("x", box[0] - padX);
+      rect.setAttribute("y", box[1] - padY);
+      rect.setAttribute("width", w + padX * 2);
+      rect.setAttribute("height", h + padY * 2);
+      rect.setAttribute("rx", 3);
+      svg.appendChild(rect);
+    });
+  }
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(draw);
+})();
+</script>
 </body>
 </html>
