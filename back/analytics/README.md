@@ -1,7 +1,7 @@
 # HUB GA4·SEO 데이터베이스
 
 이 DB는 현재 HUB **데이터 DB** 역할을 맡으며 프로젝트·프롬프트 버전도 별도 `catalog` 스키마에서 관리합니다.
-사용자·권한·SW 설정은 별도 `hmg_operations` DB에 있습니다. 최신 구성·통합 시작 명령은 [DB 분리 안내](../hub_storage/README.md)를 참고하십시오.
+사용자·권한·SW 설정은 별도 `geohub_operations_db` DB에 있습니다. 최신 구성·통합 시작 명령은 [DB 분리 안내](../hub_storage/README.md)를 참고하십시오.
 
 Gold ERD의 `07_ga4.js`, `08_vis.js`와 실제 Gold PostgreSQL 컬럼·PK를 대조해 추출한 별도 저장소입니다.
 현재 3333 서비스가 실행 중인 HUB 호스트의 PostgreSQL 컨테이너에서 관리합니다.

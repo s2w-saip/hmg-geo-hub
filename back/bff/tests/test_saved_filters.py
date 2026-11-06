@@ -158,7 +158,7 @@ class Routes(unittest.TestCase):
                          ("독일 전기차", "geography=DE&engine=chatgpt", False))
         self.save("  유럽  ", "geography=DE~FR")
         status, body = run(call("GET", "/v1/hub/saved-filters?page=overview", token=self.token()))
-        self.assertEqual(body["meta"], {"source": "hub_operations", "database": "hmg_operations"})
+        self.assertEqual(body["meta"], {"source": "hub_operations", "database": "geohub_operations_db"})
         self.assertEqual([(i["name"], i["query"]) for i in body["data"]["items"]],
                          [("독일 전기차", "geography=DE&engine=chatgpt"), ("유럽", "geography=DE~FR")])
         self.assertEqual(self.listed("mention"), [])

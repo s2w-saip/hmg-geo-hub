@@ -2,7 +2,7 @@ BEGIN;
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname IN ('hmg_data_external','hmg_catalog_writer','hmg_catalog_editor','hmg_analytics_reader','hmg_analytics_writer')) THEN RAISE EXCEPTION 'Data-store roles exist on private operations server'; END IF;
  IF EXISTS(SELECT 1 FROM pg_database d CROSS JOIN LATERAL aclexplode(d.datacl) a
-           WHERE d.datname='hmg_operations' AND a.grantee=0 AND a.privilege_type='CONNECT') THEN RAISE EXCEPTION 'Public operations access'; END IF;
+           WHERE d.datname='geohub_operations_db' AND a.grantee=0 AND a.privilege_type='CONNECT') THEN RAISE EXCEPTION 'Public operations access'; END IF;
 END $$;
 INSERT INTO system.project_reference VALUES('ffffffff-ffff-4fff-8fff-fffffffffff1',now());
 SET LOCAL ROLE hmg_operations_writer;

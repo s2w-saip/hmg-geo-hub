@@ -85,6 +85,21 @@ def native_exists(store: str) -> bool:
     return (NATIVE_ROOT / store / "PG_VERSION").exists()
 
 
+# Databases renamed in place (D-17, 2026-11-06): a server that has the old name keeps its data under the new one.
+RENAMED = {"geohub_bm_db": "hmg_input", "geohub_operations_db": "hmg_operations"}
+
+
+def rename_sql(database: str) -> str:
+    previous = RENAMED.get(database)
+    if not previous:
+        return ""
+    return f"""DO $$ BEGIN
+IF EXISTS(SELECT 1 FROM pg_database WHERE datname='{previous}') AND NOT EXISTS(SELECT 1 FROM pg_database WHERE datname='{database}') THEN
+    PERFORM pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='{previous}';
+    ALTER DATABASE {previous} RENAME TO {database};
+END IF; END $$;"""
+
+
 def native_start(store: str, port: int, admin: str, database: str, password: str):
     """Start the store's local server (initdb first when new) and create its database if missing."""
     data, socket = NATIVE_ROOT / store, NATIVE_ROOT / f"{store}-socket"
@@ -102,6 +117,8 @@ def native_start(store: str, port: int, admin: str, database: str, password: str
     if run([pg_tool("pg_ctl"), "-D", str(data), "status"], check=False).returncode != 0:
         run([pg_tool("pg_ctl"), "-D", str(data), "-l", str(NATIVE_ROOT / f"{store}.log"), "-w", "-o",
              f"-p {port} -k '{socket}' -c listen_addresses=127.0.0.1 -c unix_socket_permissions=0700", "start"])
+    if rename_sql(database):
+        run(native_psql(store, port, admin, "postgres"), text=rename_sql(database))
     found = run(native_psql(store, port, admin, "postgres"), text=f"SELECT 1 FROM pg_database WHERE datname={literal(database)};")
     if found.stdout.strip() != "1":
         run(native_psql(store, port, admin, "postgres"), text=f"CREATE DATABASE {database} OWNER {admin};")

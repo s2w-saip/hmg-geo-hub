@@ -162,7 +162,7 @@ class Figure:
 
 
 def operations() -> Figure:
-    """hmg_operations: back/hub_storage/operations-001.sql … operations-004.sql."""
+    """geohub_operations_db: back/hub_storage/operations-001.sql … operations-004.sql."""
     f = Figure("ops", 776, "HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
                "project_reference는 입력 DB catalog.project와 같은 UUID만 보관한다. "
                "global_role은 계정의 역할과 열람 범위, saved_filter는 계정별 저장한 필터다.")
@@ -213,7 +213,7 @@ def operations() -> Figure:
 
 
 def catalog() -> Figure:
-    """hmg_input catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
+    """geohub_bm_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
     f = Figure("cat", 740, "HUB 입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
                "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
@@ -259,7 +259,7 @@ def catalog() -> Figure:
 
 
 def external() -> Figure:
-    """hmg_input reference values and the prompt and reference API boundary: back/hub_storage/input-001.sql (the structure of data-005, -007
+    """geohub_bm_db reference values and the prompt and reference API boundary: back/hub_storage/input-001.sql (the structure of data-005, -007
     ... -010 and -013 as it moved) and input-002.sql (the reference values the store owns, versions of every list, who reads what)."""
     f = Figure("ext", 1610, "HUB 입력 DB의 기준정보와 프롬프트·기준정보 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 수집 또는 분석으로 키와 허용 프로젝트를 가지며, "
                "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 "

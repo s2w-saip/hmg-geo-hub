@@ -4,7 +4,7 @@
 `127.0.0.1:3333`에서 읽기 전용으로 실행합니다. 모든 화면은 HUB 로그인(최상위 관리자, `manage.py set-admin`)이 필요합니다.
 
 HUB 데이터 DB `hmg_analytics`는 GA4·SEO와 프로젝트·프롬프트 버전을 관리하고,
-별도 운영 DB `hmg_operations`는 사용자·권한·SW 설정·감사 이력을 관리합니다.
+별도 운영 DB `geohub_operations_db`는 사용자·권한·SW 설정·감사 이력을 관리합니다.
 [운영/데이터 DB 분리와 실행 안내](back/hub_storage/README.md), [GA4·SEO 스키마·ERD](back/analytics/README.md)를 참고하십시오.
 GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연결하지 않았습니다.
 

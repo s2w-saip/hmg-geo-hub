@@ -162,7 +162,7 @@ DO $$ BEGIN
        EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
--- The inputs moved to hmg_input (014): nothing writes the frozen copy here, and the API's input roles no longer connect.
+-- The inputs moved to geohub_bm_db (014): nothing writes the frozen copy here, and the API's input roles no longer connect.
 DO $$ BEGIN
  IF has_table_privilege('hmg_catalog_writer','catalog.prompt_version','INSERT') OR has_table_privilege('hmg_catalog_editor','catalog.prompt_version','INSERT')
     OR has_table_privilege('hmg_project_editor','catalog.prompt','INSERT') OR has_table_privilege('hmg_source_override_editor','catalog.source_seed','INSERT')

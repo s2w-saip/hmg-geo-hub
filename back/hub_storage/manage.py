@@ -38,7 +38,7 @@ SERVICE_WEEK_SECRET = ROOT / '.env.service-week-db.local'  # service week job ro
 INPUT_SECRET = ROOT / '.env.input-db.local'        # input store (2026-11-06): admin, API reader and measurement editor passwords
 METRICS_SECRET = ROOT / '.env.metrics-db.local'    # metrics store (2026-11-06): admin, API reader, cache and rollup passwords
 OPS_CONTAINER = 'hgh-operations-db'
-OPS_DB = 'hmg_operations'
+OPS_DB = 'geohub_operations_db'
 
 
 class Store(NamedTuple):
@@ -54,7 +54,7 @@ class Store(NamedTuple):
 STORES = {
     'analytics': Store(analytics.CONTAINER, analytics.DB, analytics.ADMIN, analytics.OWNER, analytics.SECRET, 'HGH_ANALYTICS_DB_PORT', 'ops'),
     'operations': Store(OPS_CONTAINER, OPS_DB, 'hmg_operations_admin', 'hmg_operations_owner', OPS_SECRET, 'HGH_OPERATIONS_DB_PORT', 'system'),
-    'input': Store('hgh-input-db', 'hmg_input', 'hmg_input_admin', 'hmg_input_owner', INPUT_SECRET, 'HGH_INPUT_DB_PORT', 'catalog'),
+    'input': Store('hgh-input-db', 'geohub_bm_db', 'hmg_input_admin', 'hmg_input_owner', INPUT_SECRET, 'HGH_INPUT_DB_PORT', 'catalog'),
     'metrics': Store('hgh-metrics-db', 'hmg_metrics', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'gold'),
 }
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
@@ -197,6 +197,7 @@ def start_operations_container():
     for _ in range(90):
         ready = run(['docker', 'inspect', OPS_CONTAINER, '--format', '{{.State.Health.Status}}'], check=False)
         if ready.returncode == 0 and ready.stdout.strip() == 'healthy':
+            rename_previous(STORES['operations'])
             break
         time.sleep(.5)
     else:
@@ -215,11 +216,11 @@ ALTER ROLE hmg_operations_writer WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPL
 ALTER ROLE hmg_operations_reader SET default_transaction_read_only=on;
 ALTER ROLE hmg_operations_reader SET statement_timeout='15s';
 ALTER ROLE hmg_operations_writer SET statement_timeout='30s';
-ALTER DATABASE hmg_operations OWNER TO hmg_operations_owner;
-REVOKE ALL ON DATABASE hmg_operations FROM PUBLIC;
+ALTER DATABASE geohub_operations_db OWNER TO hmg_operations_owner;
+REVOKE ALL ON DATABASE geohub_operations_db FROM PUBLIC;
 REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
 REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;
-GRANT CONNECT ON DATABASE hmg_operations TO hmg_operations_reader,hmg_operations_writer;
+GRANT CONNECT ON DATABASE geohub_operations_db TO hmg_operations_reader,hmg_operations_writer;
 COMMIT;""", True)
     migrate('operations-001.sql', '001_operations', True)
     migrate('operations-002.sql', '002_hub_login', True)
@@ -234,7 +235,7 @@ END $$;
 ALTER ROLE hmg_saved_filter_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(saved['SAVED_FILTER_EDITOR_PASSWORD'])};
 ALTER ROLE hmg_saved_filter_editor SET statement_timeout='15s';
 ALTER ROLE hmg_saved_filter_editor CONNECTION LIMIT 4;
-GRANT CONNECT ON DATABASE hmg_operations TO hmg_saved_filter_editor;
+GRANT CONNECT ON DATABASE geohub_operations_db TO hmg_saved_filter_editor;
 COMMIT;""", True)
     migrate('operations-003.sql', '003_saved_filters', True)
     # HUB accounts (2026-10-29): the API's role for the account tables (Admin › 사용자 관리) and nothing else.
@@ -248,7 +249,7 @@ END $$;
 ALTER ROLE hmg_account_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(account['ACCOUNT_EDITOR_PASSWORD'])};
 ALTER ROLE hmg_account_editor SET statement_timeout='15s';
 ALTER ROLE hmg_account_editor CONNECTION LIMIT 4;
-GRANT CONNECT ON DATABASE hmg_operations TO hmg_account_editor;
+GRANT CONNECT ON DATABASE geohub_operations_db TO hmg_account_editor;
 COMMIT;""", True)
     migrate('operations-004.sql', '004_hub_accounts', True)
     migrate('operations-005.sql', '005_account_one_brand', True)
@@ -405,6 +406,13 @@ COMMIT;""")
 
 # ═══ the input and metrics stores (2026-11-06) ═══════════════════════════════════════════════════════════════════════════════
 
+def rename_previous(s):
+    """An existing container keeps its database under the old name: POSTGRES_DB only applies to a new volume."""
+    query = analytics.rename_sql(s.database)
+    if query:
+        run(['docker', 'exec', '-i', s.container, 'psql', '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-U', s.admin, '-d', 'postgres'], text=query)
+
+
 def start_store(store):
     """The store's server: a local one in native mode, its own container otherwise."""
     s = STORES[store]
@@ -416,6 +424,7 @@ def start_store(store):
     for _ in range(90):
         ready = run(['docker', 'inspect', s.container, '--format', '{{.State.Health.Status}}'], check=False)
         if ready.returncode == 0 and ready.stdout.strip() == 'healthy':
+            rename_previous(s)
             return
         time.sleep(.5)
     raise RuntimeError(f'The {store} DB did not become ready')
@@ -606,7 +615,7 @@ def sync(args):
     """Import actual Gold catalog definitions only, using transient writer connections."""
     values, data = analytics.env_file(OPS_SECRET), analytics.env_file(DATA_SECRET)
     config = {
-        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/hmg_input",
+        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/geohub_bm_db",
         'operations': f"postgresql://hmg_operations_writer:{values['OPERATIONS_WRITER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
         'allow_removals': args.allow_removals, 'expect_mass_change': args.expect_mass_change,
     }
@@ -902,7 +911,7 @@ def start():
 
 def backup():
     analytics.backup(None)
-    output = ROOT / '.local/operations-backups' / f"hmg_operations-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.dump"
+    output = ROOT / '.local/operations-backups' / f"geohub_operations_db-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.dump"
     output.parent.mkdir(parents=True, exist_ok=True)
     # Use secure_write to establish file ACLs before writing the binary archive.
     analytics.secure_write(output, '')

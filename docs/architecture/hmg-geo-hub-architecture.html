@@ -168,7 +168,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <header>
   <div class="route" aria-label="구성 요약">
     <span>브라우저</span><span>→</span><b>front :3333</b><span>→</span><b>bff :5555</b><span>→</span>
-    <span>gold · hmg_input · hmg_analytics · hmg_operations</span><span>·</span><span>외부 호출자</span><span>→</span><b>ext :5560</b><span>→</span><span>hmg_input</span>
+    <span>gold · geohub_bm_db · hmg_analytics · geohub_operations_db</span><span>·</span><span>외부 호출자</span><span>→</span><b>ext :5560</b><span>→</span><span>geohub_bm_db</span>
   </div>
   <h1>HMG-GEO-HUB 아키텍처</h1>
   <p class="lede">로컬 서비스는 화면 서버(Next.js)와 API 서버(FastAPI BFF) 두 프로세스, 그리고 DB 다섯 개로 돌아간다.
@@ -178,7 +178,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 HUB DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-06(입력 DB <code>hmg_input</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · BFF <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: BFF 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+  <p class="asof">마지막 갱신 2026-11-06(입력 DB <code>geohub_bm_db</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · BFF <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: BFF 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · BFF 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: BFF 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/data-002~011.sql</code>, <code>operations-001~005.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
@@ -302,14 +302,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- databases -->
         <rect class="hubbox" x="1010" y="84" width="174" height="116" rx="8"/>
         <text class="b" x="1024" y="108">HUB 운영 DB</text>
-        <text class="m" x="1024" y="128">hmg_operations</text>
+        <text class="m" x="1024" y="128">geohub_operations_db</text>
         <text class="m mu" x="1024" y="145">:55437</text>
         <text class="mu" x="1024" y="170">system.* 계정·권한·감사</text>
         <text class="mu sm" x="1024" y="188">계정별 저장한 필터</text>
 
         <rect class="hubbox" x="1010" y="214" width="174" height="250" rx="8"/>
         <text class="b" x="1024" y="238">HUB 입력 · 데이터 DB</text>
-        <text class="m" x="1024" y="258">hmg_input :55438</text>
+        <text class="m" x="1024" y="258">geohub_bm_db :55438</text>
         <text class="m" x="1024" y="275">hmg_analytics :55436</text>
         <text class="m" x="1024" y="302">catalog.*</text>
         <text class="mu sm" x="1024" y="319">프로젝트·프롬프트 버전</text>
@@ -436,18 +436,18 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <tbody>
         <tr><td class="k">Gold 복사본 조회</td><td><code>HGH_GOLD_DB_URL</code></td><td><code>geohub_gold_db</code> (지표 DB 서버 :55439) 계정 <code>hmg_metrics_reader</code></td><td>읽기 전용, repeatable read. 없으면 기동 실패. 복원은 <code>back/hub_storage/copy_gold.py</code></td><td class="mono">≤ 6</td></tr>
         <tr><td class="k">데이터 DB 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>hmg_analytics</code></td><td>읽기 전용. Gold 읽기가 멈출 서비스 기준 주(<code>catalog.current_service_week</code>)도 이 연결로 읽는다. 없을 때와 못 읽을 때는 위</td><td class="mono">≤ 4</td></tr>
-        <tr><td class="k">입력 DB 조회</td><td><code>HGH_INPUT_DB_URL</code></td><td><code>hmg_input</code></td><td>읽기 전용. 프롬프트 · 측정 설정 · 기준정보를 읽는 화면(2026-11-06). 없으면 입력 화면이 503</td><td>≤ 4</td></tr>
+        <tr><td class="k">입력 DB 조회</td><td><code>HGH_INPUT_DB_URL</code></td><td><code>geohub_bm_db</code></td><td>읽기 전용. 프롬프트 · 측정 설정 · 기준정보를 읽는 화면(2026-11-06). 없으면 입력 화면이 503</td><td>≤ 4</td></tr>
         <tr><td class="k">캐시 DB</td><td><code>HGH_CACHE_DB_URL</code></td><td><code>hmg_metrics</code> 계정 <code>hmg_cache_writer</code></td><td><code>cache.query_result</code> 읽기 · 쓰기만. 아직 화면이 읽지 않는다(T5.5). 실패해도 읽기를 막지 않는다. 지표 DB 조회 <code>HGH_METRICS_DB_URL</code>은 T5.3에서 쓴다</td><td>≤ 2</td></tr>
-        <tr><td class="k">측정 설정</td><td><code>HGH_MEASUREMENT_EDITOR_DB_URL</code></td><td><code>hmg_input</code> 계정 <code>hmg_measurement_editor</code></td><td><code>project_measurement_version</code>은 <code>change_seq</code> 뺀 컬럼만 INSERT, 프로젝트 · 기준정보 원본 SELECT만. 수정 · 삭제 없음</td><td>≤ 2</td></tr>
-        <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>hmg_operations</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>hmg_input</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">계정 관리</td><td><code>HGH_ACCOUNT_EDITOR_DB_URL</code></td><td><code>hmg_operations</code><br><span class="muted">계정 hmg_account_editor</span></td><td>계정 표(<code>user_account</code>·<code>user_credential</code>·<code>global_role</code>)의 쓰는 열만 INSERT·UPDATE, <code>audit_event</code> INSERT만. 비밀번호 해시는 읽지 못하고 지우기 권한 없음. 로그인 시각도 이 연결로 남긴다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">측정 설정</td><td><code>HGH_MEASUREMENT_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code> 계정 <code>hmg_measurement_editor</code></td><td><code>project_measurement_version</code>은 <code>change_seq</code> 뺀 컬럼만 INSERT, 프로젝트 · 기준정보 원본 SELECT만. 수정 · 삭제 없음</td><td>≤ 2</td></tr>
+        <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>geohub_operations_db</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>geohub_operations_db</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">계정 관리</td><td><code>HGH_ACCOUNT_EDITOR_DB_URL</code></td><td><code>geohub_operations_db</code><br><span class="muted">계정 hmg_account_editor</span></td><td>계정 표(<code>user_account</code>·<code>user_credential</code>·<code>global_role</code>)의 쓰는 열만 INSERT·UPDATE, <code>audit_event</code> INSERT만. 비밀번호 해시는 읽지 못하고 지우기 권한 없음. 로그인 시각도 이 연결로 남긴다</td><td class="mono">≤ 2</td></tr>
         <tr><td class="k">GA4 등록부</td><td><code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>hmg_analytics</code><br><span class="muted">계정 hmg_ga4_registry_editor</span></td><td><code>analytics.ga4_registry</code> INSERT와 속성 ID 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT만. 지우기 권한 없음. 목록·이벤트 읽기는 데이터 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>hmg_input</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">고객 관심 입력</td><td><code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>hmg_input</code><br><span class="muted">계정 hmg_interest_editor</span></td><td>시드 키워드(<code>catalog.interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>) INSERT와 값·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_interest_*()</code> 실행만. 지우기·키·원문 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
-        <tr><td class="k">엔티티 역할</td><td><code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>hmg_input</code><br><span class="muted">계정 hmg_entity_role_editor</span></td><td>역할(<code>catalog.entity_role</code>) INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_entity_roles()</code> 실행만. 지우기·엔티티·이름 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
-        <tr><td class="k">프로젝트 프롬프트</td><td><code>HGH_PROJECT_EDITOR_DB_URL</code></td><td><code>hmg_input</code><br><span class="muted">계정 hmg_project_editor</span></td><td>프로젝트 표면(3) 카탈로그만: <code>catalog.prompt</code> INSERT, <code>prompt_version</code>·<code>project_version</code>은 <code>change_seq</code> 뺀 열 INSERT(기록자 필수, 트리거 <code>project_editor_guard</code>), catalog 프로젝트 · 프롬프트 표 SELECT. UPDATE·DELETE·프로젝트 생성·공개 승인 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">고객 관심 입력</td><td><code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_interest_editor</span></td><td>시드 키워드(<code>catalog.interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>) INSERT와 값·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_interest_*()</code> 실행만. 지우기·키·원문 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
+        <tr><td class="k">엔티티 역할</td><td><code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_entity_role_editor</span></td><td>역할(<code>catalog.entity_role</code>) INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_entity_roles()</code> 실행만. 지우기·엔티티·이름 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
+        <tr><td class="k">프로젝트 프롬프트</td><td><code>HGH_PROJECT_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_project_editor</span></td><td>프로젝트 표면(3) 카탈로그만: <code>catalog.prompt</code> INSERT, <code>prompt_version</code>·<code>project_version</code>은 <code>change_seq</code> 뺀 열 INSERT(기록자 필수, 트리거 <code>project_editor_guard</code>), catalog 프로젝트 · 프롬프트 표 SELECT. UPDATE·DELETE·프로젝트 생성·공개 승인 권한 없음. 목록은 데이터 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
       </tbody>
     </table>
   </div>
@@ -492,7 +492,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- HUB data DB -->
         <rect class="hubbox" x="16" y="190" width="860" height="230" rx="10"/>
         <text class="h" x="32" y="216">HUB 입력 · 데이터 DB</text>
-        <text class="m mu" x="210" y="216">hmg_input :55438 (catalog.* · publication.*) · hmg_analytics :55436 (그 밖)</text>
+        <text class="m mu" x="210" y="216">geohub_bm_db :55438 (catalog.* · publication.*) · hmg_analytics :55436 (그 밖)</text>
 
         <rect class="box" x="36" y="236" width="280" height="168" rx="6"/>
         <text class="m b" x="52" y="260">catalog.*</text>
@@ -522,7 +522,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- HUB operations DB -->
         <rect class="hubbox" x="956" y="190" width="228" height="242" rx="10"/>
         <text class="h" x="972" y="216">HUB 운영 DB</text>
-        <text class="m mu" x="972" y="236">hmg_operations :55437</text>
+        <text class="m mu" x="972" y="236">geohub_operations_db :55437</text>
         <text class="m b" x="972" y="264">system.*</text>
         <text class="m mu" x="972" y="284">user_account</text>
         <text class="m mu" x="972" y="302">user_credential (scrypt)</text>
@@ -776,7 +776,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="erd-ops" aria-labelledby="h-erd-ops">
-  <h2 id="h-erd-ops">HUB 운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_operations</span></h2>
+  <h2 id="h-erd-ops">HUB 운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">geohub_operations_db</span></h2>
   <p class="sub prose">스키마는 <code>system</code> 하나다. 사용자·권한·설정·감사와 계정별 저장한 필터를 갖고, 프로젝트는 입력 DB의 UUID를 참조만 한다.
     근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>, <code>operations-003.sql</code>, <code>operations-004.sql</code>, <code>operations-005.sql</code>, <code>operations-006.sql</code>.</p>
   <figure>
@@ -1041,7 +1041,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="erd-input" aria-labelledby="h-erd-input">
-  <h2 id="h-erd-input">HUB 입력 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">hmg_input :55438</span></h2>
+  <h2 id="h-erd-input">HUB 입력 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">geohub_bm_db :55438</span></h2>
   <p class="sub prose">프롬프트 · 측정 설정 · 수집 기준정보 · 분석 기준정보의 원본이다(SSOT <code>shared/input-contract.md</code>). 2026-11-06에 데이터 DB에서 옮겼고 이름 · 키 · 버전 · <code>change_seq</code>는 그대로다.
     입력은 모두 같은 모양이다: 현재 값, 값 전체를 담는 번호 매긴 버전(기록자 · <code>change_seq</code>), API가 읽는 발행 묶음. 프로젝트 · 프롬프트 · 측정 설정은 버전 행의 최신이 현재 값이고(그림 5), 목록은 현재 행과 트리거가 쌓는 <code>*_version</code>이다(그림 6).
     기준 주 · GA4 · SEO는 데이터 DB에 남았다. 근거: <code>back/hub_storage/input-001.sql</code> · <code>input-002.sql</code>. 범례는 그림 4와 같다.</p>

@@ -25,7 +25,7 @@ class HubStorageReads(unittest.TestCase):
         h = self.read('/healthz')
         self.assertEqual(h['database'],'gold')
         self.assertEqual(h['analytics']['database'],'hmg_analytics')
-        self.assertEqual(h['operations']['database'],'hmg_operations')
+        self.assertEqual(h['operations']['database'],'geohub_operations_db')
         self.assertEqual(h['operations']['role'],'hmg_operations_reader')
         self.assertTrue(h['operations']['ok'])
         self.assertEqual(h['operations']['read_only'],'on')

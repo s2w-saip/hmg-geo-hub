@@ -2,7 +2,7 @@
 read-only, for callers that hold an API key (back/hub_storage/manage.py ext-key-issue). A collecting client reads its projects with their
 measurement settings, their prompts and the collecting reference values; an analysis client reads the analysis reference values.
 
-The process reaches only the input store (hmg_input), as hmg_ext_api, which can read the ext schema and nothing else.
+The process reaches only the input store (geohub_bm_db), as hmg_ext_api, which can read the ext schema and nothing else.
 Every request is one read-only transaction that first sets hgh.key_hash to the sha256 of the presented key.
 The ext views then answer that caller's granted and approved projects and its audience's approved reference families,
 and nothing at all for an unknown, expired or revoked key. The scope is enforced by the database; this code

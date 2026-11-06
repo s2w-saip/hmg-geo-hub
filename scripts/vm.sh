@@ -101,7 +101,7 @@ print(" ".join(f"{k}={d[k]}" for k in ("projects","prompts","new_project_version
         log "sync FAILED $(printf '%s' "$out" | tail -1 | cut -c1-400)"; exit 1
     fi ;;
 check-sync)
-    hours="$(docker exec hgh-input-db psql -X -A -t -U hmg_input_reader -d hmg_input -c \
+    hours="$(docker exec hgh-input-db psql -X -A -t -U hmg_input_reader -d geohub_bm_db -c \
         "SELECT coalesce(round(extract(epoch FROM now()-max(finished_at))/3600,1)::text,'never')
          FROM catalog.sync_run WHERE result='ok'")"
     limit="${HGH_SYNC_STALE_HOURS:-3}"

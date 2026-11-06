@@ -1,4 +1,4 @@
-"""Global prompts in the input store (hmg_input), managed by the top-level administrator (2026-10-27).
+"""Global prompts in the input store (geohub_bm_db), managed by the top-level administrator (2026-10-27).
 
 Every Global prompt is created, edited, archived and restored here (2026-11-06, T4.2: the service holds the source of the prompts, as
 Project › Prompt has since 2026-11-03). The first HUB revision of a Gold-imported prompt makes it HUB-owned: sync_catalog.py keeps its
