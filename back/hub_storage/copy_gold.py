@@ -1,4 +1,4 @@
-"""Restore the Gold copy (geohub_gold_db, schema gold) from its kept dump in .local/gold-copy, the only place that data is kept besides the database.
+"""Restore the Gold copy (gold_db, schema gold) from its kept dump in .local/gold-copy, the only place that data is kept besides the database.
 
 The readers' ORDER BY, lower() and date casts depend on the database's sort order and settings: manage.py init creates the database with that
 sort order and this script sets the rest. The copied tables are read-only for every role; the rollup job's tables in the same schema
@@ -24,7 +24,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-TARGET = "geohub_gold_db"
+TARGET = "gold_db"
 SCHEMA = "gold"
 READER = "hmg_metrics_reader"
 OWNER = "hmg_metrics_owner"

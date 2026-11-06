@@ -1,4 +1,4 @@
-"""Adapter ②: it reads contract columns only, runs the rules of bff.metrics.judgments, and stays off unless asked. The numbers against geohub_gold_db are a live comparison: a fake
+"""Adapter ②: it reads contract columns only, runs the rules of bff.metrics.judgments, and stays off unless asked. The numbers against gold_db are a live comparison: a fake
 connection answers here, and HGH_SILVER_TEST lets the last test read the stand-in."""
 import asyncio
 import hashlib
@@ -164,7 +164,7 @@ class Signals(unittest.TestCase):
 
 
 class Inputs_(unittest.TestCase):
-    """Three differences a whole-history comparison with geohub_gold_db found (2026-11-06)."""
+    """Three differences a whole-history comparison with gold_db found (2026-11-06)."""
 
     def test_a_prompt_taken_out_of_the_catalog_still_counts_in_its_rounds(self):
         before = inputs()._replace(prompt_ids=["p1", "p2"], in_root=[True, False], brand_group=[1, 0])
@@ -232,7 +232,7 @@ class Switch(unittest.TestCase):
         with mock.patch.dict(os.environ, {"HGH_METRIC_SOURCE": "Silver "}):
             self.assertTrue(silver_obt.enabled())
 
-    def test_what_the_contract_cannot_answer_stays_on_geohub_gold_db(self):
+    def test_what_the_contract_cannot_answer_stays_on_gold_db(self):
         ctx = mock.Mock(card=False, surface="global", q={}, release={"release_id": 1, "version": 1})
         ctx.mention = None
         source = silver_obt.ObtForContext(ctx)
@@ -241,7 +241,7 @@ class Switch(unittest.TestCase):
         self.assertEqual(asyncio.run(source.acr_duel_counts()), {"rows": []})
         source.gold.acr_duel_counts.assert_awaited_once()
 
-    def test_a_drill_it_has_no_scope_for_stays_on_geohub_gold_db(self):
+    def test_a_drill_it_has_no_scope_for_stays_on_gold_db(self):
         ctx = mock.Mock(card=False, surface="global", q={"cf.x": "1"}, release={"release_id": 1, "version": 1})
         ctx.mention = None
         source = silver_obt.ObtForContext(ctx)

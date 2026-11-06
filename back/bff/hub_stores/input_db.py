@@ -1,4 +1,4 @@
-"""Read-only access to the input store (geohub_bm_db, 2026-11-06): prompts, measurement settings and the collecting and analysis
+"""Read-only access to the input store (input_db, 2026-11-06): prompts, measurement settings and the collecting and analysis
 reference values. The screens' writes use their own roles (catalog_editor, project_prompts, measurement, source_overrides, interest,
 entity_roles); 수집 and 분석 read the same data through back/ext."""
 import os

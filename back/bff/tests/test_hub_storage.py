@@ -23,10 +23,10 @@ class HubStorageReads(unittest.TestCase):
 
     def test_operations_is_separate_and_read_only(self):
         h = self.read('/healthz')
-        self.assertEqual(h['database'],'geohub_gold_db')
-        self.assertEqual(h['analytics']['database'],'geohub_gold_db')
+        self.assertEqual(h['database'],'gold_db')
+        self.assertEqual(h['analytics']['database'],'gold_db')
         self.assertEqual(h['analytics']['role'],'hmg_analytics_reader')
-        self.assertEqual(h['operations']['database'],'geohub_operations_db')
+        self.assertEqual(h['operations']['database'],'operations_db')
         self.assertEqual(h['operations']['role'],'hmg_operations_reader')
         self.assertTrue(h['operations']['ok'])
         self.assertEqual(h['operations']['read_only'],'on')

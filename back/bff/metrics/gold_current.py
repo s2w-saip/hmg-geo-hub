@@ -1,4 +1,4 @@
-"""Adapter ①: the base counts from geohub_gold_db's answer-level tables (answer_fact · answer_brand_fact ·
+"""Adapter ①: the base counts from gold_db's answer-level tables (answer_fact · answer_brand_fact ·
 citation_fact · acr_*_fact), never its precomputed cells (kpi_cell · brand_cell · citation_cell · url_prompt_cell), whose
 definitions are upstream's. Read only; goes with gold_reader at T12 once adapter ② reads Silver.
 

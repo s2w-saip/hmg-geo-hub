@@ -47,9 +47,9 @@ def render() -> str:
     lines += ["## 지금 화면 값과 다른 것 ('분석팀 리뷰 필요')", "",
               "지표 계산 함수는 SSOT 정의를 따른다. 화면을 이 함수로 바꾸면(T7) 값이 아래처럼 달라진다.", "",
               *table(["지표", "차이"], [[m.name, m.review] for m in METRICS if m.review]),
-              "## 기본 집계값과 geohub_gold_db 대응", "",
+              "## 기본 집계값과 gold_db 대응", "",
               "데이터 소스 어댑터가 세는 값이다. Silver 어댑터는 같은 값을 OBT에서 센다. 값 대조: `bff.tests.test_metrics_live`.", "",
-              *table(["기본 집계값", "단위", "뜻", "어댑터 ① geohub_gold_db"], [[k, *v] for k, v in BASE_COUNTS.items()])]
+              *table(["기본 집계값", "단위", "뜻", "어댑터 ① gold_db"], [[k, *v] for k, v in BASE_COUNTS.items()])]
     return "\n".join(lines)
 
 

@@ -85,19 +85,17 @@ def native_exists(store: str) -> bool:
     return (NATIVE_ROOT / store / "PG_VERSION").exists()
 
 
-# Databases renamed in place (D-17, 2026-11-06): a server that has the old name keeps its data under the new one.
-RENAMED = {"geohub_bm_db": "hmg_input", "geohub_operations_db": "hmg_operations"}
+# Databases renamed in place (2026-11-06): a server that has an earlier name keeps its data under the new one.
+RENAMED = {"input_db": ("geohub_bm_db", "hmg_input"), "operations_db": ("geohub_operations_db", "hmg_operations"),
+           "gold_db": ("geohub_gold_db",), "cache_db": ("geohub_cache_db",)}
 
 
 def rename_sql(database: str) -> str:
-    previous = RENAMED.get(database)
-    if not previous:
-        return ""
-    return f"""DO $$ BEGIN
+    return "\n".join(f"""DO $$ BEGIN
 IF EXISTS(SELECT 1 FROM pg_database WHERE datname='{previous}') AND NOT EXISTS(SELECT 1 FROM pg_database WHERE datname='{database}') THEN
     PERFORM pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='{previous}';
     ALTER DATABASE {previous} RENAME TO {database};
-END IF; END $$;"""
+END IF; END $$;""" for previous in RENAMED.get(database, ()))
 
 
 def native_start(store: str, port: int, admin: str, database: str, password: str):

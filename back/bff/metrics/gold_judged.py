@@ -1,4 +1,4 @@
-"""The judgments on geohub_gold_db's rows (adapter ①'s side of bff.metrics.judgments).
+"""The judgments on gold_db's rows (adapter ①'s side of bff.metrics.judgments).
 
 The brand and citation rows hold no answer-level input, so a population is held as the keys of the answers it leaves out: the rule runs once per set
 of builds (0.3 s on global) and every read of any table leaves those keys out. The per-answer sums upstream kept on answer_fact (mentions, sentiment,

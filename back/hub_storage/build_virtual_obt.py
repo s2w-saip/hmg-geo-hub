@@ -1,5 +1,5 @@
 """Build the virtual OBT: geohub_silver_db on the metrics server, the pipeline's silver.answer_analysis and silver.acr_rollup filled from the copy of
-the old upstream database (geohub_gold_db). Writes nothing to the copy; the load's temporary tables live in its own session. See silver-001.sql.
+the old upstream database (gold_db). Writes nothing to the copy; the load's temporary tables live in its own session. See silver-001.sql.
 
     HGH_HUB_NATIVE=1 python back/hub_storage/build_virtual_obt.py            # database, tables, load, analyze, check
     HGH_HUB_NATIVE=1 python back/hub_storage/build_virtual_obt.py --replace  # empty the tables and load again
@@ -22,7 +22,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-SOURCE = "geohub_gold_db"
+SOURCE = "gold_db"
 TARGET = "geohub_silver_db"
 OWNER = "hmg_metrics_owner"
 READER = "hmg_silver_reader"

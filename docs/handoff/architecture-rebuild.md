@@ -2,12 +2,12 @@
 
 서비스 전체를 SSOT 지표 가공 구조(`../hmg-geo-hub-ssot/shared/project-architecture.md`)에 맞춰 다시 짓는 일의 할 일 · 결정 · 진행 기록이다. 이 파일이 할 일의 기준 문서다. 2026-11-05 사용자 결정으로 이전 할 일 파일 `docs/handoff/admin-todo.md`와 그 안의 수정 항목을 모두 폐기했다(git 기록의 마지막 판: `3533736`).
 
-**지금 할 일:** P2의 데이터 연결(T5.3~5.6 · T7.1~7.5)은 끝났다(`ca553cb`). 다음은 T13 허브 서버 분리의 범위표다(사용자 2026-11-06). 그 뒤 P2는 T6.3 Website · Global 측정 설정 입력 화면, T6.5 e2e다. 입력 화면은 범위를 먼저 보인다. 업스트림 통보는 서비스 영역 대공사가 끝나 안정화된 뒤에 작성해 보낸다(지금 초안은 메모). D-15 · D-16은 추천안으로 정해졌다. ① 결함 3건 · ② 지표 계산 통합 · ③ Gold 지표 행(D-18)은 끝났다(`ca553cb`). `hmg_metrics` 분리(`geohub_gold_db` · `geohub_cache_db`)와 `hmg_analytics` 제거는 끝났다(`dfe7368`). `geohub_bm_db` · `geohub_operations_db` 이름 변경은 끝났다(`a8b782b`). 맥의 BFF는 가상 OBT에서 센다(`.env.silver.local`의 `HGH_METRIC_SOURCE=silver`, T9.3). 외부 Gold를 읽는 곳은 맥에 없다. ④ 판정을 `bff/metrics`로 옮기는 일은 끝났다(`geohub_gold_db` 기준, `ca553cb`, 정의 버전 `2026-11-06.6`). 남은 판정과 이유는 진행 기록에 있다.
+**지금 할 일:** P2의 데이터 연결(T5.3~5.6 · T7.1~7.5)은 끝났다(`ca553cb`). 다음은 T13 허브 서버 분리의 범위표다(사용자 2026-11-06). 그 뒤 P2는 T6.3 Website · Global 측정 설정 입력 화면, T6.5 e2e다. 입력 화면은 범위를 먼저 보인다. 업스트림 통보는 서비스 영역 대공사가 끝나 안정화된 뒤에 작성해 보낸다(지금 초안은 메모). D-15 · D-16은 추천안으로 정해졌다. ① 결함 3건 · ② 지표 계산 통합 · ③ Gold 지표 행(D-18)은 끝났다(`ca553cb`). `hmg_metrics` 분리(`gold_db` · `cache_db`)와 `hmg_analytics` 제거는 끝났다(`dfe7368`). `input_db` · `operations_db` 이름 변경은 끝났다(`a8b782b`). 맥의 BFF는 가상 OBT에서 센다(`.env.silver.local`의 `HGH_METRIC_SOURCE=silver`, T9.3). 외부 Gold를 읽는 곳은 맥에 없다. ④ 판정을 `bff/metrics`로 옮기는 일은 끝났다(`gold_db` 기준, `ca553cb`, 정의 버전 `2026-11-06.6`). 남은 판정과 이유는 진행 기록에 있다.
 
 ## 대공사 원칙
 
 - 정의는 SSOT가 절대 기준이다. 이 파일과 SSOT가 다르면 SSOT를 따르고 이 파일을 고친다. 데이터 · 화면 원칙은 `CLAUDE.md` 1 · 2절이다.
-- 이전 Gold DB는 없는 것으로 본다. 모든 작업은 서비스 DB를 기준으로 한다. 지표 계산은 `geohub_gold_db`에서 한다. Silver는 파이프라인의 외부 DB이고, 접속 정보를 받기 전까지는 아키텍처 밖의 가상 OBT(`geohub_silver_db`)가 대신한다.
+- 이전 Gold DB는 없는 것으로 본다. 모든 작업은 서비스 DB를 기준으로 한다. 지표 계산은 `gold_db`에서 한다. Silver는 파이프라인의 외부 DB이고, 접속 정보를 받기 전까지는 아키텍처 밖의 가상 OBT(`geohub_silver_db`)가 대신한다.
 - 레거시 화면(`front/app/[locale]/(dash)`) 코드는 고치지 않는다. 데이터 서버 데이터 연결 교체로 레거시 화면 값이 바뀌는 것은 막지 않고, 리뉴얼에서도 유지하는 지표는 두 화면 값이 같은지 확인하며 진행한다.
 - 레거시 KPI는 통합할 수 있어도 없애지 않는다.
 
@@ -15,16 +15,16 @@
 
 | 영역 | SSOT 목표 | 지금 |
 |---|---|---|
-| 입력 원본 | 프롬프트 · 측정 설정 · 수집/분석 기준정보를 서비스가 만들고 관리 | 2026-11-06 `geohub_bm_db`으로 옮김. `engine · country · language · taxon · brand`와 코드표는 서비스 원본. Gold 가져오기는 프롬프트 · 프로젝트 정의의 Gold 키와 계약 밖 9종만 씀(T10까지) |
+| 입력 원본 | 프롬프트 · 측정 설정 · 수집/분석 기준정보를 서비스가 만들고 관리 | 2026-11-06 `input_db`으로 옮김. `engine · country · language · taxon · brand`와 코드표는 서비스 원본. Gold 가져오기는 프롬프트 · 프로젝트 정의의 Gold 키와 계약 밖 9종만 씀(T10까지) |
 | 측정 설정 | 브랜드 · 국가, website 단위 · 기준 URL, AI 엔진, 측정 주기, ACR 반복 수, 소유 · 추적 URL, 추적 대상 | `project_measurement_version`. 처음 값은 Gold가 가진 값만, Project › Setting에서 입력(Website · Global 입력 화면은 없음) |
 | 프롬프트·기준정보 API | 엔드포인트 6개, 기준정보 15종 | 같음(2026-11-06). 호출자는 수집 · 분석으로 나뉨. 계약 밖 9종은 저장소에만 남고 나가지 않음. OpenAPI `docs/ssot-staging/service/openapi.json` |
 | 지표 정의 | 데이터 서버 한 곳, 코드 + 테스트, 지표 정의 버전 | `bff/metrics`(계산식 · 함수 · 버전)가 언급 · 인용 합계를 계산하고 계산 셀 값은 읽지 않음(2026-11-06). 드릴다운 · 목록 SQL은 아직 `gold_reader`에 있음(T9에서 어댑터 ②로) |
-| 읽는 데이터 | Silver 운영 스냅샷(포인터 · 매니페스트) | `geohub_gold_db` live 발행 하나의 답변 단위 테이블 + 서비스 기준 주. 카드 · 그리드 발행은 읽지 않음 |
+| 읽는 데이터 | Silver 운영 스냅샷(포인터 · 매니페스트) | `gold_db` live 발행 하나의 답변 단위 테이블 + 서비스 기준 주. 카드 · 그리드 발행은 읽지 않음 |
 | Gold · 캐시 DB | 데이터 서버가 사전 집계 · 캐시 DB 저장 | 같음(2026-11-06). 첫 화면 = `gold.metric_row`(지표), `gold.first_screen_read`(목록), 필터 조회 = `cache.query_result`(`bff/metrics/serving.py`, `gold_rows.py`). 메모리 캐시는 지웠음 |
 
 ## 페이즈와 태스크
 
-P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고, P3에서 데이터 소스 어댑터만 Silver용으로 바꾼다(D-10, 2026-11-06 결정). 페이즈를 건너뛸지는 사용자만 정한다. 큰 태스크는 범위 확인부터 시작해 사용자에게 보인 뒤 설계한다.
+P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에서 데이터 소스 어댑터만 Silver용으로 바꾼다(D-10, 2026-11-06 결정). 페이즈를 건너뛸지는 사용자만 정한다. 큰 태스크는 범위 확인부터 시작해 사용자에게 보인 뒤 설계한다.
 
 ### P0 준비 — 업스트림 없이 바로
 
@@ -55,7 +55,7 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 **T3 지표 정의 계층**
 
 - [x] 3.1 `back/bff/metrics/` 골격, 지표 정의 버전, 데이터 소스 어댑터 인터페이스(답변 · 브랜드 언급 · 인용 · ACR 반복)
-- [x] 3.2 어댑터 ①: `geohub_gold_db` 답변 단위 테이블(`answer_fact · answer_brand_fact · citation_fact · acr_*_fact`)
+- [x] 3.2 어댑터 ①: `gold_db` 답변 단위 테이블(`answer_fact · answer_brand_fact · citation_fact · acr_*_fact`)
 - [x] 3.3 공통 조건 7: 모니터링 답변 · 인용 모니터링 답변 · 대표 답변 · 당사 · 회차 · Δ · 권역 값
 - [x] 3.4 언급 지표 7 + 테스트
 - [x] 3.5 인용 지표 8 + 테스트(website 자사 URL 지표의 소유 URL은 지금 Gold `loc_owned`, 4.3 소유 URL 테이블이 생기면 바꾼다)
@@ -65,7 +65,7 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 **T4 서비스 DB 원본**
 
 - [x] 4.1 스키마 설계: 입력마다 현재 값 · 버전 · 이력의 공통 구조 하나(이전 D-8을 여기서 정함, 결정 기록 '입력 공통 구조') `d9c045f`
-- [x] 4.2 프롬프트 원본 전환: 표를 `geohub_bm_db`으로 옮기고 Global 프롬프트도 화면에서 고친다. 고친 프롬프트는 가져오기가 덮어쓰지 않는다. 가져오기 중지는 T10 `d9c045f`
+- [x] 4.2 프롬프트 원본 전환: 표를 `input_db`으로 옮기고 Global 프롬프트도 화면에서 고친다. 고친 프롬프트는 가져오기가 덮어쓰지 않는다. 가져오기 중지는 T10 `d9c045f`
 - [x] 4.3 측정 설정 테이블 `catalog.project_measurement_version`. 처음 값은 Gold가 가진 값만(Global 1 · Website 127 · Project 130), 2.6 값은 받으면 넣는다 `d9c045f`
 - [x] 4.4 수집 기준정보 `engine · country · language` 원본 테이블 `catalog.reference_source`(처음 값만 Gold에서), `interest_keyword · interest_source`는 버전 표를 붙임 `d9c045f`
 - [x] 4.5 분석 기준정보 `taxon · brand` · 서비스 코드표도 `catalog.reference_source`, `entity_role`은 버전 표를 붙임 `d9c045f`
@@ -78,9 +78,9 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 - [x] 5.3 사전 집계 작업: `manage.py rollup` + `vm.sh rollup`(cron 줄은 VM 반영 때 사용자가 넣는다) + `start-local.sh`, 필터 없는 초기 화면 값 전부(`bff/metrics/first_screens.py`), 스냅샷 ID · 정의 버전 기록. Mac 전체 약 6분(global 38초 · website 36초 · project 130개 5분)
 - [x] 5.4 사전 집계가 늦거나 실패하면 그 값은 보이지 않음(503, 그 구역은 기존 오류 문구). 조회 시점에 대신 계산하지 않음
 - [x] 5.5 메모리 캐시(`gold_reader/cache.py` · 필터 옵션 캐시)를 캐시 DB로(`bff/metrics/serving.py`)
-- [x] 5.6 이관 기간의 스냅샷 ID는 `geohub_gold_db` live 발행 ID · 버전 + 보이는 회차 해시 + 서비스 기준 주
+- [x] 5.6 이관 기간의 스냅샷 ID는 `gold_db` live 발행 ID · 버전 + 보이는 회차 해시 + 서비스 기준 주
 
-### P2 화면 연결 교체 — P1 뒤, 데이터는 `geohub_gold_db` 답변 단위 테이블
+### P2 화면 연결 교체 — P1 뒤, 데이터는 `gold_db` 답변 단위 테이블
 
 완료 기준: 화면 빌더가 지표 정의 · Gold · 캐시만 읽음, 앤써 · 분석이 API로 읽을 수 있음.
 
@@ -89,7 +89,7 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 - [ ] 13.1 범위표: `/v1` 경로마다 허브 서버 · 데이터 서버 분류와 읽는 DB. 코드 분석으로 DB를 따라가지 못한 15개를 다시 확인한다
 - [ ] 13.2 `back/hub_server` 프로세스: 로그인 · 토큰 발급 · 요청마다 계정 재확인, 화면 · 지표 요청 프록시(응답 해석 없음), 계정 · 저장 필터, 입력 편집, GA4 등록부
 - [ ] 13.3 데이터 서버 내부 전용: 허브 서버가 서명한 수명 짧은 내부 토큰으로 계정 범위를 받고, 운영 DB 연결과 쓰기 계정 9개를 뺀다. 프롬프트 이력의 작성자 이름은 허브 서버가 기록할 때 입력 DB에 함께 저장한다
-- [ ] 13.4 `geohub_gold_db`를 읽는 Admin 경로 12개를 데이터 서버로(D-26): 목록 8과 GA4 이벤트 목록 1은 데이터 서버가 만들고, 저장 3은 허브 서버가 데이터 서버에 확인 요청한 뒤 기록한다. 허브 서버에는 이 DB의 계정을 주지 않는다
+- [ ] 13.4 `gold_db`를 읽는 Admin 경로 12개를 데이터 서버로(D-26): 목록 8과 GA4 이벤트 목록 1은 데이터 서버가 만들고, 저장 3은 허브 서버가 데이터 서버에 확인 요청한 뒤 기록한다. 허브 서버에는 이 DB의 계정을 주지 않는다
 - [ ] 13.5 프록시로 늘어나는 응답 시간 재기, 값 비교, 아키텍처 문서 · ERD
 - [ ] 13.6 코드 이름: `back/bff`를 `back/data_server`로, import · 스크립트 · Dockerfile · 컨테이너 이름까지. 프런트의 `bff` 언급은 레거시 코드가 섞여 있어 두지 않는다
 
@@ -120,14 +120,14 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 
 ### P3 Silver 전환 — 2.1 계약 2 · Silver DB 받은 뒤
 
-완료 기준: 데이터 서버가 `geohub_gold_db`의 답변 단위 테이블 대신 Silver를 읽음.
+완료 기준: 데이터 서버가 `gold_db`의 답변 단위 테이블 대신 Silver를 읽음.
 
 **T9 Silver 읽기** (2.1 · 2.2)
 
 - [ ] 9.1 읽기 연결 · 운영 스냅샷 포인터 · 매니페스트. 대역 기준 연결은 됐다(`ff1b048`, `silver_db.py`). 실제 접속 정보가 남았다
-- [ ] 9.2 어댑터 ②: Silver OBT(jsonb 언급 · 인용). `bff/metrics/silver_obt.py`, 맥에서 켬(`.env.silver.local`). 스위치가 없는 곳은 `geohub_gold_db`에서 센다. 계약에 없는 값은 `LEFT_ON_GOLD`로 `geohub_gold_db`에 남았다
+- [ ] 9.2 어댑터 ②: Silver OBT(jsonb 언급 · 인용). `bff/metrics/silver_obt.py`, 맥에서 켬(`.env.silver.local`). 스위치가 없는 곳은 `gold_db`에서 센다. 계약에 없는 값은 `LEFT_ON_GOLD`로 `gold_db`에 남았다
 - [x] 9.3 사전 집계 · 캐시 신호를 매니페스트로. 재계산이 OBT에서 세어 Gold에 쓰고, 회차 스냅샷 · 캐시 키는 매니페스트의 운영 스냅샷으로 만든다
-- [x] 9.4 `geohub_gold_db` ↔ Silver 값 대조. 전 회차 · 전 표면 사전 집계 행 52만 건을 값 단위로 대조했고, 남은 차이의 원인을 진행 기록에 적었다
+- [x] 9.4 `gold_db` ↔ Silver 값 대조. 전 회차 · 전 표면 사전 집계 행 52만 건을 값 단위로 대조했고, 남은 차이의 원인을 진행 기록에 적었다
 - [x] 9.5 입력 '반영됨 / 반영 대기': 하지 않는다. 입력은 무조건 즉시 반영으로 본다(사용자 2026-11-06)
 - [ ] 9.6 답변 원문 경로 교체(2.3)
 
@@ -142,14 +142,14 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 
 **T12 철거** (P3 뒤)
 
-- [ ] 12.1 `gold_reader` · `geohub_gold_db` 연결(`HGH_GOLD_DB_URL`)
+- [ ] 12.1 `gold_reader` · `gold_db` 연결(`HGH_GOLD_DB_URL`)
 - [ ] 12.2 Gold 가져오기 · Gold로 판정하는 서비스 기준 주
 - [ ] 12.3 쓰지 않는 이전 재설계 코드(`back/app · ingest · db · migration`)
 - [ ] 12.4 아키텍처 문서 · ERD를 최종 구조로
 
 ## 공통 완료 기준 (태스크마다)
 
-- 값은 데이터 서버 지표 정의와 읽는 테이블의 컬럼 설명 · 집계 단위 · 인덱스에 대조한다(이관 기간에는 `geohub_gold_db`).
+- 값은 데이터 서버 지표 정의와 읽는 테이블의 컬럼 설명 · 집계 단위 · 인덱스에 대조한다(이관 기간에는 `gold_db`).
 - 1.4 기준선보다 새 테스트 실패가 없다. 실행하지 않은 테스트는 실행하지 않았다고 적는다.
 - 지표 정의를 만들거나 바꾸면 테스트와 결정 기록 '분석팀 리뷰 필요'를 남긴다.
 - 리뉴얼에서도 유지하는 지표는 리뉴얼 · 레거시 두 화면 값을 대조해 적는다.
@@ -165,7 +165,7 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 ## 보류
 
 - Admin 키워드 도구(DataForSEO · OpenRouter 계정 대기), 분석 엔진 · 리포트 관리 · 측정 크레딧(명세 대기): 2.6 답 뒤 다시 본다.
-- AI 가시성(메뉴 숨김) · 전환 변화 분해: 크롤 · 검색 · GA4 값이 `geohub_gold_db`와 Silver OBT에 없다. 값이 들어오면 다시 본다(D-11 닫음, 2026-11-06).
+- AI 가시성(메뉴 숨김) · 전환 변화 분해: 크롤 · 검색 · GA4 값이 `gold_db`와 Silver OBT에 없다. 값이 들어오면 다시 본다(D-11 닫음, 2026-11-06).
 - D-3 남은 3건(Project Mention '{rank}위', Website Overview 첫 요약 '나빠진 것만', AI Conversion 'coverage' 발견 늘 warn): 대공사 뒤 한 건씩 본다(사용자 2026-11-06).
 - Silver OBT에 없는 값(키워드 · 소셜 · SEO와 크롤): Silver 연결 때 정한다(D-24, 사용자 2026-11-06).
 
@@ -175,18 +175,18 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 
 | # | 항목 | 확인한 상태 | 사용자 응답 | 반영 |
 |---|---|---|---|---|
-| 1 | GA4 프로젝트 ↔ 속성 연결(T6.3) | 속성 목록은 `geohub_bm_db`의 `catalog.ga4_registry`에 Admin › GA4 연동 화면으로 넣는다(1행: 이전 Gold DB에서 옮긴 Kia · IT). Global · Website 전환 화면은 프로젝트 연결 없이 등록 속성을 읽는다. Project 전환 화면만 프로젝트의 브랜드 × 국가로 찾는데, 정의의 국가 0/130 · 측정 설정 브랜드 0/130이라 샘플을 보여 준다. `catalog.project_ga4_property`(0행)는 BFF · 화면이 쓰지 않고, 쓰기를 막은 옛 `catalog.project`를 참조한다 | '있다고 표기만 해두고 실제 연결하는 인터페이스의 개발, 구현은 하지마' | 결정 기록 |
+| 1 | GA4 프로젝트 ↔ 속성 연결(T6.3) | 속성 목록은 `input_db`의 `catalog.ga4_registry`에 Admin › GA4 연동 화면으로 넣는다(1행: 이전 Gold DB에서 옮긴 Kia · IT). Global · Website 전환 화면은 프로젝트 연결 없이 등록 속성을 읽는다. Project 전환 화면만 프로젝트의 브랜드 × 국가로 찾는데, 정의의 국가 0/130 · 측정 설정 브랜드 0/130이라 샘플을 보여 준다. `catalog.project_ga4_property`(0행)는 BFF · 화면이 쓰지 않고, 쓰기를 막은 옛 `catalog.project`를 참조한다 | '있다고 표기만 해두고 실제 연결하는 인터페이스의 개발, 구현은 하지마' | 결정 기록 |
 | 2 | Website · Global 측정 설정 입력 화면(T6.3) | 값은 있고 입력 폼이 없다. SSOT 관리 화면은 '프로젝트 설정'. BFF 쓰기 경로는 프로젝트 ID만 받는다 | 대기 | |
 | 3 | 나머지 입력 화면 저장 확인(T6.5) | 새 DB에서 Project › Setting은 화면 저장, Global 프롬프트는 API 저장을 확인했다. Project 프롬프트 · 인용 출처 분류 · 고객 관심 · 엔티티 역할은 읽기만 확인했다 | 대기 | |
 | 4 | 비어 있는 측정 값(2.6) | 258개 전체에서 프로젝트 이름 · 측정 주기 · ACR 반복 수 · 추적 URL · 추적 대상이 0. Project는 브랜드 0/130, 국가 · 엔진 73/130. Website는 소유 URL 106/127 | 대기 | |
 | 5 | API 키 발급 · 읽기 시작(T8.3 · 2.5) | 실제 키 0개. 로컬 시험 호출자 3개는 모두 중지 상태 | 대기 | |
 | 6 | SSOT 반영 | `prompt-reference-api.md`의 호출자 · 인증 · 측정 설정 변경 감지 · OpenAPI가 SSOT와 다르고, `openapi.json`은 SSOT에 없다 | '올리지마. 모든 작업 다 끝나고 SSOT에 업로드는 항상 내가 먼저 이슈레이징 할거야' | 결정 기록 |
 | 7 | 사전 집계 · 캐시 연결(T5.3~5.6) | 끝났다(`ca553cb`). 대공사 세션 몫이다 | 대기 | |
-| 8 | `hmg_analytics` 제거 | 없앴다. GA4 속성 · 수집 결과 · 기준 주는 `geohub_bm_db`, GA4 데이터 · SEO · `ref` · `ops`는 `geohub_gold_db`로 옮겼다. 동결한 입력 사본, `project_ga4_property`(0행), `published.*`는 읽는 곳이 없어 옮기지 않았다. 덤프는 `.local/analytics-backups`. VM은 사용자가 정할 때 `manage.py init`이 한 번 옮긴다(Docker 경로는 실행하지 못했다) | '1. 지금 바로 시작' | `dfe7368` |
+| 8 | `hmg_analytics` 제거 | 없앴다. GA4 속성 · 수집 결과 · 기준 주는 `input_db`, GA4 데이터 · SEO · `ref` · `ops`는 `gold_db`로 옮겼다. 동결한 입력 사본, `project_ga4_property`(0행), `published.*`는 읽는 곳이 없어 옮기지 않았다. 덤프는 `.local/analytics-backups`. VM은 사용자가 정할 때 `manage.py init`이 한 번 옮긴다(Docker 경로는 실행하지 못했다) | '1. 지금 바로 시작' | `dfe7368` |
 | 9 | 커밋 안 한 문서 · 로컬 시험 잔여물 | 로컬에 중지된 시험 호출자 3개와 기준정보 전체 승인이 남아 있다 | 대기 | |
-| 10 | BFF를 OBT 대역에 연결(어댑터 ②, T9.2 · 9.3) | 맥의 BFF가 기본으로 읽는다. 첫 화면은 OBT에서 센 사전 집계, 필터는 OBT 계산과 캐시 DB. 계약에 없는 값은 `geohub_gold_db` | '2. 지금 바로 시작', '외부 gold를 사용하라는게 아니야. 외부 gold를 사용하던 것을 모두 끊고 내부 DB와 가상 silver OBT를 사용하라는거지' | 결정 기록 |
-| 11 | 이전 Gold DB 이관 | 끝났다. 86개 테이블 1억 8,265만 행은 `geohub_gold_db`에 있다(복원 때 행 수 · 컬럼 차이 0, 62개 테이블 지문 차이 0). 입력 값은 `geohub_bm_db`에 있고, 남아 있던 GA4 속성 1행(Kia · IT)도 `catalog.ga4_registry`로 옮겼다. 삭제되기 전 카탈로그 소속(Global 프롬프트 115개)은 `geohub_gold_db`의 `gold.dim_prompt`에만 있고 어댑터가 거기서 읽는다. 연결은 사용자 지시로 끊었다. '원본 운영 DB'는 이쪽이 레거시 프런트의 Supabase를 가리켜 쓴 말이어서 답과 어긋났다 | '3. 원본 운영 DB에 있는 모든 데이터를 새로 만든 geohub db로 옮겨야지', '지금 "원본 DB"라고 내가 표현한 것은 예전에 사용하던 외부 gold를 의미한거였어.', '레거시 프론트가 사용하던 supabase는 절대로 접근할 일 없어' | 결정 기록 |
-| 12 | `bm`의 뜻 | 사용자 답: business model의 약자. 'bm은 business model의 약자를 우선 썼는데, 더 적합한 단어 있어?' 9c 추천 `geohub_input_db`. 사용자 되물음: 'business model이라고 풀네임을 사용하는건 어때?' 9c 답: 뜻은 분명해지지만 담긴 것이 입력이고 코드 · SSOT에 business model이 없어 추천 유지(변경 대상 19개 파일은 어느 쪽이든 같다) | '추천대로 진행해' | `geohub_input_db`로 바꾼다. 세션 fc의 재계산이 끝난 뒤 진행 |
+| 10 | BFF를 OBT 대역에 연결(어댑터 ②, T9.2 · 9.3) | 맥의 BFF가 기본으로 읽는다. 첫 화면은 OBT에서 센 사전 집계, 필터는 OBT 계산과 캐시 DB. 계약에 없는 값은 `gold_db` | '2. 지금 바로 시작', '외부 gold를 사용하라는게 아니야. 외부 gold를 사용하던 것을 모두 끊고 내부 DB와 가상 silver OBT를 사용하라는거지' | 결정 기록 |
+| 11 | 이전 Gold DB 이관 | 끝났다. 86개 테이블 1억 8,265만 행은 `gold_db`에 있다(복원 때 행 수 · 컬럼 차이 0, 62개 테이블 지문 차이 0). 입력 값은 `input_db`에 있고, 남아 있던 GA4 속성 1행(Kia · IT)도 `catalog.ga4_registry`로 옮겼다. 삭제되기 전 카탈로그 소속(Global 프롬프트 115개)은 `gold_db`의 `gold.dim_prompt`에만 있고 어댑터가 거기서 읽는다. 연결은 사용자 지시로 끊었다. '원본 운영 DB'는 이쪽이 레거시 프런트의 Supabase를 가리켜 쓴 말이어서 답과 어긋났다 | '3. 원본 운영 DB에 있는 모든 데이터를 새로 만든 geohub db로 옮겨야지', '지금 "원본 DB"라고 내가 표현한 것은 예전에 사용하던 외부 gold를 의미한거였어.', '레거시 프론트가 사용하던 supabase는 절대로 접근할 일 없어' | 결정 기록 |
+| 12 | `bm`의 뜻 | 사용자 답: business model의 약자. 'bm은 business model의 약자를 우선 썼는데, 더 적합한 단어 있어?' 9c 추천 `geohub_input_db`. 사용자 되물음: 'business model이라고 풀네임을 사용하는건 어때?' 9c 답: 뜻은 분명해지지만 담긴 것이 입력이고 코드 · SSOT에 business model이 없어 추천 유지(변경 대상 19개 파일은 어느 쪽이든 같다) | '추천대로 진행해' | `input_db`로 바꿨다. 접두어도 함께 뺐다(결정 기록 2026-11-06) |
 
 ## 결정 기록
 
@@ -279,6 +279,7 @@ P1 · P2는 Silver 없이 `geohub_gold_db`의 답변 단위 테이블로 짓고,
 | 2026-11-06 | 맥의 BFF 기본 지표 원천을 가상 OBT로 켠다. 재계산이 OBT에서 세어 `gold.metric_row`에 쓰고, 첫 화면은 그 행을, 필터 조회는 OBT 계산과 캐시 DB를 읽는다. 스냅샷 신호는 매니페스트의 운영 스냅샷이다(T9.3). 스위치는 `.env.silver.local`에 두어 그 파일이 없는 곳은 그대로다 | KPI별 대조 전까지 꺼 두기(이쪽 앞선 안), 스위치만 켜고 매 조회 계산(첫 화면 원칙 위반, Global 전체 10~20배 느림) | 사용자 '외부 gold를 사용하던 것을 모두 끊고 내부 DB와 가상 silver OBT를 사용하라는거지' |
 | 2026-11-06 | 어댑터 판정 입력 추가: 한국어 프롬프트 = 본문에 한글(28,750개 모두 옛 표시와 같음), 표준 카탈로그 = 지금 정의 + 삭제 전 소속(Global 115개, `gold.dim_prompt`), Project 분류 필터 = 그 프로젝트 프롬프트로 좁힘. 대역 매니페스트는 옛 값이 제공하지 않던 회차를 `ready`로 둔다(Website 34개). **분석팀 리뷰 필요** | `language`='ko'로 판정(Global 1개 · Website 90개 · Project 431개 다름), 삭제 전 소속 무시(7~8월 Global 답변 약 절반), 필터 무시(Project 값이 있는 칸 143곳) | 전 회차 대조에서 나온 차이 |
 | 2026-11-06 | 남은 차이는 그대로 둔다. Global 08-24: 옛 값이 인용만 숨긴 회차 1개도 센다(인용 117,892 → 134,513). Global 08-31: 대표 답변 표시가 계약에 없어 규칙으로 고른다(답변 35,250 → 34,515). Website SA: 도시 3개 구분이 계약에 없어 사이트 국가 하나로 합친다(`SA-Dammam` 138 → 492). **분석팀 리뷰 필요** | 대역의 `ext`에서 읽어 맞추기(실제 OBT에 없다) | '측정 방식이나 범위가 달라 값이 튀어도 숨기거나 경고하지 않는다', '없는 데이터를 만들지 않는다'(`CLAUDE.md`) |
+| 2026-11-06 | 서비스 DB 이름에서 `geohub_`를 뺀다: `input_db` · `operations_db` · `gold_db` · `cache_db`. `geohub_bm_db`는 앞서 정한 `geohub_input_db` 대신 `input_db`가 된다. 대역 `geohub_silver_db`는 그대로 둔다(`silver_db`면 파이프라인의 실제 Silver처럼 보인다). 지난 결정 · 진행 기록과 적용한 마이그레이션 파일의 옛 이름은 그대로 둔다. 확인하지 못한 것: 프로덕션에서 이 DB들이 다른 서비스의 DB와 같은 서버를 쓰는지 | 접두어 유지, `operations_db`를 `user_db`로(코드 · 계정 · 환경변수 이름이 operations라 한 대상에 이름이 둘이 된다) | 사용자 '모든 db prefix에서 geohub를 그냥 빼버릴까?', '제안대로 진행' |
 
 ## 진행 기록
 

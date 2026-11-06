@@ -5,7 +5,7 @@ services:
     container_name: hgh-input-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: geohub_bm_db
+      POSTGRES_DB: input_db
       POSTGRES_USER: hmg_input_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run the HUB storage initializer first}
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
@@ -14,7 +14,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hmg_input_admin -d geohub_bm_db"]
+      test: ["CMD-SHELL", "pg_isready -U hmg_input_admin -d input_db"]
       interval: 5s
       timeout: 3s
       retries: 12

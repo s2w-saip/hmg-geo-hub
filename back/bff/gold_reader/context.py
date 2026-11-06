@@ -251,7 +251,7 @@ class Context:
                 "cycles": [d.isoformat() for d in sorted(self.selected_dates)],
                 "generation": self.release["version"], "ignored_filters": [], "dropped_filters": {},
                 "suppressed": suppressed or {}, "source": {"url_rates": "live", "reason": "not_website" if self.sf != 2 else "no_publication"},
-                "gold": {"database": "geohub_gold_db", "release_id": self.release["release_id"],
+                "gold": {"database": "gold_db", "release_id": self.release["release_id"],
                     "rule_signature": self.release["rule_signature"], "read_mode": self.mode}}
         if page is not None:
             meta["page"] = page

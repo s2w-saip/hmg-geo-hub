@@ -1,4 +1,4 @@
-"""Read-only access to Gold, the rollup job's tables (geohub_gold_db, SSOT shared/project-architecture.md 6): the
+"""Read-only access to Gold, the rollup job's tables (gold_db, SSOT shared/project-architecture.md 6): the
 values of the unfiltered first screens. A store that cannot be read answers nothing, and the read goes on as any other."""
 from __future__ import annotations
 

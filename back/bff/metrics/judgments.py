@@ -1,7 +1,7 @@
 """판정: 어떤 답변을 세는가, 어느 브랜드가 경쟁사인가. These rules live here and nowhere else (CLAUDE.md 1절): a read asks for them, never for
 a flag upstream worked out. A rule is SQL over the columns an adapter names (AnswerColumns), so an adapter on the OBT uses the same rule.
 
-The rules are legacy's (back/ingest/project/apply/queries.py, _ig_ans). Checked against upstream's flags on every round of the geohub_gold_db, the three
+The rules are legacy's (back/ingest/project/apply/queries.py, _ig_ans). Checked against upstream's flags on every round of the gold_db, the three
 surfaces, 2026-11-06: eligible, citation monitoring, monitoring and the analysis gap differ on no answer.
 
 Inputs, not judgments: the extraction (mentions, positions, sentiment, citations, analysis_state) and a brand row's own_bit, the analysis's 자사 분류
@@ -38,7 +38,7 @@ NON_COMPETITOR_BRANDS = frozenset((
 ))
 
 #: Names that are noise as a bare word and a real brand in a longer product name ("Smart" against "Smart Fortwo"): judged per mention. A source whose
-#: brand rows are already split by that judgement keeps the split (the geohub_gold_db's competitive).
+#: brand rows are already split by that judgement keeps the split (the gold_db's competitive).
 BARE_ONLY_NON_COMPETITORS = frozenset((
     'bolt', 'century', 'charger', 'city', 'crown', 'cruise', 'dual electronics', 'edge', 'element', 'falcon', 'fastback', 'fit',
     'focus', 'golf', 'gravity', 'integra', 'international', 'is', 'legacy', 'lightning', 'one', 'pilot', 'punch', 'smart', 'transit',

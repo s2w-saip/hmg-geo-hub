@@ -1,5 +1,5 @@
 """What a data source adapter answers: the base counts of catalog.BASE_COUNTS, counted in the data source's database
-(the tables are too large to fetch), one row per group. Adapter ① reads geohub_gold_db's answer-level tables
+(the tables are too large to fetch), one row per group. Adapter ① reads gold_db's answer-level tables
 (gold_current); adapter ② will read the Silver OBT's operational snapshot (T9). The metric layer knows only this.
 
 `group` is a tuple of "round" · "engine" · "country" · "prompt": a row carries those keys besides its counts. The read's

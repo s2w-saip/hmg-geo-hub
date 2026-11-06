@@ -431,7 +431,7 @@ async def run(args, env: dict, ga4: Ga4) -> list[dict]:
     import asyncpg
     write = not args.dry_run
     conn = await asyncpg.connect(env["HGH_ANALYTICS_WRITER_DB_URL"], command_timeout=300)
-    # The properties and this run's results are in geohub_bm_db, the rows in geohub_gold_db: a result is written after its rows, and the next run replaces it.
+    # The properties and this run's results are in input_db, the rows in gold_db: a result is written after its rows, and the next run replaces it.
     registry = await asyncpg.connect(env["HGH_GA4_REGISTRY_DB_URL"], command_timeout=60)
     results = []
     try:

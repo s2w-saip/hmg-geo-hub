@@ -1,4 +1,4 @@
--- Fills the virtual Silver (silver-001.sql) from the copy of the old upstream database (geohub_gold_db, schema gold). Run by build_virtual_obt.py,
+-- Fills the virtual Silver (silver-001.sql) from the copy of the old upstream database (gold_db, schema gold). Run by build_virtual_obt.py,
 -- one section per COPY: each section's last statement writes rows to stdout. Only the live release's builds are read: the release is the old
 -- database's operating snapshot, so one Silver run per cycle, status public.
 -- Nothing is estimated. Contract fields the old database does not hold are NULL (listed in back/hub_storage/README.md). What it holds outside the
@@ -25,7 +25,7 @@ COPY (SELECT cycle_id,surface_name FROM cycle_run ORDER BY cycle_id) TO STDOUT;
 
 -- @section run
 COPY (SELECT silver_run,cycle_id,NULL::uuid,'silver','succeeded','silver.v1',NULL::text,
-             jsonb_build_object('virtual',true,'source','geohub_gold_db','rule_signature',(SELECT max(rule_signature) FROM gold.active_release WHERE read_mode='live')),
+             jsonb_build_object('virtual',true,'source','gold_db','rule_signature',(SELECT max(rule_signature) FROM gold.active_release WHERE read_mode='live')),
              now(),now()
       FROM cycle_run ORDER BY cycle_id) TO STDOUT;
 

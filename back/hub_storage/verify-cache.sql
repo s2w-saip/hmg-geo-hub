@@ -1,4 +1,4 @@
--- The cache DB (geohub_cache_db): UNLOGGED, holds what SSOT service/cache-db.md lists, and the cache role reaches that table only.
+-- The cache DB (cache_db): UNLOGGED, holds what SSOT service/cache-db.md lists, and the cache role reaches that table only.
 BEGIN;
 DO $$ BEGIN
  IF (SELECT relpersistence FROM pg_class WHERE oid='cache.query_result'::regclass)<>'u' THEN RAISE EXCEPTION 'The cache table is not UNLOGGED'; END IF;

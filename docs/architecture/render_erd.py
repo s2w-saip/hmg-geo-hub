@@ -163,7 +163,7 @@ class Figure:
 
 
 def operations() -> Figure:
-    """geohub_operations_db: back/hub_storage/operations-001.sql … operations-004.sql."""
+    """operations_db: back/hub_storage/operations-001.sql … operations-004.sql."""
     f = Figure("ops", 776, "운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
                "project_reference는 입력 DB catalog.project와 같은 UUID만 보관한다. "
                "global_role은 계정의 역할과 열람 범위, saved_filter는 계정별 저장한 필터다.")
@@ -214,7 +214,7 @@ def operations() -> Figure:
 
 
 def catalog() -> Figure:
-    """geohub_bm_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
+    """input_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
     f = Figure("cat", 740, "입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
                "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
@@ -260,7 +260,7 @@ def catalog() -> Figure:
 
 
 def external() -> Figure:
-    """geohub_bm_db reference values and the prompt and reference API boundary: back/hub_storage/input-001.sql (the structure of data-005, -007
+    """input_db reference values and the prompt and reference API boundary: back/hub_storage/input-001.sql (the structure of data-005, -007
     ... -010 and -013 as it moved) and input-002.sql (the reference values the store owns, versions of every list, who reads what)."""
     f = Figure("ext", 1610, "입력 DB의 기준정보와 프롬프트·기준정보 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 수집 또는 분석으로 키와 허용 프로젝트를 가지며, "
                "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 "
@@ -367,9 +367,9 @@ def external() -> Figure:
 
 
 def ga4_registry_week() -> Figure:
-    """geohub_bm_db: the GA4 properties and the service week, back/hub_storage/input-003.sql."""
+    """input_db: the GA4 properties and the service week, back/hub_storage/input-003.sql."""
     f = Figure("ga4reg", 660, "입력 DB의 GA4 속성과 서비스 기준 주. 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, 수집기가 속성마다 남기는 마지막 결과 ga4_collect_status, "
-               "바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 geohub_gold_db의 ga4_property로 복사한다.")
+               "바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 gold_db의 ga4_property로 복사한다.")
     f.table("catalog.ga4_registry_event", 70, 40, 300, "등록부의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
         ("PK", "event_id", "bigint"), ("FK", "property_id", "text"), ("", "action", "=create|update|stop|resume"),
         ("", "actor_id", "⇢ user_account"), ("", "changes", "jsonb"), ("", "occurred_at", "timestamptz")])
@@ -394,8 +394,8 @@ def ga4_registry_week() -> Figure:
 
 
 def metrics() -> Figure:
-    """geohub_gold_db gold (the rollup job's tables): back/hub_storage/metrics-001.sql · 002 · 003; geohub_cache_db cache: cache-001.sql; SSOT service/cache-db.md."""
-    f = Figure("metrics", 950, "geohub_cache_db의 cache 스키마와 geohub_gold_db의 사전 집계 테이블. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.")
+    """gold_db gold (the rollup job's tables): back/hub_storage/metrics-001.sql · 002 · 003; cache_db cache: cache-001.sql; SSOT service/cache-db.md."""
+    f = Figure("metrics", 950, "cache_db의 cache 스키마와 gold_db의 사전 집계 테이블. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.")
     f.table("cache.query_result", 16, 40, 320, "필터 조회 결과다. 조회 조건마다 한 행이고 UNLOGGED이며 백업하지 않는다.", [
         ("PK", "cache_key", "text sha256"), ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "query", "jsonb"),
         ("", "result", "jsonb"), ("", "created_at", "timestamptz")],
@@ -420,8 +420,8 @@ def metrics() -> Figure:
     gy = 40
     g = [f'<rect class="vgrp" x="696" y="{gy}" width="488" height="170" rx="8"/>',
          f'<text class="m b" x="712" y="{gy + 26}">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>',
-         f'<text class="m" x="712" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="882" y="{gy + 58}">데이터 서버 읽기 · geohub_gold_db SELECT</text>',
-         f'<text class="m" x="712" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="882" y="{gy + 82}">데이터 서버 캐시 · geohub_cache_db 읽기 · 쓰기</text>',
+         f'<text class="m" x="712" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="882" y="{gy + 58}">데이터 서버 읽기 · gold_db SELECT</text>',
+         f'<text class="m" x="712" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="882" y="{gy + 82}">데이터 서버 캐시 · cache_db 읽기 · 쓰기</text>',
          f'<text class="m" x="712" y="{gy + 106}">hmg_rollup_writer</text><text class="mu sm" x="882" y="{gy + 106}">사전 집계 작업 · 테이블 4개만 쓰기</text>',
          f'<text class="mu sm" x="712" y="{gy + 142}">API는 hmg_rollup_writer를 받지 않는다</text>']
     f.raw("\n".join(g))
@@ -429,8 +429,8 @@ def metrics() -> Figure:
 
 
 def ga4() -> Figure:
-    """geohub_gold_db GA4: back/hub_storage/metrics-004.sql (back/analytics/schema.sql, operations.sql)."""
-    f = Figure("ga4", 510, "geohub_gold_db의 GA4 테이블 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, "
+    """gold_db GA4: back/hub_storage/metrics-004.sql (back/analytics/schema.sql, operations.sql)."""
+    f = Figure("ga4", 510, "gold_db의 GA4 테이블 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, "
                "차원 키는 kind별로 ga4_value를 가리킨다. ga4_property는 수집기가 입력 DB의 등록부에서 복사한다.")
     f.table("analytics.ga4_row", 70, 40, 290, "GA4 보고서 5종의 세션·사용자·조회·이벤트를 날짜·차원 조합별로 담는다.", [
         ("PK FK", "prop_key", "smallint"), ("PK", "report", "=1~5"), ("PK", "date", "date"),
@@ -460,8 +460,8 @@ def ga4() -> Figure:
 
 
 def seo() -> Figure:
-    """geohub_gold_db SEO and build bookkeeping: back/hub_storage/metrics-004.sql."""
-    f = Figure("seo", 610, "geohub_gold_db의 SEO 테이블과 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, "
+    """gold_db SEO and build bookkeeping: back/hub_storage/metrics-004.sql."""
+    f = Figure("seo", 610, "gold_db의 SEO 테이블과 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, "
                "ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.")
     f.table("ops.build", 16, 40, 250, "SEO 데이터 빌드 한 번당 한 행으로, 규칙 버전·상태·검증 결과를 담는다.", [
         ("PK", "build_id", "bigint"), ("", "family", "text"), ("", "slice_key", "text"),
@@ -508,8 +508,8 @@ def seo() -> Figure:
 
 
 def ref() -> Figure:
-    """geohub_gold_db ref dictionaries: back/hub_storage/metrics-004.sql."""
-    f = Figure("ref", 672, "geohub_gold_db의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, "
+    """gold_db ref dictionaries: back/hub_storage/metrics-004.sql."""
+    f = Figure("ref", 672, "gold_db의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, "
                "프로젝트는 국가를, 국가는 대륙을 가리킨다.")
     f.table("ref.dim_owned_base", 16, 100, 260, "자사 URL로 판정하는 주소 접두사와 그 브랜드·국가·언어를 담는다.", [
         ("PK", "owner_key", "smallint"), ("UK", "kind", "text"), ("UK", "prefix", "text"), ("", "host", "text"),

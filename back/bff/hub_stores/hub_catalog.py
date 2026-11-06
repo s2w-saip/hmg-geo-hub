@@ -27,5 +27,5 @@ async def listing(kind, limit, offset, project_id=None):
         item = dict(row)
         item['definition'] = json.loads(item['definition'])
         items.append(item)
-    return {'data':{'items':items}, 'meta':{'source':'hub_data','database':'geohub_bm_db',
+    return {'data':{'items':items}, 'meta':{'source':'hub_data','database':'input_db',
             'available':bool(total),'page':{'total':total,'limit':limit,'offset':offset}}}

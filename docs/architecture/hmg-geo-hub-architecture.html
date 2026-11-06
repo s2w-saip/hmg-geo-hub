@@ -168,18 +168,18 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <header>
   <div class="route" aria-label="구성 요약">
     <span>브라우저</span><span>→</span><b>front :3333</b><span>→</span><b>bff :5555</b><span>→</span>
-    <span>geohub_gold_db · geohub_bm_db · geohub_cache_db · geohub_operations_db</span><span>·</span><span>외부 호출자</span><span>→</span><b>ext :5560</b><span>→</span><span>geohub_bm_db</span>
+    <span>gold_db · input_db · cache_db · operations_db</span><span>·</span><span>외부 호출자</span><span>→</span><b>ext :5560</b><span>→</span><span>input_db</span>
   </div>
   <h1>HMG-GEO-HUB 아키텍처</h1>
   <p class="lede">로컬 서비스는 화면 서버(Next.js)와 데이터 서버(FastAPI) 두 프로세스, 그리고 DB 네 개로 돌아간다.
-    브라우저는 Next만 부르고, 화면을 위해 DB에 접속하는 것은 데이터 서버뿐이다. GEO 측정값은 서비스 DB의 geohub_gold_db에서 읽기만 하고,
+    브라우저는 Next만 부르고, 화면을 위해 DB에 접속하는 것은 데이터 서버뿐이다. GEO 측정값은 서비스 DB의 gold_db에서 읽기만 하고,
     서비스가 직접 가진 데이터는 입력 DB(프롬프트 · 측정 설정 · 기준정보 · GA4 속성 · 서비스 기준 주), 운영 DB(계정 · 권한), Gold DB(사전 집계 · 답변 단위 테이블 · GA4 · SEO), 캐시 DB 네 곳에 나눠 둔다. 이와 별도로 외부 API(<code>back/ext</code>)가
     입력 DB의 값을 API 키를 가진 수집 · 분석 호출자에게 읽기 전용으로 준다(<a href="#ext">외부 API</a>).
     이 문서는 지금 구현을 그린다. 허브 서버 분리(Next → 허브 서버 → 데이터 서버, T13) 전까지는 데이터 서버(<code>back/bff</code>)가 로그인 · 계정 · 입력 편집도 함께 맡는다.</p>
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 서비스 DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-06(어댑터 ② <code>bff/metrics/silver_obt.py</code> · <code>hub_stores/silver_db.py</code>, 스위치 <code>HGH_METRIC_SOURCE=silver</code>, 맥에서 켬, 사전 집계 · 캐시 신호는 매니페스트) · 2026-11-06(<code>hmg_analytics</code>를 없앰: GA4 속성 · 서비스 기준 주는 입력 DB로, GA4 · SEO 데이터는 Gold DB로. <code>input-003.sql</code> · <code>metrics-004.sql</code>) · 2026-11-06(<code>hmg_metrics</code>를 Gold DB <code>geohub_gold_db</code>와 캐시 DB <code>geohub_cache_db</code>로 분리: <code>metrics-001~003.sql</code> · <code>cache-001.sql</code>) · 2026-11-06(입력 DB <code>geohub_bm_db</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · 데이터 서버 <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: 데이터 서버 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · 데이터 서버 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: 데이터 서버 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+  <p class="asof">마지막 갱신 2026-11-06(DB 이름에서 <code>geohub_</code>를 뺌: <code>input_db</code> · <code>operations_db</code> · <code>gold_db</code> · <code>cache_db</code>) · 2026-11-06(어댑터 ② <code>bff/metrics/silver_obt.py</code> · <code>hub_stores/silver_db.py</code>, 스위치 <code>HGH_METRIC_SOURCE=silver</code>, 맥에서 켬, 사전 집계 · 캐시 신호는 매니페스트) · 2026-11-06(<code>hmg_analytics</code>를 없앰: GA4 속성 · 서비스 기준 주는 입력 DB로, GA4 · SEO 데이터는 Gold DB로. <code>input-003.sql</code> · <code>metrics-004.sql</code>) · 2026-11-06(<code>hmg_metrics</code>를 Gold DB <code>gold_db</code>와 캐시 DB <code>cache_db</code>로 분리: <code>metrics-001~003.sql</code> · <code>cache-001.sql</code>) · 2026-11-06(입력 DB <code>input_db</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · 데이터 서버 <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: 데이터 서버 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · 데이터 서버 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: 데이터 서버 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/input-001~003.sql</code>, <code>metrics-001~004.sql</code>, <code>operations-001~005.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
@@ -198,7 +198,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-path">요청이 지나가는 길</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 데이터 서버(5555)를 HTTP로 부른다. 데이터 서버는 모듈별로 운영 DB, 입력 DB, geohub_gold_db에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리, GA4 속성 등록부와 인용 출처 교정뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다. Global · Website의 Gold 읽기는 입력 DB에 기록된 서비스 기준 주(catalog.service_week)의 마지막 날까지만 한다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 데이터 서버(5555)를 HTTP로 부른다. 데이터 서버는 모듈별로 운영 DB, 입력 DB, gold_db에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리, GA4 속성 등록부와 인용 출처 교정뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다. Global · Website의 Gold 읽기는 입력 DB에 기록된 서비스 기준 주(catalog.service_week)의 마지막 날까지만 한다.">
         <defs>
           <marker id="f1a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f1w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -303,14 +303,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- databases -->
         <rect class="hubbox" x="1010" y="84" width="174" height="116" rx="8"/>
         <text class="b" x="1024" y="108">운영 DB</text>
-        <text class="m" x="1024" y="128">geohub_operations_db</text>
+        <text class="m" x="1024" y="128">operations_db</text>
         <text class="m mu" x="1024" y="145">:55437</text>
         <text class="mu" x="1024" y="170">system.* 계정·권한·감사</text>
         <text class="mu sm" x="1024" y="188">계정별 저장한 필터</text>
 
         <rect class="hubbox" x="1010" y="214" width="174" height="190" rx="8"/>
         <text class="b" x="1024" y="238">입력 DB</text>
-        <text class="m" x="1024" y="258">geohub_bm_db :55438</text>
+        <text class="m" x="1024" y="258">input_db :55438</text>
         <text class="m" x="1024" y="284">catalog.*</text>
         <text class="mu sm" x="1024" y="301">프로젝트·프롬프트 버전</text>
         <text class="m" x="1024" y="326">catalog.ga4_registry</text>
@@ -319,7 +319,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu sm" x="1024" y="385">서비스 기준 주</text>
 
         <rect class="goldbox" x="1010" y="414" width="174" height="126" rx="8"/>
-        <text class="b" x="1024" y="434">geohub_gold_db</text>
+        <text class="b" x="1024" y="434">gold_db</text>
         <text class="m" x="1024" y="451">:55439 · gold 읽기만</text>
         <text class="mu sm" x="1024" y="468">active_release 고정</text>
         <text class="m" x="1024" y="495">analytics.* · ref.*</text>
@@ -351,7 +351,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="e"/></svg>요청 · 읽기 (DB는 읽기 전용 트랜잭션)</span>
         <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="ew"/></svg>쓰기</span>
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-hub"/></svg>서비스가 가진 DB</span>
-        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>geohub_gold_db</span>
+        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>gold_db</span>
       </div>
       <strong>그림 1. 브라우저 요청은 모두 middleware 관문을 지나 Next 서버에서 끝난다. 데이터 서버를 부르는 것은 Next 서버이고,
         DB 자격증명은 데이터 서버만 갖는다. 빨간 선 네 개가 앱이 DB에 쓰는 경로의 전부다(계정 관리, 계정별 저장한 필터, 글로벌 프롬프트 INSERT, GA4 속성 등록부 · 인용 출처 분류 · 고객 관심 데이터 · 엔티티 역할).
@@ -370,7 +370,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       읽기의 답은 아래 '읽기 답의 출처'대로 가져오고, 브라우저로 가는 응답은 모두 <code>no-store</code>다. 한 읽기가 20초를 넘으면 그 구역만 504로 비운다.</li>
     <li><b>지표 계산 층</b>(2026-11-06, 대공사 T3 · T7). <code>back/bff/metrics/</code>가 KPI 계산식(<code>catalog.py</code>)과 계산 함수(<code>formulas.py</code> · <code>compute.py</code>)를 한 곳에 둔다.
       <code>/v1</code> 읽기의 비율은 <code>compute.py</code>에서 나온다. 화면 빌더는 <code>/v1</code>이 준 분자 · 분모로 반올림 · 파생만 한다(약 60곳, Top 3 · 복수 언급률은 <code>compute.py</code>).
-      판정 규칙(모수 · 비경쟁 · 자사 URL · 명부 제외)은 <code>judgments.py</code>, 그 규칙의 geohub_gold_db 적용은 <code>gold_judged.py</code>, 화면 빌더의 비율 · 변화 · 반올림은 <code>display.py</code>에 둔다. 데이터는 어댑터(<code>source.py</code>)로 읽는다. 어댑터 ①(<code>gold_current.py</code>)은 geohub_gold_db의 답변 단위 테이블을, 어댑터 ③(<code>gold_rows.py</code>)은 Gold의 지표 행을 읽는다. Silver가 나오면 어댑터 ①을 ②로 바꾼다.
+      판정 규칙(모수 · 비경쟁 · 자사 URL · 명부 제외)은 <code>judgments.py</code>, 그 규칙의 gold_db 적용은 <code>gold_judged.py</code>, 화면 빌더의 비율 · 변화 · 반올림은 <code>display.py</code>에 둔다. 데이터는 어댑터(<code>source.py</code>)로 읽는다. 어댑터 ①(<code>gold_current.py</code>)은 gold_db의 답변 단위 테이블을, 어댑터 ③(<code>gold_rows.py</code>)은 Gold의 지표 행을 읽는다. Silver가 나오면 어댑터 ①을 ②로 바꾼다.
       업스트림 계산 테이블(<code>kpi_cell</code> 등)은 대조 테스트(<code>bff.tests.test_metrics_live</code>)만 읽고, 카드(card) · 그리드 발행은 읽지 않는다(회차마다 운영 데이터 하나).
       모니터링 답변은 ACR 셀마다 1건이라 대표 답변이 아닌 ACR 답변을 모든 답변 단위 읽기에서 뺀다(<code>Context.older_acr</code>). 드릴다운 · 목록 · ACR 화면의 SQL은 아직 <code>gold_reader</code>에 있고 T9에서 어댑터 ②로 옮긴다.</li>
     <li><b>읽기 답의 출처</b>(<code>bff/metrics/serving.py</code>, <code>api.get</code> 안, 2026-11-06 T5 · D-18). SSOT <code>project-architecture.md</code> 6절 · <code>cache-db.md</code>대로 나뉜다.
@@ -380,7 +380,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       ④ 지표 값이 아닌 읽기(<code>answers</code> · <code>gold/keywords</code> · <code>gold/social</code> · <code>source</code>): 그대로 읽는다. 사전 집계 테이블을 못 읽으면 ③처럼 동작한다.</li>
     <li><b>사전 집계 작업</b>(<code>manage.py rollup</code>, <code>bff/metrics/rollup.py</code>). 표면의 스냅샷 ID나 지표 정의 버전이 바뀌었으면 첫 화면 빌더(<code>bff/metrics/first_screens.py</code>)를 돌린다. 빌더가 묻는 집계는 회차별로 나눠 <code>gold.metric_row</code>에 쓰고(이미 맞는 회차는 다시 세지 않음), 호출마다 <code>gold.metric_call</code>에 스냅샷 · 버전 · 실패를 남긴다. 목록 응답은 <code>gold.first_screen_read</code>에, 실행 기록은 <code>gold.rollup_run</code>에 쓴다. 끝나면 다른 스냅샷의 캐시 행을 지운다.
       행에는 기본 집계값(<code>counts</code>)과 지표 값(<code>metrics</code>)이 함께 있어 SQL로 지표 값을 바로 읽을 수 있다. ACR 지표는 행으로도 쓰지만 화면은 시트 때문에 응답 단위로 읽는다. 계정은 <code>hmg_rollup_writer</code>이고 API는 받지 않는다. 로컬은 <code>scripts/start-local.sh</code>가, VM은 <code>vm.sh rollup</code> cron이 돌린다.</li>
-    <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code>·<code>analytics/properties</code>(AI Conversion 국가 선택지 = 계정이 읽을 수 있는 GA4 속성, 2026-10-30) 세 경로만 <code>geohub_gold_db</code>의 <code>analytics</code> · <code>ref</code> 스키마로 가고,
+    <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code>·<code>analytics/properties</code>(AI Conversion 국가 선택지 = 계정이 읽을 수 있는 GA4 속성, 2026-10-30) 세 경로만 <code>gold_db</code>의 <code>analytics</code> · <code>ref</code> 스키마로 가고,
       나머지 <code>/v1/*</code>는 <code>gold</code> 스키마로 간다. Gold는 <code>active_release</code>와 검증된 빌드에 고정해서 읽고, Global · Website 회차는 서비스 기준 주까지만 읽는다(다음 항목).</li>
     <li><b>Gold 회차는 서비스 기준 주까지만 읽는다</b>(2026-11-02, 결정 ‘발행 시점 판정’ · ‘기준 주 세부’). 서비스 기준 주는 끝난 ISO 주(월~일) 가운데 Gold가 Global · Website 회차를 모두 발행해 기다리는 회차가 없는 가장 최근 주이고(그 주에 회차가 없는 표면은 Gold에 그 표면의 더 뒤 회차가 있을 때만 건너뛴 주로 보고, 없으면 아직 적재되지 않은 것으로 보아 기다린다 — 2026-11-03, 결정 ‘미적재 표면’), 서비스 전체가 하나를 같이 쓴다(2026-11-02: 10월 2주차, 10/5~10/11).
       HUB 작업 <code>manage.py sync-service-week</code>(<code>back/hub_storage/service_week.py</code>)가 Gold의 회차 · 발행 상태를 읽어 입력 DB <code>catalog.service_week</code>에 기록하고(<a href="#writes">그림 2</a>), 기준 주는 뒤로 가지 않는다.
@@ -434,22 +434,22 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     <table>
       <thead><tr><th>연결</th><th>환경변수</th><th>대상</th><th>할 수 있는 일</th><th>풀</th></tr></thead>
       <tbody>
-        <tr><td class="k">geohub_gold_db 조회</td><td><code>HGH_GOLD_DB_URL</code></td><td><code>geohub_gold_db</code> (:55439) 계정 <code>hmg_metrics_reader</code></td><td>읽기 전용, repeatable read. 없으면 기동 실패. 복원은 <code>back/hub_storage/copy_gold.py</code></td><td class="mono">≤ 6</td></tr>
-        <tr><td class="k">GA4 · SEO 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>geohub_gold_db</code> (:55439) 계정 <code>hmg_analytics_reader</code></td><td>읽기 전용. <code>analytics</code> · <code>ref</code> · <code>ops</code>만 읽고 <code>gold</code>는 읽지 못한다</td><td class="mono">≤ 4</td></tr>
-        <tr><td class="k">입력 DB 조회</td><td><code>HGH_INPUT_DB_URL</code></td><td><code>geohub_bm_db</code></td><td>읽기 전용. 프롬프트 · 측정 설정 · 기준정보 · GA4 속성을 읽는 화면(2026-11-06)과 Gold 읽기가 멈출 서비스 기준 주(<code>catalog.current_service_week</code>). 없으면 입력 화면이 503이고, 기준 주는 위와 같다</td><td>≤ 4</td></tr>
-        <tr><td class="k">Silver 조회</td><td><code>HGH_SILVER_DB_URL</code></td><td>파이프라인의 Silver OBT. 접속 정보를 받기 전에는 아키텍처 밖의 대역<br><span class="muted">계정 hmg_silver_reader</span></td><td><code>HGH_METRIC_SOURCE=silver</code>일 때만 연다(<code>.env.silver.local</code>, 맥에서 켬). <code>silver_contract</code>와 매니페스트 읽기 전용. 어댑터 ② <code>bff/metrics/silver_obt.py</code>는 계약 컬럼만 읽고, 계약에 없는 값은 <code>geohub_gold_db</code>에서 그대로 읽는다(<code>LEFT_ON_GOLD</code>). 재계산이 여기서 세어 Gold 지표 행에 쓰고, 회차 스냅샷 · 캐시 키는 매니페스트의 운영 스냅샷으로 만든다(T9.3)</td><td class="mono">≤ 6</td></tr>
-        <tr><td class="k">사전 집계 조회</td><td><code>HGH_METRICS_DB_URL</code></td><td><code>geohub_gold_db</code> (:55439) 계정 <code>hmg_metrics_reader</code></td><td><code>gold.metric_row</code> · <code>metric_call</code> · <code>first_screen_read</code> 읽기 전용. 못 읽으면 조회 시점 집계처럼 동작한다</td><td>≤ 8</td></tr>
-        <tr><td class="k">캐시 DB</td><td><code>HGH_CACHE_DB_URL</code></td><td><code>geohub_cache_db</code> (:55439) 계정 <code>hmg_cache_writer</code></td><td><code>cache.query_result</code> 읽기 · 쓰기만. 이 계정은 Gold DB에 접속하지 못하고, 다른 데이터 서버 계정은 캐시 DB에 접속하지 못한다. 실패해도 읽기를 막지 않는다</td><td>≤ 2</td></tr>
-        <tr><td class="k">측정 설정</td><td><code>HGH_MEASUREMENT_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code> 계정 <code>hmg_measurement_editor</code></td><td><code>project_measurement_version</code>은 <code>change_seq</code> 뺀 컬럼만 INSERT, 프로젝트 · 기준정보 원본 SELECT만. 수정 · 삭제 없음</td><td>≤ 2</td></tr>
-        <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>geohub_operations_db</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>geohub_operations_db</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">계정 관리</td><td><code>HGH_ACCOUNT_EDITOR_DB_URL</code></td><td><code>geohub_operations_db</code><br><span class="muted">계정 hmg_account_editor</span></td><td>계정 표(<code>user_account</code>·<code>user_credential</code>·<code>global_role</code>)의 쓰는 열만 INSERT·UPDATE, <code>audit_event</code> INSERT만. 비밀번호 해시는 읽지 못하고 지우기 권한 없음. 로그인 시각도 이 연결로 남긴다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">GA4 등록부</td><td><code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_ga4_registry_editor</span></td><td><code>catalog.ga4_registry</code> INSERT와 속성 ID 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT만. 지우기 권한 없음. 목록은 입력 DB 조회 연결로, GA4 이벤트 이름은 GA4 · SEO 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 입력 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
-        <tr><td class="k">고객 관심 입력</td><td><code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_interest_editor</span></td><td>시드 키워드(<code>catalog.interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>) INSERT와 값·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_interest_*()</code> 실행만. 지우기·키·원문 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 입력 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
-        <tr><td class="k">엔티티 역할</td><td><code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_entity_role_editor</span></td><td>역할(<code>catalog.entity_role</code>) INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_entity_roles()</code> 실행만. 지우기·엔티티·이름 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 입력 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
-        <tr><td class="k">프로젝트 프롬프트</td><td><code>HGH_PROJECT_EDITOR_DB_URL</code></td><td><code>geohub_bm_db</code><br><span class="muted">계정 hmg_project_editor</span></td><td>프로젝트 표면(3) 카탈로그만: <code>catalog.prompt</code> INSERT, <code>prompt_version</code>·<code>project_version</code>은 <code>change_seq</code> 뺀 열 INSERT(기록자 필수, 트리거 <code>project_editor_guard</code>), catalog 프로젝트 · 프롬프트 표 SELECT. UPDATE·DELETE·프로젝트 생성·공개 승인 권한 없음. 목록은 입력 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">gold_db 조회</td><td><code>HGH_GOLD_DB_URL</code></td><td><code>gold_db</code> (:55439) 계정 <code>hmg_metrics_reader</code></td><td>읽기 전용, repeatable read. 없으면 기동 실패. 복원은 <code>back/hub_storage/copy_gold.py</code></td><td class="mono">≤ 6</td></tr>
+        <tr><td class="k">GA4 · SEO 조회</td><td><code>HGH_ANALYTICS_DB_URL</code></td><td><code>gold_db</code> (:55439) 계정 <code>hmg_analytics_reader</code></td><td>읽기 전용. <code>analytics</code> · <code>ref</code> · <code>ops</code>만 읽고 <code>gold</code>는 읽지 못한다</td><td class="mono">≤ 4</td></tr>
+        <tr><td class="k">입력 DB 조회</td><td><code>HGH_INPUT_DB_URL</code></td><td><code>input_db</code></td><td>읽기 전용. 프롬프트 · 측정 설정 · 기준정보 · GA4 속성을 읽는 화면(2026-11-06)과 Gold 읽기가 멈출 서비스 기준 주(<code>catalog.current_service_week</code>). 없으면 입력 화면이 503이고, 기준 주는 위와 같다</td><td>≤ 4</td></tr>
+        <tr><td class="k">Silver 조회</td><td><code>HGH_SILVER_DB_URL</code></td><td>파이프라인의 Silver OBT. 접속 정보를 받기 전에는 아키텍처 밖의 대역<br><span class="muted">계정 hmg_silver_reader</span></td><td><code>HGH_METRIC_SOURCE=silver</code>일 때만 연다(<code>.env.silver.local</code>, 맥에서 켬). <code>silver_contract</code>와 매니페스트 읽기 전용. 어댑터 ② <code>bff/metrics/silver_obt.py</code>는 계약 컬럼만 읽고, 계약에 없는 값은 <code>gold_db</code>에서 그대로 읽는다(<code>LEFT_ON_GOLD</code>). 재계산이 여기서 세어 Gold 지표 행에 쓰고, 회차 스냅샷 · 캐시 키는 매니페스트의 운영 스냅샷으로 만든다(T9.3)</td><td class="mono">≤ 6</td></tr>
+        <tr><td class="k">사전 집계 조회</td><td><code>HGH_METRICS_DB_URL</code></td><td><code>gold_db</code> (:55439) 계정 <code>hmg_metrics_reader</code></td><td><code>gold.metric_row</code> · <code>metric_call</code> · <code>first_screen_read</code> 읽기 전용. 못 읽으면 조회 시점 집계처럼 동작한다</td><td>≤ 8</td></tr>
+        <tr><td class="k">캐시 DB</td><td><code>HGH_CACHE_DB_URL</code></td><td><code>cache_db</code> (:55439) 계정 <code>hmg_cache_writer</code></td><td><code>cache.query_result</code> 읽기 · 쓰기만. 이 계정은 Gold DB에 접속하지 못하고, 다른 데이터 서버 계정은 캐시 DB에 접속하지 못한다. 실패해도 읽기를 막지 않는다</td><td>≤ 2</td></tr>
+        <tr><td class="k">측정 설정</td><td><code>HGH_MEASUREMENT_EDITOR_DB_URL</code></td><td><code>input_db</code> 계정 <code>hmg_measurement_editor</code></td><td><code>project_measurement_version</code>은 <code>change_seq</code> 뺀 컬럼만 INSERT, 프로젝트 · 기준정보 원본 SELECT만. 수정 · 삭제 없음</td><td>≤ 2</td></tr>
+        <tr><td class="k">운영 DB 조회</td><td><code>HGH_OPERATIONS_DB_URL</code></td><td><code>operations_db</code></td><td>읽기 전용. 로그인 확인과 작성자 이름 표시</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">카탈로그 편집</td><td><code>HGH_CATALOG_EDITOR_DB_URL</code></td><td><code>input_db</code><br><span class="muted">계정 hmg_catalog_editor</span></td><td><code>catalog.prompt</code>·<code>prompt_version</code> INSERT와 catalog SELECT만. UPDATE·DELETE 권한 없음</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">저장한 필터</td><td><code>HGH_SAVED_FILTER_EDITOR_DB_URL</code></td><td><code>operations_db</code><br><span class="muted">계정 hmg_saved_filter_editor</span></td><td><code>system.saved_filter</code> 한 표만 SELECT·INSERT·UPDATE·DELETE. 목록 읽기는 운영 DB 조회 연결로 한다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">계정 관리</td><td><code>HGH_ACCOUNT_EDITOR_DB_URL</code></td><td><code>operations_db</code><br><span class="muted">계정 hmg_account_editor</span></td><td>계정 표(<code>user_account</code>·<code>user_credential</code>·<code>global_role</code>)의 쓰는 열만 INSERT·UPDATE, <code>audit_event</code> INSERT만. 비밀번호 해시는 읽지 못하고 지우기 권한 없음. 로그인 시각도 이 연결로 남긴다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">GA4 등록부</td><td><code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>input_db</code><br><span class="muted">계정 hmg_ga4_registry_editor</span></td><td><code>catalog.ga4_registry</code> INSERT와 속성 ID 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT만. 지우기 권한 없음. 목록은 입력 DB 조회 연결로, GA4 이벤트 이름은 GA4 · SEO 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">출처 분류 입력</td><td><code>HGH_SOURCE_OVERRIDE_EDITOR_DB_URL</code></td><td><code>input_db</code><br><span class="muted">계정 hmg_source_override_editor</span></td><td>교정(<code>catalog.source_override</code>)·시드(<code>source_seed</code>)·공식 소셜(<code>source_social</code>) INSERT와 값·상태·시각·행위자 UPDATE, 코드표(<code>source_code</code>) 이름·설명·순서 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_source_*()</code> 실행만. 지우기·키 변경·코드 추가·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 입력 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
+        <tr><td class="k">고객 관심 입력</td><td><code>HGH_INTEREST_EDITOR_DB_URL</code></td><td><code>input_db</code><br><span class="muted">계정 hmg_interest_editor</span></td><td>시드 키워드(<code>catalog.interest_keyword</code>)·커뮤니티 소스(<code>interest_source</code>) INSERT와 값·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_interest_*()</code> 실행만. 지우기·키·원문 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 입력 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
+        <tr><td class="k">엔티티 역할</td><td><code>HGH_ENTITY_ROLE_EDITOR_DB_URL</code></td><td><code>input_db</code><br><span class="muted">계정 hmg_entity_role_editor</span></td><td>역할(<code>catalog.entity_role</code>) INSERT와 역할·자사 브랜드·메모·상태·시각·행위자 UPDATE, 이력 표 INSERT, 발행 함수 <code>catalog.publish_entity_roles()</code> 실행만. 지우기·엔티티·이름 변경·<code>reference_set</code> 직접 쓰기 권한 없음. 목록은 입력 DB 조회 계정과 Gold 조회 계정으로 읽는다</td></tr>
+        <tr><td class="k">프로젝트 프롬프트</td><td><code>HGH_PROJECT_EDITOR_DB_URL</code></td><td><code>input_db</code><br><span class="muted">계정 hmg_project_editor</span></td><td>프로젝트 표면(3) 카탈로그만: <code>catalog.prompt</code> INSERT, <code>prompt_version</code>·<code>project_version</code>은 <code>change_seq</code> 뺀 열 INSERT(기록자 필수, 트리거 <code>project_editor_guard</code>), catalog 프로젝트 · 프롬프트 표 SELECT. UPDATE·DELETE·프로젝트 생성·공개 승인 권한 없음. 목록은 입력 DB 조회 연결과 Gold 조회 연결로 읽는다</td><td class="mono">≤ 2</td></tr>
       </tbody>
     </table>
   </div>
@@ -459,7 +459,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-writes">누가 어디에 쓰는가</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="서비스 DB에 쓰는 경로는 여섯 개다. 데이터 서버 글로벌 프롬프트 편집과 Project › Prompt 편집(프로젝트 표면 카탈로그만, 계정 hmg_project_editor)이 catalog에 INSERT하고, 데이터 서버 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, 데이터 서버 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, 데이터 서버 GA4 연동이 최상위 관리자의 요청으로 입력 DB의 GA4 속성 등록부(catalog.ga4_registry)와 그 이력을 쓰고, 데이터 서버 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, 데이터 서버 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, 데이터 서버 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하고, Gold의 회차 · 발행 상태를 읽어 서비스 기준 주를 catalog.service_week에 기록하며(바뀔 때만 한 행, 아니면 확인 시각만), 운영 DB에 관리자와 UUID 참조를 등록한다. 답변 단위 테이블에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 geohub_gold_db의 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="서비스 DB에 쓰는 경로는 여섯 개다. 데이터 서버 글로벌 프롬프트 편집과 Project › Prompt 편집(프로젝트 표면 카탈로그만, 계정 hmg_project_editor)이 catalog에 INSERT하고, 데이터 서버 저장한 필터가 운영 DB system.saved_filter에 계정마다 자기 행만 쓰고, 데이터 서버 계정 관리가 최상위 관리자의 요청으로 운영 DB 계정 표를 쓰고, 데이터 서버 GA4 연동이 최상위 관리자의 요청으로 입력 DB의 GA4 속성 등록부(catalog.ga4_registry)와 그 이력을 쓰고, 데이터 서버 인용 출처 분류가 최상위 관리자의 요청으로 catalog.source_override와 그 이력을 쓰고 발행 함수로 기준값 종류 source_override를 기록하고, 데이터 서버 고객 관심 데이터 관리가 같은 방식으로 catalog.interest_keyword · interest_source와 그 이력을 쓰고, 데이터 서버 엔티티 카탈로그가 같은 방식으로 catalog.entity_role과 그 이력을 쓰고, manage.py 관리 명령이 Gold 정의를 읽어 catalog에 새 버전을 기록하고, Gold의 회차 · 발행 상태를 읽어 서비스 기준 주를 catalog.service_week에 기록하며(바뀔 때만 한 행, 아니면 확인 시각만), 운영 DB에 관리자와 UUID 참조를 등록한다. 답변 단위 테이블에는 아무도 쓰지 않는다. GA4 수집기(back/analytics/ga4_collect.py)는 hmg_analytics_writer 계정으로 그 등록부를 읽어 GA4 Data API 값을 gold_db의 analytics.ga4_*에 쓰고 속성마다 결과를 ga4_collect_status에 남기도록 만들어 두었지만, GA4 자격 증명을 인계받기 전이라 아직 돌지 않는다. SEO 수집기는 없다. 외부 API는 hmg_ext_api 계정으로 ext 뷰만 읽는다.">
         <defs>
           <marker id="f2a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f2w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -474,7 +474,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu" x="32" y="111">보던 버전이 아니면 409</text>
 
         <rect class="goldbox" x="316" y="24" width="240" height="100" rx="6"/>
-        <text class="b" x="332" y="50">geohub_gold_db</text>
+        <text class="b" x="332" y="50">gold_db</text>
         <text class="m mu" x="332" y="70">gold · analytics · ref · ops</text>
         <text class="mu" x="332" y="92">측정·응답·멘션·인용, GA4·SEO</text>
         <text class="mu" x="332" y="111">답변 단위 테이블은 쓰지 않음</text>
@@ -494,7 +494,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- HUB data DB -->
         <rect class="hubbox" x="16" y="190" width="860" height="230" rx="10"/>
         <text class="h" x="32" y="216">입력 DB</text>
-        <text class="m mu" x="130" y="216">geohub_bm_db :55438</text>
+        <text class="m mu" x="130" y="216">input_db :55438</text>
 
         <rect class="box" x="36" y="236" width="280" height="168" rx="6"/>
         <text class="m b" x="52" y="260">catalog.*</text>
@@ -523,7 +523,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- HUB operations DB -->
         <rect class="hubbox" x="956" y="190" width="228" height="242" rx="10"/>
         <text class="h" x="972" y="216">운영 DB</text>
-        <text class="m mu" x="972" y="236">geohub_operations_db :55437</text>
+        <text class="m mu" x="972" y="236">operations_db :55437</text>
         <text class="m b" x="972" y="264">system.*</text>
         <text class="m mu" x="972" y="284">user_account</text>
         <text class="m mu" x="972" y="302">user_credential (scrypt)</text>
@@ -551,7 +551,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <!-- not connected yet -->
         <rect class="ghost" x="336" y="464" width="260" height="64" rx="6"/>
         <text class="mu" x="466" y="490" text-anchor="middle">GA4 수집기 · ga4_collect.py</text>
-        <text class="mu sm" x="466" y="510" text-anchor="middle">등록부를 읽고 값은 geohub_gold_db에 씀</text>
+        <text class="mu sm" x="466" y="510" text-anchor="middle">등록부를 읽고 값은 gold_db에 씀</text>
         <path class="ed" d="M466,464V404" marker-end="url(#f2d)"/>
 
         <rect class="box" x="36" y="464" width="280" height="64" rx="6"/>
@@ -580,7 +580,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="ew"/></svg>쓰기</span>
         <span><svg viewBox="0 0 28 12"><line x1="1" y1="6" x2="27" y2="6" class="ed"/></svg>아직 연결 안 됨 · 참조만</span>
         <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-hub"/></svg>서비스가 가진 DB</span>
-        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>geohub_gold_db</span>
+        <span><svg viewBox="0 0 28 12"><rect x="1" y="1" width="26" height="10" rx="2" class="sw-gold"/></svg>gold_db</span>
       </div>
       <p><strong>그림 2.</strong> 서비스 DB에 쓰는 경로는 빨간 선 여섯 개가 전부다. 편집과 sync는 같은 advisory lock을 잡아서 한 번에 하나만 기록한다.
         오른쪽 아래 선은 두 데이터 서버 연결이다: 저장한 필터는 <code>hmg_saved_filter_editor</code>로 <code>saved_filter</code>만, 계정 관리는 <code>hmg_account_editor</code>로 계정 표만 쓴다.
@@ -593,7 +593,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         엔티티 카탈로그 화면도 같은 선을 쓴다: <code>hmg_entity_role_editor</code>로 역할(<code>entity_role</code>, <code>data-010.sql</code>)과 그 이력만 쓰고, 발행 함수 <code>catalog.publish_entity_roles()</code>가 기록한다. 초안·미리보기·승인은 두지 않는다(적용은 파이프라인의 Gold 재가공이다).
         2026-11-03부터 Project › Prompt 화면은 글로벌 프롬프트 편집과 같은 catalog INSERT 선을 쓴다: <code>hmg_project_editor</code>로 프로젝트 표면 카탈로그의 프롬프트 · 프롬프트 버전 · 프로젝트 버전(커스텀 태그 열)만 더한다(<code>data-012.sql</code>). 버전 행이 곧 발행이다(<code>change_seq</code>, 외부 API <code>ext.prompts</code>).
         한 번 HUB가 고친 프롬프트 · 프로젝트는 Gold 가져오기가 HUB 키(원문 · 종류 · 언어 · 시장 · 분류축 · 태그 값 · 상태, 프로젝트는 태그 열 · 이름)를 덮어쓰지 않고 Gold 키만 갱신하며, HUB 프롬프트를 제거하지 않는다.
-        점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 <code>geohub_gold_db</code>의 <code>analytics.ga4_*</code>에 통째로 바꿔 쓰고,
+        점선의 GA4 수집기(<code>back/analytics/ga4_collect.py</code>)는 <code>hmg_analytics_writer</code>로 그 등록부를 읽어 속성마다 수집한 날짜를 <code>gold_db</code>의 <code>analytics.ga4_*</code>에 통째로 바꿔 쓰고,
         결과(수집됨 · 권한 대기 · 실패 · 중지됨)를 <code>ga4_collect_status</code>에 남긴다. 화면은 그 값을 그대로 보인다.
         GA4 자격 증명(<code>.env.ga4.local</code>)은 이 프로세스만 읽고, 데이터 서버와 브라우저는 GA4를 부르지 않는다. 자격 증명을 인계받으면 돌린다.
         <code>manage.py</code>에서 catalog로 가는 sync 선은 2026-11-02부터 <code>sync-service-week</code>도 쓴다: <code>hmg_service_week_writer</code>로 <code>catalog.service_week</code>(<code>input-003.sql</code>)만 쓴다.
@@ -777,7 +777,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="erd-ops" aria-labelledby="h-erd-ops">
-  <h2 id="h-erd-ops">운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">geohub_operations_db</span></h2>
+  <h2 id="h-erd-ops">운영 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">operations_db</span></h2>
   <p class="sub prose">스키마는 <code>system</code> 하나다. 사용자·권한·설정·감사와 계정별 저장한 필터를 갖고, 프로젝트는 입력 DB의 UUID를 참조만 한다.
     근거: <code>back/hub_storage/operations-001.sql</code>, <code>operations-002.sql</code>, <code>operations-003.sql</code>, <code>operations-004.sql</code>, <code>operations-005.sql</code>, <code>operations-006.sql</code>.</p>
   <figure>
@@ -1043,7 +1043,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="erd-input" aria-labelledby="h-erd-input">
-  <h2 id="h-erd-input">입력 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">geohub_bm_db :55438</span></h2>
+  <h2 id="h-erd-input">입력 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">input_db :55438</span></h2>
   <p class="sub prose">프롬프트 · 측정 설정 · 수집 기준정보 · 분석 기준정보의 원본이다(SSOT <code>shared/input-contract.md</code>).
     입력은 모두 같은 모양이다: 현재 값, 값 전체를 담는 번호 매긴 버전(기록자 · <code>change_seq</code>), API가 읽는 발행 묶음. 프로젝트 · 프롬프트 · 측정 설정은 버전 행의 최신이 현재 값이고(그림 5), 목록은 현재 행과 트리거가 쌓는 <code>*_version</code>이다(그림 6).
     GA4 속성과 서비스 기준 주는 그림 7이다. 근거: <code>back/hub_storage/input-001~003.sql</code>. 범례는 그림 4와 같다.</p>
@@ -1737,7 +1737,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ga4reg -->
-<svg viewBox="0 0 1200 660" role="img" aria-label="입력 DB의 GA4 속성과 서비스 기준 주. 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, 수집기가 속성마다 남기는 마지막 결과 ga4_collect_status, 바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 geohub_gold_db의 ga4_property로 복사한다.">
+<svg viewBox="0 0 1200 660" role="img" aria-label="입력 DB의 GA4 속성과 서비스 기준 주. 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, 수집기가 속성마다 남기는 마지막 결과 ga4_collect_status, 바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 gold_db의 ga4_property로 복사한다.">
 <defs><marker id="ga4reg-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ga4reg-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="70" y="40" width="300" height="194" rx="6"/>
 <path class="th" d="M70,70V46q0,-6 6,-6H364q6,0 6,6V70z"/>
@@ -1844,7 +1844,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     <figcaption>
       <p><strong>그림 7. GA4 속성과 서비스 기준 주.</strong> <code>ga4_registry</code>는 수집 대상의 정본이다. 최상위 관리자가 리뉴얼 Admin › GA4 연동에서 고치고(한 시장에 수집하는 속성 하나,
         지우지 않고 중지), 바꿀 때마다 <code>ga4_registry_event</code>가 남는다. <code>account_id</code> · <code>account_name</code>은 속성이 속한 GA4 계정을 적을 뿐이고, 키 · 토큰은 DB에 두지 않는다(<code>.env.ga4.local</code>).
-        수집기는 실행마다 등록부를 읽어 <code>geohub_gold_db</code>의 <code>analytics.ga4_property</code>에 복사하고(중지한 속성은 <code>unmapped</code>라 리더가 뺀다), 결과를 <code>ga4_collect_status</code>에 남긴다. 두 DB 사이에 FK는 없다.
+        수집기는 실행마다 등록부를 읽어 <code>gold_db</code>의 <code>analytics.ga4_property</code>에 복사하고(중지한 속성은 <code>unmapped</code>라 리더가 뺀다), 결과를 <code>ga4_collect_status</code>에 남긴다. 두 DB 사이에 FK는 없다.
         서비스 기준 주(<code>service_week</code>)는 기준 주나 그 주의 회차(표면별 <code>dim_cycle.cycle_id</code>, 빈 배열은 그 표면 ‘측정 없음’)가 바뀔 때만 한 행을 더하고,
         같은 주를 다시 확인하면 그 행의 <code>checked_at</code>만 바꾼다. <code>catalog.current_service_week</code> 뷰가 최신 행과 <code>week_end</code>(일요일)를 준다.
         <code>manage.py sync-service-week</code>가 <code>hmg_service_week_writer</code>로 쓰고, 데이터 서버는 입력 DB 조회 계정으로 읽기만 한다. 이 그림의 테이블은 API로 나가지 않는다. 근거: <code>back/hub_storage/input-003.sql</code>.</p>
@@ -1854,14 +1854,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="erd-ga4" aria-labelledby="h-erd-ga4">
-  <h2 id="h-erd-ga4">Gold DB의 GA4 · SEO ERD <span class="mono muted" style="font-size:15px;font-weight:400">geohub_gold_db :55439</span></h2>
+  <h2 id="h-erd-ga4">Gold DB의 GA4 · SEO ERD <span class="mono muted" style="font-size:15px;font-weight:400">gold_db :55439</span></h2>
   <p class="sub prose"><code>analytics</code>·<code>ref</code>·<code>ops</code> 스키마다(그림 8~10). 답변 단위 테이블(<code>gold</code>)과 스키마를 나눠서 <code>hmg_analytics_reader</code> · <code>hmg_analytics_writer</code>는 이 세 스키마만 닿고 <code>gold</code>는 읽지 못한다.
     근거: <code>back/hub_storage/metrics-004.sql</code>. 범례는 그림 4와 같다.</p>
 
   <figure>
     <div class="scroll">
       <!-- erd:ga4 -->
-<svg viewBox="0 0 1200 510" role="img" aria-label="geohub_gold_db의 GA4 테이블 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, 차원 키는 kind별로 ga4_value를 가리킨다. ga4_property는 수집기가 입력 DB의 등록부에서 복사한다.">
+<svg viewBox="0 0 1200 510" role="img" aria-label="gold_db의 GA4 테이블 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, 차원 키는 kind별로 ga4_value를 가리킨다. ga4_property는 수집기가 입력 DB의 등록부에서 복사한다.">
 <defs><marker id="ga4-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ga4-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="70" y="40" width="290" height="392" rx="6"/>
 <path class="th" d="M70,70V46q0,-6 6,-6H354q6,0 6,6V70z"/>
@@ -2010,7 +2010,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:seo -->
-<svg viewBox="0 0 1200 610" role="img" aria-label="geohub_gold_db의 SEO 테이블과 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.">
+<svg viewBox="0 0 1200 610" role="img" aria-label="gold_db의 SEO 테이블과 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.">
 <defs><marker id="seo-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="seo-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="250" height="248" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H260q6,0 6,6V70z"/>
@@ -2219,7 +2219,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:ref -->
-<svg viewBox="0 0 1200 672" role="img" aria-label="geohub_gold_db의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, 프로젝트는 국가를, 국가는 대륙을 가리킨다.">
+<svg viewBox="0 0 1200 672" role="img" aria-label="gold_db의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, 프로젝트는 국가를, 국가는 대륙을 가리킨다.">
 <defs><marker id="ref-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ref-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="100" width="260" height="248" rx="6"/>
 <path class="th" d="M16,130V106q0,-6 6,-6H270q6,0 6,6V130z"/>
@@ -2448,8 +2448,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td class="k mono">hmg_input_owner · hmg_metrics_owner</td><td>마이그레이션 · <code>ext</code> 뷰 소유(입력 DB), GA4 · SEO 스키마 소유(Gold DB)</td><td>스키마 소유 (로그인 불가). 공개 승인·외부 호출자·키는 DB 관리자 권한으로 <code>manage.py</code> 명령(<a href="#ext">외부 API</a>)이 쓴다</td></tr>
         <tr><td class="k mono">hmg_input_reader</td><td>API · <code>HGH_INPUT_DB_URL</code></td><td>입력 DB <code>catalog</code> SELECT, 읽기 전용</td></tr>
         <tr><td class="k mono">hmg_measurement_editor</td><td>API Project › Setting · <code>HGH_MEASUREMENT_EDITOR_DB_URL</code></td><td><code>project_measurement_version</code>은 <code>change_seq</code> 뺀 컬럼만 INSERT, 프로젝트 · 기준정보 원본 SELECT. 수정 · 삭제 · 다른 입력 읽기 없음</td></tr>
-        <tr><td class="k mono">hmg_analytics_reader</td><td>API · <code>HGH_ANALYTICS_DB_URL</code></td><td><code>geohub_gold_db</code>의 <code>ref</code>·<code>analytics</code>·<code>ops</code> SELECT. <code>gold</code>는 읽지 못한다</td></tr>
-        <tr><td class="k mono">hmg_analytics_writer</td><td>GA4 수집기 <code>back/analytics/ga4_collect.py</code> (자격 증명 인계 전) · SEO 적재 (수집기 없음)</td><td><code>geohub_gold_db</code>의 <code>ref</code>·<code>analytics</code> 쓰기, <code>ops.build</code> 쓰기, <code>ops.publish_seo_build()</code> 실행.
+        <tr><td class="k mono">hmg_analytics_reader</td><td>API · <code>HGH_ANALYTICS_DB_URL</code></td><td><code>gold_db</code>의 <code>ref</code>·<code>analytics</code>·<code>ops</code> SELECT. <code>gold</code>는 읽지 못한다</td></tr>
+        <tr><td class="k mono">hmg_analytics_writer</td><td>GA4 수집기 <code>back/analytics/ga4_collect.py</code> (자격 증명 인계 전) · SEO 적재 (수집기 없음)</td><td><code>gold_db</code>의 <code>ref</code>·<code>analytics</code> 쓰기, <code>ops.build</code> 쓰기, <code>ops.publish_seo_build()</code> 실행.
           입력 DB의 <code>ga4_registry</code>는 SELECT만, <code>ga4_collect_status</code>는 SELECT·INSERT·UPDATE</td></tr>
         <tr><td class="k mono">hmg_ga4_registry_editor</td><td>API GA4 연동 · <code>HGH_GA4_REGISTRY_EDITOR_DB_URL</code></td><td><code>ga4_registry</code> INSERT와 속성 ID·등록 시각 뺀 열 UPDATE, <code>ga4_registry_event</code> INSERT, 이 둘과 <code>ga4_collect_status</code> SELECT. DELETE 없음.
           GA4 측정 행·<code>ga4_property</code>·카탈로그는 읽지도 못하고 운영 DB에는 접속하지 못한다</td></tr>
@@ -2472,12 +2472,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 </section>
 
 <section id="erd-metrics" aria-labelledby="h-erd-metrics">
-  <h2 id="h-erd-metrics">Gold · 캐시 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">geohub_gold_db · geohub_cache_db :55439</span></h2>
-  <p class="sub prose">데이터 서버가 계산해 두는 값의 자리다(SSOT <code>service/cache-db.md</code>, 결정 기록 'DB 구성 변경'). 한 서버의 두 DB다. <code>gold.*</code> 사전 집계 테이블은 <code>geohub_gold_db</code>에서 답변 단위 테이블과 스키마를 함께 쓰고, <code>cache.*</code>는 <code>geohub_cache_db</code>에 따로 있다. 정본이 아니고 다른 파트에 열지 않으며 <code>manage.py backup</code>에 들지 않는다. 데이터 서버가 <code>bff/metrics/serving.py</code>로 읽는다. 근거: <code>back/hub_storage/metrics-001~003.sql</code> · <code>cache-001.sql</code>.</p>
+  <h2 id="h-erd-metrics">Gold · 캐시 DB ERD <span class="mono muted" style="font-size:15px;font-weight:400">gold_db · cache_db :55439</span></h2>
+  <p class="sub prose">데이터 서버가 계산해 두는 값의 자리다(SSOT <code>service/cache-db.md</code>, 결정 기록 'DB 구성 변경'). 한 서버의 두 DB다. <code>gold.*</code> 사전 집계 테이블은 <code>gold_db</code>에서 답변 단위 테이블과 스키마를 함께 쓰고, <code>cache.*</code>는 <code>cache_db</code>에 따로 있다. 정본이 아니고 다른 파트에 열지 않으며 <code>manage.py backup</code>에 들지 않는다. 데이터 서버가 <code>bff/metrics/serving.py</code>로 읽는다. 근거: <code>back/hub_storage/metrics-001~003.sql</code> · <code>cache-001.sql</code>.</p>
   <figure>
     <div class="scroll">
       <!-- erd:metrics -->
-<svg viewBox="0 0 1200 950" role="img" aria-label="geohub_cache_db의 cache 스키마와 geohub_gold_db의 사전 집계 테이블. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.">
+<svg viewBox="0 0 1200 950" role="img" aria-label="cache_db의 cache 스키마와 gold_db의 사전 집계 테이블. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.">
 <defs><marker id="metrics-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="metrics-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="320" height="230" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H330q6,0 6,6V70z"/>
@@ -2656,8 +2656,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="666" y="873" text-anchor="end">timestamptz</text>
 <rect class="vgrp" x="696" y="40" width="488" height="170" rx="8"/>
 <text class="m b" x="712" y="66">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>
-<text class="m" x="712" y="98">hmg_metrics_reader</text><text class="mu sm" x="882" y="98">데이터 서버 읽기 · geohub_gold_db SELECT</text>
-<text class="m" x="712" y="122">hmg_cache_writer</text><text class="mu sm" x="882" y="122">데이터 서버 캐시 · geohub_cache_db 읽기 · 쓰기</text>
+<text class="m" x="712" y="98">hmg_metrics_reader</text><text class="mu sm" x="882" y="98">데이터 서버 읽기 · gold_db SELECT</text>
+<text class="m" x="712" y="122">hmg_cache_writer</text><text class="mu sm" x="882" y="122">데이터 서버 캐시 · cache_db 읽기 · 쓰기</text>
 <text class="m" x="712" y="146">hmg_rollup_writer</text><text class="mu sm" x="882" y="146">사전 집계 작업 · 테이블 4개만 쓰기</text>
 <text class="mu sm" x="712" y="182">API는 hmg_rollup_writer를 받지 않는다</text>
 </svg>
@@ -2680,8 +2680,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <tr><td>국가별 GEO·언급·인용·답변·프롬프트·ACR</td><td>Gold 활성 빌드 (<code>answer_fact</code>, <code>citation_fact</code> 등)</td><td><span class="pill on">들어옴</span></td></tr>
         <tr><td>키워드 검색량·검색 결과·관련 키워드</td><td>Gold <code>kw_volume_monthly</code>·<code>kw_serp</code>·<code>kw_suggestion</code></td><td><span class="pill on">들어옴</span></td></tr>
         <tr><td>소셜 맥락·요구·근거 발화</td><td>Gold 활성 <code>ctx_snapshot</code>과 연관 데이터</td><td><span class="pill on">들어옴</span></td></tr>
-        <tr><td>GA4 세션·기간 사용자·전환·이벤트</td><td><code>geohub_gold_db</code> <code>analytics.ga4_*</code> ← GA4 수집기 (<code>back/analytics/ga4_collect.py</code>, 속성 목록은 Admin › GA4 연동의 <code>ga4_registry</code>)</td><td><span class="pill off">수집 전</span> <span class="muted">수집기 있음 · GA4 자격 증명 인계 전</span></td></tr>
-        <tr><td>SEO 노출·크롤러·기기·페이지 우선순위</td><td><code>geohub_gold_db</code> <code>analytics.current_page_*</code> 뷰</td><td><span class="pill off">수집 전</span></td></tr>
+        <tr><td>GA4 세션·기간 사용자·전환·이벤트</td><td><code>gold_db</code> <code>analytics.ga4_*</code> ← GA4 수집기 (<code>back/analytics/ga4_collect.py</code>, 속성 목록은 Admin › GA4 연동의 <code>ga4_registry</code>)</td><td><span class="pill off">수집 전</span> <span class="muted">수집기 있음 · GA4 자격 증명 인계 전</span></td></tr>
+        <tr><td>SEO 노출·크롤러·기기·페이지 우선순위</td><td><code>gold_db</code> <code>analytics.current_page_*</code> 뷰</td><td><span class="pill off">수집 전</span></td></tr>
         <tr><td>프로젝트·프롬프트 버전 카탈로그</td><td>입력 DB <code>catalog.*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 정의 + HUB 글로벌 프롬프트 + HUB 프로젝트 프롬프트 · 태그 편집(2026-11-03, 파이프라인이 읽는 합의는 대기)</span></td></tr>
         <tr><td>기준정보 원본 8종과 계약 밖 9종</td><td>입력 DB <code>catalog.reference_*</code></td><td><span class="pill on">들어옴</span> <span class="muted">Gold 가져오기 · 브랜드 별칭·자사 도메인·도메인 분류 규칙·비경쟁 명단은 Gold에 없어 아직 없음</span></td></tr>
         <tr><td>출처 카테고리 교정 (HUB 정본)</td><td>입력 DB <code>catalog.source_override</code> → 기준값 종류 <code>source_override</code></td><td><span class="pill on">들어옴</span> <span class="muted">Admin › 인용 출처 분류 · 처음 값은 Gold 교정 2건 · 파이프라인이 읽는 합의는 대기</span></td></tr>

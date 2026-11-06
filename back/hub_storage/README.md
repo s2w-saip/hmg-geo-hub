@@ -6,12 +6,12 @@
 
 | 저장소 | 실제 DB / 로컬 포트 | 책임 |
 |---|---|---|
-| 운영 DB | `geohub_operations_db` / `127.0.0.1:55437` | 사용자, 프로젝트 멤버십·권한, SW 설정 버전, 연동 설정, 감사 이력, 계정별 저장한 필터 |
-| 입력 DB | `geohub_bm_db` / `127.0.0.1:55438` | 프롬프트, 측정 설정, 수집 · 분석 기준정보, API 호출자 · 승인, GA4 속성, 서비스 기준 주(아래 '입력 DB') |
-| Gold DB | `geohub_gold_db` / `127.0.0.1:55439` | 사전 집계 테이블, 답변 단위 테이블 86개, GA4 · SEO 데이터(`analytics` · `ref` · `ops`). 데이터 서버가 읽는 곳이다(아래 'Gold DB') |
-| 캐시 DB | `geohub_cache_db` / `127.0.0.1:55439`(Gold DB와 같은 서버) | 필터 조회 결과. 정본이 아니다(아래 '캐시 DB') |
+| 운영 DB | `operations_db` / `127.0.0.1:55437` | 사용자, 프로젝트 멤버십·권한, SW 설정 버전, 연동 설정, 감사 이력, 계정별 저장한 필터 |
+| 입력 DB | `input_db` / `127.0.0.1:55438` | 프롬프트, 측정 설정, 수집 · 분석 기준정보, API 호출자 · 승인, GA4 속성, 서비스 기준 주(아래 '입력 DB') |
+| Gold DB | `gold_db` / `127.0.0.1:55439` | 사전 집계 테이블, 답변 단위 테이블 86개, GA4 · SEO 데이터(`analytics` · `ref` · `ops`). 데이터 서버가 읽는 곳이다(아래 'Gold DB') |
+| 캐시 DB | `cache_db` / `127.0.0.1:55439`(Gold DB와 같은 서버) | 필터 조회 결과. 정본이 아니다(아래 '캐시 DB') |
 
-`geohub_gold_db`의 `ops` 스키마는 SEO 빌드·발행 메타데이터이며, 사용자·권한을 담는 운영 DB와 별개다.
+`gold_db`의 `ops` 스키마는 SEO 빌드·발행 메타데이터이며, 사용자·권한을 담는 운영 DB와 별개다.
 
 ## 실행
 
@@ -37,7 +37,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 프롬프트 · 측정 설정 · 수집 기준정보 · 분석 기준정보의 원본이다(SSOT `shared/input-contract.md`). 아래 절들의 `catalog` · `publication` 표와 역할은 이름과 권한 그대로 이 DB로 옮겼다(`input-001.sql`은 옮길 때의 구조, `input-002.sql` · `input-003.sql`은 새로 더한 것).
 
-- **옮기기:** 옛 저장소 `hmg_analytics`가 남아 있는 곳에서 `manage.py init`이 한 번 한다: 입력 표 30개(id · 버전 · `change_seq` · 키 해시 유지, 행 수와 해시 대조), GA4 속성 · 서비스 기준 주는 이 DB로, GA4 · SEO 데이터는 `geohub_gold_db`로 옮기고(`retire_data_store`, 행 수 대조), 덤프를 `.local/analytics-backups`에 남긴 뒤 옛 저장소를 내린다. 그동안 옛 API의 쓰기는 실패한다. 끝나면 API를 재시작한다.
+- **옮기기:** 옛 저장소 `hmg_analytics`가 남아 있는 곳에서 `manage.py init`이 한 번 한다: 입력 표 30개(id · 버전 · `change_seq` · 키 해시 유지, 행 수와 해시 대조), GA4 속성 · 서비스 기준 주는 이 DB로, GA4 · SEO 데이터는 `gold_db`로 옮기고(`retire_data_store`, 행 수 대조), 덤프를 `.local/analytics-backups`에 남긴 뒤 옛 저장소를 내린다. 그동안 옛 API의 쓰기는 실패한다. 끝나면 API를 재시작한다.
 - **입력의 공통 모양:** 현재 값, 값 전체를 담는 번호 매긴 버전(기록자 · `change_seq`), API가 읽는 발행 묶음. 프로젝트 · 프롬프트 · 측정 설정은 버전 행의 최신이 현재 값이고, 목록은 현재 행과 트리거가 쌓는 `*_version`이다(고객 관심 · 엔티티 역할 · 기준정보 원본에도 붙였다).
 - **기준정보 원본 `catalog.reference_source`:** `engine` · `country` · `language` · `taxon` · `brand` · `surface` · `brand_bit` · `mention_type`. SSOT에 관리 화면이 없어 한 표에 둔다. 처음 값만 `sync-gold-catalog`가 Gold에서 넣고(`origin = gold_import`), 그 뒤로 가져오기는 이 종류를 쓰지 않는다. 발행은 `catalog.publish_reference_source(종류)`이고, 코드표 셋은 `source = hub`, 나머지는 `hub_edit`이다.
 - **측정 설정 `catalog.project_measurement_version`:** 프로젝트마다 버전 행을 더한다(`catalog.current_measurement`가 최신). `sync-gold-catalog`가 설정이 없는 프로젝트에 Gold가 가진 값만 버전 1로 넣는다: 브랜드(사이트 브랜드, Global은 카탈로그 브랜드), 국가 · 엔진(측정 기록), website 단위(선언된 기준 URL만), 소유 URL(같은 브랜드 · 국가의 `dim_owned_base`, website만). 측정 주기 · ACR 반복 수 · 추적 URL · 추적 대상은 비어 있다. 2026-11-06 첫 값: Global 1 · Website 127(소유 URL 106) · Project 130(국가 · 엔진 73, 브랜드 0).
@@ -47,7 +47,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 ## Gold DB (2026-11-06)
 
-`geohub_gold_db`는 서버 :55439의 서비스 DB다. 스키마 `gold` 하나에 두 가지가 있다.
+`gold_db`는 서버 :55439의 서비스 DB다. 스키마 `gold` 하나에 두 가지가 있다.
 
 - **사전 집계:** `gold.metric_row`는 필터 없는 첫 화면의 지표 행이고(회차 · 차원 조합마다 기본 집계값 + 지표 값, 상태는 `gold.metric_call`), `gold.first_screen_read`는 지표가 아닌 첫 화면 목록의 `/v1` 응답이다(`manage.py rollup`이 쓴다, 기록은 `gold.rollup_run`). 정본이 아니어서 다시 계산할 수 있다.
 - **답변 단위 테이블:** 86개(1억 8,265만 행, 40 GB). 데이터 서버는 `HGH_GOLD_DB_URL`로 읽는다.
@@ -58,7 +58,7 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 ## 캐시 DB (2026-11-06)
 
-`geohub_cache_db`는 Gold DB와 같은 서버의 별도 DB다(SSOT `service/cache-db.md`, 결정 기록 'DB 구성 변경'). `cache.query_result`는 필터 조회 결과다(UNLOGGED, TTL 없음, `manage.py backup`에 들지 않음). `hmg_cache_writer`(`HGH_CACHE_DB_URL`)만 접속해 그 테이블만 읽고 쓴다. 코드는 `bff/hub_stores/cache_db.py`(키 · 읽기 · 쓰기 · 이전 스냅샷 삭제)이고, 다른 파트에는 열지 않는다.
+`cache_db`는 Gold DB와 같은 서버의 별도 DB다(SSOT `service/cache-db.md`, 결정 기록 'DB 구성 변경'). `cache.query_result`는 필터 조회 결과다(UNLOGGED, TTL 없음, `manage.py backup`에 들지 않음). `hmg_cache_writer`(`HGH_CACHE_DB_URL`)만 접속해 그 테이블만 읽고 쓴다. 코드는 `bff/hub_stores/cache_db.py`(키 · 읽기 · 쓰기 · 이전 스냅샷 삭제)이고, 다른 파트에는 열지 않는다.
 
 ## 프로젝트·프롬프트의 기준
 
@@ -257,7 +257,7 @@ GA4와 프로젝트의 관계는 `catalog.project_ga4_property`에 실제 연동
 
 내부 API `GET /v1/hub/projects`, `/v1/hub/prompts`는 HUB 카탈로그 조회 계약이다(`limit=1..1000`, `offset>=0`, 선택적 `project_id=UUID`). 로컬 서비스용이며 외부 공개 정책을 적용하는 엔드포인트는 아니다. 외부 호출자는 외부 API를 사용한다. 기존 데이터 서버 `/v1/screens/*`와 Gold 조회 계약은 보존한다. 현재 GEO 화면의 측정 및 원천 카탈로그는 계속 Gold에서 읽는다.
 
-`/healthz`는 `geohub_gold_db`, GA4 · SEO 조회 연결(`analytics`), 입력 DB(`input`), 운영 DB(`operations`), 캐시 DB(`cache`)의 실제 연결과 읽기 전용 여부를 보여준다. Next는 DB 자격 증명을 받지 않고 FastAPI만 호출한다.
+`/healthz`는 `gold_db`, GA4 · SEO 조회 연결(`analytics`), 입력 DB(`input`), 운영 DB(`operations`), 캐시 DB(`cache`)의 실제 연결과 읽기 전용 여부를 보여준다. Next는 DB 자격 증명을 받지 않고 FastAPI만 호출한다.
 
 ## 검증
 

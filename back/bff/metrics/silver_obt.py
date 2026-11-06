@@ -1,5 +1,5 @@
 """Adapter ②: the base counts from the Silver OBT's operational snapshots (silver_contract.answer_analysis · acr_rollup, public snapshots only), with what the
-service holds itself (geohub_bm_db: the prompts' definitions, the markets, the brands, the roster). It reads contract columns only, never `ext`: until the
+service holds itself (input_db: the prompts' definitions, the markets, the brands, the roster). It reads contract columns only, never `ext`: until the
 pipeline's connection details arrive the virtual OBT stands in for it, and only the connection changes.
 
 An answer's rows are JSON arrays, unfolded in the query: one global round (47 thousand answers, 660 thousand rollup rows) in about 1.5 s.
@@ -72,7 +72,7 @@ class Scope(NamedTuple):
 
 
 class Inputs(NamedTuple):
-    """From geohub_bm_db, once per read."""
+    """From input_db, once per read."""
     prompt_ids: list[str]
     funnel: list[str | None]
     #: (prompt, brand bit) of the catalog rows marked branded
@@ -99,7 +99,7 @@ class Inputs(NamedTuple):
 
 
 def with_past_catalogs(inputs: Inputs, rows: Sequence[Mapping[str, Any]]) -> Inputs:
-    """A prompt later taken out of the standard catalog still counts in the rounds it was measured in. The service's definitions hold today's catalog; geohub_gold_db holds what
+    """A prompt later taken out of the standard catalog still counts in the rounds it was measured in. The service's definitions hold today's catalog; gold_db holds what
     it was, for the prompts where the two differ (115 on global, 2026-11-06)."""
     past = {r["id"]: r for r in rows}
     return inputs._replace(in_root=[past[p]["in_root_catalog_all"] if p in past else v for p, v in zip(inputs.prompt_ids, inputs.in_root)],
@@ -107,7 +107,7 @@ def with_past_catalogs(inputs: Inputs, rows: Sequence[Mapping[str, Any]]) -> Inp
 
 
 async def read_inputs(conn: Any) -> Inputs:
-    """conn = geohub_bm_db."""
+    """conn = input_db."""
     rows = await conn.fetch("SELECT prompt_id::text AS id,text,definition::text AS d FROM catalog.current_prompt")
     columns: tuple[list, ...] = ([], [], [], [], [], [], [], [], [])
     for r in rows:
@@ -599,7 +599,7 @@ class SilverObtSource:
         return await self.acr_brand_counts(("prompt", "engine", "country"))
 
 
-#: What the contract cannot answer, read from geohub_gold_db until the real OBT or the service's inputs hold it. Nothing is estimated.
+#: What the contract cannot answer, read from gold_db until the real OBT or the service's inputs hold it. Nothing is estimated.
 #: domain_rows · source_counts · rival_citations: a source's is_social, owned brand and competitor brand (no contract field).
 #: applied_prompts: the catalog read's own rule (Context). source_categories: over every round. acr_model_counts: a model's name (no contract field).
 #: acr_duel_counts: an iteration's winner and shortlist (no contract field).
@@ -612,7 +612,7 @@ _public: dict[str, tuple[float, dict[date, str]]] = {}
 
 
 def enabled() -> bool:
-    """HGH_METRIC_SOURCE=silver: the base counts come from the OBT. Set beside HGH_SILVER_DB_URL in .env.silver.local; a machine without them counts on geohub_gold_db."""
+    """HGH_METRIC_SOURCE=silver: the base counts come from the OBT. Set beside HGH_SILVER_DB_URL in .env.silver.local; a machine without them counts on gold_db."""
     return os.environ.get("HGH_METRIC_SOURCE", "").strip().lower() == "silver"
 
 
@@ -629,7 +629,7 @@ async def public_snapshots(surface: str) -> dict[date, str]:
 
 
 async def current_inputs(gold: Any) -> Inputs:
-    """gold = the read's connection to geohub_gold_db."""
+    """gold = the read's connection to gold_db."""
     global _cached
     now = time.monotonic()
     if _cached is None or now - _cached[0] >= _CACHE_SECONDS:

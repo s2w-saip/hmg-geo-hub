@@ -39,7 +39,7 @@ TYPES = ("mention", "recommendation", "comparison", "definition", "final_choice"
 TYPE_NAMES = {"mention": "단순 언급", "recommendation": "추천", "comparison": "비교", "definition": "정의", "final_choice": "최종 선택"}
 SENTIMENTS = {"s_pos": "긍정", "s_neu": "중립", "s_neg": "부정", "s_mix": "혼합"}
 
-#: Base counts: what a data source adapter counts. key -> (단위, 뜻, 어댑터 ① geohub_gold_db 대응)
+#: Base counts: what a data source adapter counts. key -> (단위, 뜻, 어댑터 ① gold_db 대응)
 BASE_COUNTS: dict[str, tuple[str, str, str]] = {
     # answers (answer_counts)
     "answers": ("답변", "모수 답변 수", "answer_fact 행 수"),
@@ -125,7 +125,7 @@ class Metric:
 
 _MARKET = ("전체", "회차", "엔진", "국가", "권역")
 _BRAND = (*_MARKET, "브랜드")
-_OUTSIDE = "서비스 수집값(geohub_gold_db의 analytics 스키마). Silver 밖"
+_OUTSIDE = "서비스 수집값(gold_db의 analytics 스키마). Silver 밖"
 
 METRICS: tuple[Metric, ...] = (
     # ── 언급: SSOT ──
@@ -140,7 +140,7 @@ METRICS: tuple[Metric, ...] = (
            review="이전 화면은 Overview 카드 53.95% · Mention 54.12%로 달랐다. SSOT 공통 조건의 모니터링 답변이면 174,341/323,266 = 53.93%"),
     Metric("priority", "AI 우선 노출도", "언급", "avg", "rank_sum", "ranked", MONITORING, higher_is_better=False, ssot=True, dims=_BRAND,
            screens="Overview · Mention · Website · Project", note="순위 = 당사보다 먼저 언급된 경쟁 브랜드 수 + 1. 비경쟁 · 노이즈 브랜드는 뺀다. 낮을수록 앞",
-           review="화면은 지금 업스트림 경쟁 순위(rk)로 센다(Overview 2.345 · Mention 2.353). SSOT 문구는 먼저 언급된 경쟁 브랜드 수 + 1(텍스트 순서, 76,706/34,273 = 2.238). rk는 텍스트 순서와 55%만 같고 동순위가 있다. geohub_gold_db는 global 2026-09-07 · website 2026-09-11 이전 회차에 텍스트 순서 값이 없어 그 회차는 빈칸이다"),
+           review="화면은 지금 업스트림 경쟁 순위(rk)로 센다(Overview 2.345 · Mention 2.353). SSOT 문구는 먼저 언급된 경쟁 브랜드 수 + 1(텍스트 순서, 76,706/34,273 = 2.238). rk는 텍스트 순서와 55%만 같고 동순위가 있다. gold_db는 global 2026-09-07 · website 2026-09-11 이전 회차에 텍스트 순서 값이 없어 그 회차는 빈칸이다"),
     Metric("top3_rate", "Top 3 노출 비율", "언급", "rate", "top3", "tracked", MONITORING, ssot=True, dims=_BRAND, needs="ranked",
            screens="레거시 Overview · Mention", note="순위는 AI 우선 노출도와 같다",
            review="이전 화면은 rk 기준(대표 답변 79.7%). SSOT 순위 · 모니터링 답변 기준이면 27,619/34,274 = 80.58%. 텍스트 순서가 없는 회차는 빈칸"),
@@ -219,7 +219,7 @@ METRICS: tuple[Metric, ...] = (
     Metric("model_conversion", "차종별 선택 전환율", "ACR", "rate", "model_choice", "model_iterations", ACR_REPETITION, ssot=True, dims=("차종",), screens="ACR"),
     Metric("acr_average_line", "브랜드 평균선 · 평균선 대비", "ACR", "derived", "평균선 기울기 k = 표시된 브랜드의 Top1 ACR 합 ÷ 후보군 포함율 합, 평균선 대비 = Top1 ACR − k × 후보군 포함율", dims=("브랜드",), screens="ACR", note="단위가 달라(셀 · 반복) 비교 기준이고 전환율이 아니다. D-11로 되살림(2026-11-06). 분석팀 리뷰 필요"),
     Metric("head_to_head", "맞대결", "ACR", "rate", "own_wins", "duel_iterations", ACR_REPETITION, ssot=True, dims=("엔진", "브랜드"), screens="ACR", note="경쟁사 값은 rival_wins ÷ duel_iterations",
-           review="SSOT 분모는 함께 후보에 오른 반복인데, geohub_gold_db acr_iter_fact는 셀마다 반복 1회 정도만 둔다(35,927회 중 3,763회). 표본 값이다"),
+           review="SSOT 분모는 함께 후보에 오른 반복인데, gold_db acr_iter_fact는 셀마다 반복 1회 정도만 둔다(35,927회 중 3,763회). 표본 값이다"),
     # ── ACR: SSOT 밖의 화면 값 ──
     Metric("choice_count", "최종 선택(1순위 횟수)", "ACR", "count", "choice", population=ACR_REPETITION, dims=("전체", "브랜드"), screens="ACR"),
     Metric("appearance_count", "후보 언급 수", "ACR", "count", "appearance", population=ACR_REPETITION, dims=("전체", "브랜드"), screens="ACR"),

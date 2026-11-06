@@ -1,4 +1,4 @@
-"""geohub_gold_db's business data. No seed, mirror, migration, or write connection."""
+"""gold_db's business data. No seed, mirror, migration, or write connection."""
 from __future__ import annotations
 
 import os

@@ -1,4 +1,4 @@
--- Gold (geohub_gold_db): the rollup role writes its own tables and nothing else in the schema, the BFF's reader only reads.
+-- Gold (gold_db): the rollup role writes its own tables and nothing else in the schema, the BFF's reader only reads.
 BEGIN;
 SET LOCAL ROLE hmg_rollup_writer;
 INSERT INTO gold.rollup_run(surface,snapshot_id,definition_version) VALUES('global','rollback-only','v0');

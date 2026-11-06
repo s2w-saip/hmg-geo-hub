@@ -38,7 +38,7 @@ SERVICE_WEEK_SECRET = ROOT / '.env.service-week-db.local'  # service week job ro
 INPUT_SECRET = ROOT / '.env.input-db.local'        # input store (2026-11-06): admin, API reader and measurement editor passwords
 METRICS_SECRET = ROOT / '.env.metrics-db.local'    # metrics store (2026-11-06): admin, API reader, cache and rollup passwords
 OPS_CONTAINER = 'hgh-operations-db'
-OPS_DB = 'geohub_operations_db'
+OPS_DB = 'operations_db'
 
 
 class Store(NamedTuple):
@@ -55,9 +55,9 @@ class Store(NamedTuple):
 STORES = {
     'analytics': Store(analytics.CONTAINER, analytics.DB, analytics.ADMIN, analytics.OWNER, analytics.SECRET, 'HGH_ANALYTICS_DB_PORT', 'ops'),
     'operations': Store(OPS_CONTAINER, OPS_DB, 'hmg_operations_admin', 'hmg_operations_owner', OPS_SECRET, 'HGH_OPERATIONS_DB_PORT', 'system'),
-    'input': Store('hgh-input-db', 'geohub_bm_db', 'hmg_input_admin', 'hmg_input_owner', INPUT_SECRET, 'HGH_INPUT_DB_PORT', 'catalog'),
-    'metrics': Store('hgh-metrics-db', 'geohub_gold_db', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'gold'),
-    'cache': Store('hgh-metrics-db', 'geohub_cache_db', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'cache', 'metrics'),
+    'input': Store('hgh-input-db', 'input_db', 'hmg_input_admin', 'hmg_input_owner', INPUT_SECRET, 'HGH_INPUT_DB_PORT', 'catalog'),
+    'metrics': Store('hgh-metrics-db', 'gold_db', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'gold'),
+    'cache': Store('hgh-metrics-db', 'cache_db', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'cache', 'metrics'),
 }
 GOLD_ICU_LOCALE = 'en-US-u-ka-shifted'  # macOS libc sorts UTF-8 byte by byte; the readers' ORDER BY passes over punctuation (back/hub_storage/copy_gold.py)
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
@@ -235,11 +235,11 @@ ALTER ROLE hmg_operations_writer WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPL
 ALTER ROLE hmg_operations_reader SET default_transaction_read_only=on;
 ALTER ROLE hmg_operations_reader SET statement_timeout='15s';
 ALTER ROLE hmg_operations_writer SET statement_timeout='30s';
-ALTER DATABASE geohub_operations_db OWNER TO hmg_operations_owner;
-REVOKE ALL ON DATABASE geohub_operations_db FROM PUBLIC;
+ALTER DATABASE operations_db OWNER TO hmg_operations_owner;
+REVOKE ALL ON DATABASE operations_db FROM PUBLIC;
 REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;
 REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;
-GRANT CONNECT ON DATABASE geohub_operations_db TO hmg_operations_reader,hmg_operations_writer;
+GRANT CONNECT ON DATABASE operations_db TO hmg_operations_reader,hmg_operations_writer;
 COMMIT;""", True)
     migrate('operations-001.sql', '001_operations', True)
     migrate('operations-002.sql', '002_hub_login', True)
@@ -254,7 +254,7 @@ END $$;
 ALTER ROLE hmg_saved_filter_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(saved['SAVED_FILTER_EDITOR_PASSWORD'])};
 ALTER ROLE hmg_saved_filter_editor SET statement_timeout='15s';
 ALTER ROLE hmg_saved_filter_editor CONNECTION LIMIT 4;
-GRANT CONNECT ON DATABASE geohub_operations_db TO hmg_saved_filter_editor;
+GRANT CONNECT ON DATABASE operations_db TO hmg_saved_filter_editor;
 COMMIT;""", True)
     migrate('operations-003.sql', '003_saved_filters', True)
     # HUB accounts (2026-10-29): the API's role for the account tables (Admin › 사용자 관리) and nothing else.
@@ -268,7 +268,7 @@ END $$;
 ALTER ROLE hmg_account_editor WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {analytics.literal(account['ACCOUNT_EDITOR_PASSWORD'])};
 ALTER ROLE hmg_account_editor SET statement_timeout='15s';
 ALTER ROLE hmg_account_editor CONNECTION LIMIT 4;
-GRANT CONNECT ON DATABASE geohub_operations_db TO hmg_account_editor;
+GRANT CONNECT ON DATABASE operations_db TO hmg_account_editor;
 COMMIT;""", True)
     migrate('operations-004.sql', '004_hub_accounts', True)
     migrate('operations-005.sql', '005_account_one_brand', True)
@@ -526,8 +526,8 @@ def metrics_server_sql(query):
 
 
 def install_metrics():
-    """The metrics server's two databases, both the BFF's own (2026-11-06, D-17): Gold, the pre-computed values (geohub_gold_db), and the
-    cache DB (geohub_cache_db)."""
+    """The metrics server's two databases, both the BFF's own (2026-11-06, D-17): Gold, the pre-computed values (gold_db), and the
+    cache DB (cache_db)."""
     values = create_secret(METRICS_SECRET, {'HGH_METRICS_DB_PORT': '55439', 'POSTGRES_PASSWORD': None, 'METRICS_READER_PASSWORD': None,
                                             'CACHE_WRITER_PASSWORD': None, 'ROLLUP_WRITER_PASSWORD': None}, 'hgh-metrics-pgdata', 'metrics')
     start_store('metrics')
@@ -542,6 +542,8 @@ def install_metrics():
     gold_locale = f"LOCALE_PROVIDER icu ICU_LOCALE '{GOLD_ICU_LOCALE}' LOCALE 'C'" if analytics.NATIVE else ''
     for store, locale in (('metrics', gold_locale), ('cache', '')):
         database = STORES[store].database
+        if analytics.rename_sql(database):
+            metrics_server_sql(analytics.rename_sql(database))
         if metrics_server_sql(f"SELECT 1 FROM pg_database WHERE datname={analytics.literal(database)};").stdout.strip() != '1':
             metrics_server_sql(f"CREATE DATABASE {database} OWNER {owner} TEMPLATE template0 ENCODING 'UTF8' {locale};")
     sql('BEGIN;\n' + store_database('metrics', ['hmg_metrics_reader', 'hmg_rollup_writer', 'hmg_analytics_reader', 'hmg_analytics_writer']) + 'COMMIT;', store='metrics')
@@ -654,7 +656,7 @@ RETIRED_TABLES = (('catalog.service_week', 'catalog.service_week', 'input'), ('a
 
 
 def retire_data_store():
-    """Once (D-17): GA4 properties and the service week go to geohub_bm_db, GA4 data, SEO, ref and ops to geohub_gold_db, with their keys, in one transaction per store and
+    """Once (D-17): GA4 properties and the service week go to input_db, GA4 data, SEO, ref and ops to gold_db, with their keys, in one transaction per store and
     counted. A dump stays in .local/analytics-backups; then the old store stops. Its frozen inputs and its published views are not moved: nothing reads them."""
     if not old_data_store():
         return
@@ -734,9 +736,9 @@ def write_env_files():
         f"HGH_MEASUREMENT_EDITOR_DB_URL={url('hmg_measurement_editor', inputs['MEASUREMENT_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
     roles = ga4_roles()
-    analytics.secure_write(ROOT / '.env.analytics.local', '# FastAPI read-only GA4 and SEO connection (geohub_gold_db).\n'
+    analytics.secure_write(ROOT / '.env.analytics.local', '# FastAPI read-only GA4 and SEO connection (gold_db).\n'
         f"HGH_ANALYTICS_DB_URL={url('hmg_analytics_reader', roles['ANALYTICS_READER_PASSWORD'], 'metrics')}\n")
-    analytics.secure_write(ROOT / '.env.analytics-ingest.local', '# The GA4 collector: its rows in geohub_gold_db, the properties and its results in geohub_bm_db.\n'
+    analytics.secure_write(ROOT / '.env.analytics-ingest.local', '# The GA4 collector: its rows in gold_db, the properties and its results in input_db.\n'
         f"HGH_ANALYTICS_WRITER_DB_URL={url('hmg_analytics_writer', roles['ANALYTICS_WRITER_PASSWORD'], 'metrics')}\n"
         f"HGH_GA4_REGISTRY_DB_URL={url('hmg_analytics_writer', roles['ANALYTICS_WRITER_PASSWORD'], 'input')}\n")
 
@@ -752,7 +754,7 @@ def sync(args):
     """Import actual Gold catalog definitions only, using transient writer connections."""
     values, data = analytics.env_file(OPS_SECRET), analytics.env_file(DATA_SECRET)
     config = {
-        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/geohub_bm_db",
+        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/input_db",
         'operations': f"postgresql://hmg_operations_writer:{values['OPERATIONS_WRITER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
         'allow_removals': args.allow_removals, 'expect_mass_change': args.expect_mass_change,
     }
@@ -1060,7 +1062,7 @@ def start():
 
 
 def backup():
-    output = ROOT / '.local/operations-backups' / f"geohub_operations_db-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.dump"
+    output = ROOT / '.local/operations-backups' / f"operations_db-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.dump"
     output.parent.mkdir(parents=True, exist_ok=True)
     # Use secure_write to establish file ACLs before writing the binary archive.
     analytics.secure_write(output, '')

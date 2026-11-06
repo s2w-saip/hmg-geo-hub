@@ -1,4 +1,4 @@
-"""Local BFF/API over geohub_gold_db, the Silver OBT and the separate input and operations stores. Every route but /healthz and the
+"""Local BFF/API over gold_db, the Silver OBT and the separate input and operations stores. Every route but /healthz and the
 login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and data reads run inside its scope
 (bff/access.py). Read-only, except what the HUB writes: every account changes its own password
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
@@ -127,8 +127,8 @@ async def healthz():
 # ─── HUB login, accounts, Global prompt editing and saved filters ─────────────────────────────────────
 # Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
 
-def hub_json(data, status: int = 200, database: str = "geohub_bm_db") -> JSONResponse:
-    source = {"geohub_operations_db": "hub_operations", "geohub_bm_db": "hub_input"}.get(database, "hub_data")
+def hub_json(data, status: int = 200, database: str = "input_db") -> JSONResponse:
+    source = {"operations_db": "hub_operations", "input_db": "hub_input"}.get(database, "hub_data")
     return JSONResponse(jsonable_encoder({"data": data, "meta": {"source": source, "database": database}}),
                         status_code=status, headers={"Cache-Control": "no-store"})
 
@@ -160,34 +160,34 @@ async def auth_me(request: Request):
 @app.post("/v1/auth/password")
 async def auth_password(request: Request):
     body = catalog_editor.parse(accounts.PasswordChange, await json_body(request), "password")
-    return hub_json(await accounts.change_password(request.headers.get("authorization"), body), database="geohub_operations_db")
+    return hub_json(await accounts.change_password(request.headers.get("authorization"), body), database="operations_db")
 
 
 # Admin › 사용자 관리 (hub_stores/accounts.py): the top-level administrator only.
 @app.get("/v1/hub/accounts")
 async def account_list(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await accounts.listing(actor), database="geohub_operations_db")
+    return hub_json(await accounts.listing(actor), database="operations_db")
 
 
 @app.post("/v1/hub/accounts")
 async def account_create(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(accounts.AccountCreate, await json_body(request), "account")
-    return hub_json(await accounts.create(body, actor), 201, database="geohub_operations_db")
+    return hub_json(await accounts.create(body, actor), 201, database="operations_db")
 
 
 @app.get("/v1/hub/accounts/{user_id}")
 async def account(user_id: UUID, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await accounts.detail(user_id, actor), database="geohub_operations_db")
+    return hub_json(await accounts.detail(user_id, actor), database="operations_db")
 
 
 @app.put("/v1/hub/accounts/{user_id}")
 async def account_update(user_id: UUID, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(accounts.AccountUpdate, await json_body(request), "account")
-    return hub_json(await accounts.update(user_id, body, actor), database="geohub_operations_db")
+    return hub_json(await accounts.update(user_id, body, actor), database="operations_db")
 
 
 @app.post("/v1/hub/accounts/{user_id}/{action}")
@@ -196,9 +196,9 @@ async def account_action(user_id: UUID, action: str, request: Request):
         raise HTTPException(404, "Unknown action")
     actor = await hub_auth.admin(request.headers.get("authorization"))
     if action == "reset-password":
-        return hub_json(await accounts.reset_password(user_id, actor), database="geohub_operations_db")
+        return hub_json(await accounts.reset_password(user_id, actor), database="operations_db")
     return hub_json(await accounts.set_status(user_id, "active" if action == "enable" else "disabled", actor),
-                    database="geohub_operations_db")
+                    database="operations_db")
 
 
 # Admin › GA4 연동 (hub_stores/ga4_registry.py): the top-level administrator only.
@@ -563,34 +563,34 @@ async def global_prompt_status(prompt_id: UUID, action: str, request: Request):
 @app.get("/v1/hub/saved-filters")
 async def saved_filter_list(request: Request):
     actor = await hub_auth.principal(request.headers.get("authorization"))
-    return hub_json(await saved_filters.listing(request.query_params.get("page"), actor), database="geohub_operations_db")
+    return hub_json(await saved_filters.listing(request.query_params.get("page"), actor), database="operations_db")
 
 
 @app.post("/v1/hub/saved-filters")
 async def saved_filter_create(request: Request):
     actor = await hub_auth.principal(request.headers.get("authorization"))
     body = catalog_editor.parse(saved_filters.FilterCreate, await json_body(request), "saved filter")
-    return hub_json(await saved_filters.create(body, actor), 201, database="geohub_operations_db")
+    return hub_json(await saved_filters.create(body, actor), 201, database="operations_db")
 
 
 @app.post("/v1/hub/saved-filters/import")
 async def saved_filter_import(request: Request):
     actor = await hub_auth.principal(request.headers.get("authorization"))
     body = catalog_editor.parse(saved_filters.FilterImport, await json_body(request), "saved filter")
-    return hub_json(await saved_filters.import_items(body, actor), database="geohub_operations_db")
+    return hub_json(await saved_filters.import_items(body, actor), database="operations_db")
 
 
 @app.patch("/v1/hub/saved-filters/{filter_id}")
 async def saved_filter_change(filter_id: UUID, request: Request):
     actor = await hub_auth.principal(request.headers.get("authorization"))
     body = catalog_editor.parse(saved_filters.FilterChange, await json_body(request), "saved filter")
-    return hub_json(await saved_filters.change(filter_id, body, actor), database="geohub_operations_db")
+    return hub_json(await saved_filters.change(filter_id, body, actor), database="operations_db")
 
 
 @app.delete("/v1/hub/saved-filters/{filter_id}")
 async def saved_filter_delete(filter_id: UUID, request: Request):
     actor = await hub_auth.principal(request.headers.get("authorization"))
-    return hub_json(await saved_filters.remove(filter_id, actor), database="geohub_operations_db")
+    return hub_json(await saved_filters.remove(filter_id, actor), database="operations_db")
 
 
 @app.get("/v1/hub/{kind}")
