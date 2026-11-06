@@ -63,7 +63,7 @@ async def brand_sums(ctx: Context) -> dict:
 class AgainstCells(unittest.TestCase):
     def run_read(self, read):
         async def main():
-            conn = await asyncpg.connect(DSN, statement_cache_size=0, server_settings={"default_transaction_read_only": "on", "jit": "off"})
+            conn = await asyncpg.connect(DSN, statement_cache_size=0, server_settings={"default_transaction_read_only": "on", "jit": "off", "work_mem": "32MB"})  # as the API's pool
             try:
                 async with conn.transaction(isolation="repeatable_read", readonly=True):
                     await read(conn)
@@ -157,7 +157,7 @@ class AgainstCells(unittest.TestCase):
                 url, cells = (await source.url_counts())[0], await self.url_cell_sums(ctx)
                 self.assert_same(url, cells, [("url_prompts", "measured"), ("url_target_prompts", "target")])
                 self.assertGreater(url["url_own_prompts"], 0)
-                # every counted pair is under what its site registered
+                # every counted pair is of an origin its site registered
                 inputs = await gold_judged.read_inputs()
                 sites = {r["project_key"]: r["id"] for r in await conn.fetch(
                     "SELECT project_key,coalesce(project_id,scope_project_id,site_id)::text AS id FROM gold.dim_project WHERE surface=2")}

@@ -123,6 +123,15 @@ class Judgments(unittest.TestCase):
     C = judgments.AnswerColumns(run_finished="r", region="g", measured_at="t", in_standard_catalog="c", is_korean="k", prompt_regions="pr",
                                 market_hidden="h", is_acr="a", acr_iteration="i", analysis_state="s", representative="rep")
 
+    def test_own_url_is_every_url_of_a_registered_origin(self):
+        # decision 2026-11-06 (D-25): '등록한 URL을 오리진으로 하는 모든 URL은 자사'. A subdomain is another origin.
+        registered = judgments.registered_urls(["https://www.Genesis.com/kr/ko/"], [{"base": "kia.com/us/en"}, {"base": None}])
+        self.assertEqual(registered, {"genesis.com", "kia.com"})
+        for url in ("genesis.com", "https://www.genesis.com/ae/en/models", "kia.com/kr", "http://kia.com/us/en/x"):
+            self.assertTrue(judgments.is_registered(url, registered), url)
+        for url in ("eu-www.kia.com/de", "dealers.kia.com", "kia.com.cn/zh", "notkia.com/us/en", None):
+            self.assertFalse(judgments.is_registered(url, registered), url)
+
     def test_only_global_asks_more_than_a_finished_run(self):
         self.assertEqual(judgments.eligible(self.C, is_global=False), "(r)")
         rule = judgments.eligible(self.C, is_global=True)

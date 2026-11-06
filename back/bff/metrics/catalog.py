@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Stored with every precomputed (Gold) and cached value. A definition change moves it.
-DEFINITION_VERSION = "2026-11-06.6"
+DEFINITION_VERSION = "2026-11-06.7"
 
 # Populations (SSOT 공통 조건)
 MONITORING = "monitoring"                 # 모니터링 답변
@@ -74,7 +74,7 @@ BASE_COUNTS: dict[str, tuple[str, str, str]] = {
     "citations": ("인용", "전체 출처 인용 횟수(호스트 있는 인용)", "citation_fact source_key ≠ 0 행 수"),
     "citations_all": ("인용", "호스트 없는 인용까지 센 횟수", "citation_fact 행 수"),
     "official": ("인용", "출처 카테고리 공식 (HMG) 인용", "citation_fact × dim_source 카테고리 공식 (HMG) 행 수"),
-    "owned": ("인용", "자사 URL 인용. website = 등록한 소유 URL · 대표 주소와 하위 경로, project = 등록값이 없어 업스트림 표시, global = 관점의 소유 베이스", "website 등록 URL 규칙 · project loc_owned · global owner_key"),
+    "owned": ("인용", "자사 URL 인용. website = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, project = 등록값이 없어 업스트림 표시, global = 관점의 소유 베이스", "website 등록 URL 규칙 · project loc_owned · global owner_key"),
     "target": ("인용", "타겟 URL 인용", "citation_fact tgt_hit 행 수"),
     "category_citations": ("인용", "그 출처 카테고리 인용", "citation_fact × dim_source.category_key(조회 시점 값)"),
     "source_citations": ("인용", "그 출처 인용", "citation_fact 행 수"),
@@ -181,17 +181,17 @@ METRICS: tuple[Metric, ...] = (
            screens="Overview · Citation", note="공식 (HMG) = HMG 3사 공식 사이트와 공식 소셜 계정",
            review="이전 화면은 Overview 카드 233,239/934,592 = 24.96% · Citation 233,628/935,276 = 24.98%로 달랐다. SSOT 공통 조건의 인용 모니터링 답변(ACR 셀당 1건)이면 233,610/935,072 = 24.98%"),
     Metric("citation_share_website", "AI 인용 점유율(website)", "인용", "rate", "owned", "citations", CITATION_MONITORING, ssot=True, dims=_MARKET,
-           screens="Website Overview · Citation", note="자사 URL = 측정 설정의 소유 URL과 등록 대표 주소, 그 하위 경로. 하위 도메인은 등록해야 센다",
-           review="이전 화면은 업스트림 표시(loc_owned)로 셌다(2026-10-09 103,274/415,271 = 24.87%). 등록한 것만 세면 113,208/415,271 = 27.26%"),
+           screens="Website Overview · Citation", note="자사 URL = 측정 설정의 소유 URL · 등록 대표 주소의 오리진에 속한 모든 URL. 하위 도메인은 다른 오리진이라 등록해야 센다",
+           review="이전 화면은 업스트림 표시(loc_owned)로 셌다(2026-10-09 103,274/415,271 = 24.87%). 등록한 URL의 오리진으로 세면 159,229/415,271 = 38.34%"),
     Metric("category_share", "인용 비중", "인용", "rate", "category_citations", "citations", CITATION_MONITORING, ssot=True, dims=(*_MARKET, "카테고리"),
            screens="Citation · Website Citation", note="출처 카테고리별. 예: 공식 (HMG) · 딜러·마켓",
            review="Δ · 추이는 지금 빌드 시점 카테고리(citation_cell)로 읽는다. 조회 시점 dim_source로 통일"),
     Metric("owned_url_rate", "자사 URL 인용률(website)", "인용", "rate", "url_own_prompts", "url_prompts", URL_MEASURED, ssot=True, dims=("전체", "회차", "엔진"), screens="Website Overview · Citation · Project", note="프롬프트 단위",
-           review="Project Dashboard 타일은 답변 단위로 셌다(own_url_hits ÷ url_den). SSOT는 프롬프트 단위. 자사 URL은 등록한 것만 센다(website 2026-10-09 8,736 → 9,074/10,021, 87.18 → 90.55%)"),
+           review="Project Dashboard 타일은 답변 단위로 셌다(own_url_hits ÷ url_den). SSOT는 프롬프트 단위. 자사 URL은 등록한 URL의 오리진으로 센다(website 2026-10-09 8,736 → 9,584/10,021, 87.18 → 95.64%)"),
     Metric("target_url_rate", "타겟 URL 인용률(website)", "인용", "rate", "url_target_prompts", "url_prompts", URL_MEASURED, ssot=True, dims=("전체", "회차", "엔진"), screens="Website Overview · Citation · Project", note="다른 프롬프트의 타겟 인용은 뺀다",
            review="Project Dashboard 타일은 지금 답변 단위로 센다(tgt_hits ÷ url_den). SSOT는 프롬프트 단위"),
     Metric("target_source_rate", "AI 타겟 출처 인용률(website)", "인용", "rate", "url_target_answers", "url_own_answers", URL_MEASURED, ssot=True, dims=("전체", "회차", "엔진"), screens="Website Overview", note="답변 단위",
-           review="분모는 자사 URL ∨ 타겟 인용 답변이다. 자사 URL을 등록한 것만 세면서 website 2026-10-09 9,829/15,062 = 65.26% → 9,829/15,660 = 62.77%"),
+           review="분모는 자사 URL ∨ 타겟 인용 답변이다. 자사 URL을 등록한 URL의 오리진으로 세면서 website 2026-10-09 9,829/15,062 = 65.26% → 9,829/17,740 = 55.41%"),
     Metric("uncited_prompts", "공식(당사) URL 미인용 프롬프트", "인용", "count", "uncited_prompts", population=CITATION_MONITORING, ssot=True, dims=("전체",), screens="Citation · Website Citation"),
     Metric("coverage", "커버리지", "인용", "rate", "source_answers", "base_answers", CITATION_MONITORING, ssot=True, dims=("전체", "출처"), screens="Citation"),
     # ── 인용: SSOT 밖의 화면 값 ──

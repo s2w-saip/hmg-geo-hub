@@ -110,10 +110,10 @@ def normal_url_sql(value: str) -> str:
 
 
 def registered_urls(owned_urls: Iterable[str] | None, web_units: Iterable[Mapping[str, Any]] | None) -> set[str]:
-    """자사 URL, 등록한 것만 (decision 2026-11-06, '자사 url로 등록했으면 자사인거야'): a site's 소유 URL and its units' 대표 주소. A page under them
-    counts; a subdomain counts only when it is registered itself."""
+    """자사 URL (decisions 2026-11-06, '자사 url로 등록했으면 자사인거야', '등록한 URL을 오리진으로 하는 모든 URL은 자사'): the origins of a site's 소유 URL
+    and its units' 대표 주소. Every page of such an origin counts; a subdomain is another origin and counts only when it is registered itself."""
     values = [*(owned_urls or []), *(unit.get("base") for unit in web_units or [])]
-    return {url for url in map(normal_url, values) if url}
+    return {url.split("/", 1)[0] for url in map(normal_url, values) if url}
 
 
 def is_registered(url: str | None, registered: Iterable[str]) -> bool:
