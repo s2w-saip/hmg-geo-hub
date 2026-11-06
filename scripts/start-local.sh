@@ -14,7 +14,7 @@ listening() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 
 # Native HUB stores (local PostgreSQL in .local/pg): start them after a reboot; the API reads their env files.
 hub_env=()
-if [ -f "$repo/.local/pg/analytics/PG_VERSION" ] && [ -f "$repo/.local/pg/operations/PG_VERSION" ]; then
+if [ -f "$repo/.local/pg/operations/PG_VERSION" ]; then
     (cd "$repo" && HGH_HUB_NATIVE=1 "$python" -X utf8 back/hub_storage/manage.py start)
     # The service week (catalog.service_week) before the API starts, so its Gold reads have a week to stop at. A failure
     # does not stop the API: it keeps the last recorded week, and with none recorded yet its Gold screens answer 503.

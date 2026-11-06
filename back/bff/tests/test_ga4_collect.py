@@ -384,7 +384,7 @@ class Run(unittest.TestCase):
         args = ga4c.argparse.Namespace(frm=None, to=None, backfill=None, property=None, dry_run=dry_run)
         with mock.patch("asyncpg.connect", mock.AsyncMock(return_value=conn)), mock.patch.object(ga4c, "yesterday", lambda tz, now=None: END), \
                 mock.patch.object(ga4c, "store", store or mock.AsyncMock(side_effect=AssertionError("a dry run stores nothing"))):
-            return asyncio.run(ga4c.run(args, {**ENV, "HGH_ANALYTICS_WRITER_DB_URL": "postgresql://writer@test/db"}, client(Emulator(sessions(), deny={"9"}))))
+            return asyncio.run(ga4c.run(args, {**ENV, "HGH_GA4_REGISTRY_DB_URL": "postgresql://writer@test/x", "HGH_ANALYTICS_WRITER_DB_URL": "postgresql://writer@test/db"}, client(Emulator(sessions(), deny={"9"}))))
 
     def test_dry_run_reads_the_registry_and_every_property_and_writes_nothing(self):
         conn = RegistryConn(REGISTRY)

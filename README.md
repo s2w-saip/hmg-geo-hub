@@ -3,10 +3,10 @@
 현재 로컬 서비스는 서비스 DB만 읽습니다. DB 접속 계정은 서버에서만 사용하며,
 `127.0.0.1:3333`에서 읽기 전용으로 실행합니다. 모든 화면은 HUB 로그인(최상위 관리자, `manage.py set-admin`)이 필요합니다.
 
-HUB 데이터 DB `hmg_analytics`는 GA4·SEO와 프로젝트·프롬프트 버전을 관리하고,
-별도 운영 DB `geohub_operations_db`는 사용자·권한·SW 설정·감사 이력을 관리합니다.
-[운영/데이터 DB 분리와 실행 안내](back/hub_storage/README.md), [GA4·SEO 스키마·ERD](back/analytics/README.md)를 참고하십시오.
-GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연결하지 않았습니다.
+입력 DB `geohub_bm_db`는 프롬프트 · 측정 설정 · 기준정보 · GA4 속성을, `geohub_gold_db`는 답변 단위 테이블 · 사전 집계 · GA4·SEO 데이터를,
+운영 DB `geohub_operations_db`는 사용자·권한·SW 설정·감사 이력을 관리합니다.
+[DB 구성과 실행 안내](back/hub_storage/README.md), [GA4·SEO 스키마·ERD](back/analytics/README.md)를 참고하십시오.
+GA4·SEO 화면은 `geohub_gold_db`를 읽고, 수집기는 GA4 자격 증명을 인계받으면 돕니다.
 
 1. `.env.gold.local`에 서비스 DB `geohub_gold_db`의 접속 정보(`HGH_GOLD_DB_URL`)를 둡니다.
 2. `front/.env.example`을 `front/.env.local`로 복사합니다. 최초 설치 시 `front`에서 `npm ci`를 실행합니다.
@@ -26,10 +26,10 @@ Gold만 연결해 API와 프론트를 시작합니다. 이 Python에는 `back/bf
 | 국가별 GEO·언급·인용·답변·프롬프트·ACR | `geohub_gold_db`의 발행된 활성 빌드 | 데이터 없음 |
 | 키워드 검색량·검색 결과·관련 키워드 | Gold `kw_volume_monthly`·`kw_serp`·`kw_suggestion` | 데이터 없음 |
 | 소셜 맥락·요구·조합·관계·근거 발화 | Gold의 활성 `ctx_snapshot` 및 연관 데이터 | 데이터 없음 |
-| GA4 세션·기간 사용자·전환·이벤트·페이지 | HUB `hmg_analytics.analytics.ga4_*` | 현재 미수집: 데이터 없음 |
-| SEO 노출·크롤러·기기·페이지 우선순위 | HUB의 게시된 `analytics.current_page_*` 뷰 | 현재 미수집: 데이터 없음 |
+| GA4 세션·기간 사용자·전환·이벤트·페이지 | `geohub_gold_db` `analytics.ga4_*` | 현재 미수집: 데이터 없음 |
+| SEO 노출·크롤러·기기·페이지 우선순위 | `geohub_gold_db` `analytics.current_page_*` 뷰 | 현재 미수집: 데이터 없음 |
 | 프로젝트 이름·멤버·생성 이력·생성 프롬프트 | Gold에 제공되지 않음 | 데이터 없음 |
-| HUB 프로젝트·프롬프트 버전 카탈로그 | 데이터 DB `catalog.*` / 내부 `/v1/hub/*` API | 원천에 없는 이름은 null |
+| HUB 프로젝트·프롬프트 버전 카탈로그 | 입력 DB `catalog.*` / 내부 `/v1/hub/*` API | 원천에 없는 이름은 null |
 | 사용자·멤버십·SW 설정·감사 이력 | 운영 DB `system.*` | 실제 사용자/설정 등록 전 빈 상태 |
 
 실측 0은 0으로 유지하고, 관측 행/필드가 없으면 null과 `데이터 없음`을 사용합니다. GA4 사용자 수는

@@ -27,7 +27,7 @@ export function formatTime(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 }
 
-/** HUB 데이터 DB · (Gold round) · the upstream list the external API serves. */
+/** HUB 입력 DB · (Gold round) · the upstream list the external API serves. */
 export function ListPills({ family, published, asOf }: { family: string; published: ListPublished | null; asOf?: string | null }) {
   const t = useTranslations("hubSourceLists");
   const locale = useLocale();

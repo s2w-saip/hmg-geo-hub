@@ -3,7 +3,7 @@
 The top-level administrator registers the GA4 properties the collector reads (back/analytics/ga4_collect.py): the
 property ID, its market (brand × country, one collected property per market), the conversion basis (GA4 key events,
 or the listed events) and whether it is collected (stop / resume; a property is never deleted). Reads use the
-read-only data DB role; writes use hmg_ga4_registry_editor (HGH_GA4_REGISTRY_EDITOR_DB_URL), which can touch the
+read-only input store role; writes use hmg_ga4_registry_editor (HGH_GA4_REGISTRY_EDITOR_DB_URL), which can touch the
 registry and its history only. Every change is a ga4_registry_event row, shown as the property's history.
 
 The BFF does not call GA4. A change reaches the AI Conversion screen when the collector next runs, and the
@@ -23,7 +23,7 @@ import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from bff.hub_stores import analytics_db
+from bff.hub_stores import analytics_db, input_db
 from bff.hub_stores.catalog_editor import actors, refused
 from bff.hub_stores.hub_auth import Principal
 
@@ -40,10 +40,10 @@ EVENT_DAYS = 90
 
 REGISTRY_COLUMNS = """r.property_id,r.brand,r.country,r.conv_basis,r.conv_events,r.enabled,r.created_at,r.updated_at,
     s.status,s.checked_at,s.error,s.collected_at,s.collected_to
-    FROM analytics.ga4_registry r LEFT JOIN analytics.ga4_collect_status s USING(property_id)"""
+    FROM catalog.ga4_registry r LEFT JOIN catalog.ga4_collect_status s USING(property_id)"""
 LIST_SQL = f"SELECT {REGISTRY_COLUMNS} ORDER BY r.brand,r.country,r.property_id"
 ONE_SQL = f"SELECT {REGISTRY_COLUMNS} WHERE r.property_id=$1"
-HISTORY_SQL = """SELECT event_id,action,actor_id,changes,occurred_at FROM analytics.ga4_registry_event
+HISTORY_SQL = """SELECT event_id,action,actor_id,changes,occurred_at FROM catalog.ga4_registry_event
     WHERE property_id=$1 ORDER BY occurred_at DESC,event_id DESC LIMIT 100"""
 # The property's events in its last EVENT_DAYS collected days (report 3: every event, AI and other sessions).
 EVENTS_SQL = """WITH p AS (SELECT prop_key FROM analytics.ga4_property WHERE property_id=$1),
@@ -55,13 +55,13 @@ EVENTS_SQL = """WITH p AS (SELECT prop_key FROM analytics.ga4_property WHERE pro
     WHERE r.report=3 AND r.date>last.day-$2::int AND v.value<>''
     GROUP BY v.value ORDER BY count DESC,name"""
 LOCK_SQL = "SELECT pg_advisory_xact_lock($1)"
-TAKEN_SQL = "SELECT 1 FROM analytics.ga4_registry WHERE property_id=$1"
-MARKET_SQL = "SELECT property_id FROM analytics.ga4_registry WHERE brand=$1 AND country=$2 AND enabled AND property_id<>$3"
-INSERT_SQL = "INSERT INTO analytics.ga4_registry(property_id,brand,country,conv_basis,conv_events) VALUES($1,$2,$3,$4,$5)"
-UPDATE_SQL = """UPDATE analytics.ga4_registry SET brand=$2,country=$3,conv_basis=$4,conv_events=$5,updated_at=now()
+TAKEN_SQL = "SELECT 1 FROM catalog.ga4_registry WHERE property_id=$1"
+MARKET_SQL = "SELECT property_id FROM catalog.ga4_registry WHERE brand=$1 AND country=$2 AND enabled AND property_id<>$3"
+INSERT_SQL = "INSERT INTO catalog.ga4_registry(property_id,brand,country,conv_basis,conv_events) VALUES($1,$2,$3,$4,$5)"
+UPDATE_SQL = """UPDATE catalog.ga4_registry SET brand=$2,country=$3,conv_basis=$4,conv_events=$5,updated_at=now()
     WHERE property_id=$1"""
-ENABLED_SQL = "UPDATE analytics.ga4_registry SET enabled=$2,updated_at=now() WHERE property_id=$1"
-EVENT_SQL = "INSERT INTO analytics.ga4_registry_event(property_id,action,actor_id,changes) VALUES($1,$2,$3,$4::jsonb)"
+ENABLED_SQL = "UPDATE catalog.ga4_registry SET enabled=$2,updated_at=now() WHERE property_id=$1"
+EVENT_SQL = "INSERT INTO catalog.ga4_registry_event(property_id,action,actor_id,changes) VALUES($1,$2,$3,$4::jsonb)"
 
 
 # ═══ input ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -176,10 +176,10 @@ async def writing():
 @asynccontextmanager
 async def reading():
     try:
-        async with analytics_db.connection() as conn:
+        async with input_db.connection() as conn:
             yield conn
     except ConnectionError:
-        raise HTTPException(503, "HUB data store is not configured") from None
+        raise HTTPException(503, "HUB input store is not configured") from None
 
 
 async def current(conn, pid: str):
@@ -220,7 +220,11 @@ async def events(pid: str) -> dict:
     before its first collection."""
     async with reading() as conn:
         await current(conn, pid)
-        rows = await conn.fetch(EVENTS_SQL, pid, EVENT_DAYS)
+    try:
+        async with analytics_db.connection() as conn:
+            rows = await conn.fetch(EVENTS_SQL, pid, EVENT_DAYS)
+    except ConnectionError:
+        raise HTTPException(503, "GA4 data is not configured") from None
     last = rows[0]["last_day"] if rows else None
     return {"days": EVENT_DAYS, "to": last, "events": [{"name": r["name"], "count": r["count"], "keyEvent": r["key_events"] > 0} for r in rows]}
 

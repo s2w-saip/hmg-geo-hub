@@ -49,14 +49,17 @@ class Store(NamedTuple):
     secret: Path
     port_key: str
     migrations: str  # the schema of its schema_migration table
+    server: str | None = None  # the store whose server it shares, when it is a second database there
 
 
 STORES = {
     'analytics': Store(analytics.CONTAINER, analytics.DB, analytics.ADMIN, analytics.OWNER, analytics.SECRET, 'HGH_ANALYTICS_DB_PORT', 'ops'),
     'operations': Store(OPS_CONTAINER, OPS_DB, 'hmg_operations_admin', 'hmg_operations_owner', OPS_SECRET, 'HGH_OPERATIONS_DB_PORT', 'system'),
     'input': Store('hgh-input-db', 'geohub_bm_db', 'hmg_input_admin', 'hmg_input_owner', INPUT_SECRET, 'HGH_INPUT_DB_PORT', 'catalog'),
-    'metrics': Store('hgh-metrics-db', 'hmg_metrics', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'gold'),
+    'metrics': Store('hgh-metrics-db', 'geohub_gold_db', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'gold'),
+    'cache': Store('hgh-metrics-db', 'geohub_cache_db', 'hmg_metrics_admin', 'hmg_metrics_owner', METRICS_SECRET, 'HGH_METRICS_DB_PORT', 'cache', 'metrics'),
 }
+GOLD_ICU_LOCALE = 'en-US-u-ka-shifted'  # macOS libc sorts UTF-8 byte by byte; the readers' ORDER BY passes over punctuation (back/hub_storage/copy_gold.py)
 # External API (2026-10-28): what a project approval covers, the Gold reference families an approval can
 # open (the HUB-owned surface/brand_bit/mention_type are always part of the contract), key lifetimes.
 PROJECT_FLAGS = ('projects', 'prompts')
@@ -68,6 +71,7 @@ REFERENCE_FAMILIES = ('engine', 'country', 'language', 'interest_keyword', 'inte
                       'source_seed', 'source_social', 'source_code', 'entity_role')
 AUDIENCES = ('collect', 'analyze')  # 수집 reads prompts, settings and the collecting values; 분석 reads the analysis values
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
+RETIRED_DATA_STORE = ROOT / '.local' / 'analytics-retired'  # a container host: the old store's volume stays until removed by hand
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
 CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
 
@@ -98,7 +102,7 @@ def psql_args(store, role=None):
     """The psql command for a store: its local server's socket in native mode, inside its container otherwise."""
     s = STORES[store]
     if analytics.NATIVE:
-        return analytics.native_psql(store, port_of(store), role or s.admin, s.database)
+        return analytics.native_psql(s.server or store, port_of(store), role or s.admin, s.database)
     return ['docker', 'exec', '-i', s.container, 'psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-U', role or s.admin, '-d', s.database]
 
 
@@ -171,9 +175,19 @@ def migrate(filename, version, operations=False, store=None):
     print(f'{version}: installed')
 
 
+def old_data_store():
+    """hmg_analytics is still on this machine. It is only read to move what it holds (retire_data_store); a new machine never has one."""
+    if RETIRED_DATA_STORE.exists():
+        return False
+    if analytics.NATIVE:
+        return analytics.native_exists('analytics')
+    return run(['docker', 'volume', 'inspect', 'hgh-analytics-pgdata'], check=False).returncode == 0
+
+
 def initialize():
     # The existing initializer verifies its original migration checksum, without resetting data.
-    analytics.initialize(55436)
+    if old_data_store():
+        analytics.initialize(55436)
     values = create_secret(OPS_SECRET, {'HGH_OPERATIONS_DB_PORT': '55437', 'POSTGRES_PASSWORD': None,
                            'OPERATIONS_READER_PASSWORD': None, 'OPERATIONS_WRITER_PASSWORD': None}, 'hgh-operations-pgdata')
     port = int(values['HGH_OPERATIONS_DB_PORT'])
@@ -187,6 +201,7 @@ def initialize():
     install_input()
     install_metrics()
     move_input()
+    retire_data_store()
     write_env_files()
     status()
 
@@ -258,6 +273,15 @@ COMMIT;""", True)
     migrate('operations-004.sql', '004_hub_accounts', True)
     migrate('operations-005.sql', '005_account_one_brand', True)
     migrate('operations-006.sql', '006_account_editor_columns', True)
+    if not old_data_store():
+        # A machine without the old data DB: the roles' passwords are made here and the roles on the stores that use them.
+        for path, fields in ((DATA_SECRET, {'CATALOG_WRITER_PASSWORD': None}), (EDIT_SECRET, {'CATALOG_EDITOR_PASSWORD': None, 'HGH_AUTH_SECRET': None}),
+                             (EXT_SECRET, {'EXT_API_PASSWORD': None}), (GA4_REGISTRY_SECRET, {'GA4_REGISTRY_EDITOR_PASSWORD': None}),
+                             (SOURCE_OVERRIDE_SECRET, {'SOURCE_OVERRIDE_EDITOR_PASSWORD': None}), (INTEREST_SECRET, {'INTEREST_EDITOR_PASSWORD': None}),
+                             (ENTITY_ROLE_SECRET, {'ENTITY_ROLE_EDITOR_PASSWORD': None}), (SERVICE_WEEK_SECRET, {'SERVICE_WEEK_WRITER_PASSWORD': None}),
+                             (PROJECT_EDITOR_SECRET, {'PROJECT_EDITOR_PASSWORD': None})):
+            create_secret(path, fields)
+        return
     if not DATA_SECRET.exists() and sql("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname IN ('hmg_catalog_writer','hmg_data_external'));").stdout.strip() == 't':
         raise RuntimeError('Data access roles already exist; restore .env.data-access.local rather than replacing credentials')
     data = create_secret(DATA_SECRET, {'CATALOG_WRITER_PASSWORD': None, 'DATA_EXTERNAL_PASSWORD': None})
@@ -410,6 +434,11 @@ COMMIT;""")
 
 # ═══ the input and metrics stores (2026-11-06) ═══════════════════════════════════════════════════════════════════════════════
 
+def startup_database(store):
+    """The database a server's start makes when missing. The metrics server's two are install_metrics', with their sort order."""
+    return 'postgres' if store == 'metrics' else STORES[store].database
+
+
 def rename_previous(s):
     """An existing container keeps its database under the old name: POSTGRES_DB only applies to a new volume."""
     query = analytics.rename_sql(s.database)
@@ -422,7 +451,7 @@ def start_store(store):
     s = STORES[store]
     values = analytics.env_file(s.secret)
     if analytics.NATIVE:
-        analytics.native_start(store, int(values[s.port_key]), s.admin, s.database, values['POSTGRES_PASSWORD'])
+        analytics.native_start(store, int(values[s.port_key]), s.admin, startup_database(store), values['POSTGRES_PASSWORD'])
         return
     run(['docker', 'compose', '--env-file', str(s.secret), '-f', str(ROOT / f'infra/{store}/compose.yml'), 'up', '-d'])
     for _ in range(90):
@@ -453,6 +482,11 @@ GRANT CONNECT ON DATABASE {s.database} TO {','.join(logins)};
 """
 
 
+def ga4_roles():
+    """The GA4 reader's and the collector's passwords. The file keeps the name it had with the old data DB."""
+    return create_secret(analytics.SECRET, {'ANALYTICS_READER_PASSWORD': None, 'ANALYTICS_WRITER_PASSWORD': None})
+
+
 def install_input():
     """The input store. The roles keep the names they have on the data server, with the passwords already in their secret files, so
     only the host in their connections changes."""
@@ -469,28 +503,54 @@ def install_input():
              login_role('hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD'], *editor),
              login_role('hmg_interest_editor', env(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD'], *editor),
              login_role('hmg_entity_role_editor', env(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD'], *editor),
+             login_role('hmg_service_week_writer', env(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD'], "SET statement_timeout='15s'", 'CONNECTION LIMIT 2'),
+             login_role('hmg_analytics_writer', ga4_roles()['ANALYTICS_WRITER_PASSWORD'], "SET statement_timeout='5min'"),
              login_role('hmg_ext_api', env(EXT_SECRET)['EXT_API_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='10s'",
                         "SET idle_in_transaction_session_timeout='15s'", 'SET search_path=ext', 'CONNECTION LIMIT 8')]
     logins = ['hmg_input_reader', 'hmg_measurement_editor', 'hmg_catalog_writer', 'hmg_catalog_editor', 'hmg_project_editor',
-              'hmg_source_override_editor', 'hmg_interest_editor', 'hmg_entity_role_editor', 'hmg_ext_api']
+              'hmg_source_override_editor', 'hmg_interest_editor', 'hmg_entity_role_editor', 'hmg_ga4_registry_editor', 'hmg_service_week_writer',
+              'hmg_analytics_writer', 'hmg_ext_api']
     isql('BEGIN;\n' + ''.join(roles) + store_database('input', logins) + 'COMMIT;')
     migrate('input-001.sql', '001_input_store', store='input')
     migrate('input-002.sql', '002_measurement_reference_contract', store='input')
+    migrate('input-003.sql', '003_ga4_properties_service_week', store='input')
+
+
+def metrics_server_sql(query):
+    """On the metrics server's own database: what has to run before its two databases exist."""
+    s = STORES['metrics']
+    if analytics.NATIVE:
+        return run(analytics.native_psql('metrics', port_of('metrics'), s.admin, 'postgres'), text=query)
+    return run(['docker', 'exec', '-i', s.container, 'psql', '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-U', s.admin, '-d', 'postgres'], text=query)
 
 
 def install_metrics():
-    """The metrics store: Gold (pre-computed values) and the cache DB, both the BFF's own."""
+    """The metrics server's two databases, both the BFF's own (2026-11-06, D-17): Gold, the pre-computed values (geohub_gold_db), and the
+    cache DB (geohub_cache_db)."""
     values = create_secret(METRICS_SECRET, {'HGH_METRICS_DB_PORT': '55439', 'POSTGRES_PASSWORD': None, 'METRICS_READER_PASSWORD': None,
                                             'CACHE_WRITER_PASSWORD': None, 'ROLLUP_WRITER_PASSWORD': None}, 'hgh-metrics-pgdata', 'metrics')
     start_store('metrics')
-    logins = ['hmg_metrics_reader', 'hmg_cache_writer', 'hmg_rollup_writer']
-    sql('BEGIN;\n' + login_role('hmg_metrics_reader', values['METRICS_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'")
+    owner = STORES['metrics'].owner
+    metrics_server_sql('BEGIN;\n' + login_role('hmg_metrics_reader', values['METRICS_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'")
         + login_role('hmg_cache_writer', values['CACHE_WRITER_PASSWORD'], "SET statement_timeout='30s'", 'CONNECTION LIMIT 4')
         + login_role('hmg_rollup_writer', values['ROLLUP_WRITER_PASSWORD'], "SET statement_timeout='10min'", 'CONNECTION LIMIT 2')
-        + store_database('metrics', logins) + 'COMMIT;', store='metrics')
-    migrate('metrics-001.sql', '001_gold_cache', store='metrics')
+        + login_role('hmg_analytics_reader', ga4_roles()['ANALYTICS_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'")
+        + login_role('hmg_analytics_writer', ga4_roles()['ANALYTICS_WRITER_PASSWORD'], "SET statement_timeout='5min'")
+        + f"DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='{owner}') THEN CREATE ROLE {owner} NOLOGIN; END IF; END $$;\nCOMMIT;")
+    # Gold's sort order is the readers': set when the database is made, and it cannot change after.
+    gold_locale = f"LOCALE_PROVIDER icu ICU_LOCALE '{GOLD_ICU_LOCALE}' LOCALE 'C'" if analytics.NATIVE else ''
+    for store, locale in (('metrics', gold_locale), ('cache', '')):
+        database = STORES[store].database
+        if metrics_server_sql(f"SELECT 1 FROM pg_database WHERE datname={analytics.literal(database)};").stdout.strip() != '1':
+            metrics_server_sql(f"CREATE DATABASE {database} OWNER {owner} TEMPLATE template0 ENCODING 'UTF8' {locale};")
+    sql('BEGIN;\n' + store_database('metrics', ['hmg_metrics_reader', 'hmg_rollup_writer', 'hmg_analytics_reader', 'hmg_analytics_writer']) + 'COMMIT;', store='metrics')
+    sql('BEGIN;\n' + store_database('cache', ['hmg_cache_writer']) + 'COMMIT;', store='cache')
+    migrate('metrics-001.sql', '001_gold', store='metrics')
     migrate('metrics-002.sql', '002_first_screen', store='metrics')
     migrate('metrics-003.sql', '003_metric_rows', store='metrics')
+    migrate('metrics-004.sql', '004_ga4_seo', store='metrics')
+    migrate('cache-001.sql', '001_cache', store='cache')
 
 
 # Everything the inputs were in the data DB. catalog.service_week, catalog.project_ga4_property and published.* stay there.
@@ -518,7 +578,9 @@ AND table_name={analytics.literal(name)} ORDER BY ordinal_position;""", store=st
 def move_input():
     """Once: the inputs written so far move from the data DB to the input store, with their ids, versions and change_seq, in one
     transaction, and the data DB copy stops taking writes first. Runs before the API restarts, so until then the old API's writes fail
-    rather than get lost. Nothing is deleted; T12 removes the frozen copy."""
+    rather than get lost. Nothing is deleted here; retire_data_store removes the old store after it has moved the rest."""
+    if not old_data_store():
+        return
     migrate('data-014.sql', '014_inputs_moved')
     # install() grants these for a new data DB; on the data DB they stay out for good.
     sql('REVOKE CONNECT ON DATABASE hmg_analytics FROM hmg_catalog_writer,hmg_catalog_editor,hmg_project_editor,hmg_source_override_editor,'
@@ -577,12 +639,77 @@ COMMIT;
     print(f'Inputs: moved {len(MOVED_TABLES)} tables to the input store')
 
 
+# What the old data DB still holds, and where it goes: (table there, table here, store here).
+RETIRED_TABLES = (('catalog.service_week', 'catalog.service_week', 'input'), ('analytics.ga4_registry', 'catalog.ga4_registry', 'input'),
+                  ('analytics.ga4_registry_event', 'catalog.ga4_registry_event', 'input'), ('analytics.ga4_collect_status', 'catalog.ga4_collect_status', 'input'),
+                  ('ops.build', 'ops.build', 'metrics'), ('ops.data_version', 'ops.data_version', 'metrics'),
+                  ('ref.dim_region', 'ref.dim_region', 'metrics'), ('ref.dim_country', 'ref.dim_country', 'metrics'), ('ref.dim_engine', 'ref.dim_engine', 'metrics'),
+                  ('ref.dim_brand', 'ref.dim_brand', 'metrics'), ('ref.dim_category', 'ref.dim_category', 'metrics'), ('ref.dim_source', 'ref.dim_source', 'metrics'),
+                  ('ref.dim_owned_base', 'ref.dim_owned_base', 'metrics'), ('ref.dim_url', 'ref.dim_url', 'metrics'), ('ref.dim_project', 'ref.dim_project', 'metrics'),
+                  ('ops.seo_active_build', 'ops.seo_active_build', 'metrics'), ('analytics.dim_crawl_bot', 'analytics.dim_crawl_bot', 'metrics'),
+                  ('analytics.ga4_property', 'analytics.ga4_property', 'metrics'), ('analytics.ga4_value', 'analytics.ga4_value', 'metrics'),
+                  ('analytics.ga4_row', 'analytics.ga4_row', 'metrics'), ('analytics.ga4_users_window', 'analytics.ga4_users_window', 'metrics'),
+                  ('analytics.page_visibility_daily', 'analytics.page_visibility_daily', 'metrics'), ('analytics.page_crawl_daily', 'analytics.page_crawl_daily', 'metrics'),
+                  ('analytics.page_seo_device_daily', 'analytics.page_seo_device_daily', 'metrics'), ('analytics.page_priority', 'analytics.page_priority', 'metrics'))
+
+
+def retire_data_store():
+    """Once (D-17): GA4 properties and the service week go to geohub_bm_db, GA4 data, SEO, ref and ops to geohub_gold_db, with their keys, in one transaction per store and
+    counted. A dump stays in .local/analytics-backups; then the old store stops. Its frozen inputs and its published views are not moved: nothing reads them."""
+    if not old_data_store():
+        return
+    for store in ('input', 'metrics'):
+        moved = [t for t in RETIRED_TABLES if t[2] == store and sql(f'SELECT EXISTS(SELECT 1 FROM {t[0]});').stdout.strip() == 't']
+        already = [t for t in moved if sql(f'SELECT EXISTS(SELECT 1 FROM {t[1]});', store=store).stdout.strip() == 't']
+        if already:
+            raise RuntimeError(f'{already[0][1]} already has rows: compare both stores before going on')
+        if not moved:
+            continue
+        with tempfile.TemporaryFile() as errors:
+            target = subprocess.Popen(psql_args(store), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=errors)
+            target.stdin.write(b'BEGIN;\nSET LOCAL session_replication_role=replica;\n')
+            for old, new, _ in moved:
+                cols = ','.join(c for c in columns_of(new, store) if c in set(columns_of(old, 'analytics')))
+                target.stdin.write(f'COPY {new}({cols}) FROM STDIN;\n'.encode())
+                source = subprocess.Popen(psql_args('analytics') + ['-c', f'COPY (SELECT {cols} FROM {old}) TO STDOUT'], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                shutil.copyfileobj(source.stdout, target.stdin)
+                failed = source.stderr.read()
+                if source.wait():
+                    raise RuntimeError(sanitize(failed.decode(errors='replace')[-1500:]))
+                target.stdin.write(b'\\.\n')
+            identities = sql("""SELECT table_schema||'.'||table_name||' '||column_name FROM information_schema.columns
+WHERE (is_identity='YES' OR column_default LIKE 'nextval%') AND table_schema IN ('catalog','analytics','ref','ops');""", store=store).stdout.split('\n')
+            names = {t[1] for t in moved}
+            for line in filter(None, identities):
+                table, column = line.split(' ')
+                if table in names:
+                    target.stdin.write(f"SELECT setval(pg_get_serial_sequence('{table}','{column}'),greatest(coalesce(max({column}),0),1)) FROM {table};\n".encode())
+            target.stdin.write(b'COMMIT;\n')
+            target.stdin.close()
+            if target.wait():
+                errors.seek(0)
+                raise RuntimeError(sanitize(errors.read().decode(errors='replace')[-2500:]))
+        for old, new, _ in moved:
+            if sql(f'SELECT count(*) FROM {old};').stdout != sql(f'SELECT count(*) FROM {new};', store=store).stdout:
+                raise RuntimeError(f'{new}: the moved row count differs; compare both stores before going on')
+        print(f'Old data DB: moved {len(moved)} tables with rows to {STORES[store].database}')
+    dump_store('analytics')
+    if analytics.NATIVE:
+        run([analytics.pg_tool('pg_ctl'), '-D', str(analytics.NATIVE_ROOT / 'analytics'), '-m', 'fast', '-w', 'stop'])
+        shutil.rmtree(analytics.NATIVE_ROOT / 'analytics')
+    else:
+        run(['docker', 'compose', '--env-file', str(analytics.SECRET), '-f', str(ROOT / 'infra/analytics/compose.yml'), 'down'])
+        RETIRED_DATA_STORE.parent.mkdir(parents=True, exist_ok=True)
+        RETIRED_DATA_STORE.write_text('hmg_analytics retired; its volume is kept until someone removes it by hand\n', encoding='utf8')
+    print('Old data DB: stopped and removed; its dump is in .local/analytics-backups')
+
+
 def write_env_files():
     """The connections the API and the external API get. The editors and the external API reach the input store."""
     env = analytics.env_file
     def url(role, password, store):
         return f"postgresql://{role}:{password}@{service_host(store)}/{STORES[store].database}"
-    data, values = env(DATA_SECRET), env(OPS_SECRET)
+    values = env(OPS_SECRET)
     edit, inputs, metrics = env(EDIT_SECRET), env(INPUT_SECRET), env(METRICS_SECRET)
     analytics.secure_write(ROOT / '.env.ext-api.local', '# External API: the caller-scoped ext views only.\n'
         f"HGH_EXT_DB_URL={url('hmg_ext_api', env(EXT_SECRET)['EXT_API_PASSWORD'], 'input')}\n")
@@ -590,28 +717,32 @@ def write_env_files():
         f"HGH_OPERATIONS_DB_URL={url('hmg_operations_reader', values['OPERATIONS_READER_PASSWORD'], 'operations')}\n")
     analytics.secure_write(ROOT / '.env.input.local', '# FastAPI read-only input store connection.\n'
         f"HGH_INPUT_DB_URL={url('hmg_input_reader', inputs['INPUT_READER_PASSWORD'], 'input')}\n")
-    analytics.secure_write(ROOT / '.env.metrics.local', '# FastAPI metrics store: read Gold and the cache, write the cache. The rollup role stays with the job.\n'
+    analytics.secure_write(ROOT / '.env.metrics.local', '# FastAPI: read Gold, read and write the cache DB. The rollup role stays with the job.\n'
         f"HGH_METRICS_DB_URL={url('hmg_metrics_reader', metrics['METRICS_READER_PASSWORD'], 'metrics')}\n"
-        f"HGH_CACHE_DB_URL={url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'metrics')}\n")
+        f"HGH_CACHE_DB_URL={url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'cache')}\n")
     analytics.secure_write(ROOT / '.env.hub-edit.local', '# FastAPI HUB writes, each role for one screen: Global prompts, Project prompts, measurement settings, '
-        'source classification, customer interest, entity roles (input store), saved filters, accounts (operations store), the GA4 registry (data store), '
+        'source classification, customer interest, entity roles, the GA4 registry (input store), saved filters, accounts (operations store), '
         'and the login token secret.\n'
         f"HGH_CATALOG_EDITOR_DB_URL={url('hmg_catalog_editor', edit['CATALOG_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_SAVED_FILTER_EDITOR_DB_URL={url('hmg_saved_filter_editor', env(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD'], 'operations')}\n"
         f"HGH_ACCOUNT_EDITOR_DB_URL={url('hmg_account_editor', env(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD'], 'operations')}\n"
-        f"HGH_GA4_REGISTRY_EDITOR_DB_URL={url('hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD'], 'analytics')}\n"
+        f"HGH_GA4_REGISTRY_EDITOR_DB_URL={url('hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_SOURCE_OVERRIDE_EDITOR_DB_URL={url('hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_INTEREST_EDITOR_DB_URL={url('hmg_interest_editor', env(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_ENTITY_ROLE_EDITOR_DB_URL={url('hmg_entity_role_editor', env(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_PROJECT_EDITOR_DB_URL={url('hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_MEASUREMENT_EDITOR_DB_URL={url('hmg_measurement_editor', inputs['MEASUREMENT_EDITOR_PASSWORD'], 'input')}\n"
         f"HGH_AUTH_SECRET={edit['HGH_AUTH_SECRET']}\n")
-    analytics.secure_write(ROOT / '.env.data-external.local', '# Local connection only. Empty exports until per-project approval.\n'
-        f"HGH_DATA_EXTERNAL_DB_URL=postgresql://hmg_data_external:{data['DATA_EXTERNAL_PASSWORD']}@127.0.0.1:{data_port()}/hmg_analytics\n")
+    roles = ga4_roles()
+    analytics.secure_write(ROOT / '.env.analytics.local', '# FastAPI read-only GA4 and SEO connection (geohub_gold_db).\n'
+        f"HGH_ANALYTICS_DB_URL={url('hmg_analytics_reader', roles['ANALYTICS_READER_PASSWORD'], 'metrics')}\n")
+    analytics.secure_write(ROOT / '.env.analytics-ingest.local', '# The GA4 collector: its rows in geohub_gold_db, the properties and its results in geohub_bm_db.\n'
+        f"HGH_ANALYTICS_WRITER_DB_URL={url('hmg_analytics_writer', roles['ANALYTICS_WRITER_PASSWORD'], 'metrics')}\n"
+        f"HGH_GA4_REGISTRY_DB_URL={url('hmg_analytics_writer', roles['ANALYTICS_WRITER_PASSWORD'], 'input')}\n")
 
 
 def status():
-    for store, namespace, migrations in (('analytics', 'catalog', 'ops'), ('operations', 'system', 'system'), ('input', 'catalog', 'catalog'), ('metrics', 'cache', 'gold')):
+    for store, namespace, migrations in (('operations', 'system', 'system'), ('input', 'catalog', 'catalog'), ('metrics', 'gold', 'gold'), ('cache', 'cache', 'cache')):
         print(sql(f"""SELECT json_build_object('database',current_database(),
             'tables',(SELECT count(*) FROM information_schema.tables WHERE table_schema='{namespace}' AND table_type='BASE TABLE'),
             'migrations',(SELECT json_agg(version ORDER BY version) FROM {migrations}.schema_migration));""", store=store).stdout.strip())
@@ -636,7 +767,7 @@ def service_week(args):
     config = {'dry_run': args.dry_run}
     if SERVICE_WEEK_SECRET.exists():
         config['data'] = (f"postgresql://hmg_service_week_writer:{analytics.env_file(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD']}"
-                          f"@{service_host('analytics')}/hmg_analytics")
+                          f"@{service_host('input')}/{STORES['input'].database}")
     elif not args.dry_run:
         raise RuntimeError(f'{SERVICE_WEEK_SECRET.name} is missing: run manage.py init first')
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.
@@ -655,40 +786,39 @@ def rollup(args):
 
 
 def verify():
-    sql((HERE / 'verify-data.sql').read_text(encoding='utf8'))
     sql((HERE / 'verify-operations.sql').read_text(encoding='utf8'), True)
     isql((HERE / 'verify-input.sql').read_text(encoding='utf8'))
     sql((HERE / 'verify-metrics.sql').read_text(encoding='utf8'), store='metrics')
-    for store, role in (('analytics', 'hmg_data_external'), ('input', 'hmg_ext_api'), ('input', 'hmg_input_reader'), ('analytics', 'hmg_analytics_reader'),
+    sql((ROOT / 'back/analytics/verify.sql').read_text(encoding='utf8'), store='metrics', role='hmg_analytics_writer')  # GA4 and SEO: the collector's role, keys, builds
+    sql((HERE / 'verify-cache.sql').read_text(encoding='utf8'), store='cache')
+    for store, role in (('input', 'hmg_ext_api'), ('input', 'hmg_input_reader'), ('metrics', 'hmg_analytics_reader'),
                         ('operations', 'hmg_operations_reader'), ('metrics', 'hmg_metrics_reader')):
         print(sql("SELECT json_build_object('database',current_database(),'role',current_user,'read_only',current_setting('transaction_read_only'));", store=store, role=role).stdout.strip())
     # Connection checks cannot assume the database has no intentionally approved exports.
     env = analytics.env_file
-    data, values, ext = env(DATA_SECRET), env(OPS_SECRET), env(EXT_SECRET)
+    values, ext = env(OPS_SECRET), env(EXT_SECRET)
     def url(role, password, store):
         return f"postgresql://{role}:{password}@{service_host(store)}/{STORES[store].database}"
     def both(name, role, password, store='input', other='operations'):
         return {name: url(role, password, store), f'{name}_operations': url(role, password, other)}
     inputs, metrics = env(INPUT_SECRET), env(METRICS_SECRET)
-    config = {**both('external', 'hmg_data_external', data['DATA_EXTERNAL_PASSWORD'], 'analytics'),
-              **both('ext', 'hmg_ext_api', ext['EXT_API_PASSWORD']),
-              'ext_data': url('hmg_ext_api', ext['EXT_API_PASSWORD'], 'analytics'),
+    config = {**both('ext', 'hmg_ext_api', ext['EXT_API_PASSWORD']),
               'operations_reader': url('hmg_operations_reader', values['OPERATIONS_READER_PASSWORD'], 'operations'),
               'saved_filter': url('hmg_saved_filter_editor', env(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD'], 'operations'),
-              'saved_filter_data': url('hmg_saved_filter_editor', env(FILTER_SECRET)['SAVED_FILTER_EDITOR_PASSWORD'], 'analytics'),
               'account': url('hmg_account_editor', env(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD'], 'operations'),
-              'account_data': url('hmg_account_editor', env(ACCOUNT_SECRET)['ACCOUNT_EDITOR_PASSWORD'], 'analytics'),
-              **both('ga4_registry', 'hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD'], 'analytics'),
+              **both('ga4_registry', 'hmg_ga4_registry_editor', env(GA4_REGISTRY_SECRET)['GA4_REGISTRY_EDITOR_PASSWORD']),
               **both('source_override', 'hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD']),
               **both('interest', 'hmg_interest_editor', env(INTEREST_SECRET)['INTEREST_EDITOR_PASSWORD']),
               **both('entity_role', 'hmg_entity_role_editor', env(ENTITY_ROLE_SECRET)['ENTITY_ROLE_EDITOR_PASSWORD']),
               **both('project_editor', 'hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD']),
-              'project_editor_data': url('hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD'], 'analytics'),
-              **both('service_week', 'hmg_service_week_writer', env(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD'], 'analytics'),
+              **both('service_week', 'hmg_service_week_writer', env(SERVICE_WEEK_SECRET)['SERVICE_WEEK_WRITER_PASSWORD']),
               **both('measurement', 'hmg_measurement_editor', inputs['MEASUREMENT_EDITOR_PASSWORD']),
               'input_reader': url('hmg_input_reader', inputs['INPUT_READER_PASSWORD'], 'input'),
               'metrics_reader': url('hmg_metrics_reader', metrics['METRICS_READER_PASSWORD'], 'metrics'),
-              'cache_writer': url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'metrics'),
+              'metrics_reader_cache': url('hmg_metrics_reader', metrics['METRICS_READER_PASSWORD'], 'cache'),
+              'rollup_cache': url('hmg_rollup_writer', metrics['ROLLUP_WRITER_PASSWORD'], 'cache'),
+              'cache_writer': url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'cache'),
+              'cache_writer_gold': url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'metrics'),
               'cache_writer_input': url('hmg_cache_writer', metrics['CACHE_WRITER_PASSWORD'], 'input')}
     script = (HERE / 'verify_connections.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
@@ -914,19 +1044,22 @@ def start():
         raise RuntimeError('start is for native mode (HGH_HUB_NATIVE=1); with Docker the containers restart themselves')
     running = []
     for store, s in STORES.items():
+        if s.server:
+            continue
         if not (s.secret.exists() and analytics.native_exists(store)):
-            if store in ('analytics', 'operations'):
+            if store == 'analytics':
+                continue
+            if store == 'operations':
                 raise RuntimeError(f'No native {store} store yet; run init first')
             print(f'No native {store} store yet; run init to create it')
             continue
         values = analytics.env_file(s.secret)
-        analytics.native_start(store, int(values[s.port_key]), s.admin, s.database, values['POSTGRES_PASSWORD'])
+        analytics.native_start(store, int(values[s.port_key]), s.admin, startup_database(store), values['POSTGRES_PASSWORD'])
         running.append(str(values[s.port_key]))
     print('HUB stores running on 127.0.0.1:' + ', :'.join(running))
 
 
 def backup():
-    analytics.backup(None)
     output = ROOT / '.local/operations-backups' / f"geohub_operations_db-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.dump"
     output.parent.mkdir(parents=True, exist_ok=True)
     # Use secure_write to establish file ACLs before writing the binary archive.
@@ -1138,7 +1271,6 @@ COMMIT;""")
 
 
 COMMANDS = {
-    'rollup': rollup,
     'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
     'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
     'publish-project': lambda a: set_project_access(a, True), 'unpublish-project': lambda a: set_project_access(a, False),
@@ -1151,6 +1283,7 @@ COMMANDS = {
     'import-interest-keywords': import_interest_keywords,
     'import-entity-roles': import_entity_roles,
     'sync-service-week': service_week,
+    'rollup': rollup,
 }
 
 if __name__ == '__main__':

@@ -24,14 +24,14 @@ together, and every report carries device × new/returning so the screen's filte
 zero (GA4 leaves out all-zero rows). A property GA4 refuses (403) is stored as pending_grant and keeps its rows; a
 property the registry stops is stored as unmapped (the reader leaves it out) and keeps its rows. A collected
 property's stored event rows take is_conv from its current basis on every run, so a basis or event change covers
-every collected day, not only the days read again. Each property's result goes to analytics.ga4_collect_status.
+every collected day, not only the days read again. Each property's result goes to catalog.ga4_collect_status.
 
   python -X utf8 back/analytics/ga4_collect.py                  # the last 3 days up to yesterday (see last_day)
   python -X utf8 back/analytics/ga4_collect.py --backfill 180   # the first load
   python -X utf8 back/analytics/ga4_collect.py --from 2026-10-01 --to 2026-10-20 --property 469542848
   python -X utf8 back/analytics/ga4_collect.py --dry-run        # read GA4, print the counts, write nothing
 
-Registry: analytics.ga4_registry in the same database, kept on the renewal Admin › GA4 연동 screen
+Registry: catalog.ga4_registry in the same database, kept on the renewal Admin › GA4 연동 screen
 (back/bff/hub_stores/ga4_registry.py); --dry-run reads it too."""
 from __future__ import annotations
 
@@ -89,11 +89,11 @@ class AccessDenied(Ga4Error):
 # ── registry ─────────────────────────────────────────────────────────────────
 
 REGISTRY_SQL = """SELECT property_id,brand,country,conv_basis,conv_events,enabled,now() AS read_at
-    FROM analytics.ga4_registry ORDER BY property_id"""
+    FROM catalog.ga4_registry ORDER BY property_id"""
 
 
 async def load_registry(conn) -> list[dict]:
-    """The registered properties (analytics.ga4_registry). Its constraints hold the rules the file registry had:
+    """The registered properties (catalog.ga4_registry). Its constraints hold the rules the file registry had:
     property_id digits, brand Hyundai · Kia · Genesis, country ISO-2, conv_basis 1 GA4 key events | 2 the listed
     events (at least one); and one enabled property per market. `read_at` is when this run read it: the collect
     status's checked_at, so a change made during the run still shows as not applied."""
@@ -330,7 +330,7 @@ CONVERSION_SQL = """UPDATE analytics.ga4_row r SET is_conv=CASE WHEN $2=2 THEN v
     FROM analytics.ga4_value v WHERE r.prop_key=$1 AND r.report=3 AND v.kind='event' AND v.value_key=r.event_key
     AND r.is_conv IS DISTINCT FROM (CASE WHEN $2=2 THEN v.value=ANY($3::text[]) ELSE coalesce(r.key_events,0)>0 END)"""
 # One row per property, replaced each run; a failed or refused run keeps the last successful collection.
-STATUS_SQL = """INSERT INTO analytics.ga4_collect_status AS s(property_id,checked_at,status,error,collected_at,collected_to)
+STATUS_SQL = """INSERT INTO catalog.ga4_collect_status AS s(property_id,checked_at,status,error,collected_at,collected_to)
     VALUES($1,$2,$3,$4,CASE WHEN $5::date IS NULL THEN NULL ELSE now() END,$5)
     ON CONFLICT(property_id) DO UPDATE SET checked_at=EXCLUDED.checked_at,status=EXCLUDED.status,error=EXCLUDED.error,
         collected_at=coalesce(EXCLUDED.collected_at,s.collected_at),collected_to=coalesce(EXCLUDED.collected_to,s.collected_to)"""
@@ -431,11 +431,13 @@ async def run(args, env: dict, ga4: Ga4) -> list[dict]:
     import asyncpg
     write = not args.dry_run
     conn = await asyncpg.connect(env["HGH_ANALYTICS_WRITER_DB_URL"], command_timeout=300)
+    # The properties and this run's results are in geohub_bm_db, the rows in geohub_gold_db: a result is written after its rows, and the next run replaces it.
+    registry = await asyncpg.connect(env["HGH_GA4_REGISTRY_DB_URL"], command_timeout=60)
     results = []
     try:
         if write and not await conn.fetchval("SELECT pg_try_advisory_lock($1)", RUN_LOCK):
             raise RuntimeError("another GA4 collector is running")
-        props = await load_registry(conn)
+        props = await load_registry(registry)
         if args.property:
             props = [p for p in props if p["property_id"] in args.property]
             if not props:
@@ -447,7 +449,7 @@ async def run(args, env: dict, ga4: Ga4) -> list[dict]:
                 if not prop["enabled"]:
                     if write:
                         await save_property(conn, prop, "unmapped")
-                        await note(conn, prop, "stopped")
+                        await note(registry, prop, "stopped")
                     results.append({**result, "status": "stopped"})
                     continue
                 if prop["property_id"] in refused:
@@ -459,18 +461,19 @@ async def run(args, env: dict, ga4: Ga4) -> list[dict]:
                 result.update({"from": start.isoformat(), "to": end_.isoformat(), "rows": len(data["rows"]), "windows": len(data["windows"]), "notes": data["notes"]})
                 if write:
                     await store(conn, prop, data, start, end_)
-                    await note(conn, prop, "collected", collected_to=end_)
+                    await note(registry, prop, "collected", collected_to=end_)
                 results.append({**result, "status": "active"})
             except AccessDenied as e:
                 if write:
                     await save_property(conn, prop, "pending_grant")
-                    await note(conn, prop, "pending_grant", str(e))
+                    await note(registry, prop, "pending_grant", str(e))
                 results.append({**result, "status": "pending_grant", "error": str(e)})
             except Ga4Error as e:
                 if write:
-                    await note(conn, prop, "failed", str(e))
+                    await note(registry, prop, "failed", str(e))
                 results.append({**result, "status": "failed", "error": str(e)})
     finally:
+        await registry.close()
         await conn.close()
     return results
 

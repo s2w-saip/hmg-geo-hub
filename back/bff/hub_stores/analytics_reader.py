@@ -83,7 +83,7 @@ def period(q, latest):
 
 
 def result(kind, data, *, reason=None):
-    return {"data": {"kind": kind, **data}, "meta": {"source": "hub_analytics", "database": "hmg_analytics",
+    return {"data": {"kind": kind, **data}, "meta": {"source": "hub_analytics", "database": "geohub_gold_db",
             "available": reason is None, "reason": reason, "read_only": True}}
 
 

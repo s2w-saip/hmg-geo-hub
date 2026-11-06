@@ -6831,7 +6831,7 @@
   "hubGa4": {
     "title": "GA4 연동",
     "description": "수집기가 읽는 GA4 속성 목록입니다. 속성마다 시장(브랜드 × 국가)과 전환 기준을 정하고, 수집을 멈추거나 다시 시작합니다.",
-    "storePill": "HUB 데이터 DB",
+    "storePill": "HUB 입력 DB",
     "create": "속성 등록",
     "createTitle": "GA4 속성 등록",
     "createHint": "속성 ID는 등록한 뒤 바꿀 수 없습니다. 다른 속성으로 바꾸려면 이 속성을 중지하고 새로 등록하세요.",
@@ -6951,7 +6951,7 @@
       "version_conflict": "그 사이 다른 곳에서 이 속성이 바뀌었습니다. 최신 내용으로 다시 열었습니다.",
       "unauthorized": "로그인이 끝났습니다. 다시 로그인하세요.",
       "forbidden": "최상위 관리자만 GA4 연동을 관리할 수 있습니다.",
-      "source_unavailable": "HUB 데이터 DB에 연결할 수 없습니다. 잠시 뒤에 다시 시도하세요.",
+      "source_unavailable": "HUB 입력 DB에 연결할 수 없습니다. 잠시 뒤에 다시 시도하세요.",
       "not_found": "속성을 찾을 수 없습니다.",
       "failed": "처리하지 못했습니다. 잠시 뒤에 다시 시도하세요."
     }
@@ -6959,7 +6959,7 @@
   "hubSourceOverrides": {
     "title": "인용 출처 분류",
     "description": "AI 답변이 인용한 출처의 카테고리를 교정합니다. 교정이 가장 먼저 적용되고, 시드 · 공식 소셜은 옆 탭에서 관리합니다. 자동 분류는 Gold 값을 그대로 보여 줍니다.",
-    "storePill": "HUB 데이터 DB",
+    "storePill": "HUB 입력 DB",
     "roundPill": "Gold {date} 회차 · 글로벌",
     "publishedPill": "업스트림 목록 v{version} · {items}건",
     "publishedTip": "외부 API source_override 목록 · 순번(change_seq) {seq} · {at} 기록",
@@ -7052,7 +7052,7 @@
     "publishedPill": "업스트림 목록 v{version} · {items}건",
     "publishedTip": "외부 API {family} 목록 · 순번(change_seq) {seq} · {at} 기록",
     "roundPill": "Gold {date} 회차 · 글로벌",
-    "storePill": "HUB 데이터 DB",
+    "storePill": "HUB 입력 DB",
     "system": "관리 명령",
     "loading": "불러오는 중…",
     "history": "변경 이력",

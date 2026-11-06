@@ -65,7 +65,7 @@ class GoldLiveReads(unittest.TestCase):
     def test_analytics_has_its_own_read_only_source(self):
         health = self.read("/healthz")["analytics"]
         self.assertTrue(health["ok"])
-        self.assertEqual(health["database"],"hmg_analytics")
+        self.assertEqual(health["database"],"geohub_gold_db")
         self.assertEqual(health["role"],"hmg_analytics_reader")
         self.assertEqual(health["read_only"],"on")
         for kind in ("conversion", "visibility"):

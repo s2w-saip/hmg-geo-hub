@@ -6834,7 +6834,7 @@
   "hubGa4": {
     "title": "GA4 connection",
     "description": "The GA4 properties the collector reads. Set each property's market (brand × country) and conversion basis, and stop or resume its collection.",
-    "storePill": "HUB data DB",
+    "storePill": "HUB input DB",
     "create": "Register property",
     "createTitle": "Register a GA4 property",
     "createHint": "The property ID cannot change after registration. To use another property, stop this one and register the other.",
@@ -6954,7 +6954,7 @@
       "version_conflict": "This property changed elsewhere in the meantime. It was reopened with the latest values.",
       "unauthorized": "Your sign-in ended. Sign in again.",
       "forbidden": "Only the top-level administrator manages the GA4 connection.",
-      "source_unavailable": "The HUB data DB cannot be reached. Try again shortly.",
+      "source_unavailable": "The HUB input DB cannot be reached. Try again shortly.",
       "not_found": "Property not found.",
       "failed": "Could not complete. Try again shortly."
     }
@@ -6962,7 +6962,7 @@
   "hubSourceOverrides": {
     "title": "Citation Sources",
     "description": "Correct the category of the sources AI answers cite. A correction applies first; the seeds and official social accounts have their own tabs. The automatic classification is Gold's, shown as it is.",
-    "storePill": "HUB data DB",
+    "storePill": "HUB input DB",
     "roundPill": "Gold round {date} · Global",
     "publishedPill": "Upstream list v{version} · {items}",
     "publishedTip": "External API list source_override · change_seq {seq} · recorded {at}",
@@ -7055,7 +7055,7 @@
     "publishedPill": "Upstream list v{version} · {items}",
     "publishedTip": "External API {family} list · change_seq {seq} · recorded {at}",
     "roundPill": "Gold round {date} · global",
-    "storePill": "HUB data DB",
+    "storePill": "HUB input DB",
     "system": "Admin command",
     "loading": "Loading…",
     "history": "History",

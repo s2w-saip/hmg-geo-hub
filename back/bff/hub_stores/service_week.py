@@ -2,21 +2,21 @@
 shows Gold's rounds (decisions '발행 시점 판정' and '기준 주 세부', 2026-11-02, docs/handoff/admin-todo.md).
 
 The HUB job (back/hub_storage/service_week.py, `manage.py sync-service-week`) watches Gold and records the week in the
-HUB data DB, one row per change (catalog.service_week; the newest is catalog.current_service_week). The BFF reads it
-here through the data DB's reader (analytics_db, role hmg_analytics_reader) and caps its Gold reads there
+input store, one row per change (catalog.service_week; the newest is catalog.current_service_week). The BFF reads it
+here through the input store's reader (input_db, role hmg_input_reader) and caps its Gold reads there
 (gold_reader/context.py Context.create).
 
-A Gold read never waits on the data DB: every caller of Context.create holds one of Gold's 6 connections (critic
+A Gold read never waits on the input store: every caller of Context.create holds one of Gold's 6 connections (critic
 2026-11-02). So:
 - the last good week is served at once and read again behind it once it is HGH_SERVICE_WEEK_CACHE_S seconds old
   (default 60), one read at a time, each bounded by READ_TIMEOUT_S;
 - only the first read (no week yet) waits, bounded the same way, and its caller stops at READ_TIMEOUT_S on its own:
-  a cut-off read still unwinds on the data DB, which a stopped server does not answer (review r1-5); peek(), the
+  a cut-off read still unwinds on the input store, which a stopped server does not answer (review r1-5); peek(), the
   result cache's view for the fingerprint of every Gold read (those of no round too), never waits (review r2-5);
 - a read that fails (no table, no row, a refused connection, a timeout) keeps the last good week and is not tried again
   for RETRY_S; with no week at all it is ServiceWeekUnavailable, which the reads answer with 503: an unreadable week is
   never 'no cap';
-- None only when the data DB is not configured at all (HGH_ANALYTICS_DB_URL unset: the tests, offline scripts).
+- None only when the input store is not configured at all (HGH_INPUT_DB_URL unset: the tests, offline scripts).
 
 A page reads the week (the shell's shared/service-week) and its body's screens in separate requests, so a page read as
 the kept week moves may hold the week before in some of them; a read of the week again does not tell that order apart.
@@ -38,7 +38,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
-from bff.hub_stores import analytics_db
+from bff.hub_stores import input_db
 
 log = logging.getLogger("hgh.service_week")
 
@@ -51,7 +51,7 @@ RETRY_S = 5.0
 #: how long the week moved to is just_moved: a page's reads go out together (front lib/screen.ts), so one that reached
 #: the BFF before the move did so moments before the shell's read of the week
 JUST_MOVED_S = 5.0
-UNAVAILABLE = "서비스 기준 주를 읽지 못했습니다(HUB 데이터 DB). 잠시 뒤 다시 시도해 주세요."
+UNAVAILABLE = "서비스 기준 주를 읽지 못했습니다(HUB 입력 DB). 잠시 뒤 다시 시도해 주세요."
 # The week alone. Not the cycles the job recorded in it: a held week keeps them while Gold re-opens its round, and the
 # reads follow Gold live — whether the week holds a round of a surface is their calendar's (cycles/week-notes, review r4-2).
 WEEK_SQL = """SELECT seq,week_start,week_end,recorded_at,checked_at FROM catalog.current_service_week
@@ -79,7 +79,7 @@ _moved: tuple[date, float] | None = None        # the kept week's last move: the
 
 
 async def _read() -> Week:
-    async with analytics_db.connection() as conn:
+    async with input_db.connection() as conn:
         row = await conn.fetchrow(WEEK_SQL)
     if row is None:
         raise LookupError("catalog.current_service_week has no row (manage.py sync-service-week has not run)")
@@ -109,9 +109,9 @@ def _refreshing() -> asyncio.Future:
 
 
 async def current() -> Week | None:
-    """The service week; None when the data DB is not configured. Raises ServiceWeekUnavailable when it is, but no
+    """The service week; None when the input store is not configured. Raises ServiceWeekUnavailable when it is, but no
     week has been read yet and the read fails."""
-    if not analytics_db.configured():
+    if not input_db.configured():
         return None
     due = time.monotonic() >= _next_at
     if _last is not None:
@@ -119,7 +119,7 @@ async def current() -> Week | None:
             _refreshing()
         return _last
     if due or (_refresh is not None and not _refresh.done()):
-        # bounded here as well (review r1-5): a read cut off at READ_TIMEOUT_S still unwinds on the data DB (asyncpg's
+        # bounded here as well (review r1-5): a read cut off at READ_TIMEOUT_S still unwinds on the input store (asyncpg's
         # rollback and release), which a server that stopped answering does not finish; the read goes on behind and is
         # waited on again, not started again, by the next caller
         with contextlib.suppress(TimeoutError):
@@ -140,7 +140,7 @@ async def fresh() -> Week | None:
     re-read the page (review r5-2). Waiting only for a read that was due left that order a moment earlier: the kept
     week falling due between the shell's read and the screens'. Within RETRY_S of a failed read nothing is read again:
     the kept week at once, or ServiceWeekUnavailable."""
-    if not analytics_db.configured():
+    if not input_db.configured():
         return None
     if time.monotonic() >= _retry_at:
         with contextlib.suppress(TimeoutError):
@@ -151,10 +151,10 @@ async def fresh() -> Week | None:
 
 
 def peek() -> Week | None:
-    """current() without its wait, for what must never wait on the data DB: the result cache fingerprints every Gold
+    """current() without its wait, for what must never wait on the input store: the result cache fingerprints every Gold
     read with the week, the reads of no round too (review r2-5). The kept week, read again behind it when due; with
     none yet the read starts behind it and this is ServiceWeekUnavailable at once (Context.create waits for it)."""
-    if not analytics_db.configured():
+    if not input_db.configured():
         return None
     if time.monotonic() >= _next_at:
         _refreshing()

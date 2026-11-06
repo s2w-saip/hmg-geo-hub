@@ -111,7 +111,7 @@ describe("InterestKeywordsManager", () => {
   it("lists the HUB's keywords next to Gold's collection, with no reflection state", () => {
     expect(keysOf(out, "data-hub-keyword-row")).toEqual(["중고차", "패밀리 suv", "ev9", "suv"]); // the Korean collation
     expect(out).toContain("업스트림 목록 v3 · 84건");
-    expect(out).toContain("HUB 데이터 DB");
+    expect(out).toContain("HUB 입력 DB");
     expect(out).toContain("interest_keyword");
     for (const gone of ["반영 대기", "반영됨", "data-hub-keyword-state"]) expect(out).not.toContain(gone);
     expect(out).toContain("4 / 4개 · 활성 2 · 중지 1 · 업스트림 1");

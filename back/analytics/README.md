@@ -1,23 +1,15 @@
 # HUB GA4·SEO 데이터베이스
 
-이 DB는 현재 HUB **데이터 DB** 역할을 맡으며 프로젝트·프롬프트 버전도 별도 `catalog` 스키마에서 관리합니다.
-사용자·권한·SW 설정은 별도 `geohub_operations_db` DB에 있습니다. 최신 구성·통합 시작 명령은 [DB 분리 안내](../hub_storage/README.md)를 참고하십시오.
-
-Gold ERD의 `07_ga4.js`, `08_vis.js`와 실제 Gold PostgreSQL 컬럼·PK를 대조해 추출한 별도 저장소입니다.
-현재 3333 서비스가 실행 중인 HUB 호스트의 PostgreSQL 컨테이너에서 관리합니다.
+`geohub_gold_db`의 `analytics` · `ref` · `ops` 스키마입니다. 답변 단위 테이블(`gold`)과 스키마를 나눴고, 아래 두 계정은 이 세 스키마만 닿습니다.
+GA4 속성 · 수집 결과는 입력 DB `geohub_bm_db`의 `catalog`에, 사용자·권한·SW 설정은 `geohub_operations_db`에 있습니다. 최신 구성·통합 시작 명령은 [DB 구성 안내](../hub_storage/README.md)를 참고하십시오.
 GA4·SEO 사실을 복제하는 FDW나 자동 동기화 작업은 없습니다.
-프로젝트·프롬프트 정의와 외부 API용 기준값은 별도의 명시적 카탈로그 가져오기 명령과, 최상위 관리자의 글로벌 프롬프트 편집([HUB 저장소 안내](../hub_storage/README.md))으로만 버전 기록합니다.
 
 | 구분 | 구성 |
 | --- | --- |
-| DB | `hmg_analytics` / PostgreSQL 17 |
-| 컨테이너 | `hgh-analytics-db` |
-| 호스트 접속 | `127.0.0.1:55436` |
-| 컨테이너 간 접속 | `hgh-analytics-network` → `hgh-analytics-db:5432` |
-| 영구 볼륨 | `hgh-analytics-pgdata` |
+| DB | `geohub_gold_db` / `127.0.0.1:55439` |
 | 조회 계정 | `hmg_analytics_reader` / 읽기 전용, DDL·DML 불가 |
 | 적재 계정 | `hmg_analytics_writer` / 허용 테이블 DML·SEO 발행 함수, DDL 불가 |
-| 소유 계정 | `hmg_analytics_owner` / 로그인 불가 |
+| 소유 계정 | `hmg_metrics_owner` / 로그인 불가 |
 
 ## 분리한 데이터
 
@@ -89,11 +81,11 @@ GA4 자격 증명을 인계받기 전이라 아직 실행하지 않았고, 지�
 | --- | --- |
 | 실행 | 저장소 루트에서 `python -X utf8 back/analytics/ga4_collect.py` — 최근 3일(속성 시간대의 어제까지)을 다시 받아 바꿔 씁니다. 처음은 `--backfill 180`, 등록부와 GA4만 읽고 쓰지 않으려면 `--dry-run`, 기간 지정은 `--from`·`--to`, 속성 하나만은 `--property` |
 | 주기 | 하루 한 번. GA4 값은 며칠 동안 확정되므로 매번 최근 3일을 다시 받습니다 |
-| VM (taeho-dev) | production · dev build가 HUB 데이터 DB 하나를 같이 써서 수집도 하나입니다. 정기 실행은 cron `15 9 * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh ga4-cron >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1`(09:15 UTC — 모든 시간대의 어제가 끝난 뒤, 로그에 속성별 한 줄), 수동 실행은 `bash scripts/vm.sh ga4 --dry-run` · `bash scripts/vm.sh ga4 --backfill 180`처럼 수집기 인자를 그대로 넘깁니다. BFF 이미지(`hgh-gold-api:local`)의 일회용 컨테이너가 호스트 네트워크에서 돕니다. 서비스 계정 키는 이미지에 `google-auth`가 없어 아직 쓸 수 없습니다 |
-| 쓰기 계정 | `.env.analytics-ingest.local`의 `HGH_ANALYTICS_WRITER_DB_URL` (`hmg_analytics_writer`). 한 번에 하나만 실행됩니다(advisory lock) |
+| VM (taeho-dev) | production · dev build가 서비스 DB를 같이 써서 수집도 하나입니다. 정기 실행은 cron `15 9 * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh ga4-cron >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1`(09:15 UTC — 모든 시간대의 어제가 끝난 뒤, 로그에 속성별 한 줄), 수동 실행은 `bash scripts/vm.sh ga4 --dry-run` · `bash scripts/vm.sh ga4 --backfill 180`처럼 수집기 인자를 그대로 넘깁니다. BFF 이미지(`hgh-gold-api:local`)의 일회용 컨테이너가 호스트 네트워크에서 돕니다. 서비스 계정 키는 이미지에 `google-auth`가 없어 아직 쓸 수 없습니다 |
+| 쓰기 계정 | `.env.analytics-ingest.local`의 `HGH_ANALYTICS_WRITER_DB_URL`(`geohub_gold_db`)과 `HGH_GA4_REGISTRY_DB_URL`(`geohub_bm_db`), 계정 `hmg_analytics_writer`. 한 번에 하나만 실행됩니다(advisory lock) |
 | GA4 자격 증명 | `.env.ga4.local`: OAuth `GA4_OAUTH_CLIENT_ID`·`GA4_OAUTH_CLIENT_SECRET`·`GA4_OAUTH_REFRESH_TOKEN`(예전 웹과 같은 이름), 또는 서비스 계정 `GA4_SERVICE_ACCOUNT_FILE`(JSON 키 경로, 서명에 `google-auth` 패키지 필요). 범위는 `analytics.readonly` |
-| 속성 목록 | 같은 DB의 `analytics.ga4_registry`(2026-10-29, `back/hub_storage/data-006.sql`). 관리자가 리뉴얼 Admin › GA4 연동(`/renewal/admin/ga4`)에서 등록 · 수정 · 중지 · 재개합니다: 속성 ID · 브랜드 · 국가 · 전환 기준(1 = GA4 주요 이벤트, 2 = 고른 이벤트만, 1개 이상) · 수집 여부. 한 시장(브랜드 × 국가)에 수집하는 속성은 하나입니다. 예전 파일 등록부(`.local/ga4-properties.json`)는 없앴습니다 |
-| 속성 상태 | 수집하면 `active`, GA4가 거부(403)하면 `pending_grant`, 등록부에서 중지하면 `unmapped`(리더가 빼고 봄)로 두고, 어느 경우든 그 속성의 기존 행은 그대로 둡니다. 실행마다 속성별 결과(`collected` · `pending_grant` · `failed` · `stopped`, 시각, 오류, 마지막 수집일)를 `analytics.ga4_collect_status`에 남기고 Admin 화면이 그대로 보입니다 |
+| 속성 목록 | 입력 DB의 `catalog.ga4_registry`(`back/hub_storage/input-003.sql`). 관리자가 리뉴얼 Admin › GA4 연동(`/renewal/admin/ga4`)에서 등록 · 수정 · 중지 · 재개합니다: 속성 ID · 브랜드 · 국가 · 전환 기준(1 = GA4 주요 이벤트, 2 = 고른 이벤트만, 1개 이상) · 수집 여부. 한 시장(브랜드 × 국가)에 수집하는 속성은 하나입니다. 예전 파일 등록부(`.local/ga4-properties.json`)는 없앴습니다 |
+| 속성 상태 | 수집하면 `active`, GA4가 거부(403)하면 `pending_grant`, 등록부에서 중지하면 `unmapped`(리더가 빼고 봄)로 두고, 어느 경우든 그 속성의 기존 행은 그대로 둡니다. 실행마다 속성별 결과(`collected` · `pending_grant` · `failed` · `stopped`, 시각, 오류, 마지막 수집일)를 입력 DB `catalog.ga4_collect_status`에 남기고 Admin 화면이 그대로 보입니다 |
 | 전환 기준 변경 | 등록부의 전환 기준 · 이벤트를 바꾸면 다음 실행이 그 속성의 저장된 이벤트 행 전체(`report 3`)의 `is_conv`를 새 기준으로 다시 정합니다. 다시 받지 않은 지난 날짜에도 새 기준이 적용됩니다 |
 
 저장하는 것(속성 · 날짜마다, 모든 보고서에 기기 · 신규/재방문을 둬 화면 필터가 똑같이 걸립니다):
@@ -111,22 +103,20 @@ GA4 자격 증명을 인계받기 전이라 아직 실행하지 않았고, 지�
 시험: `bff.tests.test_ga4_collect` — GA4 Data API 모사기로 수집한 행을 실제 리더에 넣어, 화면 숫자가 세션 원자료에서 직접 센 값과 같은지 봅니다. `HGH_GA4_TEST_DB_URL`(버려도 되는 DB)을 주면 PostgreSQL에 쓰고 리더 SQL로 다시 읽습니다.
 
 GSC와 서버 크롤 로그(SEO) 수집기는 아직 없습니다.
-프로젝트 매핑은 로컬 참조의 UUID와 국가·브랜드로 해석합니다. 원격 Gold의 정수 키를 이 DB의 키로 사용하지 않습니다.
+프로젝트 매핑은 로컬 참조의 UUID와 국가·브랜드로 해석합니다.
 엔진·기기·방문자 필터 비트의 정의가 제공되지 않았으므로 정확한 기간 사용자 수는 필터 없음(마스크 0) 창만 읽고, 해석할 수 없는 조합은 null입니다.
 SEO는 현재 게시 뷰만 조회하며, 기기 필터는 검색 노출, 엔진 필터는 크롤링 수에 각각 적용합니다.
 
 ## 검증 및 백업
 
 ```powershell
-python -X utf8 back/analytics/manage.py verify
-python -X utf8 back/analytics/manage.py backup
+python -X utf8 back/hub_storage/manage.py verify
 ```
 
-검증은 실제 PostgreSQL에서 컬럼·PK 일치, reader의 쓰기 거부, writer의 DDL 거부,
+검증은 `verify.sql`을 `geohub_gold_db`에서 돌려 reader의 쓰기 거부, writer의 DDL 거부,
 GA4 사전의 종류별 FK, SEO 합계 검증·빌드 불변성·이전 포인터 검사·중복 없는 현재 뷰를 확인합니다.
 검증용 행은 한 트랜잭션에서 롤백하며 앱에 노출하거나 저장하지 않습니다. identity 번호는 롤백으로 되돌아가지 않으므로 중간 번호가 비는 것은 정상입니다.
 
-백업은 `.local/analytics-backups/`에 PostgreSQL custom-format으로 생성합니다. 별도 서버 보관·정기 백업 스케줄은 아직 구성하지 않았습니다.
-복원은 관리자 역할과 스키마 owner 역할을 먼저 준비한 별도 DB에서 `pg_restore`로 수행합니다. 실행 중인 DB를 자동 삭제하거나 덮어쓰는 명령은 제공하지 않습니다.
+`geohub_gold_db`의 복원은 `back/hub_storage/copy_gold.py`로 한다. 옛 저장소의 마지막 덤프는 `.local/analytics-backups/`에 있습니다.
 
-정본 SQL: [schema.sql](schema.sql), 추출기: [generate_schema.py](generate_schema.py), ERD: [구조·ERD 정본](../../docs/architecture/hmg-geo-hub-architecture.html#erd-data).
+정본 SQL: [schema.sql](schema.sql), 추출기: [generate_schema.py](generate_schema.py), ERD: [구조·ERD 정본](../../docs/architecture/hmg-geo-hub-architecture.html#erd-ga4).

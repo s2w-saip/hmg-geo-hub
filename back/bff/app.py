@@ -209,33 +209,33 @@ def ga4_property_id(property_id: str) -> str:
 @app.get("/v1/hub/ga4-properties")
 async def ga4_property_list(request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.listing(), database="hmg_analytics")
+    return hub_json(await ga4_registry.listing())
 
 
 @app.post("/v1/hub/ga4-properties")
 async def ga4_property_create(request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(ga4_registry.PropertyCreate, await json_body(request), "GA4 property")
-    return hub_json(await ga4_registry.create(body, actor), 201, database="hmg_analytics")
+    return hub_json(await ga4_registry.create(body, actor), 201)
 
 
 @app.get("/v1/hub/ga4-properties/{property_id}")
 async def ga4_property(property_id: str, request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.detail(ga4_property_id(property_id)), database="hmg_analytics")
+    return hub_json(await ga4_registry.detail(ga4_property_id(property_id)))
 
 
 @app.put("/v1/hub/ga4-properties/{property_id}")
 async def ga4_property_update(property_id: str, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(ga4_registry.PropertyUpdate, await json_body(request), "GA4 property")
-    return hub_json(await ga4_registry.update(ga4_property_id(property_id), body, actor), database="hmg_analytics")
+    return hub_json(await ga4_registry.update(ga4_property_id(property_id), body, actor))
 
 
 @app.get("/v1/hub/ga4-properties/{property_id}/events")
 async def ga4_property_events(property_id: str, request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.events(ga4_property_id(property_id)), database="hmg_analytics")
+    return hub_json(await ga4_registry.events(ga4_property_id(property_id)))
 
 
 @app.post("/v1/hub/ga4-properties/{property_id}/{action}")
@@ -243,7 +243,7 @@ async def ga4_property_action(property_id: str, action: str, request: Request):
     if action not in ("stop", "resume"):
         raise HTTPException(404, "Unknown action")
     actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor), database="hmg_analytics")
+    return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor))
 
 
 # Admin › 인용 출처 분류 (hub_stores/source_overrides.py): the top-level administrator only. A source key can hold a

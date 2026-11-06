@@ -23,7 +23,7 @@ except ModuleNotFoundError as exc:
 # ═══ fakes ═══════════════════════════════════════════════════════════════════════════════════════════════
 
 class Registry:
-    """analytics.ga4_registry + ga4_registry_event + ga4_collect_status, answering the SQL constants sent."""
+    """catalog.ga4_registry + ga4_registry_event + ga4_collect_status, answering the SQL constants sent."""
 
     def __init__(self):
         self.props, self.events, self.status, self.stored, self.clock, self.locks = {}, [], {}, {}, 0, 0
@@ -154,6 +154,7 @@ class Routes(unittest.TestCase):
         hub_auth.limiter.failures.clear()
         for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(hub_auth.operations_db, "connection", accounts),
+                  mock.patch.object(reg.input_db, "connection", data),
                   mock.patch.object(reg.analytics_db, "connection", data),
                   mock.patch.object(reg, "actors", actors),
                   mock.patch.object(reg, "_pool", Pool(RegistryConn(r)))):
@@ -192,7 +193,7 @@ class Routes(unittest.TestCase):
                          ("469542848", "Kia", "IT", "key_events", [], True))
         self.assertEqual(item["collection"], {"status": None, "checkedAt": None, "error": None, "collectedAt": None,
                                               "collectedTo": None, "pending": True})
-        self.assertEqual(out["meta"]["database"], "hmg_analytics")
+        self.assertEqual(out["meta"]["database"], "geohub_bm_db")
         self.assertEqual(self.r.locks, 1)
         event = self.r.events[-1]
         self.assertEqual((event["action"], event["actor_id"], event["changes"]),

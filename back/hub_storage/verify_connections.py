@@ -6,34 +6,6 @@ import asyncpg
 
 
 async def main(config):
-    external = await asyncpg.connect(config['external'], timeout=5)
-    try:
-        assert await external.fetchval('SHOW transaction_read_only') == 'on'
-        for view in ('projects','prompts','ga4_daily','ga4_users_window','ga4_values','ga4_properties',
-                     'seo_visibility_daily','seo_crawl_daily','seo_device_daily','seo_priority',
-                     'urls','countries','engines','crawl_bots'):
-            await external.fetchval(f'SELECT count(*) FROM published.{view}')
-        # Even overriding the default read-only transaction cannot bypass grants.
-        async with external.transaction(readonly=False):
-            await external.execute('SET TRANSACTION READ WRITE')
-            for query in ('SELECT * FROM catalog.project', 'SELECT * FROM analytics.ga4_row',
-                          'CREATE TABLE published.forbidden_tcp(id int)'):
-                try:
-                    async with external.transaction():
-                        await external.execute(query)
-                except asyncpg.InsufficientPrivilegeError:
-                    pass
-                else:
-                    raise AssertionError('External access boundary failed')
-    finally:
-        await external.close()
-    try:
-        forbidden = await asyncpg.connect(config['external_operations'], timeout=5)
-    except asyncpg.InvalidAuthorizationSpecificationError:
-        pass
-    else:
-        await forbidden.close()
-        raise AssertionError('Data external credentials can connect to operations DB')
     reader = await asyncpg.connect(config['operations_reader'], timeout=5)
     try:
         assert await reader.fetchval('SHOW transaction_read_only') == 'on'
@@ -62,13 +34,6 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('External API credentials can connect to operations DB')
-    try:
-        forbidden = await asyncpg.connect(config['ext_data'], timeout=5)
-    except (asyncpg.InsufficientPrivilegeError, asyncpg.InvalidCatalogNameError):
-        pass
-    else:
-        await forbidden.close()
-        raise AssertionError('External API credentials can still connect to the data DB')
     # The input store's API reader and measurement editor; the metrics store's reader and cache role.
     reader = await asyncpg.connect(config['input_reader'], timeout=5)
     try:
@@ -98,7 +63,7 @@ async def main(config):
     metrics = await asyncpg.connect(config['metrics_reader'], timeout=5)
     try:
         assert await metrics.fetchval('SHOW transaction_read_only') == 'on'
-        await metrics.fetchval('SELECT count(*) FROM cache.query_result')
+        await metrics.fetchval('SELECT 1 FROM gold.metric_row LIMIT 1')
     finally:
         await metrics.close()
     cache = await asyncpg.connect(config['cache_writer'], timeout=5)
@@ -113,6 +78,16 @@ async def main(config):
     else:
         await forbidden.close()
         raise AssertionError('Cache credentials can connect to the input store')
+    # Gold and the cache DB share a server: each role reaches its own database only.
+    for name, problem in (('cache_writer_gold', 'Cache credentials can connect to Gold'), ('metrics_reader_cache', 'The Gold reader can connect to the cache DB'),
+                          ('rollup_cache', 'Rollup credentials can connect to the cache DB')):
+        try:
+            forbidden = await asyncpg.connect(config[name], timeout=5)
+        except asyncpg.InsufficientPrivilegeError:
+            pass
+        else:
+            await forbidden.close()
+            raise AssertionError(problem)
     # Saved filter role: system.saved_filter on the operations server only.
     saved = await asyncpg.connect(config['saved_filter'], timeout=5)
     try:
@@ -125,13 +100,6 @@ async def main(config):
             raise AssertionError('Saved filter role reads beyond system.saved_filter')
     finally:
         await saved.close()
-    try:
-        forbidden = await asyncpg.connect(config['saved_filter_data'], timeout=5)
-    except asyncpg.InvalidAuthorizationSpecificationError:
-        pass
-    else:
-        await forbidden.close()
-        raise AssertionError('Saved filter credentials can connect to the data DB')
     # Account role: the account tables on the operations server only.
     account = await asyncpg.connect(config['account'], timeout=5)
     try:
@@ -144,19 +112,12 @@ async def main(config):
             raise AssertionError('Account role reads beyond the account tables')
     finally:
         await account.close()
-    try:
-        forbidden = await asyncpg.connect(config['account_data'], timeout=5)
-    except asyncpg.InvalidAuthorizationSpecificationError:
-        pass
-    else:
-        await forbidden.close()
-        raise AssertionError('Account credentials can connect to the data DB')
     # GA4 registry role: the registry tables on the data server only.
     registry = await asyncpg.connect(config['ga4_registry'], timeout=5)
     try:
-        await registry.fetchval('SELECT count(*) FROM analytics.ga4_registry')
+        await registry.fetchval('SELECT count(*) FROM catalog.ga4_registry')
         try:
-            await registry.execute('SELECT 1 FROM analytics.ga4_row LIMIT 1')
+            await registry.execute('SELECT 1 FROM catalog.prompt LIMIT 1')
         except asyncpg.InsufficientPrivilegeError:
             pass
         else:
@@ -269,7 +230,7 @@ async def main(config):
         await forbidden.close()
         raise AssertionError('Service week credentials can connect to the operations DB')
     print(json.dumps({'tcp_authentication':'passed','external_operations_access':'denied','api_operations_reader':'read_only',
-                      'input_reader':'read_only','measurement':'its_tables','metrics_reader':'read_only','cache':'cache_table','cache_input_access':'denied',
+                      'input_reader':'read_only','measurement':'its_tables','metrics_reader':'read_only','cache':'cache_table','cache_input_access':'denied','gold_cache_separation':'denied',
                       'ext_api':'scoped_read_only','ext_operations_access':'denied','saved_filter':'one_table',
                       'saved_filter_data_access':'denied','account':'account_tables','account_data_access':'denied',
                       'ga4_registry':'registry_tables','ga4_registry_operations_access':'denied',

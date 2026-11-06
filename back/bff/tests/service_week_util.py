@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager, contextmanager
 from datetime import UTC, date, datetime, timedelta
 from unittest import mock
 
-from bff.hub_stores import analytics_db
+from bff.hub_stores import input_db
 
 RECORDED = datetime(2026, 10, 25, 1, 10, tzinfo=UTC)
 CHECKED = datetime(2026, 11, 2, 1, 10, tzinfo=UTC)
@@ -90,8 +90,8 @@ def hub(data: HubData | None):
                 await asyncio.sleep(data.stall)   # the rollback and the release wait on the stopped server
             raise
 
-    with mock.patch.object(analytics_db, "_pool", None if data is None else object()), \
-            mock.patch.object(analytics_db, "connection", connection):
+    with mock.patch.object(input_db, "_pool", None if data is None else object()), \
+            mock.patch.object(input_db, "connection", connection):
         try:
             yield data
         finally:
