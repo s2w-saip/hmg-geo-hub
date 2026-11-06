@@ -14,7 +14,7 @@
 //   brand table (cells, best, bar, rivals' Δ)  overview/brand-matrix (+ the parts that failed)
 //   markets                                    overview/geo (GeoOverview)
 // This file formats and lays them out. What the numbers count is said on the page (Gold metric review ⚠️,
-// 2026-10-29): the cards and the table count 대표 답변 (Mention / Citation count every answer), and a read
+// 2026-10-29): AI 노출률 counts 대표 답변, the other KPIs every answer, as on Mention / Citation (2026-11-06), and a read
 // that failed says so instead of vanishing or reading as "no competitor value".
 
 import { Suspense, use } from "react";
@@ -178,9 +178,9 @@ function KpiRow({
                 {/* above the card's link, so ⓘ shows its tip instead of opening the page */}
                 <span className="relative z-[1] inline-flex">
                   <RnInfoTip label={t("infoLabel", { name })} align={i >= 3 ? "end" : "start"}>
-                    <RnInfoTipItem label={t("definition")}>{tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
+                    <RnInfoTipItem label={t("definition")}>{key === "visibility" ? t("definitionVisibility") : tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
                     {/* 우선 노출도: the card shows "N번째"; the shared formula (legacy dashboard copy) names the unit "위" */}
-                    <RnInfoTipItem label={t("formula")}>{key === "position" ? t("formulaPosition") : tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
+                    <RnInfoTipItem label={t("formula")}>{key === "position" ? t("formulaPosition") : key === "visibility" ? t("formulaVisibility") : tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
                     <RnInfoTipItem label={t("basisLabel")}>{t("basisTip", { page: tNav(analysisPageOf(key)) })}</RnInfoTipItem>
                   </RnInfoTip>
                 </span>

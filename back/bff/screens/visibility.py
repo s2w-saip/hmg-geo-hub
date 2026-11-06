@@ -28,6 +28,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from bff import api
+from bff.metrics.display import change_pct as change_of, share as share_pct
 from bff.access import reader_scope
 from bff.hub_stores.analytics_reader import BRAND_NAMES
 from bff.screens import screen, split_context
@@ -66,11 +67,11 @@ def path_of(url: Any) -> str:
 
 
 def share(n: float | None, d: float | None) -> float | None:
-    return 100 * n / d if n is not None and d else None
+    return share_pct(n, d) if n is not None and d else None
 
 
 def change_pct(cur: float | None, prev: float | None) -> float | None:
-    return 100 * (cur - prev) / prev if cur is not None and prev else None
+    return change_of(cur, prev) if cur is not None and prev else None
 
 
 def _sum(values) -> float:

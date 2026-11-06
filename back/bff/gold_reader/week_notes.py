@@ -5,8 +5,8 @@ it is). The screens put it next to a period that holds such a week: 'Website 7�
 Gold's completion rule, the one the HUB job advances the week by (back/hub_storage/service_week.py, rule A of the
 service week's reference SQL, checked on live Gold 2026-11-02; the job's twin, so the two change together, pinned clause
 by clause in bff.tests.test_gold_service_week.WeekNotes): a cycle is shown when Gold published it (status 2,
-servable, an active publication, visible today in Korea) into every active release of its scope; one Gold has not
-finished holds its site back (open, a closed week representative, or published but not yet in every release); hidden_scope
+servable, an active publication, visible today in Korea) into the live release of its scope; one Gold has not
+finished holds its site back (open, a closed week representative, or published but not yet in the live release); hidden_scope
 1 is an operator's hiding. Per site and week:
 - shown: a shown cycle;
 - unpublished: none shown, one held back;
@@ -27,8 +27,8 @@ site hidden on 09-18). Read on the global or website surface only: those are the
 service week (review r2-6).
 
 With them, `rounds`: whether the service week (`week_start`) holds a round of each surface as the reads take it — the
-shell's '측정 없음' (review r1-19). True when the round calendar of a release the reads pick from (live · card · grid: a
-page reads its snapshot in its own mode) takes a round in the week, by Context.create's own test of a cycle
+shell's '측정 없음' (review r1-19). True when the round calendar of the live release, the one the reads
+take, holds a round in the week, by Context.create's own test of a cycle
 (calendar_round); False = none does, and no read of the surface takes a snapshot. Not the HUB job's record of the
 week's complete cycles: a held week keeps that as recorded while Gold re-opens its round (review r4-2, 2026-11-03)."""
 from __future__ import annotations
@@ -48,14 +48,14 @@ ROUNDS_SQL = f"""SELECT a.scope,a.read_mode,EXISTS (SELECT 1 FROM gold.dim_cycle
         WHERE c.surface=CASE a.scope WHEN 'global' THEN 1 ELSE 2 END AND {calendar_round("a.release_id", "$1::date")}
           AND c.round_date BETWEEN $3::date AND $4::date) AS holds
     FROM gold.active_release a
-    WHERE a.scope IN ('global','website') AND a.read_mode IN ('live','card','grid') AND ($2::text IS NULL OR a.rule_signature=$2)"""
+    WHERE a.scope IN ('global','website') AND a.read_mode='live' AND ($2::text IS NULL OR a.rule_signature=$2)"""
 
 # $3 the service week's last day, $4 brand bits, $5 · $6 · $7 the countries, languages and engines picked (None = any).
 # `measured`: per website site with a job up to $3, whether one is on every axis picked. Read only with an axis picked
 # (the gate holds in a generic plan too): one scan of job_index, 0.2 s on live Gold (2026-11-03)
 NOTES_SQL = """WITH rel AS (
     SELECT a.scope,a.release_id FROM gold.active_release a
-     WHERE a.scope IN ('global','website') AND a.read_mode IN ('live','card','grid')
+     WHERE a.scope IN ('global','website') AND a.read_mode='live'
        AND ($2::text IS NULL OR a.rule_signature=$2)),
   measured AS MATERIALIZED (
     SELECT j.project_key,bool_or(($5::text[] IS NULL OR j.geo_key IN (SELECT geo_key FROM gold.dim_country WHERE lower(code)=ANY($5::text[])))

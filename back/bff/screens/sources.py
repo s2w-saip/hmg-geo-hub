@@ -6,6 +6,7 @@ import math
 from typing import Any
 
 from bff import api
+from bff.metrics.display import share as share_pct
 from bff.screens import screen, split_context
 from bff.screens._filters import parse_time_range, split_filter_values
 from bff.screens._js import is_num, js_number, js_str
@@ -86,7 +87,7 @@ async def project_detail(q) -> dict:
         values = {}
         for key in KPI_KEYS:
             r = summary["data"].get(key)
-            values[key] = 100 * r["num"] / r["den"] if isinstance(r, dict) and r.get("den") else None
+            values[key] = share_pct(r["num"], r["den"]) if isinstance(r, dict) and r.get("den") else None
         data["kpis"] = values
     return data
 

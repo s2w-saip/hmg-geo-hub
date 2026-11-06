@@ -15,7 +15,7 @@ try:
 
     from bff import api
     from bff.api import query
-    from bff.gold_reader import cache as gold_cache
+    from bff.metrics import serving
     from bff.screens import REGISTRY, screen
     from bff.screens._convert import Exact
     from bff.screens._js import js_round, js_str, rank_value, ratio_value, to_fixed
@@ -92,8 +92,12 @@ class SharedReads(unittest.TestCase):
             await asyncio.sleep(0.01)  # both callers join the one read
             return answer
 
+        async def as_it_is(path, q, read_it):  # no snapshot to read: serving.read opens Gold
+            return await read_it()
+
         async def run():
-            with mock.patch.object(api, "read", read), mock.patch.object(gold_cache, "MAX_AGE_S", 0),                     mock.patch.object(api.json, "dumps", dumps), mock.patch.object(api.json, "loads", loads):
+            with mock.patch.object(api, "read", read), mock.patch.object(serving, "read", as_it_is), \
+                    mock.patch.object(api.json, "dumps", dumps), mock.patch.object(api.json, "loads", loads):
                 return await asyncio.gather(api.get("kpi/summary", {"surface": "global"}), api.get("kpi/summary", {"surface": "global"}))
 
         a, b = asyncio.run(run())

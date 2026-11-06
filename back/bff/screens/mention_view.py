@@ -11,6 +11,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from bff.metrics.display import average1_exact, change1, share1
+from bff.metrics import compute
 from bff.screens._competitors import (brand_key, competitor_mini_picks, competitor_value_index, competitor_value_of,
                                        rank_first_position_rows, resolve_competitor_overlay)
 from bff.screens._convert import Exact, delta1, exact, round1
@@ -54,7 +56,7 @@ def overview_key_of(metric: str) -> str:
 
 def pct_or_null(num: float, den: float) -> float | None:
     """Denominator 0 -> None; round1((100 * num) / den)."""
-    return round1((100 * num) / den) if _gt0(den) else None
+    return share1(num, den) if _gt0(den) else None
 
 
 # ── hero scalar ─────────────────────────────────────────────────────────────
@@ -85,7 +87,7 @@ def delta_pp(current: float | None, previous: float | None) -> float | None:
 def wow_pct(current: float | None, previous: float | None) -> float | None:
     if current is None or previous is None or previous == 0:
         return None
-    return round1((100 * (exact(current) - exact(previous))) / exact(previous))
+    return change1(current, previous)
 
 
 # ── axis ────────────────────────────────────────────────────────────────────
@@ -419,7 +421,7 @@ def engine_competitor_bars(trend: dict | None, metric: str) -> list[dict]:
         out.append({"engine": e["engine"],
                     "ownPct": (own["exposurePct"] if metric == "exposure" else own["sovPct"]) if own else None,
                     # the average of the rounded values, as shown, keeping the exact average (its gap is exact)
-                    "competitorAvgPct": Exact(js_round((total / len(pcts)) * 10) / 10, exact_total / len(pcts)) if pcts else None,
+                    "competitorAvgPct": average1_exact(total, exact_total, len(pcts)) if pcts else None,
                     "competitorCount": len(pcts)})
     return out
 
@@ -844,5 +846,5 @@ def brand_row_values(row: dict, opts: dict) -> dict:
         return {"mentions": None, "prompts": None, "share": None, "mentionRate": None}
     total, answers = opts["multiTotalMentions"], opts.get("totalAnswers")
     return {"mentions": m["mentions"], "prompts": m["prompts"],
-            "share": round1((100 * m["mentions"]) / total) if total > 0 else None,
-            "mentionRate": round1((100 * m["answers"]) / answers) if answers is not None and answers > 0 else None}
+            "share": share1(m["mentions"], total) if total > 0 else None,
+            "mentionRate": pct_or_null(*compute.multi_rate(m["answers"], answers).values())}

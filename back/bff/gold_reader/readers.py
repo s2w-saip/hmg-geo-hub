@@ -5,6 +5,9 @@ from starlette.datastructures import QueryParams
 from bff.gold_reader import acr, advanced, answers, catalog, citations, compare, drilldown, insights, metrics, projects, week_notes
 from bff.gold_reader.context import Context
 from bff.gold_reader.db import connection
+from bff.hub_stores import metrics_db
+from bff.metrics.gold_rows import scope_of
+from bff.metrics.serving import ROW_READS
 
 METRICS = {"filters/options": metrics.options, "filters/dates": metrics.dates,
            "kpi/summary": metrics.summary, "kpi/engines": metrics.engines,
@@ -15,7 +18,10 @@ async def read(path: str, q: QueryParams) -> dict:
     """One Gold /v1 GET in one read-only transaction on the pinned release."""
     async with connection() as conn:
         # gold/projects · keywords · social read no global or website round: the service week leaves them out
-        ctx = await Context.create(conn, q, capped=not path.startswith("gold/"))
+        row_read = path in ROW_READS
+        ctx = await Context.create(conn, q, capped=not path.startswith("gold/"), lazy_catalog=row_read)
+        if row_read and (not metrics_db.configured() or scope_of(ctx) is None):
+            await ctx.load_catalog()
         if path in METRICS:
             return await METRICS[path](ctx)
         if path == "source":

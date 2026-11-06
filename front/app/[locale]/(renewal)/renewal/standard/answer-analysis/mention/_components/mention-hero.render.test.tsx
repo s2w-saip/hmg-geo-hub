@@ -217,7 +217,7 @@ describe("renewal Mention heroes", () => {
   it("the rate trend's table names 당사's numerator and denominator per round", () => {
     const rows = cells(render(<RateHero metric="exposure" />, { tables: ["hero-exposure"] }));
     expect(rows).toContainEqual(["브랜드 언급 답변 수", "34,452", "34,452", "34,452", "34,452"]);
-    expect(rows).toContainEqual(["모니터링 답변 수", "44,979", "44,979", "44,979", "44,979"]);
+    expect(rows).toContainEqual(["대표 답변 수", "44,979", "44,979", "44,979", "44,979"]);
   });
 
   it("the favorability trend's table names the signal counts per round", () => {
@@ -254,7 +254,7 @@ describe("renewal Mention heroes", () => {
     const over = { input: { rateHero: settled(old) }, pick: { auto: false, brands: [] } };
     expect(render(<RateHero metric="exposure" />, over)).not.toContain("경쟁사 평균");
     const rows = cells(render(<RateHero metric="exposure" />, { ...over, tables: ["hero-exposure"] }));
-    expect(rows.map((r) => r[0])).toEqual(["", "HMG", "브랜드 언급 답변 수", "모니터링 답변 수"]);
+    expect(rows.map((r) => r[0])).toEqual(["", "HMG", "브랜드 언급 답변 수", "대표 답변 수"]);
   });
 
   it("the type card compares with the picked brands only: no competitor average, no gap without a pick", () => {

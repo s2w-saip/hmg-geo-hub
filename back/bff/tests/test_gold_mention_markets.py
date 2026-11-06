@@ -14,6 +14,11 @@ try:
 except ModuleNotFoundError as exc:  # pragma: no cover - outside the API image
     raise unittest.SkipTest("Run inside the BFF image") from exc
 
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
+
 D = date(2026, 10, 9)
 
 
@@ -42,10 +47,12 @@ class MarketGaps(unittest.TestCase):
         got = asyncio.run(drilldown.market_gaps(context(conn)))
         self.assertEqual(got["data"]["items"], [{"country": "US", "missing": 150, "with_brands": 4, "answers_no_brand": 301}])
         sql = conn.sql[0]
-        # a missing prompt is the 미언급 count's (same cells), an answer without a brand is Gold's ment_total = 0
-        self.assertIn("HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)", sql)
-        self.assertIn("WHERE ment=0", sql)
+        # a missing prompt is the 미언급 count's (same answers), an answer without a brand has no competitive mention
+        self.assertIn("bool_or(named) AS named,bool_or(own) AS own FROM ans GROUP BY geo_key,prompt_key", sql)
+        self.assertIn("count(s.prompt_key) FILTER(WHERE NOT s.own)", sql)
+        self.assertIn("WHERE NOT named", sql)
         self.assertIn("gold.answer_fact a", sql)
+        self.assertNotIn("kpi_cell", sql)
 
     def test_no_snapshot_no_rows(self):
         ctx = context(Conn([]))
@@ -65,13 +72,16 @@ class MissingPromptsList(unittest.TestCase):
     def test_the_partial_list_holds_the_prompts_an_engine_left_out(self):
         conn = Conn([self.ROW])
         got = asyncio.run(drilldown.missing_prompts(context(conn, "partial=true")))
-        self.assertIn("HAVING bool_or(f.has_mention)", conn.sql[0])
-        self.assertIn("FILTER(WHERE f.has_measured)", conn.sql[0])
+        own = "FALSE"   # the answers' keys, none in this stand-in
+        self.assertIn(f"HAVING bool_or({own})", conn.sql[0])
+        self.assertIn(f"count(DISTINCT f.engine_key)>count(DISTINCT f.engine_key) FILTER(WHERE {own})", conn.sql[0])
+        self.assertIn("FROM gold.answer_fact f", conn.sql[0])
         self.assertEqual(got["data"]["items"][0]["missing_engines"], ["gemini"])
 
     def test_the_whole_list_counts_the_partial_prompts(self):
         conn = Conn([self.ROW])
         got = asyncio.run(drilldown.missing_prompts(context(conn)))
+        self.assertIn("HAVING NOT bool_or(FALSE)", conn.sql[0])
         self.assertEqual(got["data"]["counts"]["partial"], 5)
 
 

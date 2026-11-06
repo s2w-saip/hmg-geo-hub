@@ -10,6 +10,9 @@
 #   service-week cron, hourly at minute 10: the service week check (manage.py sync-service-week, in the BFF container):
 #               a new catalog.service_week row when Gold completed a later week or the week's cycles changed, else the
 #               newest row's checked_at; a refused read records nothing and the screens keep the last week
+#   rollup      cron, hourly at minute 20 (manage.py rollup, in the BFF container): the unfiltered first screens' values into Gold for the
+#               surfaces whose live snapshot or definition version moved; nothing moved, it only says so. Until a run succeeds, those
+#               screen parts show nothing (SSOT). Run it by hand after deploying a new definition version.
 #   ga4         the GA4 collector (back/analytics/ga4_collect.py) once, by hand: its arguments pass through
 #               (--dry-run, --backfill 180, --from/--to, --property). It runs in a throwaway container of the BFF
 #               image on the host network (the HUB data DB on 127.0.0.1, GA4 on the internet); the secrets travel in
@@ -20,6 +23,7 @@
 # sync, check-sync, service-week and ga4-cron append one line each to .local/vm-cron.log. The user's crontab (installed by
 # hand; this script installs nothing) for service-week, after manage.py init has applied 011:
 #   10 * * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh service-week >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1
+#   20 * * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh rollup >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo"
@@ -109,6 +113,15 @@ check-sync)
         log "check-sync WARN last successful import: $hours h ago (limit $limit h)"; exit 1
     fi
     log "check-sync ok last successful import $hours h ago" ;;
+rollup)
+    exec 9>.local/vm-rollup.lock
+    flock -n 9 || { log 'rollup skipped: the previous run is still going'; exit 0; }
+    if out="$(python3 -X utf8 back/hub_storage/manage.py rollup 2>&1)"; then
+        log "rollup ok $(printf '%s' "$out" | tail -1 | cut -c1-400)"
+    else
+        log "rollup FAILED $(printf '%s' "$out" | tail -1 | cut -c1-400)"; exit 1
+    fi
+    ;;
 service-week)
     exec 9>.local/vm-service-week.lock
     flock -n 9 || { log 'service-week skipped: the previous run is still going'; exit 0; }

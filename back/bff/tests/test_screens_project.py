@@ -16,7 +16,8 @@ PROJECT_META = {**META, "surface": "project", "as_of": "2026-10-09", "cycles": [
 
 def project_summary() -> dict:
     s = summary(192)
-    s["data"].update({"owned_url_rate": {"num": 14, "den": 192}, "target_url_rate": {"num": 0, "den": 192},
+    s["data"].update({"url_prompts": {"measured_prompts": 192, "target_prompts": 0, "owned_prompts": 14},
+                      "owned_url_rate": {"num": 14, "den": 192}, "target_url_rate": {"num": 0, "den": 192},
                       "citation_accuracy": {"num": 0, "den": 14}})
     return {**s, "meta": PROJECT_META}
 

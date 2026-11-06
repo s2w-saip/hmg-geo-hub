@@ -9,7 +9,8 @@ the week's Sunday, so a Gold re-publication of an older week is followed.
 
 Rule A, per cycle of surfaces 1 and 2 in the ISO week of its round_date (checked on live Gold, 2026-11-02):
 - complete: published (status 2), servable, an active gold.publication, visible today (view_date NULL or <= today KST)
-  and a ready, validated 'fact' release item cyc:<cyc_key> in every active release (live, card, grid) of its scope.
+  and a ready, validated 'fact' release item cyc:<cyc_key> in the live release of its scope, the one snapshot the screens read
+  (until Silver's manifest, T9: going live is Gold's live release taking the round; 2026-11-06, the card and grid releases are not read).
 - blocking: not hidden (hidden_scope <> 1), not complete, and open (status 0), closed as its site's week representative
   (status 1 and fleet-visible; Global always is) or published and servable. Hidden cycles, superseded duplicates
   (status 2, not servable), other closed cycles of a site (status 1, not fleet-visible) and stale ones (3) never block.
@@ -94,11 +95,11 @@ def delay_days(week_end, today):
 
 # The active releases the screens pick from, one per scope and read mode (HGH_GOLD_RULE_SIGNATURE as the BFF).
 RELEASES_SQL = '''SELECT scope,read_mode,release_id,version,rule_signature,last_build_id,as_of FROM gold.active_release
-    WHERE scope IN ('global','website') AND read_mode IN ('live','card','grid') AND ($1::text IS NULL OR rule_signature=$1)
+    WHERE scope IN ('global','website') AND read_mode='live' AND ($1::text IS NULL OR rule_signature=$1)
     ORDER BY scope,read_mode'''
 # One row per cycle of surfaces 1 and 2, with the facts rule A needs; fleet_visible is NULL without a pick row.
 CYCLES_SQL = '''WITH rel AS (SELECT scope,release_id FROM gold.active_release
-        WHERE scope IN ('global','website') AND read_mode IN ('live','card','grid') AND ($1::text IS NULL OR rule_signature=$1))
+        WHERE scope IN ('global','website') AND read_mode='live' AND ($1::text IS NULL OR rule_signature=$1))
     SELECT d.cycle_id,d.cyc_key,d.surface,d.project_key,d.round_date,d.status,d.servable,d.view_date,d.hidden_scope,b.fleet_visible,
         EXISTS(SELECT 1 FROM gold.publication p WHERE p.cyc_key=d.cyc_key AND p.state='active') AS has_active_publication,
         (EXISTS(SELECT 1 FROM rel r WHERE r.scope=s.scope) AND NOT EXISTS(SELECT 1 FROM rel r WHERE r.scope=s.scope AND NOT EXISTS(

@@ -1,7 +1,6 @@
 """Period mode (a closed URL period): a Δ compares the period with the period before it, on the values the page
 shows (2026-10-29 metric review R3)."""
 import asyncio
-import re
 import unittest
 from datetime import date
 from unittest import mock
@@ -11,31 +10,36 @@ try:
 
     from bff.gold_reader import compare
     from bff.gold_reader.context import Context
-    from bff.gold_reader.metrics import COUNTS
     from bff.screens import _compare, citation, citation_model, mention_data, mention_renewal, overview
     from bff.screens._convert import pct1_or_zero, rank_avg
+    from bff.tests.test_gold_metrics import counts_row as answers_row
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_period_basis)") from exc
+
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
 
 D1, D2 = date(2026, 10, 4), date(2026, 10, 5)  # a one-day window and the day before it
 
 
 def counts_row(day, **values):
-    row = dict.fromkeys(COUNTS, 0)
-    row.update(round_date=day, measured_prompts=0, mentioned_prompts=0, **values)
-    return row
+    return answers_row(round_date=day, **values)
 
 
 class Conn:
-    """Answers the cycle ledger and the kpi cells of each population (bound as population_key)."""
+    """Answers the cycle ledger and the answers' counts of each population (the mention read's, the citation read's)."""
 
-    def __init__(self, by_population):
-        self.by_population = by_population
+    def __init__(self, *, mentions, citations):
+        self.mentions, self.citations = mentions, citations
 
     async def fetch(self, sql, *args):
-        if "FROM gold.kpi_cell" in sql:
-            m = re.search(r"population_key=\$(\d+)", sql)
-            return self.by_population[args[int(m.group(1)) - 1]]
+        if "citations_all" in sql:   # the citation rows' sums
+            return [{"round_date": r["round_date"], "citations": r["citations"], "citations_all": r["citations_all"], "official": r["official"],
+                     "target": r["target"], "owned": r["owned"], "owned_or_target": r["owned_or_target"]} for r in self.citations]
+        if "FROM gold.answer_fact" in sql or "f.answer_key AS a_" in sql:
+            return self.citations if "base_answers" in sql else self.mentions
         if "FROM gold.dim_cycle" in sql:
             return [{"round_date": d, "hidden_scope": 0, "servable": True, "in_release": True, "expected_units": 1, "status": 1}
                     for d in (D1, D2)]
@@ -45,11 +49,11 @@ class Conn:
 class CompareReader(unittest.TestCase):
     def test_citations_per_answer_counts_the_answers_of_the_citation_population(self):
         # Citation 월 비교 줄 ▲70.0% vs Gold +52.9%: the answers came from the mention population
-        conn = Conn({1: [counts_row(D1, answers=100, gap_base=100), counts_row(D2, answers=100, gap_base=100)],
-                     2: [counts_row(D1, cit_total=300, gap_base=60), counts_row(D2, cit_total=500, gap_base=50)]})
+        conn = Conn(mentions=[counts_row(D1, answers=100, gap_base=100), counts_row(D2, answers=100, gap_base=100)],
+                    citations=[counts_row(D1, cit_total=300, gap_base=60), counts_row(D2, cit_total=500, gap_base=50)])
         ctx = Context(conn, QueryParams("surface=global&kind=window&from=2026-10-05&to=2026-10-05&metrics=citations_per_answer"))
         ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
-        ctx.builds = {"cell": [1]}
+        ctx.builds = {"fact": [1]}
         ctx.dates = [D2, D1]
         ctx.selected_dates = [D2]
         item = asyncio.run(compare.read(ctx))["data"][0]
@@ -62,13 +66,13 @@ def cycle(day, *, published=True, expected=1):
 
 
 class LedgerConn:
-    """The cycle ledger `cycles` and one kpi row per measured day (answers 100, tracked `tracked[day]`)."""
+    """The cycle ledger `cycles` and one row of counts per measured day (answers 100, tracked `tracked[day]`)."""
 
     def __init__(self, cycles, tracked):
         self.cycles, self.tracked = cycles, tracked
 
     async def fetch(self, sql, *args):
-        if "FROM gold.kpi_cell" in sql:
+        if "FROM gold.answer_fact" in sql or "f.answer_key AS a_" in sql:
             return [counts_row(d, answers=100, tracked=n, cit_total=10, gap_base=100) for d, n in self.tracked.items()]
         if "FROM gold.dim_cycle" in sql:
             return self.cycles
@@ -79,7 +83,7 @@ def compare_item(query, cycles, tracked):
     """The visibility item of one kpi/compare read over `cycles` (selectable dates = the measured days)."""
     ctx = Context(LedgerConn(cycles, tracked), QueryParams(f"surface=global&metrics=visibility&{query}"))
     ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
-    ctx.builds = {"cell": [1]}
+    ctx.builds = {"fact": [1]}
     ctx.dates = sorted(tracked, reverse=True)
     ctx.selected_dates = ctx.dates[:1]
     return asyncio.run(compare.read(ctx))["data"][0]

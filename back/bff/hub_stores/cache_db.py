@@ -3,7 +3,7 @@ here never fails a read: get answers a miss and put gives up, and the caller cou
 
 The key is the query, the live snapshot id and the metric definition version, hashed after writing the query one way. There is no TTL:
 another snapshot or definition version is simply another key, and purge_other_snapshots removes the old rows when a new snapshot goes
-live. Nothing reads this yet: the screens switch over with the metric definitions (docs/handoff/architecture-rebuild.md T5.5)."""
+live. bff.metrics.serving reads and writes it; results travel as JSON text, as the reads answer."""
 from __future__ import annotations
 
 import hashlib
@@ -63,38 +63,38 @@ def cache_key(query: dict, snapshot_id: str, definition_version: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-async def get(query: dict, snapshot_id: str, definition_version: str):
-    """The stored result, or None on a miss (or when the cache cannot be read)."""
+async def get(query: dict, snapshot_id: str, definition_version: str) -> str | None:
+    """The stored result as JSON text, or None on a miss (or when the cache cannot be read)."""
     if _pool is None:
         return None
     try:
         async with _pool.acquire() as conn:
-            value = await conn.fetchval("SELECT result FROM cache.query_result WHERE cache_key=$1", cache_key(query, snapshot_id, definition_version))
+            return await conn.fetchval("SELECT result::text FROM cache.query_result WHERE cache_key=$1", cache_key(query, snapshot_id, definition_version))
     except UNAVAILABLE as error:
         log.warning("cache read failed: %s", type(error).__name__)
         return None
-    return json.loads(value) if isinstance(value, str) else value
 
 
-async def put(query: dict, snapshot_id: str, definition_version: str, result) -> bool:
+async def put(query: dict, snapshot_id: str, definition_version: str, result: str) -> bool:
+    """Store a result (JSON text)."""
     if _pool is None:
         return False
     try:
         async with _pool.acquire() as conn:
             await conn.execute(UPSERT_SQL, cache_key(query, snapshot_id, definition_version), snapshot_id, definition_version,
-                               json.dumps(canonical_query(query), ensure_ascii=False, default=str), json.dumps(result, ensure_ascii=False, default=str))
+                               json.dumps(canonical_query(query), ensure_ascii=False, default=str), result)
     except UNAVAILABLE as error:
         log.warning("cache write failed: %s", type(error).__name__)
         return False
     return True
 
 
-async def purge_other_snapshots(snapshot_id: str) -> int:
-    """After a new snapshot goes live: remove every row of the others. The number of rows removed."""
+async def purge_other_snapshots(snapshot_ids: list[str]) -> int:
+    """After a new snapshot goes live: remove every row of the others (each surface has its own). The number of rows removed."""
     if _pool is None:
         return 0
     async with _pool.acquire() as conn:
-        status = await conn.execute("DELETE FROM cache.query_result WHERE snapshot_id<>$1", snapshot_id)
+        status = await conn.execute("DELETE FROM cache.query_result WHERE NOT snapshot_id=ANY($1::text[])", snapshot_ids)
     return int(status.split()[-1])
 
 

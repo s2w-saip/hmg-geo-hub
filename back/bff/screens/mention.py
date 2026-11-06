@@ -445,5 +445,5 @@ async def prompts_section(q) -> dict:
     if data is None:
         return {"data": None, "degraded": degraded}
     return {"data": data, "degraded": degraded,
-            "table": brand_table_view(data["brands"], data["summary"].get("totalAnswers")),
+            "table": brand_table_view(data["brands"], data["summary"].get("monitoringAnswers", data["summary"].get("totalAnswers"))),
             "trendSeries": trend_split(data.get("trend"), data["brands"])}

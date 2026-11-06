@@ -25,8 +25,10 @@ from functools import cmp_to_key
 from itertools import combinations
 from typing import Any
 
+from bff.metrics.display import share as share_pct, share1, share_whole
 from bff.access import BRANDS, reader_scope
 from bff.hub_stores import service_week
+from bff.metrics import compute
 from bff.screens import screen, split_context
 from bff.screens._competitors import competitor_value_of
 from bff.screens._convert import Exact, delta1, exact, pct1_or_null, rank_avg
@@ -658,7 +660,7 @@ def _group_of(key: str, members: list[dict], total: float) -> dict:
         "key": key,
         "members": sorted_m,
         "value": value,
-        "share": round1((100 * value) / total),
+        "share": share1(value, total),
         # a sum of some members is not the group's change (2026-11-02 premise review)
         "delta": round1(_js_sum(exact(m["delta"]) for m in with_d)) if with_d and not partial else None,
         "partial": partial,
@@ -940,7 +942,7 @@ def _drawer_row(row: dict, rank: int, types: Any) -> dict:
         "avgPosition": row["avgPosition"],
         "mentionRate": row["mentionRate"],
         "sentiment": sent if sent and total > 0 else None,
-        "sentimentPct": {k: (100 * sent[k]) / total for k in SENTIMENT_KEYS} if sent and total > 0 else None,
+        "sentimentPct": {k: share_pct(sent[k], total) for k in SENTIMENT_KEYS} if sent and total > 0 else None,
         "types": types,
     }
 
@@ -1171,7 +1173,7 @@ def rank_standing(rows: list[dict], hero: dict) -> dict | None:
     rank = next((i + 1 for i, r in enumerate(rows) if r["own"]), None)
     if rank is None or hero["avgPosition"] is None:
         return None
-    return {"rank": rank, "total": len(rows), "topPct": max(1, js_round((100 * rank) / len(rows)))}
+    return {"rank": rank, "total": len(rows), "topPct": max(1, share_whole(rank, len(rows)))}
 
 
 def rank_payload(fp: Any, period: Any, brands: list[dict], trend: Any, degraded: bool, prev_brands: list[dict] | None = None) -> dict:
@@ -1248,8 +1250,8 @@ def brand_row_values(row: dict, multi: bool, multi_total: float, total_answers: 
     return {
         "mentions": m["mentions"],
         "prompts": m["prompts"],
-        "share": round1((100 * m["mentions"]) / multi_total) if multi_total > 0 else None,
-        "mentionRate": round1((100 * m["answers"]) / total_answers) if total_answers is not None and total_answers > 0 else None,
+        "share": share1(m["mentions"], multi_total) if multi_total > 0 else None,
+        "mentionRate": pct_or_null(*compute.multi_rate(m["answers"], total_answers).values()),
     }
 
 
@@ -1272,7 +1274,10 @@ def ranking_payload(data: Any, trend: Any, prev_brands: list[dict] | None = None
     brands = data["brands"] if data else []
     deltas = share_deltas(trend) if prev_brands is None else period_share_deltas(brands, prev_brands)
     multi_total = _js_sum((b["multi"]["mentions"] if b.get("multi") else 0) for b in brands)
-    total_answers = (data.get("summary") or {}).get("totalAnswers") if data else None
+    # 복수 언급률's denominator: the monitoring answers, as its numerator counts them (2026-11-06: over the representative ones a project's
+    # repeated measurements gave 182.7%)
+    summary = (data.get("summary") or {}) if data else {}
+    total_answers = summary.get("monitoringAnswers", summary.get("totalAnswers"))
     tb_by: dict = {}
     for b in ((data.get("typesByBrand") if data else None) or {}).get("brands") or []:
         tb_by.setdefault(b["brand"], b["types"])  # a repeated name keeps the first row, as the shell's drawer

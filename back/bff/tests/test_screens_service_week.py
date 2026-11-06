@@ -26,6 +26,11 @@ try:
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_screens_service_week)") from exc
 
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
+
 D = date.fromisoformat
 OCT5 = D("2026-10-05")
 NOTES = [{"surface": "website", "week_start": "2026-07-20", "sites": 25, "shown": 24, "unpublished": 1, "hidden": 0, "other": 0,
@@ -364,7 +369,7 @@ class GoldUnderTheWeek:
         if path == "kpi/compare":
             week = await service_week.current()
             ctx = Context(LedgerConn(MONDAYS), q)
-            ctx.release, ctx.builds, ctx.week = {"release_id": 1, "version": 1, "rule_signature": "test"}, {"cell": [1]}, week
+            ctx.release, ctx.builds, ctx.week = {"release_id": 1, "version": 1, "rule_signature": "test"}, {"fact": [1]}, week
             ctx.dates = [d for d in MONDAYS if d <= week.end]
             lo, hi = q.get("from"), q.get("to")
             ctx.selected_dates = [d for d in ctx.dates if (not lo or d >= D(lo)) and (not hi or d <= D(hi))]

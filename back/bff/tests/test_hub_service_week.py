@@ -37,6 +37,11 @@ try:
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_hub_service_week)") from exc
 
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
+
 G, W, P = 1, 2, 3                 # surfaces: global (Monday rounds), website (Friday rounds), project (out of scope)
 TODAY = date(2026, 11, 2)         # a Monday: live Gold's service week then is 2026-10-05..10-11 (10월 2주차)
 KEYS = itertools.count(1)
@@ -293,14 +298,14 @@ class GoldReads(unittest.TestCase):
     def test_the_sql_half_of_rule_a(self):
         for sql, clauses in (
                 (sw.RELEASES_SQL, (
-                    # the active releases the screens pick from: Global and Website, live · card · grid, one rule signature
+                    # the releases the screens read: Global and Website, live, one rule signature
                     "SELECT scope,read_mode,release_id,version,rule_signature,last_build_id,as_of FROM gold.active_release "
-                    "WHERE scope IN ('global','website') AND read_mode IN ('live','card','grid') "
+                    "WHERE scope IN ('global','website') AND read_mode='live' "
                     "AND ($1::text IS NULL OR rule_signature=$1) ORDER BY scope,read_mode",)),
                 (sw.CYCLES_SQL, (
                     # the same releases for the cycles' check
                     "WITH rel AS (SELECT scope,release_id FROM gold.active_release WHERE scope IN ('global','website') "
-                    "AND read_mode IN ('live','card','grid') AND ($1::text IS NULL OR rule_signature=$1))",
+                    "AND read_mode='live' AND ($1::text IS NULL OR rule_signature=$1))",
                     "SELECT d.cycle_id,d.cyc_key,d.surface,d.project_key,d.round_date,d.status,d.servable,d.view_date,"
                     "d.hidden_scope,b.fleet_visible,",
                     # complete(): an active publication
@@ -336,8 +341,8 @@ class GoldReads(unittest.TestCase):
 
         notes, job = same(importlib.import_module("bff.gold_reader.week_notes").NOTES_SQL), same(sw.CYCLES_SQL)
         for piece in (
-                # the releases: Global and Website, live · card · grid, the one rule signature
-                "scope IN ('global','website') AND", "read_mode IN ('live','card','grid') AND", "::text IS NULL OR",
+                # the releases: Global and Website, live, the one rule signature
+                "scope IN ('global','website') AND", "read_mode='live' AND", "::text IS NULL OR",
                 "rule_signature=$",
                 # an active publication
                 "EXISTS(SELECT 1 FROM gold.publication p WHERE p.cyc_key=", "AND p.state='active')",
@@ -914,7 +919,7 @@ class GoldSchema(unittest.TestCase):
             8: (W, date(2026, 10, 9), {"project": 4, **closed, "status": 0, "hidden": 1}, quiet),     # hidden everywhere
             9: (W, date(2026, 10, 9), {"project": 5, **closed, "status": 3}, quiet),                  # stale
             10: (P, date(2026, 10, 6), {**closed, "status": 0}, None),                                # never read
-            11: (G, date(2026, 10, 12), {}, shown), 12: (W, date(2026, 10, 16), {"modes": ("live", "grid")}, owed),   # not in card
+            11: (G, date(2026, 10, 12), {}, shown), 12: (W, date(2026, 10, 16), {"modes": ("card", "grid")}, owed),   # not in live
             13: (G, date(2026, 10, 19), {}, shown), 14: (W, date(2026, 10, 23), {"publication": "retired"}, owed),
             15: (G, date(2026, 10, 26), {}, shown),
             16: (W, friday, {"item": "building"}, owed), 17: (W, friday, {"project": 2, "build": "failed"}, owed),
@@ -954,11 +959,11 @@ class GoldSchema(unittest.TestCase):
                 end = start + timedelta(days=6)
                 calendar = {(scope, mode): any(start <= r["round_date"] <= end for r in await conn.fetch(
                                 context.CALENDAR_SQL, {"global": G, "website": W}[scope], None, TODAY, release, end))
-                            for (scope, mode), release in RELEASE_IDS.items()}
+                            for (scope, mode), release in RELEASE_IDS.items() if mode == "live"}
                 rounds = {(r["scope"], r["read_mode"]): r["holds"] for r in await conn.fetch(rounds_sql, TODAY, SIGNATURE, start, end)}
                 self.assertEqual(rounds, calendar, start)
-                if start == date(2026, 10, 12):   # 12, of 10-16, is in no card release: the card calendar has no round
-                    self.assertEqual([rounds["website", m] for m in ("card", "grid", "live")], [False, True, True])
+                if start == date(2026, 10, 12):   # 12, of 10-16, is in no live release: the live calendar has no round
+                    self.assertFalse(rounds["website", "live"])
         await conn.execute("INSERT INTO gold.publication VALUES (99,'active'),(98,'retired')")   # cycles a reload has not brought
         await conn.execute("INSERT INTO gold.release_item VALUES (4,'fact','cyc:97',1001,'ready'),"
                            "(8,'fact','cyc:96',1001,'ready'),(5,'fact','cyc:95',1001,'building')")

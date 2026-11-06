@@ -124,12 +124,16 @@ def service_host(store):
     return f'127.0.0.1:{port_of(store)}' if analytics.NATIVE else f'{STORES[store].container}:5432'
 
 
-def api_python(script):
-    """Run a helper script where the API runs: inside its container, or this Python in native mode (BFF env)."""
+def api_python(script, api_env=False):
+    """Run a helper script where the API runs: inside its container, or this Python in native mode (BFF env; with `api_env` the API's
+    stores too and the back folder as the working directory, for a script that imports bff)."""
     if analytics.NATIVE:
-        gold = ROOT / '.env.gold.local'
-        env = {**os.environ, **(analytics.env_file(gold) if gold.exists() else {})}
-        out = subprocess.run([sys.executable, '-'], input=script.encode(), capture_output=True, env=env)
+        files = ['.env.gold.local', *(['.env.analytics.local', '.env.operations.local', '.env.input.local', '.env.metrics.local', '.env.hub-edit.local'] if api_env else [])]
+        env = dict(os.environ)
+        for name in files:
+            if (ROOT / name).exists():
+                env.update(analytics.env_file(ROOT / name))
+        out = subprocess.run([sys.executable, '-X', 'utf8', '-'], input=script.encode(), capture_output=True, env=env, cwd=ROOT / 'back' if api_env else None)
         if out.returncode:
             raise RuntimeError(sanitize(out.stderr.decode(errors='replace')[-2500:]))
         return out.stdout.decode()
@@ -485,6 +489,8 @@ def install_metrics():
         + login_role('hmg_rollup_writer', values['ROLLUP_WRITER_PASSWORD'], "SET statement_timeout='10min'", 'CONNECTION LIMIT 2')
         + store_database('metrics', logins) + 'COMMIT;', store='metrics')
     migrate('metrics-001.sql', '001_gold_cache', store='metrics')
+    migrate('metrics-002.sql', '002_first_screen', store='metrics')
+    migrate('metrics-003.sql', '003_metric_rows', store='metrics')
 
 
 # Everything the inputs were in the data DB. catalog.service_week, catalog.project_ga4_property and published.* stay there.
@@ -636,6 +642,16 @@ def service_week(args):
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.
     script = (HERE / 'service_week.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
     print(api_python(script).strip())
+
+
+def rollup(args):
+    """rollup: compute the unfiltered first screens' values into Gold for the surfaces whose live snapshot or definition version moved
+    (bff/metrics/rollup.py). --force runs them although nothing moved; params name surfaces (global · website · project), default all."""
+    metrics = analytics.env_file(METRICS_SECRET)
+    config = {'dsn': f"postgresql://hmg_rollup_writer:{metrics['ROLLUP_WRITER_PASSWORD']}@{service_host('metrics')}/{STORES['metrics'].database}",
+              'surfaces': args.params or None, 'force': args.force}
+    # Secrets travel over stdin, never argv, image layers, logs or the frontend.
+    print(api_python('from bff.metrics.rollup import run\nrun(' + repr(config) + ')\n', api_env=True).strip())
 
 
 def verify():
@@ -1122,6 +1138,7 @@ COMMIT;""")
 
 
 COMMANDS = {
+    'rollup': rollup,
     'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
     'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
     'publish-project': lambda a: set_project_access(a, True), 'unpublish-project': lambda a: set_project_access(a, False),
@@ -1145,6 +1162,7 @@ if __name__ == '__main__':
     parser.add_argument('--days', type=int, help='ext-key-issue: lifetime in days')
     parser.add_argument('--audience', default='collect', help='ext-client-add: collect (수집) or analyze (분석)')
     parser.add_argument('--dry-run', action='store_true', help='sync-service-week: decide and print, write nothing')
+    parser.add_argument('--force', action='store_true', help='rollup: compute although the snapshot and the definition version did not move')
     args = parser.parse_args()
     try:
         COMMANDS[args.command](args)

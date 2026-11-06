@@ -5,18 +5,12 @@ import math
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
+from bff.metrics.display import js_round  # noqa: F401 - the screens' name
+
 
 def is_num(v: Any) -> bool:
     """typeof v === "number" && Number.isFinite(v)."""
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
-
-
-def js_round(x: float) -> int | float:
-    """Math.round: halves go toward +Infinity (Math.round(-2.5) === -2)."""
-    if not math.isfinite(x):
-        return x
-    f = math.floor(x)
-    return f + 1 if x - f >= 0.5 else f
 
 
 def to_fixed(x: float, digits: int) -> str:

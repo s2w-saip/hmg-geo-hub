@@ -12,6 +12,8 @@ from __future__ import annotations
 from typing import Any
 
 from bff import api
+from bff.metrics.display import permille1
+from bff.metrics.formulas import engine_consistency
 from bff.screens._convert import (as_of_date, filter_notices, pct1_or_null, pct1_or_zero, rank_avg, round1,
                                    suppression_of, whole_suppression)
 from bff.screens._js import js_round
@@ -150,9 +152,10 @@ def url_prompt_rates(data: dict, meta: Any) -> dict:
 
 
 def to_url_rate_kpis(data: dict, meta: Any) -> dict | None:
-    """Website/project URL-rate cards (owned, target, citation accuracy); None on global."""
+    """Website/project URL-rate cards (owned, target, citation accuracy), 자사 · 타겟 URL 인용률 per prompt on both (SSOT defines the
+    website's; the project's follows it, 2026-11-06); None on global."""
     m = meta if isinstance(meta, dict) else {}
-    if m.get("surface") == "global" or (m.get("suppressed") or {}).get("owned_url_rate") == "not_website_surface":
+    if m.get("surface") not in ("website", "project") or (m.get("suppressed") or {}).get("owned_url_rate") == "not_website_surface":
         return None
     provenance = provenance_of(meta)
 
@@ -162,22 +165,14 @@ def to_url_rate_kpis(data: dict, meta: Any) -> dict | None:
     acc = data.get("citation_accuracy")
     acc_value = pct1_or_null(acc)
     citation_accuracy = card("citationAccuracy", acc_value, _ratio_pair(acc) if acc and acc_value is not None else None)
-    if m.get("surface") == "website":
-        p = url_prompt_rates(data, meta)
+    p = url_prompt_rates(data, meta)
 
-        def pair(n: float) -> dict | None:
-            return {"numerator": n, "denominator": p["measuredPrompts"]} if _gt0(p["measuredPrompts"]) else None
+    def pair(n: float) -> dict | None:
+        return {"numerator": n, "denominator": p["measuredPrompts"]} if _gt0(p["measuredPrompts"]) else None
 
-        return {"ownedUrlRate": with_provenance(card("ownedUrlRate", p["ownedRate"], pair(p["ownedPrompts"]))),
-                "targetUrlRate": with_provenance(card("targetUrlRate", p["rate"], pair(p["hitPrompts"]))),
-                "citationAccuracy": citation_accuracy, "unit": "prompt"}
-
-    def rate(key: str, r: dict | None) -> dict:
-        return with_provenance(card(key, pct1_or_null(r), _ratio_pair(r) if r and _gt0(r.get("den")) else None))
-
-    return {"ownedUrlRate": rate("ownedUrlRate", data.get("owned_url_rate")),
-            "targetUrlRate": rate("targetUrlRate", data.get("target_url_rate")),
-            "citationAccuracy": citation_accuracy, "unit": "measurement"}
+    return {"ownedUrlRate": with_provenance(card("ownedUrlRate", p["ownedRate"], pair(p["ownedPrompts"]))),
+            "targetUrlRate": with_provenance(card("targetUrlRate", p["rate"], pair(p["hitPrompts"]))),
+            "citationAccuracy": citation_accuracy, "unit": "prompt"}
 
 
 def summary_is_empty(data: dict, meta: Any) -> bool:
@@ -236,7 +231,7 @@ def apply_competitor_sov_from_brands(kpis: list[dict], own_mentions: float | Non
     if not target:
         return kpis
     m = target["mentions"]
-    value = js_round((1000 * own_mentions) / m) / 10 if own_mentions is not None and m > 0 else None
+    value = permille1(own_mentions, m) if own_mentions is not None and m > 0 else None
     competitor_sov = {"brand": target["name"], "value": value}
     return [{**k, "competitorSov": competitor_sov} if k.get("key") == "shareOfVoice" else k for k in kpis]
 
@@ -256,10 +251,8 @@ def overview_card_state(k: dict | None) -> dict:
 
 def consistency(values: list[float]) -> float | None:
     """Engine consistency = min / max x 100 (one decimal); fewer than two engines or max <= 0 -> None."""
-    if len(values) < 2:
-        return None
-    mn, mx = min(values), max(values)
-    return round1((100 * mn) / mx) if mx > 0 else None
+    value = engine_consistency(values)
+    return None if value is None else round1(value)
 
 
 def apply_engine_consistency(kpis: list[dict], rows: list[dict] | None) -> list[dict]:

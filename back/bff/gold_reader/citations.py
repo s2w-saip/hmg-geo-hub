@@ -1,8 +1,12 @@
 """Citation readers use the fact build associated with the pinned release."""
 from __future__ import annotations
 
-from bff.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit, ratio, values
+from bff.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit, values
+from bff.metrics import compute
+from bff.metrics.formulas import rate
+from bff.metrics.gold_judged import own_url
 from bff.gold_reader.metrics import TYPES
+from bff.metrics.gold_rows import metric_source
 
 OFFICIAL_COMPETITOR = "officialCompetitor"
 DOMAIN_SORTS = ("citations", "share", "coverage", "prompts", "skey")
@@ -46,9 +50,7 @@ def select_domains(ctx: Context, items: list[dict]) -> list[dict]:
 
 
 def predicate(ctx: Context, b: SQL, *, alias: str = "f") -> str:
-    where = ctx.predicate(b, alias, family="fact", measure_family="citations") + f" AND {alias}.cit_in"
-    if ctx.card:
-        where += f" AND {alias}.is_rep"
+    where = ctx.predicate(b, alias, family="fact", measure_family="citations") + f" AND {ctx.citation_monitoring(b, alias)}"
     if values(ctx.q, "source"):
         where += f" AND {alias}.source_key IN (SELECT s.source_key FROM gold.dim_source s JOIN gold.dim_category d USING(category_key) WHERE d.slug=ANY({b.bind(values(ctx.q, 'source'), 'text[]')}))"
     if ctx.mention:
@@ -77,14 +79,14 @@ async def mention_target(ctx: Context) -> bool:
 
 def mentioned(ctx: Context, b: SQL, alias: str = "f") -> str:
     """The answer (same build, surface, round and answer key) holds a mention row of ctx.mention as the brand row's
-    prompts tab counts it (drilldown.mention_prompts: std_in, competitive, mentioned; 당사 = an own brand of the
+    prompts tab counts it (drilldown.mention_prompts: monitoring, competitive, mentioned; 당사 = an own brand of the
     perspective). The pkey of answer_brand_fact leads with those keys."""
     kind, key = ctx.mention
     who = (f"ab.brand_key={b.bind(key)}" if kind == "brand"
            else f"ab.brand_key IN (SELECT brand_key FROM gold.dim_brand WHERE (own_bit & {b.bind(ctx.bits)})<>0)")
     return (f"EXISTS(SELECT 1 FROM gold.answer_brand_fact ab WHERE (ab.build_id,ab.surface,ab.round_date,ab.answer_key)="
             f"({alias}.build_id,{alias}.surface,{alias}.round_date,{alias}.answer_key) "
-            f"AND ab.std_in AND ab.competitive AND ab.mention_count>0 AND {who})")
+            f"AND {ctx.monitoring(b, 'ab')} AND {ctx.competitive(b, 'ab')} AND ab.mention_count>0 AND {who})")
 
 
 def unknown_brand(ctx: Context, out: dict) -> dict:
@@ -110,11 +112,10 @@ async def owned_bases(ctx: Context) -> list[int]:
 
 
 async def own_citation(ctx: Context, b: SQL, alias: str = "f") -> str:
-    """A 자사 citation, by surface as Gold defines it (gold.citation_cell): global = owner_key = ANY(허용 배열), website =
-    loc_owned ∨ tgt_hit, project = loc_owned."""
+    """A 자사 citation (the metric layer's): global = owner_key = ANY(허용 배열), else gold_judged.own_url."""
     if ctx.sf == 1:
         return f"{alias}.owner_key=ANY({b.bind(await owned_bases(ctx), 'smallint[]')})"
-    return f"({alias}.loc_owned OR {alias}.tgt_hit)" if ctx.sf == 2 else f"{alias}.loc_owned"
+    return await own_url(ctx, b, alias)
 
 
 def category(row: dict) -> dict | None:
@@ -123,41 +124,19 @@ def category(row: dict) -> dict | None:
 
 async def domains(ctx: Context) -> dict:
     if not await mention_target(ctx):
-        return unknown_brand(ctx, envelope(ctx, {"summary": {"total_citations": 0, "unique_sources": 0, "own_share": ratio(0, 0), "answers_den": 0},
+        return unknown_brand(ctx, envelope(ctx, {"summary": {"total_citations": 0, "unique_sources": 0, "own_share": rate(0, 0), "answers_den": 0},
                                                  "items": [], "competitor_totals": [], "competitor_sources": [] if flag(ctx.q, "competitor_sources") else None},
                                            page={"limit": limit(ctx.q), "total": 0, "next_cursor": None}))
-    b = SQL()
-    where = predicate(ctx, b)
-    owned = await own_citation(ctx, b)
-    # Aggregate the facts per source_key, then join the source dims to the ~26k result rows: the
-    # distinct counts sort the fact rows by a 4-byte key instead of the source's text columns
-    # (2.9 s -> 1.35 s on the global card). source_key and skey are both unique in dim_source, so
-    # the groups are the per-source groups as before.
-    rows = await ctx.conn.fetch(f"""WITH a AS (SELECT f.source_key,
-        count(*)::int AS citations,count(DISTINCT f.answer_key)::int AS answers,
-        count(DISTINCT f.prompt_key)::int AS prompts,
-        count(*) FILTER(WHERE {owned})::int AS owned,
-        bool_or(f.tgt_hit) AS target
-        FROM gold.citation_fact f WHERE {where} GROUP BY f.source_key)
-        SELECT s.skey,s.domain,s.is_social,s.owned_brand_bit,s.competitor_brand_key,
-        c.category_key,c.slug,c.name AS category_name,br.name AS competitor_brand,
-        a.citations,a.answers,a.prompts,a.owned,a.target
-        FROM a JOIN gold.dim_source s USING(source_key)
-        LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
-        LEFT JOIN gold.dim_brand br ON br.brand_key=s.competitor_brand_key
-        ORDER BY a.citations DESC,s.skey""", *b.args)
+    source = metric_source(ctx)
+    rows = await source.domain_rows()
     total = sum(r["citations"] for r in rows)
-    b = SQL()
-    where = ctx.predicate(b, family="fact", measure_family="citations") + " AND f.cit_in" + (" AND f.is_rep" if ctx.card else "")
-    if ctx.mention:  # coverage: of the answers where the brand is mentioned (the original API's answers_den_sql)
-        where += " AND " + mentioned(ctx, b)
-    answer_den = await ctx.conn.fetchval(f"SELECT count(DISTINCT f.answer_key)::int FROM gold.answer_fact f WHERE {where}", *b.args)
+    answer_den = await source.domain_answers()
     items = []
     for rank, row in enumerate(rows, 1):
         r = dict(row)
         items.append({"skey": r["skey"], "domain": r["domain"] or r["skey"], "is_social": r["is_social"],
-                      "category": category(r), "citations": r["citations"], "share": ratio(r["citations"], total),
-                      "citing_answers": r["answers"], "coverage": ratio(r["answers"], answer_den), "own_citations": r["owned"],
+                      "category": category(r), "citations": r["citations"], "share": compute.of("source_share", r["citations"], total),
+                      "citing_answers": r["answers"], "coverage": compute.of("coverage", r["answers"], answer_den), "own_citations": r["owned"],
                       "is_own": r["owned"] > 0, "is_target": bool(r["target"]),
                       "competitor_brand": r["competitor_brand"], "citing_prompts": r["prompts"], "rank": rank})
     competitors = {}
@@ -171,20 +150,16 @@ async def domains(ctx: Context) -> dict:
     offset = int(ctx.q.get("cursor") or "0")
     page = {"limit": page_limit, "total": len(selected), "next_cursor": str(offset + page_limit) if offset + page_limit < len(selected) else None}
     return envelope(ctx, {"summary": {"total_citations": total, "unique_sources": len(items),
-                                       "own_share": ratio(sum(r["own_citations"] for r in items), total), "answers_den": answer_den},
+                                       "own_share": compute.of("own_citation_share", sum(r["own_citations"] for r in items), total), "answers_den": answer_den},
                           "items": selected[offset:offset + page_limit], "competitor_totals": sorted(competitors.values(), key=lambda r: -r["citations"]),
                           "competitor_sources": [r for r in items if r["competitor_brand"]] if flag(ctx.q, "competitor_sources") else None}, page=page)
 
 
 async def sources(ctx: Context) -> dict:
-    b = SQL()
-    where = predicate(ctx, b)
     # per engine x source, once: the category totals (per engine too) and each category's top sources over
     # every source (2026-10-29 metric review R4: the tooltip took them from the domain table's first page)
-    per_source = [dict(r) for r in await ctx.conn.fetch(f"""WITH a AS (SELECT f.engine_key,f.source_key,count(*)::int AS citations
-        FROM gold.citation_fact f WHERE {where} GROUP BY f.engine_key,f.source_key)
-        SELECT a.engine_key,a.citations,s.skey,coalesce(s.domain,s.skey) AS domain,c.category_key,c.slug,c.name AS category_name
-        FROM a JOIN gold.dim_source s USING(source_key) JOIN gold.dim_category c ON c.category_key=s.category_key""", *b.args)]
+    source = metric_source(ctx)
+    per_source = await source.source_engine_counts()
     by_engine_category: dict = {}
     by_source: dict = {}
     for r in per_source:
@@ -205,7 +180,7 @@ async def sources(ctx: Context) -> dict:
         key = row["category_key"]
         r = groups.setdefault(key, {"category": category(row), "citations": 0, "top_sources": tops.get(key, [])})
         r["citations"] += row["citations"]
-    categories = [{**r, "share": ratio(r["citations"], total)} for r in sorted(groups.values(), key=lambda r: -r["citations"])]
+    categories = [{**r, "share": compute.of("category_share", r["citations"], total)} for r in sorted(groups.values(), key=lambda r: -r["citations"])]
     codes = {r["engine_key"]: r["code"] for r in await ctx.conn.fetch("SELECT * FROM gold.dim_engine")}
     by_engine = [{"engine": codes[key], "total": sum(r["citations"] for r in rows if r["engine_key"] == key),
                   "categories": [{"category_key": r["category_key"], "citations": r["citations"]} for r in rows if r["engine_key"] == key]}
@@ -213,30 +188,10 @@ async def sources(ctx: Context) -> dict:
     if not flag(ctx.q,"include_tone",True) and not flag(ctx.q,"include_types",True):
         return envelope(ctx, {"total_citations": total, "categories": categories, "by_engine": by_engine,
             "tone": {key:{"urls":0,"citations":0,"answers":0} for key in ("positive","negative")}, "types": []})
-    # Tone and type attribution are stored on citation cells, so no text is classified at query time.
-    b = SQL()
-    where = ctx.predicate(b, population="citations", perspective=True)
-    if values(ctx.q, "source"):
-        # the 출처 filter narrows the type matrix too (it read every category: R4)
-        where += f" AND f.category_key IN (SELECT category_key FROM gold.dim_category WHERE slug=ANY({b.bind(values(ctx.q, 'source'), 'text[]')}))"
-    cells = await ctx.conn.fetch(f"""SELECT f.category_key,coalesce(sum(cit_pos),0)::bigint AS positive,
-        coalesce(sum(cit_neg),0)::bigint AS negative,
-        {','.join(f'coalesce(sum(cit_t_{t}),0)::bigint AS t_{t}' for t in TYPES)}
-        FROM gold.citation_cell f WHERE {where} GROUP BY f.category_key""", *b.args)
+    # the 출처 filter narrows the type matrix too (it read every category: R4)
+    cells = await source.type_category_counts(values(ctx.q, "source"))
     # Tile URL/answer distinct counts are derived from facts, not citation occurrence sums.
-    b = SQL()
-    where = predicate(ctx, b)
-    positive = "+".join(f"coalesce(a.sent_pos_{s},0)" for bit,s in ((1,"h"),(2,"k"),(4,"g")) if ctx.bits & bit)
-    negative = "+".join(f"coalesce(a.sent_neg_{s},0)" for bit,s in ((1,"h"),(2,"k"),(4,"g")) if ctx.bits & bit)
-    tone_rows = await ctx.conn.fetch(f"""SELECT
-        CASE WHEN ({positive}) > ({negative}) THEN 'positive' ELSE 'negative' END AS tone,
-        count(*)::int AS citations,count(DISTINCT coalesce(u.url_norm,u.url))::int AS urls,count(DISTINCT f.answer_key)::int AS answers
-        FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
-        JOIN gold.dim_url u ON u.url_key=f.url_key
-        WHERE {where} AND ({positive})<>({negative}) GROUP BY tone""", *b.args)
-    tone = {key: {"urls": 0, "citations": 0, "answers": 0} for key in ("positive", "negative")}
-    for r in tone_rows:
-        tone[r["tone"]] = {k: r[k] for k in ("urls", "citations", "answers")}
+    tone = await source.tone_counts()
     return envelope(ctx, {"total_citations": total, "categories": categories, "by_engine": by_engine,
                           "tone": tone, "types": [{"type": t, "total": sum(c[f"t_{t}"] for c in cells),
                             "categories": [{"category_key": c["category_key"], "citations": c[f"t_{t}"]} for c in cells if c[f"t_{t}"]]} for t in TYPES]})

@@ -350,8 +350,9 @@ describe("renewal Overview first position unit", () => {
     expect(tip).toContain("(단위: 번째)");
     expect(tip).not.toContain("(단위: 위)");
   });
-  it("the other KPIs keep the shared formulas", () => {
-    expect(card(html(), "visibility")).toContain(ko.dashboard.kpi.formula.visibility);
+  it("AI 노출률 names the representative answers its formula counts, the other KPIs keep the shared formulas", () => {
+    expect(card(html(), "visibility")).toContain(ko.renewal.overview.formulaVisibility);
+    expect(card(html(), "shareOfVoice")).toContain(ko.dashboard.kpi.formula.shareOfVoice);
   });
 });
 

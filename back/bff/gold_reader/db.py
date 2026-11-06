@@ -16,10 +16,11 @@ async def open_pool() -> None:
     if not dsn:
         raise RuntimeError("HGH_GOLD_DB_URL is required; there is no sample-data fallback")
     _pool = await asyncpg.create_pool(
-        dsn, min_size=1, max_size=6, timeout=8, command_timeout=20,
+        dsn, min_size=1, max_size=6, timeout=8, command_timeout=int(os.environ.get("HGH_GOLD_COMMAND_TIMEOUT_S", "20")),
         statement_cache_size=0,
         server_settings={"application_name": "hmg-geo-hub-gold", "default_transaction_read_only": "on",
-                         "statement_timeout": "15000", "idle_in_transaction_session_timeout": "30000",
+                         "work_mem": os.environ.get("HGH_GOLD_WORK_MEM", "32MB"),
+                         "statement_timeout": os.environ.get("HGH_GOLD_STATEMENT_TIMEOUT_MS", "15000"), "idle_in_transaction_session_timeout": "30000",
                          # Our sessions only: compiling each 1-3 s read cost up to 1.2 s and saved less than
                          # that (citations/domains 2.25 -> 1.85 s without it). No memory settings: Gold is not ours.
                          "jit": "off"},

@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from bff.metrics.display import average1, share_of_fraction
 from bff.screens import screen, split_context
 from bff.screens._convert import delta1, round1
 from bff.screens._filters import load_filter_dates, load_panel_options, read_project_custom_field_filters, read_standard_filters
@@ -97,7 +98,7 @@ def own_compare_row(own_rows: list[dict], own: dict | None, own_mention_rate: An
             rate = max(rate, b["mentionRate"])
     return {"brand": label, "mentions": mentions, "prompts": prompts, "share": own["share"] if own else share,
             "mentionRate": rate,
-            "avgPosition": own["avgPosition"] if own else (js_round((s / n) * 10) / 10 if n > 0 else None),
+            "avgPosition": own["avgPosition"] if own else (average1(s, n) if n > 0 else None),
             "isTracked": True}
 
 
@@ -127,7 +128,7 @@ def sentiment_view(totals: dict | None) -> list[dict] | None:
     if not totals:
         return None
     total = totals["positive"] + totals["neutral"] + totals["negative"] + totals["mixed"] or 1
-    return [{"key": k, "value": totals[k], "cls": cls, "share": (totals[k] / total) * 100} for k, cls in SENTIMENT_SEGS]
+    return [{"key": k, "value": totals[k], "cls": cls, "share": share_of_fraction(totals[k], total)} for k, cls in SENTIMENT_SEGS]
 
 
 def assign_other_colors(brand_totals: list[dict], colors: tuple) -> dict:
@@ -186,7 +187,7 @@ def type_share_view(types_by_brand: dict | None, tracked: set, comparison_brand:
             segs.append({"key": "etc", "labelKey": "others", "val": etc, "color": "bg-ink-100"})
         for s in segs:
             s["width"] = (s["val"] / total) * 100 if total > 0 else 0
-        rows.append({"type": typ, "total": total, "trackedShare": (own / total) * 100 if total > 0 else 0, "segs": segs})
+        rows.append({"type": typ, "total": total, "trackedShare": share_of_fraction(own, total) if total > 0 else 0, "segs": segs})
     return {"rows": rows, "legend": legend_from_segments(rows)}
 
 
@@ -248,7 +249,7 @@ async def view(q) -> dict:
     out.update({"deltas": summary_deltas(sub_kpis, prev_sub), **compare_parts(data, sub_kpis, None, None),
                 "sentiment": sentiment_view(data.get("sentimentTotals")), "typeAbs": type_abs_view(data.get("typeTotals")),
                 "trendSeries": trend_split(data.get("trend"), data["brands"]),
-                "table": brand_table_view(data["brands"], data["summary"].get("totalAnswers"))})
+                "table": brand_table_view(data["brands"], data["summary"].get("monitoringAnswers", data["summary"].get("totalAnswers")))})
     return out
 
 

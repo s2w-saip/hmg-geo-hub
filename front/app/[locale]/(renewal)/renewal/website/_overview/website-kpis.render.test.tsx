@@ -27,7 +27,7 @@ describe("renewal Website Overview KPI", () => {
     expect(text(engine)).toMatch(/^data-rn-engine="visibility"[^>]*>엔진 간 일관성/);
     expect(engine).toMatch(/<dd[^>]*>34\.7%<\/dd>/);
     expect(text(v)).toContain("브랜드 언급 답변17,796");
-    expect(text(v)).toContain("모니터링 답변20,216");
+    expect(text(v)).toContain("대표 답변20,216");
     const p = tileOf(out, "position");
     expect(text(p)).toContain("1.1번째");
     // a Δ that rounds to 0 reads 변화 없음 (as the renewal Overview's brand table and Mention), never "0.0번째"

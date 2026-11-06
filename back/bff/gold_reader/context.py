@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 from fastapi import HTTPException
 
 from bff.hub_stores import service_week
+from bff.metrics.gold_judged import Populations, populations
+from bff.metrics.judgments import excluded_from_ranks
 
 SURFACES = {"global": 1, "website": 2, "project": 3}
 BRANDS = {"hyundai": 1, "kia": 2, "genesis": 4, "hmg": 7}
@@ -90,8 +92,10 @@ class Context:
         if self.surface not in SURFACES:
             raise HTTPException(422, "Unknown surface")
         self.sf = SURFACES[self.surface]
-        self.card = flag(q, "card") and self.sf != 3
-        self.mode = "grid" if self.card and flag(q, "grid") else "card" if self.card else "live"
+        # One snapshot per round (SSOT): the card and grid releases, older copies of some rounds, are not read. ?card= is ignored,
+        # and the screens that send it read the same answers as the others (decision 2026-11-06, D-15).
+        self.card = False
+        self.mode = "live"
         self.bits = 0
         for brand in values(q, "brand"):
             if brand.lower() not in BRANDS:
@@ -113,9 +117,14 @@ class Context:
         self.owned_bases: list[int] | None = None
         # the prompts whose catalog row matches every taxonomy pick (global · website), read once; None = no pick
         self.catalog_prompts: list[int] | None = None
+        # the rounds of this read whose pre-computed values are late (metrics.gold_rows): a trend shows them as gaps
+        self.late_rounds: set[date] = set()
+        # what the judgments leave out of this read's builds (metrics.gold_judged); the ACR answers no population takes leave every fact read
+        self.populations = Populations()
+        self.older_acr: list[int] = []
 
     @classmethod
-    async def create(cls, conn: Any, q: Any, *, capped: bool = True) -> Context:
+    async def create(cls, conn: Any, q: Any, *, capped: bool = True, lazy_catalog: bool = False) -> Context:
         """`capped` False: a read of no Gold round (keyword and social research, the project list) leaves the service
         week out, so it never waits on or fails with the HUB data DB. On the global and website surfaces it reads no
         round calendar either: its meta names no round (as_of None), never one after the week (review r2-4)."""
@@ -179,14 +188,48 @@ class Context:
                 self.selected_dates = []
             else:
                 self.selected_dates = self.dates[offset:offset + 1]
-        # Overview check (2026-11-02): an EXISTS on catalog_entry per cell row (no prompt_key index) planned a nested
-        # loop on card reads, 13 s and past the 15 s limit; the keys read once and bound take 0.5-1 s, same rows.
+        self.populations = await populations(conn, self.sf, self.builds.get("fact", []))
+        self.older_acr = self.populations.older_acr
+        if not lazy_catalog:
+            await self.load_catalog()
+        return self
+
+    async def load_catalog(self) -> None:
+        """The prompts of the taxonomy picks, once. A read Gold's rows answer never needs them (2.9 s on a brand_presence pick): it comes
+        with lazy_catalog, and its data source calls this before counting from the snapshot.
+        Overview check (2026-11-02): an EXISTS on catalog_entry per cell row (no prompt_key index) planned a nested loop on card reads,
+        13 s and past the 15 s limit; the keys read once and bound take 0.5-1 s, same rows."""
         b = SQL()
-        if self.sf != 3 and (tax := self.taxon_where(b, "ce")):
-            self.catalog_prompts = [r["prompt_key"] for r in await conn.fetch(f"""SELECT DISTINCT ce.prompt_key
+        if self.catalog_prompts is None and self.sf != 3 and (tax := self.taxon_where(b, "ce")):
+            self.catalog_prompts = [r["prompt_key"] for r in await self.conn.fetch(f"""SELECT DISTINCT ce.prompt_key
                 FROM gold.catalog_entry ce WHERE ce.build_id=ANY({b.bind(self.builds.get('fact', []), 'bigint[]')})
                 AND (ce.brand_bit & {b.bind(self.bits | 8)})<>0 AND {' AND '.join(tax)}""", *b.args)]
-        return self
+
+    @staticmethod
+    def _left_out(b: SQL, alias: str, keys: list[int], column: str = "answer_key") -> str:
+        # a hashed subplan: <>ALL over a bound array compares every row with every key (the reads took ten times as long)
+        return f"{alias}.{column} NOT IN (SELECT unnest({b.bind(keys, 'bigint[]')}))" if keys else "TRUE"
+
+    def monitoring(self, b: SQL, alias: str = "f") -> str:
+        """모니터링 답변 (judgments.monitoring), on a row of any answer table."""
+        return self._left_out(b, alias, self.populations.not_monitoring)
+
+    def citation_monitoring(self, b: SQL, alias: str = "f") -> str:
+        return self._left_out(b, alias, self.populations.not_citation_monitoring)
+
+    def eligible(self, b: SQL, alias: str = "f") -> str:
+        return self._left_out(b, alias, self.populations.not_eligible)
+
+    def competitive(self, b: SQL, alias: str = "f") -> str:
+        """A competing brand's row (judgments.NON_COMPETITOR_BRANDS). A bare-only name keeps the split its rows came with."""
+        parts = [self._left_out(b, alias, self.populations.non_competitor, "brand_key")]
+        if self.populations.bare_only:
+            parts.append(f"({alias}.competitive OR {self._left_out(b, alias, self.populations.bare_only, 'brand_key')})")
+        return "(" + " AND ".join(parts) + ")"
+
+    def excluded(self, name: str | None, *, is_own: bool = False) -> bool:
+        """A rank row the roster excludes (judgments.excluded_from_ranks): out of the lists, in every total."""
+        return excluded_from_ranks(name, is_own=is_own, excluded=self.populations.excluded_brands)
 
     def capped(self, day: date | None) -> date | None:
         """`day`, at the latest the service week's last day (an uncapped read keeps it)."""
@@ -235,6 +278,9 @@ class Context:
                   measure_family: str = "mentions") -> str:
         parts = [f"{alias}.build_id=ANY({b.bind(self.builds_for(family, dates), 'bigint[]')})",
                  f"{alias}.surface={b.bind(self.sf, 'smallint')}"]
+        if family == "fact" and self.older_acr:
+            # a hashed subplan: <>ALL over a bound array compares every row with every key (the reads took ten times as long)
+            parts.append(f"{alias}.answer_key NOT IN (SELECT unnest({b.bind(self.older_acr, 'bigint[]')}))")
         if dates:
             parts.append(f"{alias}.round_date=ANY({b.bind(self.selected_dates, 'date[]')})")
             hidden = (1, 2) if (population or measure_family) == "citations" else (1, 3)

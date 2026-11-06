@@ -11,7 +11,8 @@ from fastapi import HTTPException
 
 from bff.gold_reader import compare_logic as logic
 from bff.gold_reader.context import envelope, values
-from bff.gold_reader.metrics import COUNTS, counts, metric_values
+from bff.gold_reader.metrics import COUNTS, URL_METRICS, counts, metric_values
+from bff.metrics.formulas import rate
 
 
 async def read(ctx):
@@ -89,7 +90,7 @@ async def read(ctx):
                     ledger.missing_units += planned
         for lab in sums:
             ledgers[(lab, family)].published_cycles = len(published[lab])
-        for row in await counts(scan_ctx, group="date", family=population, prompts=False):
+        for row in await counts(scan_ctx, group="date", family=population, prompts=False, owned=bool(set(metrics) & set(URL_METRICS))):
             lab = window.label_of(row["round_date"])
             for key in COUNTS:
                 if key.startswith("cit_") == (family == "citation"):
@@ -100,8 +101,8 @@ async def read(ctx):
                 ledgers[(lab, family)].data_cycles += 1
     items, suppressed = [], {}
     def pairs(row, base):
-        return {**metric_values(row), "mentions_per_answer": {"num": row["own_mentions"], "den": row["answers"]},
-                "citations_per_answer": {"num": row["cit_total"], "den": base}}
+        return {**metric_values(row), "mentions_per_answer": rate(row["own_mentions"], row["answers_mon"]),
+                "citations_per_answer": rate(row["cit_total"], base)}
     prev, cur = pairs(sums["prev"], cit_base["prev"]), pairs(sums["cur"], cit_base["cur"])
     for metric in metrics:
         family, unit = logic.METRIC_FAMILY[metric], logic.METRIC_UNIT[metric]

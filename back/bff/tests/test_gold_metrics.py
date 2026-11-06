@@ -13,46 +13,67 @@ try:
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_gold_metrics)") from exc
 
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
+
 D1, D2 = date(2026, 9, 28), date(2026, 10, 5)
 
 
 def counts_row(**values) -> dict:
-    row = dict.fromkeys(metrics.COUNTS, 0)
-    row.update(measured_prompts=0, mentioned_prompts=0)
-    row.update(values)
-    return row
+    """One row that answers each read of the adapter over the answers (bff.metrics.gold_current: answer_counts,
+    citation_counts, own_brand_counts), which takes the columns it selects. The names a test gives are counts()'s:
+    answers · tracked = the representative answers, answers_mon = the monitoring ones (as many unless given), cit_* ·
+    gap_base = the citation read's."""
+    given = {**dict.fromkeys(metrics.COUNTS, 0), "measured_prompts": 0, "mentioned_prompts": 0, **values}
+    return {**given, "rep_answers": given["answers"], "rep_tracked": given["tracked"],
+            "answers": values.get("answers_mon", given["answers"]),
+            "base_answers": given["gap_base"], "citations": given["cit_total"], "citations_all": given["cit_total_all"],
+            "official": given["cit_m05"], "target": given["cit_target"], "owned": given["cit_owned"], "owned_or_target": 0}
 
 
-def brand_row(day, key, name, own_bit, mentions, answers) -> dict:
-    row = {"round_date": day, "brand_key": key, "name": name, "own_bit": own_bit, "mentions": mentions,
-           "answers": answers, "rank_sum": 0, "ranked": 0, "positive": 0, "neutral": 0, "mixed": 0, "negative": 0}
-    return row
+def brand_row(day, key, name, own_bit, mentions, answers, *, positive=0, neutral=0, mixed=0, negative=0, **values) -> dict:
+    """One row of the adapter's brand read (brand_counts). `answers` = the brand's representative answers, the sentiments
+    are its s_* sums."""
+    return {"round_date": day, "brand_key": key, "name": name, "own_bit": own_bit, "mentions": mentions, "answers": answers,
+            "rep_answers": answers, "rank_sum": 0, "ranked": 0, "rk_sum": 0, "rk_count": 0, "multi_answers": 0, "multi_mentions": 0,
+            "s_pos": positive, "s_neu": neutral, "s_mix": mixed, "s_neg": negative,
+            **{f"signals_{t}": 0 for t in metrics.TYPES}, **values}
 
 
 class Conn:
-    """asyncpg stand-in: answers by the table read, applies a brand_key text filter like the database
-    would, and records every statement."""
+    """asyncpg stand-in: answers by the table read (url = the URL counts per round, url_engines per round and engine),
+    applies a brand_key text filter like the database would, and records every statement."""
 
-    def __init__(self, *, kpi=(), brands=(), catalog=(), url=()):
-        self.kpi, self.brands, self.catalog, self.url, self.sql = list(kpi), list(brands), list(catalog), list(url), []
+    def __init__(self, *, kpi=(), brands=(), catalog=(), url=(), url_engines=()):
+        self.kpi, self.brands, self.catalog, self.url, self.url_engines = list(kpi), list(brands), list(catalog), list(url), list(url_engines)
+        self.sql = []
 
     async def fetch(self, sql, *args):
         self.sql.append(sql)
-        if "FROM gold.brand_cell" in sql:
+        if "FROM gold.catalog_entry" in sql:  # first: it counts its measured prompts on answer_fact
+            return self.catalog
+        if "FROM gold.answer_brand_fact f" in sql:
+            if "WITH a AS" not in sql:  # own_brand_counts: 당사's type answers, per the counts' groups
+                return self.kpi
             m = re.search(r"f\.brand_key::text=ANY\(\$(\d+)::text\[\]\)", sql)
             return [r for r in self.brands if not m or str(r["brand_key"]) in args[int(m.group(1)) - 1]]
-        if "FROM gold.kpi_cell" in sql:
+        if "url_prompts" in sql or "url_own_prompts" in sql:
+            return self.url_engines if "f.engine_key AS engine_key" in sql else self.url
+        if "FROM gold.answer_fact" in sql or "FROM gold.citation_fact" in sql:
             return self.kpi
-        if "FROM gold.catalog_entry" in sql:
-            return self.catalog
-        if "FROM gold.url_prompt_cell" in sql:
-            return self.url
+        if "FROM gold.dim_owned_base" in sql:
+            return []
         if "gold.dim_engine" in sql:
             return [{"engine_key": 1, "code": "chatgpt"}]
         raise AssertionError(f"unexpected statement: {sql[:120]}")
 
     def reads(self, table: str) -> int:
-        return sum(f"FROM gold.{table}" in s for s in self.sql)
+        return sum(f"FROM gold.{table}" in s for s in self.sql if "f.answer_key AS a_" not in s)
+
+    def url_reads(self) -> int:
+        return sum("url_prompts" in s for s in self.sql)
 
 
 def context(conn: Conn, qs: str) -> Context:
@@ -100,7 +121,7 @@ class Builds(unittest.TestCase):
 
 
 class BrandTrend(unittest.TestCase):
-    def test_reads_the_mention_cells_once_and_only_the_asked_brands(self):
+    def test_reads_the_answers_once_and_only_the_asked_brands(self):
         conn = Conn(kpi=[counts_row(round_date=D1, answers=10, total_mentions=20),
                          counts_row(round_date=D2, answers=20, total_mentions=40)],
                     brands=[brand_row(D1, 370, "Toyota", 0, 6, 4), brand_row(D2, 370, "Toyota", 0, 10, 8),
@@ -116,9 +137,9 @@ class BrandTrend(unittest.TestCase):
         self.assertEqual([(p["ratio"], p["gap"]) for p in honda_vis["points"]],
                          [({"num": 0, "den": 10}, True), ({"num": 2, "den": 20}, False)])
         self.assertEqual((honda_sov["brand_key"], honda_sov["is_own"]), (1420, False))
-        # the date totals are one scan of the mention cells (no citation cells, no repeat)
-        self.assertEqual(conn.reads("kpi_cell"), 1)
-        self.assertEqual(conn.reads("brand_cell"), 1)
+        # the date totals are one scan of the answers (no citation read, no repeat)
+        self.assertEqual(conn.reads("answer_fact"), 1)
+        self.assertEqual(conn.reads("answer_brand_fact"), 1)
 
     def test_without_brand_keys_every_brand_is_a_candidate(self):
         conn = Conn(kpi=[counts_row(round_date=D2, answers=20, total_mentions=40)],
@@ -126,7 +147,7 @@ class BrandTrend(unittest.TestCase):
         ctx = context(conn, "surface=global&card=true&dimension=brand&metrics=share_of_voice&top_n=5")
         out = asyncio.run(metrics.trend(ctx))["data"]
         self.assertEqual([(s["key"], s["is_own"]) for s in out["series"]], [("HMG", True), ("Toyota", False)])
-        self.assertNotIn("brand_key::text", next(s for s in conn.sql if "brand_cell" in s))
+        self.assertNotIn("brand_key::text", next(s for s in conn.sql if "answer_brand_fact" in s))
 
     def test_the_own_series_is_the_perspective_not_one_own_brand(self):
         # 2026-10-29 metric review R1: 당사 = Hyundai + Kia + Genesis. The own line came from the first own
@@ -152,7 +173,7 @@ class BrandTrend(unittest.TestCase):
         self.assertEqual(by["sentiment"], [{"num": 6, "den": 10}, {"num": 9, "den": 20}])
         # own brands are never rivals, and the top counts rivals only
         self.assertEqual(sorted({s["key"] for s in out["series"] if not s["is_own"]}), ["Toyota"])
-        self.assertEqual(conn.reads("kpi_cell"), 1)
+        self.assertEqual(conn.reads("answer_fact"), 1)
 
     def test_the_top_counts_rivals_after_the_own_series(self):
         brands = [brand_row(D2, 9, "Kia", 2, 50, 10), brand_row(D2, 7, "Hyundai", 1, 40, 8)]
@@ -201,10 +222,10 @@ class TypeTrend(unittest.TestCase):
     no dims (2026-10-29), so the renewal Mention's type trend and its favourability trend never showed."""
 
     def conn(self, *rows) -> Conn:
-        return Conn(kpi=list(rows) or [counts_row(round_date=D1, engine_key=1, answers=10, t_mention=6, t_final_choice=1),
-                                       counts_row(round_date=D2, engine_key=1, answers=20, t_mention=9, t_final_choice=4)])
+        return Conn(kpi=list(rows) or [counts_row(round_date=D1, engine_key=1, answers=3, answers_mon=10, t_mention=6, t_final_choice=1),
+                                       counts_row(round_date=D2, engine_key=1, answers=5, answers_mon=20, t_mention=9, t_final_choice=4)])
 
-    def test_dims_type_comes_with_the_engine_trend_from_its_cells(self):
+    def test_dims_type_comes_with_the_engine_trend_from_its_reads(self):
         conn = self.conn()
         ctx = context(conn, "surface=global&bucket=cycle&dimension=engine&metrics=visibility&dims=type:type_exposure")
         out = asyncio.run(metrics.trend(ctx))["data"]
@@ -215,8 +236,9 @@ class TypeTrend(unittest.TestCase):
         by = {s["key"]: [p["ratio"] for p in s["points"]] for s in block["series"]}
         self.assertEqual(by["mention"], [{"num": 6, "den": 10}, {"num": 9, "den": 20}])
         self.assertEqual(by["final_choice"], [{"num": 1, "den": 10}, {"num": 4, "den": 20}])
-        self.assertEqual(by["definition"], [{"num": 0, "den": 10}, {"num": 0, "den": 20}])
-        self.assertEqual(conn.reads("kpi_cell"), 2)  # the engine trend's mention and citation cells, nothing more
+        self.assertEqual(by["definition"], [{"num": 0, "den": 10}, {"num": 0, "den": 20}])  # of the monitoring answers
+        self.assertEqual(conn.reads("answer_fact"), 2)  # the engine trend's mention and citation counts, nothing more
+        self.assertEqual(conn.reads("answer_brand_fact"), 1)  # the type answers
 
     def test_dimension_type(self):
         out = asyncio.run(metrics.trend(context(self.conn(), "surface=global&bucket=cycle&dimension=type")))["data"]
@@ -234,6 +256,7 @@ class TypeTrend(unittest.TestCase):
         out = asyncio.run(metrics.trend(ranged(context(conn, f"surface=global&dimension=engine&metrics=visibility&dims=none:visibility&from={D1}&to={D2}"))))["data"]
         (none,) = out["dims"][0]["series"]
         self.assertEqual([p["ratio"] for p in none["points"]], [None, {"num": 19, "den": 30}])
+        self.assertEqual(conn.reads("answer_brand_fact"), 0)  # no type asked: no type read
 
     def test_an_unsupported_or_repeated_dims_dimension_is_refused(self):
         for qs in ("dimension=engine&dims=brand", "dimension=engine&dims=engine", "dimension=none&dims=type&dims=type"):
@@ -243,48 +266,52 @@ class TypeTrend(unittest.TestCase):
 
 
 class UrlRateTrend(unittest.TestCase):
-    """The website (and project) URL rates are answer-level Gold measures (url_prompt_cell), the cards' (summary)
-    values. The trend read them from the citation counts of kpi_cell instead (cit_target / cit_owned), so on
-    2026-10-30 the website 타겟 출처 인용률 card said 65.3 % (9,832 / 15,065 answers) while its trend point for the
-    same round said 22.8 %, and the card's Δ came from that other measure. A trend point now reads the same
-    measure as the card, per round and per engine."""
+    """The website (and project) URL rates are the cards' (summary) measure: 자사 · 타겟 URL 인용률 per prompt, AI 타겟 출처 인용률
+    per answer. The trend read them from the citation counts instead (cit_target / cit_owned), so on 2026-10-30 the website
+    타겟 출처 인용률 card said 65.3 % (9,832 / 15,065 answers) while its trend point for the same round said 22.8 %, and the
+    card's Δ came from that other measure. A trend point now reads the same measure as the card, per round and per engine;
+    a distinct prompt count does not add up, so the round's value is its own read."""
 
     def conn(self) -> Conn:
         kpi = [counts_row(round_date=D1, engine_key=1, answers=10, cit_total=40, cit_target=2, cit_owned=20),
                counts_row(round_date=D2, engine_key=1, answers=10, cit_total=40, cit_target=3, cit_owned=20),
                counts_row(round_date=D2, engine_key=2, answers=10, cit_total=40, cit_target=1, cit_owned=10)]
-        url = [{"round_date": D1, "engine_key": 1, "url_den": 10, "tgt_hits": 6, "own_hits": 8, "tgt_own_hits": 5},
-               {"round_date": D2, "engine_key": 1, "url_den": 10, "tgt_hits": 7, "own_hits": 9, "tgt_own_hits": 6},
-               {"round_date": D2, "engine_key": 2, "url_den": 5, "tgt_hits": 1, "own_hits": 3, "tgt_own_hits": 1}]
-        return Conn(kpi=kpi, url=url)
+        def row(day, prompts, own_prompts, target_prompts, own_answers, target_answers, **keys):
+            return {"round_date": day, "url_prompts": prompts, "url_own_prompts": own_prompts, "url_target_prompts": target_prompts,
+                    "url_own_answers": own_answers, "url_target_answers": target_answers, **keys}
+        # 2 of D2's prompts are measured on both engines: 12 prompts, not 15
+        url = [row(D1, 10, 8, 6, 8, 5), row(D2, 12, 10, 7, 12, 7)]
+        url_engines = [row(D1, 10, 8, 6, 8, 5, engine_key=1), row(D2, 10, 9, 7, 9, 6, engine_key=1), row(D2, 5, 3, 1, 3, 1, engine_key=2)]
+        return Conn(kpi=kpi, url=url, url_engines=url_engines)
 
     def series(self, qs: str, conn: Conn | None = None) -> tuple[dict, Conn]:
         conn = conn or self.conn()
         out = asyncio.run(metrics.trend(ranged(context(conn, f"{qs}&from={D1}&to={D2}"))))["data"]
         return out, conn
 
-    def test_a_website_trend_point_is_the_cards_answer_level_measure(self):
+    def test_a_website_trend_point_is_the_cards_measure(self):
         out, conn = self.series("surface=website&metrics=citation_accuracy,target_url_rate,owned_url_rate")
         by = {s["metric"]: [p["ratio"] for p in s["points"]] for s in out["series"]}
         self.assertEqual(by["citation_accuracy"], [{"num": 5, "den": 8}, {"num": 7, "den": 12}])
-        self.assertEqual(by["target_url_rate"], [{"num": 6, "den": 10}, {"num": 8, "den": 15}])
-        self.assertEqual(by["owned_url_rate"], [{"num": 8, "den": 10}, {"num": 12, "den": 15}])
-        self.assertEqual(conn.reads("url_prompt_cell"), 1)
+        self.assertEqual(by["target_url_rate"], [{"num": 6, "den": 10}, {"num": 7, "den": 12}])
+        self.assertEqual(by["owned_url_rate"], [{"num": 8, "den": 10}, {"num": 10, "den": 12}])
+        self.assertEqual(conn.url_reads(), 1)
 
     def test_per_engine_and_summed(self):
-        out, _ = self.series("surface=website&dimension=engine&metrics=citation_accuracy&dims=none:citation_accuracy")
+        out, conn = self.series("surface=website&dimension=engine&metrics=citation_accuracy&dims=none:citation_accuracy")
         by = {s["key"]: [p["ratio"] for p in s["points"]] for s in out["series"]}
         self.assertEqual(by["chatgpt"], [{"num": 5, "den": 8}, {"num": 6, "den": 9}])
         (none,) = out["dims"][0]["series"]
         self.assertEqual([p["ratio"] for p in none["points"]], [{"num": 5, "den": 8}, {"num": 7, "den": 12}])
+        self.assertEqual(conn.url_reads(), 2)
 
-    def test_the_other_metrics_and_the_global_surface_do_not_read_the_url_cells(self):
+    def test_the_other_metrics_and_the_global_surface_do_not_read_the_url_counts(self):
         out, conn = self.series("surface=website&metrics=visibility,citation_share")
-        self.assertEqual(conn.reads("url_prompt_cell"), 0)
+        self.assertEqual(conn.url_reads(), 0)
         _, conn = self.series("surface=global&metrics=citation_accuracy")
-        self.assertEqual(conn.reads("url_prompt_cell"), 0)
+        self.assertEqual(conn.url_reads(), 0)
 
-    def test_a_round_with_answers_but_no_url_cells_has_no_url_value(self):
+    def test_a_round_with_answers_but_no_url_counts_has_no_url_value(self):
         conn = self.conn()
         conn.url = [r for r in conn.url if r["round_date"] == D2]
         out, _ = self.series("surface=website&metrics=citation_accuracy", conn)
@@ -344,6 +371,23 @@ class Summary(unittest.TestCase):
                 self.assertEqual(data["params"]["applied_prompts"], 3)
                 self.assertEqual(conn.reads("catalog_entry"), 1)
 
+    def test_the_url_rates_are_per_prompt_on_website_and_project(self):
+        # the citation accuracy per answer; global has none (suppressed)
+        url = [{"url_prompts": 20, "url_own_prompts": 10, "url_target_prompts": 5, "url_own_answers": 8, "url_target_answers": 6}]
+        for qs in ("surface=website&parts=urls", "surface=project&project_id=p1&parts=urls"):
+            with self.subTest(qs=qs):
+                conn = Conn(kpi=[counts_row(answers=10, tracked=5, cit_total=40, cit_target=2, cit_owned=30)], url=url)
+                data = asyncio.run(metrics.summary(context(conn, qs)))["data"]
+                self.assertEqual(data["owned_url_rate"], {"num": 10, "den": 20})
+                self.assertEqual(data["target_url_rate"], {"num": 5, "den": 20})
+                self.assertEqual(data["citation_accuracy"], {"num": 6, "den": 8})
+                self.assertEqual(data["url_prompts"], {"measured_prompts": 20, "target_prompts": 5, "owned_prompts": 10})
+                self.assertEqual(data["citation_share"], {"num": 30, "den": 40})  # 자사 URL citations off global
+        data, conn = self.summary("surface=global&parts=urls")
+        self.assertIsNone(data["url_prompts"])
+        self.assertIsNone(data["owned_url_rate"])
+        self.assertEqual(conn.url_reads(), 0)
+
 
 class BrandsSplitOwn(unittest.TestCase):
     """mentions/brands ?split_own (contract D13): with two or more perspective brands, 당사 becomes one row per brand,
@@ -352,8 +396,8 @@ class BrandsSplitOwn(unittest.TestCase):
 
     def conn(self) -> Conn:
         return Conn(kpi=[counts_row(answers=20, tracked=16, own_mentions=50, total_mentions=100, rank_sum=24, ranked=16)],
-                    brands=[{**brand_row(D2, 2, "Kia", 2, 25, 12), "rank_sum": 30, "ranked": 12, "positive": 6, "negative": 2},
-                            {**brand_row(D2, 1, "Hyundai", 1, 20, 10), "rank_sum": 25, "ranked": 10, "positive": 5},
+                    brands=[brand_row(D2, 2, "Kia", 2, 25, 12, rank_sum=30, ranked=12, positive=6, negative=2),
+                            brand_row(D2, 1, "Hyundai", 1, 20, 10, rank_sum=25, ranked=10, positive=5),
                             brand_row(D2, 370, "Toyota", 0, 10, 8),
                             brand_row(D2, 3, "Genesis", 4, 5, 3)])
 
@@ -388,7 +432,7 @@ class BrandsSplitOwn(unittest.TestCase):
 class GeoBrandedAnswers(unittest.TestCase):
     """advanced.branded_answers (?branded_share, 2026-11-05 D-12): the answers of branded prompts per country, the
     prompts the brand_presence=branded pick selects (a catalog row of the perspective's brands or the shared rows),
-    counted on the read's own cells."""
+    the representative answers of the read's own filters."""
 
     class Conn:
         def __init__(self):
@@ -398,7 +442,7 @@ class GeoBrandedAnswers(unittest.TestCase):
             self.sql.append((sql, args))
             if "FROM gold.catalog_entry" in sql:
                 return [{"prompt_key": 7}, {"prompt_key": 9}]
-            if "FROM gold.kpi_cell" in sql:
+            if "FROM gold.answer_fact" in sql or "f.answer_key AS a_" in sql:
                 return [{"geo_key": 1, "answers": 298}, {"geo_key": 2, "answers": 742}]
             raise AssertionError(sql[:80])
 
@@ -407,13 +451,13 @@ class GeoBrandedAnswers(unittest.TestCase):
         conn = self.Conn()
         ctx = context(conn, "surface=global&card=true")
         self.assertEqual(asyncio.run(advanced.branded_answers(ctx)), {1: 298, 2: 742})
-        (catalog, cargs), (cells, kargs) = conn.sql
+        (catalog, cargs), (facts, kargs) = conn.sql
         self.assertIn("lower(code)='branded'", catalog)
         self.assertIn("ce.brand_bit &", catalog)
         self.assertIn(15, cargs)  # the perspective's bits (HMG 7) | the shared rows (8)
-        self.assertIn("f.prompt_key=ANY(", cells)
+        self.assertIn("f.prompt_key=ANY(", facts)
         self.assertIn([7, 9], kargs)
-        self.assertIn("f.perspective_key=", cells)
+        self.assertIn("AND f.is_rep", facts)
 
 
 def geo_row(country, lang, **flags) -> dict:
@@ -422,23 +466,17 @@ def geo_row(country, lang, **flags) -> dict:
 
 
 class OptionsConn:
-    """Stand-in for the filter options' statements; `moves` bumps data_version after that many reads of it."""
+    """Stand-in for the filter options' statements."""
 
-    def __init__(self, *, geo=None, taxa=None, combos=None, moves=None):
-        self.versions = [{"scope": "dim", "version": 7}, {"scope": "prompt", "version": 3}]
+    def __init__(self, *, geo=None, taxa=None, combos=None):
         self.geo = [geo_row("DE", "DE"), geo_row("FR", "FR")] if geo is None else geo
         self.taxa = [{"axis": "funnel", "code": "aware", "parent_code": None, "orphan": False}] if taxa is None else taxa
         self.combos = [{"brand_bit": 1, **dict.fromkeys(AXES), "funnel": "aware", "orphan": False}] if combos is None else combos
-        self.moves, self.version_reads, self.sql = moves, 0, []
+        self.sql = []
 
     async def fetch(self, sql, *args):
         self.sql.append(sql)
-        if "FROM gold.data_version" in sql:
-            self.version_reads += 1
-            if self.moves is not None and self.version_reads > self.moves:
-                return [{**v, "version": v["version"] + 1} for v in self.versions]
-            return self.versions
-        if "FROM gold.answer_fact" in sql:
+        if "FROM gold.answer_fact" in sql or "f.answer_key AS a_" in sql:
             return self.geo
         if "FROM gold.dim_taxon t" in sql:
             return self.taxa
@@ -447,43 +485,34 @@ class OptionsConn:
         raise AssertionError(f"unexpected statement: {sql[:120]}")
 
     def reads(self, table: str) -> int:
-        return sum(f"FROM gold.{table}" in s for s in self.sql)
+        return sum(f"FROM gold.{table}" in s for s in self.sql if "f.answer_key AS a_" not in s)
 
 
 class Options(unittest.TestCase):
-    """The filter options are kept per release builds, Gold data_version and query less the period."""
+    """The filter options and whether their read was consistent (metrics.options_data)."""
 
-    def setUp(self):
-        metrics._options_cache.clear()
+    def read(self, conn, qs="surface=global") -> dict:
+        return asyncio.run(metrics.options(context(conn, qs)))
 
-    def read(self, conn, qs="surface=global", builds=None) -> dict:
-        ctx = context(conn, qs)
-        if builds is not None:
-            ctx.builds = builds
-        return asyncio.run(metrics.options(ctx))
-
-    def test_another_period_is_answered_from_the_kept_options(self):
-        first, second = OptionsConn(), OptionsConn()
-        out = self.read(first, "surface=global&from=2026-09-01&to=2026-09-14")
-        again = self.read(second, "surface=global&to=2026-10-05&from=2026-09-28")
-        self.assertEqual(again["data"], out["data"])
+    def test_the_options_of_the_read(self):
+        conn = OptionsConn()
+        out = self.read(conn)
         self.assertEqual([r["code"] for r in out["data"]["regions"]], ["DE", "FR"])
-        self.assertEqual((first.reads("answer_fact"), second.reads("answer_fact"), second.reads("catalog_entry")), (1, 0, 0))
-        # the period's own part, meta, is the request's
-        self.assertEqual(again["meta"]["cycles"], ["2026-10-05"])
+        self.assertEqual(out["data"]["languages"], ["de", "fr"])
+        self.assertEqual(out["data"]["catalog"]["funnel"], [{"code": "aware", "parent_code": None}])
+        self.assertEqual((conn.reads("answer_fact"), conn.reads("catalog_entry")), (1, 1))
+        self.assertEqual(out["meta"]["cycles"], ["2026-10-05"])
 
-    def test_builds_versions_and_the_query_are_the_key(self):
-        self.read(OptionsConn())
-        changed = {"builds": (OptionsConn(), "surface=global", {"cell": [11], "fact": [13]}),
-                   "data_version": (OptionsConn(moves=0), "surface=global", None),
-                   "geo_only": (OptionsConn(), "surface=global&geo_only=true", None),
-                   "brand": (OptionsConn(), "surface=global&brand=kia", None)}
-        for name, (conn, qs, builds) in changed.items():
-            with self.subTest(name):
-                self.read(conn, qs, builds)
-                self.assertEqual(conn.reads("answer_fact"), 1)
+    def test_geo_only_reads_no_catalog(self):
+        conn = OptionsConn()
+        self.assertIsNone(self.read(conn, "surface=global&geo_only=true")["data"]["catalog"])
+        self.assertEqual((conn.reads("answer_fact"), conn.reads("catalog_entry")), (1, 0))
 
-    def test_an_inconsistent_read_is_answered_but_not_kept(self):
+    def test_an_inconsistent_read_is_answered_and_told_apart(self):
+        def consistent(conn) -> bool:
+            return asyncio.run(metrics.options_data(context(conn, "surface=global")))[1]
+
+        self.assertTrue(consistent(OptionsConn()))
         cases = {"fact key without its country": dict(geo=[geo_row("DE", "DE"), geo_row(None, None, kept=False, orphan=True)]),
                  "nothing to answer from": dict(geo=[]),
                  "taxon without its parent": dict(taxa=[{"axis": "funnel", "code": "aware", "parent_code": None, "orphan": True}]),
@@ -492,32 +521,10 @@ class Options(unittest.TestCase):
                  "no catalog": dict(combos=[])}
         for name, rows in cases.items():
             with self.subTest(name):
-                metrics._options_cache.clear()
-                self.read(OptionsConn(**rows))
-                conn = OptionsConn(**rows)
-                self.read(conn)
-                self.assertEqual(conn.reads("answer_fact"), 1)
+                self.assertFalse(consistent(OptionsConn(**rows)))
         # an orphan read answers the inner join's rows, as before
         out = self.read(OptionsConn(**cases["fact key without its country"]))
         self.assertEqual([r["code"] for r in out["data"]["regions"]], ["DE"])
-
-    def test_data_version_moving_during_the_read_is_not_kept(self):
-        self.read(OptionsConn(moves=1))
-        conn = OptionsConn()
-        self.read(conn)
-        self.assertEqual(conn.reads("answer_fact"), 1)
-
-    def test_kept_options_expire(self):
-        from unittest import mock
-        self.read(OptionsConn())
-        conn = OptionsConn()
-        with mock.patch.object(metrics.time, "monotonic", return_value=metrics.time.monotonic() + metrics.OPTIONS_MAX_AGE_S):
-            self.read(conn)
-        self.assertEqual(conn.reads("answer_fact"), 1)
-
-    def test_an_answer_does_not_share_the_kept_data(self):
-        self.read(OptionsConn())["data"]["regions"].clear()
-        self.assertEqual(len(self.read(OptionsConn())["data"]["regions"]), 2)
 
 
 if __name__ == "__main__":

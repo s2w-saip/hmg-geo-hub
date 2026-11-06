@@ -6,7 +6,8 @@ from copy import copy
 
 from fastapi import HTTPException
 
-from bff.gold_reader.context import AXES, BRAND_NAMES, Context, SQL, envelope, flag, ratio
+from bff.gold_reader.context import AXES, BRAND_NAMES, Context, SQL, envelope, flag
+from bff.metrics import compute
 
 TREND_CYCLES = 12
 CELL_JOINS = """JOIN gold.dim_prompt p ON p.prompt_key=f.prompt_key JOIN gold.dim_engine e ON e.engine_key=f.engine_key
@@ -19,8 +20,9 @@ NO_BRAND = 0
 
 
 def cell_where(ctx: Context, b: SQL) -> str:
-    where = ctx.predicate(b, family="acr") + " AND f.acr_in"
-    return where + " AND f.is_rep" if ctx.card else where
+    """One row per ACR cell (SSOT 셀 = 프롬프트 × 엔진 × 국가): a cell re-measured in a round has a row per run and is_rep marks one
+    (global 2026-10-05: 3,761 rows, 3,567 cells)."""
+    return ctx.predicate(b, family="acr") + " AND f.acr_in AND f.is_rep"
 
 
 def sheet_groups(cells: list[dict]) -> list:
@@ -77,7 +79,8 @@ async def head_to_head(ctx: Context, where: str, args: list) -> dict:
         WHERE {where}""", *args)
     return {"sample": {"iterations": sample["iterations"], "cells": sample["cells"]},
             "rows": [{"engine": r["engine"], "brand": r["brand"], "iterations": r["iterations"], "own_wins": r["own_wins"],
-                      "rival_wins": r["rival_wins"], "is_hmg": bool(r["is_hmg"])} for r in sorted(rows, key=lambda r: (r["engine"], -r["iterations"], r["brand"]))]}
+                      "rival_wins": r["rival_wins"], "is_hmg": bool(r["is_hmg"])} for r in sorted(rows, key=lambda r: (r["engine"], -r["iterations"], r["brand"]))
+                     if not ctx.excluded(r["brand"])]}
 
 
 def territory_sheets(ctx: Context, sheets: list, rows_by_cell: dict, with_rows, own: dict) -> list[dict]:
@@ -129,7 +132,7 @@ async def trend_rows(ctx: Context, days: list) -> tuple[dict, list[dict]]:
     tctx = copy(ctx)
     tctx.selected_dates = days
     b = SQL()
-    where = tctx.predicate(b, family="acr") + " AND f.acr_in" + (" AND f.is_rep" if ctx.card else "")
+    where = cell_where(tctx, b)
     den = {r["round_date"]: r["den"] for r in await ctx.conn.fetch(f"""SELECT f.round_date,sum(f.valid_acr)::bigint AS den
         FROM gold.acr_cell_fact f WHERE {where} GROUP BY f.round_date""", *b.args)}
     picks = [dict(r) for r in await ctx.conn.fetch(f"""SELECT t.round_date,br.name AS brand,coalesce(br.own_bit,0) AS own_bit,t.choice
@@ -184,8 +187,8 @@ async def read(ctx: Context) -> dict:
     brands = []
     for r in brand_groups.values():
         brands.append({"brand": r["brand"], "is_ours": r["is_ours"], "is_hmg": bool(r["is_hmg"]), "choice": r["choice"], "appearance": r["appearance"],
-                       "cells": r["cells"], "choice_share": ratio(r["choice"], totals["iterations"]),
-                       "coverage": ratio(r["cells"], totals["prompt_runs"])})
+                       "cells": r["cells"], "choice_share": compute.of("top1_acr", r["choice"], totals["iterations"]),
+                       "coverage": compute.of("candidate_rate", r["cells"], totals["prompt_runs"])})
     brands.sort(key=lambda r: (-r["choice"], -r["appearance"], r["brand"]))
     # 당사 = every own brand of the perspective, wherever the page shows it (the total, its brands, its standing
     # and its trend), beyond the brand table's top (2026-10-29 metric review R1: Genesis was left out).
@@ -193,10 +196,12 @@ async def read(ctx: Context) -> dict:
     own_choice = sum(r["choice"] for r in own_rows)
     chosen_rivals = [r for r in brands if not r["is_ours"] and r["choice"]]
     own = {"choice": own_choice, "appearance": sum(r["appearance"] for r in own_rows), "cells": own_cells,
-           "choice_share": ratio(own_choice, totals["iterations"]), "coverage": ratio(own_cells, totals["prompt_runs"]),
+           "choice_share": compute.of("top1_acr", own_choice, totals["iterations"]), "coverage": compute.of("candidate_rate", own_cells, totals["prompt_runs"]),
            "brands": [r["brand"] for r in own_rows],
            "rank": 1 + len([r for r in chosen_rivals if r["choice"] > own_choice]), "ranked_brands": len(chosen_rivals) + 1} if cells else None
     trend = []
+    # the roster's excluded brands leave the list, not the values above (legacy filterAcr)
+    brands = [r for r in brands if not ctx.excluded(r["brand"], is_own=r["is_ours"])]
     top = brands[:max(1, min(100, int(ctx.q.get("top_brands", "12"))))]
     den, picks = await trend_rows(ctx, trend_dates(ctx)) if cells else ({}, [])
     for day in sorted(den):
@@ -229,7 +234,7 @@ async def read(ctx: Context) -> dict:
     chosen_models = sorted((m for m in model_rows if m["choice"] > 0 and m["den"] > 0),
                            key=lambda m: (-m["choice"] / m["den"], -m["choice"], m["model"], m["parent_brand"] or "", m["entity_key"]))
     models = [{"brand": m["parent_brand"], "model": m["model"], "is_ours": bool(m["own_bit"] & ctx.bits), "is_hmg": m["own_bit"] != 0,
-               "conversion": ratio(m["choice"], m["den"]), "cells": m["cells"], "top1": m["choice"]}
+               "conversion": compute.of("model_conversion", m["choice"], m["den"]), "cells": m["cells"], "top1": m["choice"]}
               for m in chosen_models[:max(1, min(50, int(ctx.q.get("model_limit", "12"))))]]
     sheets = sheet_groups(cells)
     with_rows = (lambda i: True) if territory_rows == "all" else (lambda i: i == 0)

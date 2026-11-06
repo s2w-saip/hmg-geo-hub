@@ -4093,7 +4093,7 @@
         "title": "Website AI answer performance",
         "copy": {
           "definition": {
-            "citationShare": "Share of all citation occurrences that point to the measured site's own URLs (its registered address and the pages under it, target URLs included; multiple citations within one answer counted)"
+            "citationShare": "Share of all citation occurrences that point to the measured site's own URLs (its registered address and the pages under it; multiple citations within one answer counted)"
           },
           "formula": {
             "citationShare": "citations to own URLs ÷ total source citations × 100 (unit: %)"
@@ -4101,6 +4101,9 @@
           "ratio": {
             "citationShare": {
               "num": "Own-URL citations"
+            },
+            "visibility": {
+              "den": "Representative answers"
             }
           }
         },
@@ -5470,12 +5473,14 @@
       "countryCount": "{count} countries",
       "kpiTitle": "5 KPIs",
       "kpiHintDelta": "Δ = {compare}",
-      "kpiHintBasis": "basis = representative answers",
+      "kpiHintBasis": "visibility = representative answers",
       "comparePerCard": "the period compare named on each card",
       "noDelta": "No change data",
       "basisLabel": "Basis",
-      "basisTip": "When a prompt was measured more than once in a round on the same engine and market, only its representative answer counts. The {page} page counts every answer, so the same KPI can differ slightly there.",
+      "basisTip": "AI Visibility counts only the representative answer when a prompt was measured more than once in a round on the same engine and market. The other KPIs count every answer. The values match the {page} page.",
       "formulaPosition": "Σ(our rank among brands in the answer = non-noise brands mentioned before ours + 1) ÷ answers mentioning our brand ≥1× (unit: position #n)",
+      "definitionVisibility": "Share of representative answers in which our brand appears at least once",
+      "formulaVisibility": "representative answers mentioning our brand ≥1× ÷ representative answers × 100 (unit: %)",
       "brandsHint": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · rivals' Δ = {compare} · our Δ is on the KPIs above",
       "brandsHintPeriod": "All 5 KPIs in one table · bars scale to each column's best · a lower Average Position is ahead · values = the selected period · our Δ is on the KPIs above · no period Δ for the rivals",
       "brandsFailed": "The brand comparison could not be loaded. Please reopen the page in a moment. If it keeps failing, contact: {contact}",
@@ -5732,7 +5737,8 @@
         "trendTitleSov": "Share of voice by brand",
         "trendNoteLabel": "Metric note",
         "basisLabel": "Basis",
-        "basisAll": "This page counts every answer. When a prompt was measured more than once in a round on the same engine and market, the Overview cards count only its representative answer, so the same KPI can differ slightly.",
+        "basisAll": "AI Visibility counts only the representative answer when a prompt was measured more than once in a round on the same engine and market. The other KPIs count every answer. The values match the Overview cards.",
+        "exposureDenominator": "Representative answers",
         "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. With no compare brand only our line is drawn.",
         "standing": "<b>#{rank}</b> of {n} brands compared",
         "leadFirst": "+{gap}pp over #2 {brand}",
@@ -6349,6 +6355,9 @@
           "ratio": {
             "citationShare": {
               "num": "Own-URL citations"
+            },
+            "visibility": {
+              "den": "Representative answers"
             }
           }
         },

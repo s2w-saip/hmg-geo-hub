@@ -1,7 +1,7 @@
 """The /v1 read routes as plain functions, so screen builders can compose them in-process.
 
 The one channel the screens read through: analytics/* comes from the HUB's GA4/SEO store
-(hub_stores), every other path from the external Gold DB (gold_reader). get() reads inside the signed-in
+(hub_stores), every other path from the metric layer over the external Gold DB (bff.metrics.serving, gold_reader). get() reads inside the signed-in
 account's scope (bff/access.py); the /v1 route clamps its query the same way before read()."""
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ from fastapi.encoders import jsonable_encoder
 from starlette.datastructures import QueryParams
 
 from bff import access
-from bff.gold_reader import cache as gold_cache
 from bff.gold_reader.readers import read as read_gold
 from bff.hub_stores import analytics_reader
+from bff.metrics import serving
 from bff.screens._js import js_str
 
 ANALYTICS = {"analytics/conversion", "analytics/visibility", "analytics/properties"}
@@ -53,7 +53,7 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     """In-process GET returning the same JSON the HTTP route would send.
 
     Identical reads that run at the same time (sections of one page asking for the same
-    summary) share one execution; a Gold read's answer is kept under Gold's state (gold_reader.cache).
+    summary) share one execution; a first screen's read comes from Gold, another from the cache DB (metrics.serving).
     The read runs inside the request account's scope (access.clamp), before it is keyed: accounts of
     different scopes never share a read. The shared read holds the answer's JSON text and every caller
     parses its own copy (a screen may change what it reads)."""
@@ -95,5 +95,5 @@ async def _read_json(path: str, q: QueryParams) -> str:
     for every caller's copy)."""
     async def text() -> str:
         return _encode(await read(path, q))
-    # the HUB analytics store is not Gold: no Gold state to key it on
-    return await (text() if path in ANALYTICS else gold_cache.read(f"{path}?{q}", text))
+    # the HUB analytics store is no metric of the snapshot
+    return await (text() if path in ANALYTICS else serving.read(path, q, text))

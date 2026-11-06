@@ -298,8 +298,7 @@ def to_dashboard_kpis(summary: dict, brands: dict | None, url_rates: bool = Fals
     if url_rates:
         u = to_url_rate_kpis(data, meta)
         if u:
-            copy = {"copyVariant": "api"} if u["unit"] == "measurement" else {}
-            cards.extend([{**u["ownedUrlRate"], **copy}, {**u["targetUrlRate"], **copy}, u["citationAccuracy"]])
+            cards.extend([u["ownedUrlRate"], u["targetUrlRate"], u["citationAccuracy"]])
     if brands is None:
         return cards
     sov = data.get("share_of_voice")

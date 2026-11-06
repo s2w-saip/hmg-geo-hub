@@ -51,7 +51,7 @@ async def prompts(ctx: Context) -> dict:
                 OR EXISTS(SELECT 1 FROM unnest(p.regions) mr(v) WHERE lower(btrim(mr.v)) NOT LIKE 'x:%'
                     AND upper(btrim(mr.v))=ANY({b.bind(countries, 'text[]')})))""")
         rows = await ctx.conn.fetch(f"""WITH measured AS (
-            SELECT DISTINCT prompt_key FROM gold.answer_fact WHERE build_id=ANY($1::bigint[]) AND std_in)
+            SELECT DISTINCT f.prompt_key FROM gold.answer_fact f WHERE f.build_id=ANY($1::bigint[]) AND {ctx.monitoring(b)})
             SELECT DISTINCT ON(ce.catalog_row_id) ce.catalog_row_id,ce.brand_bit,ce.kind,
             p.prompt_id,p.text,l.code AS lang,p.regions,{','.join(f'{a}.code AS {a}' for a in AXES)},
             (m.prompt_key IS NOT NULL) AS measured

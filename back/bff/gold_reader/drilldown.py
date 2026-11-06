@@ -6,14 +6,14 @@ from collections import defaultdict
 from fastapi import HTTPException
 
 from bff.gold_reader.citations import category, mention_target, own_citation, predicate as citation_predicate, unknown_brand
-from bff.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit, ratio
+from bff.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit
+from bff.metrics.formulas import rate
+from bff.metrics.gold_judged import in_keys, mention_keys
 
 
 async def mention_prompts(ctx: Context) -> dict:
     b = SQL()
-    where = ctx.predicate(b, family="fact") + " AND f.std_in AND f.competitive"
-    if ctx.card:
-        where += " AND f.is_rep"
+    where = ctx.predicate(b, family="fact") + f" AND {ctx.monitoring(b)} AND {ctx.competitive(b)}"
     brand_key = ctx.q.get("brand_key")
     signal = ctx.q.get("signal", "mention")
     mention_brand = (ctx.q.get("mention_brand") or "").strip()
@@ -45,7 +45,7 @@ async def mention_prompts(ctx: Context) -> dict:
     keys = [r["prompt_key"] for r in rows]
     b.args = base_args
     answer_rows = await ctx.conn.fetch(f"""SELECT f.prompt_key,j.job_id,e.code AS engine,c.code AS region,
-        sum(f.{value_col})::bigint AS value,min(nullif(f.rk,0)) AS position,j.measured_at
+        sum(f.{value_col})::bigint AS value,min(nullif(f.first_pos,0)) AS position,j.measured_at
         FROM gold.answer_brand_fact f JOIN gold.dim_brand br USING(brand_key) JOIN gold.job_index j USING(answer_key)
         JOIN gold.dim_engine e ON e.engine_key=f.engine_key JOIN gold.dim_country c ON c.geo_key=f.geo_key
         WHERE {where} AND f.prompt_key=ANY({b.bind(keys, 'int[]')})
@@ -55,7 +55,7 @@ async def mention_prompts(ctx: Context) -> dict:
         refs[r["prompt_key"]].append({"job_id": str(r["job_id"]), "engine": r["engine"], "region": r["region"],
                                       "value": r["value"], "position": r["position"], "measured_at": r["measured_at"], "runs": None})
     items = [{"prompt_id": str(r["prompt_id"]), "prompt_text": r["text"], "funnel_code": r["funnel"],
-              "count": r["count"], "share": ratio(r["count"], total),
+              "count": r["count"], "share": rate(r["count"], total),
               "providers": sorted({a["engine"] for a in refs[r["prompt_key"]]}), "answers": refs[r["prompt_key"]][:50]} for r in rows]
     return envelope(ctx, {"mode": ctx.q.get("mode", "brand"), "target": {"brand_key": int(brand_key) if brand_key else None,
                      "name": ctx.label if not brand_key else await ctx.conn.fetchval("SELECT name FROM gold.dim_brand WHERE brand_key=$1", int(brand_key)),
@@ -67,22 +67,20 @@ async def mention_prompts(ctx: Context) -> dict:
 async def market_gaps(ctx: Context) -> dict:
     """Per country, what the renewal Website Mention's market table shows beside the rates (2026-11-02): the 미언급
     prompts (as missing_prompts, those whose answers hold other brands apart) and the answers that name no brand at all
-    (answer_fact.ment_total = 0). The last holds answers the AI named no brand in and answers Gold's analysis came back
+    (no competitive mention). The last holds answers the AI named no brand in and answers Gold's analysis came back
     empty for, which Gold does not tell apart (upstream D8). None without a snapshot or period, as the counts."""
     if not ctx.selected_dates:
         return envelope(ctx, {"items": []}, suppressed={"*": "no_snapshot"})
     b = SQL()
-    cell_where = ctx.predicate(b, population="mentions", perspective=True)
-    answer_where = ctx.predicate(b, alias="a", family="fact") + " AND a.std_in"
-    rows = await ctx.conn.fetch(f"""WITH miss AS (SELECT f.geo_key,f.prompt_key FROM gold.kpi_cell f WHERE {cell_where}
-        GROUP BY f.geo_key,f.prompt_key HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)),
-        ans AS MATERIALIZED (SELECT a.geo_key,a.prompt_key,coalesce(a.ment_total,0) AS ment FROM gold.answer_fact a WHERE {answer_where}),
-        said AS (SELECT geo_key,prompt_key,sum(ment) AS ment FROM ans GROUP BY geo_key,prompt_key),
-        empty AS (SELECT geo_key,count(*)::int AS n FROM ans WHERE ment=0 GROUP BY geo_key)
-        SELECT c.code,count(m.prompt_key)::int AS missing,count(m.prompt_key) FILTER(WHERE s.ment>0)::int AS with_brands,
+    answer_where = ctx.predicate(b, alias="a", family="fact") + f" AND {ctx.monitoring(b, 'a')}"
+    keys = await mention_keys(ctx)
+    rows = await ctx.conn.fetch(f"""WITH ans AS MATERIALIZED (SELECT a.geo_key,a.prompt_key,{in_keys(b, 'a', keys.mentioned)} AS named,
+            {in_keys(b, 'a', keys.tracked)} AS own FROM gold.answer_fact a WHERE {answer_where}),
+        said AS (SELECT geo_key,prompt_key,bool_or(named) AS named,bool_or(own) AS own FROM ans GROUP BY geo_key,prompt_key),
+        empty AS (SELECT geo_key,count(*)::int AS n FROM ans WHERE NOT named GROUP BY geo_key)
+        SELECT c.code,count(s.prompt_key) FILTER(WHERE NOT s.own)::int AS missing,count(s.prompt_key) FILTER(WHERE NOT s.own AND s.named)::int AS with_brands,
             coalesce(e.n,0)::int AS answers_no_brand
-        FROM (SELECT DISTINCT geo_key FROM ans) g JOIN gold.dim_country c USING(geo_key) LEFT JOIN empty e USING(geo_key)
-        LEFT JOIN miss m ON m.geo_key=g.geo_key LEFT JOIN said s ON s.geo_key=m.geo_key AND s.prompt_key=m.prompt_key
+        FROM said s JOIN gold.dim_country c USING(geo_key) LEFT JOIN empty e USING(geo_key)
         GROUP BY c.code,e.n""", *b.args)
     return envelope(ctx, {"items": [{"country": r["code"], "missing": r["missing"], "with_brands": r["with_brands"],
                                      "answers_no_brand": r["answers_no_brand"]} for r in rows]})
@@ -92,7 +90,7 @@ async def missing_prompts(ctx: Context) -> dict:
     """The measured prompts where 당사 is in no answer: the members of the summary's params.prompts_without_brand
     (measured − mentioned prompts of the same kpi_cell rows, population and perspective), 2026-10-30 for the renewal
     Website Mention's 미언급 프롬프트 list. Each carries its target page, its answers in the window, the brand mentions
-    those answers hold (answer_fact.ment_total summed: the brands the AI named instead) and its latest answer
+    those answers hold (the brands the AI named instead) and its latest answer
     references; the prompts with the most brand mentions first. None without a snapshot or period, as the count.
     ?partial: the prompts 당사 is in on one engine and not on another instead (2026-11-02: the count leaves them out,
     though the page is missing there too), with the engines that left it out."""
@@ -100,28 +98,33 @@ async def missing_prompts(ctx: Context) -> dict:
     if not ctx.selected_dates:
         return envelope(ctx, {"items": []}, suppressed={"*": "no_snapshot"}, page={"limit": page_limit, "total": 0, "next_cursor": None})
     b = SQL()
-    cell_where = ctx.predicate(b, population="mentions", perspective=True)
-    answer_where = ctx.predicate(b, alias="a", family="fact") + " AND a.std_in"
-    cells = f"""FROM gold.kpi_cell f JOIN gold.dim_engine e USING(engine_key) WHERE {cell_where} GROUP BY f.prompt_key"""
-    left_out = """HAVING bool_or(f.has_mention)
-        AND count(DISTINCT f.engine_key) FILTER(WHERE f.has_measured)>count(DISTINCT f.engine_key) FILTER(WHERE f.has_mention)"""
-    having = left_out if flag(ctx.q, "partial") else "HAVING bool_or(f.has_measured) AND NOT bool_or(f.has_mention)"
+    answers = await mention_keys(ctx)
+    own = in_keys(b, "f", answers.tracked)
+    cell_where = ctx.predicate(b, family="fact") + f" AND {ctx.monitoring(b)}"
+    answer_where = ctx.predicate(b, alias="a", family="fact") + f" AND {ctx.monitoring(b, 'a')}"
+    named_where = ctx.predicate(b, alias="x", family="fact") + f" AND {ctx.monitoring(b, 'x')} AND {ctx.competitive(b, 'x')}"
+    cells = f"""FROM gold.answer_fact f JOIN gold.dim_engine e USING(engine_key) WHERE {cell_where} GROUP BY f.prompt_key"""
+    left_out = f"""HAVING bool_or({own})
+        AND count(DISTINCT f.engine_key)>count(DISTINCT f.engine_key) FILTER(WHERE {own})"""
+    having = left_out if flag(ctx.q, "partial") else f"HAVING NOT bool_or({own})"
     rows = await ctx.conn.fetch(f"""WITH miss AS (SELECT f.prompt_key,
-            array_agg(DISTINCT e.code) FILTER(WHERE f.has_measured) AS measured_engines,
-            array_agg(DISTINCT e.code) FILTER(WHERE f.has_mention) AS mentioned_engines {cells} {having}),
-        sums AS (SELECT a.prompt_key,count(*)::int AS answers,coalesce(sum(a.ment_total),0)::bigint AS brand_mentions
-            FROM gold.answer_fact a WHERE {answer_where} AND a.prompt_key IN (SELECT prompt_key FROM miss) GROUP BY a.prompt_key)
+            array_agg(DISTINCT e.code) AS measured_engines,
+            array_agg(DISTINCT e.code) FILTER(WHERE {own}) AS mentioned_engines {cells} {having}),
+        sums AS (SELECT a.prompt_key,count(*)::int AS answers
+            FROM gold.answer_fact a WHERE {answer_where} AND a.prompt_key IN (SELECT prompt_key FROM miss) GROUP BY a.prompt_key),
+        named AS (SELECT x.prompt_key,sum(x.mention_count)::bigint AS brand_mentions
+            FROM gold.answer_brand_fact x WHERE {named_where} AND x.prompt_key IN (SELECT prompt_key FROM miss) GROUP BY x.prompt_key)
         SELECT p.prompt_key,p.prompt_id,p.text,p.targets[1] AS target,miss.measured_engines,miss.mentioned_engines,
             ft.code AS funnel,coalesce(s.answers,0) AS answers,
-            coalesce(s.brand_mentions,0) AS brand_mentions,count(*) OVER()::int AS total_rows,
-            count(*) FILTER(WHERE coalesce(s.brand_mentions,0)>0) OVER()::int AS with_brand_rows
-        FROM miss JOIN gold.dim_prompt p USING(prompt_key) LEFT JOIN sums s USING(prompt_key)
+            coalesce(n.brand_mentions,0) AS brand_mentions,count(*) OVER()::int AS total_rows,
+            count(*) FILTER(WHERE coalesce(n.brand_mentions,0)>0) OVER()::int AS with_brand_rows
+        FROM miss JOIN gold.dim_prompt p USING(prompt_key) LEFT JOIN sums s USING(prompt_key) LEFT JOIN named n USING(prompt_key)
         LEFT JOIN gold.dim_taxon ft ON ft.taxon_key=p.funnel_key
         ORDER BY brand_mentions DESC,p.text,p.prompt_id LIMIT {b.bind(page_limit)} OFFSET {b.bind(offset)}""", *b.args)
     keys = [r["prompt_key"] for r in rows]
     answers_limit = min(50, max(1, int(ctx.q.get("answers_limit") or 6)))
     a = SQL()
-    where = ctx.predicate(a, family="fact") + " AND f.std_in"
+    where = ctx.predicate(a, family="fact") + f" AND {ctx.monitoring(a)}"
     answer_rows = await ctx.conn.fetch(f"""SELECT f.prompt_key,j.job_id,e.code AS engine,c.code AS region,j.measured_at
         FROM gold.answer_fact f JOIN gold.job_index j USING(answer_key)
         JOIN gold.dim_engine e ON e.engine_key=f.engine_key JOIN gold.dim_country c ON c.geo_key=f.geo_key
@@ -140,8 +143,10 @@ async def missing_prompts(ctx: Context) -> dict:
     # the segments over every member, not the loaded page (a list cut at its limit drops the no-brand prompts first)
     with_brands = rows[0]["with_brand_rows"] if rows else 0
     c = SQL()
+    own = in_keys(c, "f", answers.tracked)
     partial = await ctx.conn.fetch(f"""SELECT count(*)::int AS n FROM (SELECT 1
-        FROM gold.kpi_cell f WHERE {ctx.predicate(c, population="mentions", perspective=True)} GROUP BY f.prompt_key {left_out}) x""", *c.args)
+        FROM gold.answer_fact f WHERE {ctx.predicate(c, family="fact")} AND {ctx.monitoring(c)} GROUP BY f.prompt_key
+        HAVING bool_or({own}) AND count(DISTINCT f.engine_key)>count(DISTINCT f.engine_key) FILTER(WHERE {own})) x""", *c.args)
     return envelope(ctx, {"items": items, "counts": {"with_brands": with_brands, "no_brands": total - with_brands, "partial": partial[0]["n"]}},
                     page={"limit": page_limit, "total": total,
                           "next_cursor": str(offset + page_limit) if offset + page_limit < total else None})
@@ -208,9 +213,8 @@ async def tone(ctx: Context) -> dict:
     groups the citations per URL (or source) with both tones' counts; the names join the grouped rows only."""
     b = SQL()
     where = citation_predicate(ctx, b)
-    positive = "+".join("a." + col for bit, col in ((1, "sent_pos_h"), (2, "sent_pos_k"), (4, "sent_pos_g")) if ctx.bits & bit)
-    negative = "+".join("a." + col for bit, col in ((1, "sent_neg_h"), (2, "sent_neg_k"), (4, "sent_neg_g")) if ctx.bits & bit)
-    is_pos, is_neg = f"({positive})>({negative})", f"({negative})>({positive})"
+    keys = await mention_keys(ctx, measure_family="citations")
+    is_pos, is_neg = in_keys(b, "f", keys.leans_positive), in_keys(b, "f", keys.leans_negative)
     chosen = "neg" if ctx.q.get("tone") == "negative" else "pos"
     by_source = ctx.q.get("group_by") == "source"
     # A page is Gold's url_norm: its utm and #:~:text= variants are one row, shown by the shortest spelling.
@@ -220,9 +224,6 @@ async def tone(ctx: Context) -> dict:
     with_counts = flag(ctx.q, "with_counts") and not by_source
     page_limit, offset = limit(ctx.q), max(0, int(ctx.q.get("cursor") or 0))
     names = ("s.skey,s.domain" if by_source else "t.url,t.title,s.skey,s.domain") + ",c.category_key,c.slug,c.name AS category_name"
-    # The answer joins on its full key: on (build_id, answer_key) alone the index walked the build for every
-    # citation (US · ChatGPT 11 s -> 0.3 s). An answer has one row per build and its citations carry its surface
-    # and round date, so the same rows pair (checked on every active fact build, 2026-10-30).
     # A URL page without a search names only the URLs that can be on it: those cited at least as often as the
     # page's last row (ties are ordered by URL, so all of them). Every grouped URL has its dim_url / dim_source
     # rows, so the total is the grouped URLs of the tone. Joining every URL to sort it took 1.4 of A's 2.6 s.
@@ -235,9 +236,9 @@ async def tone(ctx: Context) -> dict:
     rows = await ctx.conn.fetch(f"""WITH t AS (SELECT {key} AS k,min(f.source_key) AS source_key{spelling},
             count(*) FILTER(WHERE {is_pos})::int AS pos,count(*) FILTER(WHERE {is_neg})::int AS neg,
             array_agg(DISTINCT f.engine_key) FILTER(WHERE {is_pos if chosen == 'pos' else is_neg}) AS engine_keys
-          FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
+          FROM gold.citation_fact f
           {url_join}
-          WHERE {where} AND ({positive})<>({negative}) GROUP BY {key})
+          WHERE {where} AND ({is_pos} OR {is_neg}) GROUP BY {key})
         SELECT {names},t.{chosen} AS citations,t.engine_keys,{total} AS total
           {",(SELECT count(*) FROM t WHERE pos>0)::int AS n_pos,(SELECT count(*) FROM t WHERE neg>0)::int AS n_neg" if with_counts else ""}
         FROM t JOIN gold.dim_source s ON s.source_key=t.source_key
@@ -253,9 +254,10 @@ async def tone(ctx: Context) -> dict:
             # source mode, or a page past the end: the distinct URLs of each tone, read on their own
             b2 = SQL()
             where2 = citation_predicate(ctx, b2)
-            row = await ctx.conn.fetchrow(f"""SELECT count(DISTINCT coalesce(u.url_norm,u.url)) FILTER(WHERE {is_pos})::int AS positive,
-                count(DISTINCT coalesce(u.url_norm,u.url)) FILTER(WHERE {is_neg})::int AS negative
-                FROM gold.citation_fact f JOIN gold.answer_fact a ON (a.build_id,a.surface,a.round_date,a.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
+            is_pos2, is_neg2 = in_keys(b2, "f", keys.leans_positive), in_keys(b2, "f", keys.leans_negative)
+            row = await ctx.conn.fetchrow(f"""SELECT count(DISTINCT coalesce(u.url_norm,u.url)) FILTER(WHERE {is_pos2})::int AS positive,
+                count(DISTINCT coalesce(u.url_norm,u.url)) FILTER(WHERE {is_neg2})::int AS negative
+                FROM gold.citation_fact f
                 JOIN gold.dim_url u ON u.url_key=f.url_key
                 WHERE {where2}""", *b2.args)
             counts = {"positive": row["positive"], "negative": row["negative"]}

@@ -18,6 +18,11 @@ try:
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_overview_evidence)") from exc
 
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
+
 D = date(2026, 10, 5)
 
 
@@ -39,8 +44,8 @@ class ListingConn:
 def fact(**extra) -> dict:
     row = {"job_id": "j1", "round_date": D, "anchor_date": D, "measured_at": datetime(2026, 10, 5, 3, tzinfo=timezone.utc),
            "prompt_id": "p1", "text": "Q?", "engine": "chatgpt", "country": "JP", "lang": "JA", "is_rep": True, "is_acr": False,
-           "acr_iter_rank": 0, "gap": False, "ment_total": 5, "ment_h": 2, "ment_k": 1, "ment_g": 0, "has_cit": True,
-           "tgt_cited": False, "own_url_cited": False, "cit_off": 3, "cit_n": 9}
+           "acr_iter_rank": 0, "analysis_state": 0, "mention_total": 5, "own_m": 3, "citations_all": 9, "citations_target": 0,
+           "citations_own_or_target": 0, "citations_official": 3, "citations_hosted": 9}
     row.update(extra)
     return row
 
@@ -59,17 +64,15 @@ class Split(unittest.TestCase):
     value is made of; checked on Gold 10-05: JP 347 + 222 = 569, the position's 252 + 95 = 347 ranked)."""
 
     def test_each_kpis_numerator_and_rest(self):
-        own = "(f.own_mask & 7)<>0"
-        self.assertEqual(answers.split_where("visibility", "num", 7), own)
-        self.assertEqual(answers.split_where("visibility", "rest", 7), f"NOT {own}")
-        self.assertEqual(answers.split_where("shareOfVoice", "rest", 7), f"f.ment_total>0 AND NOT {own}")
-        self.assertEqual(answers.split_where("sentiment", "num", 2), "(coalesce(f.sent_pos_k,0))>0")
-        self.assertEqual(answers.split_where("sentiment", "rest", 5),
-                         "(coalesce(f.sent_all_h,0)+coalesce(f.sent_all_g,0))>0 AND (coalesce(f.sent_pos_h,0)+coalesce(f.sent_pos_g,0))=0")
-        rank = "least(nullif(f.own_rk_h,0),nullif(f.own_rk_k,0),nullif(f.own_rk_g,0))"
-        self.assertEqual(answers.split_where("position", "num", 7), f"{rank}=1")
-        self.assertEqual(answers.split_where("position", "rest", 7), f"{rank}>=2")
-        self.assertEqual(answers.split_where("citationShare", "rest", 7), "f.cit_off=0 AND f.cit_n>0")
+        # the answers' key sets (metrics.gold_judged) an answer must be in and must not be in
+        self.assertEqual(answers.split_sets("visibility", "num"), (("tracked",), ()))
+        self.assertEqual(answers.split_sets("visibility", "rest"), ((), ("tracked",)))
+        self.assertEqual(answers.split_sets("shareOfVoice", "rest"), (("mentioned",), ("tracked",)))
+        self.assertEqual(answers.split_sets("sentiment", "num"), (("positive",), ()))
+        self.assertEqual(answers.split_sets("sentiment", "rest"), (("with_sentiment",), ("positive",)))
+        self.assertEqual(answers.split_sets("position", "num"), (("first",), ()))   # the text order, as AI 우선 노출도
+        self.assertEqual(answers.split_sets("position", "rest"), (("later",), ()))
+        self.assertEqual(answers.split_sets("citationShare", "rest"), (("hosted",), ("official",)))
 
     def test_an_unknown_split_is_refused(self):
         for split in ("nope:num", "visibility:half", "visibility"):
@@ -84,10 +87,10 @@ class ListingMarks(unittest.TestCase):
                      own_terms=["IONIQ 5", "Hyundai"])]
         out, conn = listing("surface=global&rep=1&split=visibility:num&marks=1&excerpt=1&order=prompt&limit=50", rows, 347)
         count, page = conn.sql
-        self.assertIn("AND f.is_rep AND (f.own_mask & 7)<>0", count)
-        self.assertIn("AND f.is_rep AND (f.own_mask & 7)<>0", page)
+        self.assertIn("AND f.is_rep", count)
+        self.assertIn("AND f.is_rep", page)
         # the page is chosen before the bodies and occurrences are joined (joined first they took 14 s)
-        self.assertTrue(page.startswith("WITH pg AS MATERIALIZED ("))
+        self.assertIn("pg AS MATERIALIZED (", page)
         self.assertIn('ORDER BY p.text COLLATE "und-x-icu",e.code,c.code,f.answer_key LIMIT', page)
         self.assertIn('ORDER BY f.text COLLATE "und-x-icu",f.engine,f.country,f.answer_key', page)
         # Gold's first 당사 occurrence that lands on its surface text in the body
@@ -102,7 +105,6 @@ class ListingMarks(unittest.TestCase):
     def test_the_other_lists_read_as_before(self):
         out, conn = listing("surface=global&limit=20", [fact()])
         _, page = conn.sql
-        self.assertNotIn("WITH pg", page)
         self.assertNotIn("answer_body", page)
         self.assertIn("ORDER BY f.round_date DESC,f.answer_key DESC", page)
         self.assertNotIn("marks", out["data"]["items"][0])

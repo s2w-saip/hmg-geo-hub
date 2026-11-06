@@ -1,75 +1,11 @@
-"""Shape conversions shared by the screens (port of front/lib/hgh/convert.ts, same rounding rules).
-
-The two percent helpers round the same ratio differently at exact .x5 boundaries; each one
-reproduces the front rule it replaces:
-  pct1_or_zero = Math.round((n / d) * 1000) / 10, d=0 -> 0
-  pct1_or_null = round1((100 * n) / d), d=0 -> null
-"""
+"""Shape conversions shared by the screens (port of front/lib/hgh/convert.ts). The arithmetic is in bff/metrics/display.py."""
 from __future__ import annotations
 
 from typing import Any
 
-from bff.screens._js import js_round
+from bff.metrics.display import Exact, delta1, exact, js_round, pct1_or_null, pct1_or_zero, rank_avg, ratio_value, round1  # noqa: F401 - the screens' names
 
 SUPPRESS_REASONS = ("no_active_snapshot", "hidden", "partial_hidden", "no_data", "unsupported", "source_pending", "no_prev")
-
-
-class Exact(float):
-    """A value rounded for display that keeps the exact value it was rounded from. A Δ or a gap subtracts
-    the exact values and rounds once (2026-10-29 metric review R2: two rounded values subtracted are off by
-    up to 0.1 — 2.286 → 2.345 showed "no change"). It compares, sorts and serializes as the rounded value;
-    arithmetic on it gives a plain float."""
-    __slots__ = ("exact",)
-
-    def __new__(cls, value: float, exact_value: float) -> Exact:
-        self = super().__new__(cls, value)
-        self.exact = exact_value
-        return self
-
-    def __reduce__(self):
-        return (Exact, (float(self), self.exact))
-
-
-def exact(v: Any) -> Any:
-    """The exact value behind a rounded one (the value itself when it carries none)."""
-    return getattr(v, "exact", v)
-
-
-def round1(n: float) -> float:
-    return Exact(js_round(n * 10) / 10, exact(n))
-
-
-def delta1(current: Any, previous: Any) -> float:
-    """current − previous from the exact values, rounded once."""
-    return round1(exact(current) - exact(previous))
-
-
-def _den_ok(r: Any, key: str = "den") -> bool:
-    return isinstance(r, dict) and isinstance(r.get(key), (int, float)) and r[key] > 0
-
-
-def pct1_or_zero(r: Any) -> float:
-    if not _den_ok(r):
-        return 0
-    return Exact(js_round((r["num"] / r["den"]) * 1000) / 10, (100 * r["num"]) / r["den"])
-
-
-def pct1_or_null(r: Any) -> float | None:
-    if not _den_ok(r):
-        return None
-    return round1((100 * r["num"]) / r["den"])
-
-
-def ratio_value(r: Any) -> float | None:
-    if not _den_ok(r):
-        return None
-    return r["num"] / r["den"]
-
-
-def rank_avg(r: Any) -> float | None:
-    if not _den_ok(r, "count"):
-        return None
-    return round1(r["sum"] / r["count"])
 
 
 def suppression_of(meta: Any, key: str) -> str | None:

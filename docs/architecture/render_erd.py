@@ -102,8 +102,9 @@ class Figure:
         self.tables: dict[str, Table] = {}
         self.parts: list[str] = []
 
-    def table(self, name, x, y, w, desc, rows, notes=()):
-        t = self.tables[name.rpartition(".")[2]] = Table(name, x, y, w, desc, rows, notes)
+    def table(self, name, x, y, w, desc, rows, notes=(), key=None):
+        """`key`: the figure's own name for it, when two schemas in one figure hold a table of the same name."""
+        t = self.tables[key or name.rpartition(".")[2]] = Table(name, x, y, w, desc, rows, notes)
         return t
 
     def __getitem__(self, name) -> Table:
@@ -365,57 +366,72 @@ def external() -> Figure:
     return f
 
 
-def left_behind() -> Figure:
-    """What stays in hmg_analytics catalog / publication / published after the move: data-002, -003, -011, -014."""
-    f = Figure("left", 360, "HUB 데이터 DB에 남은 catalog · published. 서비스 기준 주, GA4 속성 연결, DB 직접 공개 뷰다. 입력 테이블의 옛 사본은 쓰기를 막아 두었다.")
-    f.table("catalog.service_week", 16, 40, 280, "화면이 Gold를 읽는 마지막 주와 회차다. 바뀔 때만 한 행을 쌓고, 지우지 않는다.", [
+def ga4_registry_week() -> Figure:
+    """geohub_bm_db: the GA4 properties and the service week, back/hub_storage/input-003.sql."""
+    f = Figure("ga4reg", 660, "입력 DB의 GA4 속성과 서비스 기준 주. 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, 수집기가 속성마다 남기는 마지막 결과 ga4_collect_status, "
+               "바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 geohub_gold_db의 ga4_property로 복사한다.")
+    f.table("catalog.ga4_registry_event", 70, 40, 300, "등록부의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
+        ("PK", "event_id", "bigint"), ("FK", "property_id", "text"), ("", "action", "=create|update|stop|resume"),
+        ("", "actor_id", "⇢ user_account"), ("", "changes", "jsonb"), ("", "occurred_at", "timestamptz")])
+    f.table("catalog.ga4_registry", 420, 40, 330, "관리자가 Admin › GA4 연동에서 정하는 수집 대상 속성과 시장·전환 기준이다.", [
+        ("PK", "property_id", "text (숫자)"), ("", "brand", "=Hyundai|Kia|Genesis"), ("", "country", "text (ISO-2)"),
+        ("", "conv_basis", "=1|2"), ("", "conv_events", "text[] (2일 때 1~50개)"), ("", "enabled", "boolean"),
+        ("", "account_id", "text null (숫자)"), ("", "account_name", "text null"),
+        ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz")],
+        notes=["UK (brand, country) WHERE enabled", "⇢ Gold DB ga4_property (수집기가 복사)"])
+    f.table("catalog.ga4_collect_status", 800, 40, 300, "수집기가 속성마다 남기는 마지막 실행 결과이고, 실행마다 바뀐다.", [
+        ("PK FK", "property_id", "text"), ("", "checked_at", "timestamptz"),
+        ("", "status", "=collected|pending_grant|failed|stopped"), ("", "error", "text (≤500)"),
+        ("", "collected_at", "timestamptz"), ("", "collected_to", "date")])
+    f.fk("ga4_registry_event", "property_id", "ga4_registry", to="property_id")
+    f.fk("ga4_collect_status", "property_id", "ga4_registry", to="property_id")
+    f.table("catalog.service_week", 70, 370, 300, "화면이 Gold를 읽는 마지막 주와 회차다. 바뀔 때만 한 행을 쌓고, 지우지 않는다.", [
         ("PK", "seq", "bigint identity"), ("", "week_start", "date (월요일)"), ("", "global_cycles", "uuid[]"),
         ("", "website_cycles", "uuid[]"), ("", "gold_release", "jsonb"), ("", "gold_versions", "jsonb"),
         ("", "recorded_at", "timestamptz"), ("", "checked_at", "timestamptz")],
         notes=["최신 행 = current_service_week 뷰", "같은 주를 다시 확인하면 checked_at만"])
-    f.table("catalog.project_ga4_property", 336, 40, 260, "프로젝트와 GA4 속성의 연결이며, 실제 연동이 확인된 것만 등록한다.", [
-        ("PK FK", "project_id", "uuid"), ("PK FK", "prop_key", "→ ga4_property")])
-    gy = 40
-    views = [["projects", "prompts", "ga4_daily", "ga4_users_window", "ga4_values"],
-             ["ga4_properties", "seo_visibility_daily", "seo_crawl_daily", "seo_device_daily", "seo_priority"],
-             ["urls", "countries", "crawl_bots", "engines"]]
-    g = [f'<rect class="vgrp" x="646" y="{gy}" width="538" height="222" rx="8"/>',
-         f'<text class="m b" x="662" y="{gy + 26}">published.*<tspan class="mu" dx="10">DB 직접 공개(미개방) · 뷰 14개</tspan></text>',
-         f'<text class="mu sm" x="662" y="{gy + 46}">hmg_data_external은 이 스키마만 SELECT · 모두 security_barrier 뷰</text>']
-    for col, names in enumerate(views):
-        for i, name in enumerate(names):
-            g.append(f'<text class="m" x="{662 + 180 * col}" y="{gy + 80 + 20 * i}">{name}</text>')
-    g += [f'<text class="mu sm" x="662" y="{gy + 190}">읽는 곳: 동결한 catalog · publication 사본, analytics.ga4_* · analytics.current_page_* · ref.*</text>',
-          f'<text class="mu sm" x="662" y="{gy + 208}">T12에서 동결 사본과 함께 정리한다</text>']
-    f.raw("\n".join(g))
     return f
 
 
 def metrics() -> Figure:
-    """hmg_metrics gold / cache: back/hub_storage/metrics-001.sql; SSOT service/cache-db.md."""
-    f = Figure("metrics", 330, "HUB 지표 DB의 cache · gold 스키마. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.")
+    """geohub_gold_db gold (the rollup job's tables): back/hub_storage/metrics-001.sql · 002 · 003; geohub_cache_db cache: cache-001.sql; SSOT service/cache-db.md."""
+    f = Figure("metrics", 950, "geohub_cache_db의 cache 스키마와 geohub_gold_db의 사전 집계 테이블. 정본이 아니어서 지워져도 운영 스냅샷에서 다시 만든다.")
     f.table("cache.query_result", 16, 40, 320, "필터 조회 결과다. 조회 조건마다 한 행이고 UNLOGGED이며 백업하지 않는다.", [
         ("PK", "cache_key", "text sha256"), ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "query", "jsonb"),
         ("", "result", "jsonb"), ("", "created_at", "timestamptz")],
         notes=["키 = 조회 조건 + 스냅샷 ID + 정의 버전", "TTL 없음 · 새 운영 스냅샷에 이전 행 삭제"])
     f.table("gold.schema_migration", 376, 40, 240, "이 DB에 적용한 마이그레이션 파일과 체크섬을 기록한다.", [
         ("PK", "version", "text"), ("", "sha256", "text"), ("", "installed_at", "timestamptz")])
+    f.table("cache.schema_migration", 696, 240, 240, "캐시 DB에 적용한 마이그레이션 파일과 체크섬을 기록한다.", [
+        ("PK", "version", "text"), ("", "sha256", "text"), ("", "installed_at", "timestamptz")], key="cache_schema_migration")
+    f.table("gold.first_screen_read", 16, 320, 320, "지표가 아닌 첫 화면 목록(프롬프트 · 필터 옵션 등)의 /v1 응답 한 건. 스냅샷 ID와 정의 버전이 지금과 같을 때만 화면에 나간다.", [
+        ("PK", "read_key", "text sha256"), ("", "surface", "text"), ("", "path", "text"), ("", "query", "text"), ("", "snapshot_id", "text"),
+        ("", "definition_version", "text"), ("", "result", "jsonb null"), ("", "error", "text null"), ("", "computed_at", "timestamptz")],
+        notes=["result · error 중 하나만 있다", "실패로 남으면 그 구역은 보이지 않는다"])
+    f.table("gold.rollup_run", 376, 320, 300, "사전 집계 작업의 기록이다. 표면마다 어느 스냅샷 · 정의 버전으로 돌았는지 남긴다.", [
+        ("PK", "run_id", "bigint"), ("", "surface", "text"), ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "started_at", "timestamptz"),
+        ("", "finished_at", "timestamptz null"), ("", "status", "text"), ("", "reads", "int null"), ("", "failed", "int null"), ("", "note", "text null")])
+    f.table("gold.metric_row", 16, 620, 320, "회차의 차원 조합 한 건: 기본 집계값과 지표 값. 화면은 집계값을 읽어 지표 함수로 계산한다.", [
+        ("PK", "surface", "text"), ("PK", "project_key", "int"), ("PK", "round_date", "date"), ("PK", "call", "text"), ("PK", "scope", "text"), ("PK", "ord", "int"),
+        ("", "dims", "jsonb"), ("", "counts", "jsonb"), ("", "metrics", "jsonb"), ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "computed_at", "timestamptz")])
+    f.table("gold.metric_call", 376, 620, 300, "회차의 집계 호출이 어느 스냅샷 · 정의 버전으로 계산됐는지. 다르거나 실패면 그 회차 값은 보이지 않는다.", [
+        ("PK", "surface", "text"), ("PK", "project_key", "int"), ("PK", "round_date", "date"), ("PK", "call", "text"), ("PK", "scope", "text"),
+        ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "row_count", "int"), ("", "error", "text null"), ("", "computed_at", "timestamptz")])
     gy = 40
-    g = [f'<rect class="vgrp" x="656" y="{gy}" width="528" height="170" rx="8"/>',
-         f'<text class="m b" x="672" y="{gy + 26}">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>',
-         f'<text class="m" x="672" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="842" y="{gy + 58}">BFF 읽기 · gold, cache SELECT</text>',
-         f'<text class="m" x="672" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="842" y="{gy + 82}">BFF 캐시 · query_result 읽기 · 쓰기</text>',
-         f'<text class="m" x="672" y="{gy + 106}">hmg_rollup_writer</text><text class="mu sm" x="842" y="{gy + 106}">사전 집계 작업 · gold 쓰기 (T5.3)</text>',
-         f'<text class="mu sm" x="672" y="{gy + 142}">사전 집계 테이블은 T5.3에서 gold에 더한다</text>']
+    g = [f'<rect class="vgrp" x="696" y="{gy}" width="488" height="170" rx="8"/>',
+         f'<text class="m b" x="712" y="{gy + 26}">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>',
+         f'<text class="m" x="712" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="882" y="{gy + 58}">BFF 읽기 · geohub_gold_db SELECT</text>',
+         f'<text class="m" x="712" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="882" y="{gy + 82}">BFF 캐시 · geohub_cache_db 읽기 · 쓰기</text>',
+         f'<text class="m" x="712" y="{gy + 106}">hmg_rollup_writer</text><text class="mu sm" x="882" y="{gy + 106}">사전 집계 작업 · 테이블 4개만 쓰기</text>',
+         f'<text class="mu sm" x="712" y="{gy + 142}">API는 hmg_rollup_writer를 받지 않는다</text>']
     f.raw("\n".join(g))
     return f
 
 
 def ga4() -> Figure:
-    """hmg_analytics GA4: back/analytics/schema.sql, operations.sql; the registry back/hub_storage/data-006.sql."""
-    f = Figure("ga4", 796, "HUB 데이터 DB의 GA4 표 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, "
-               "차원 키는 kind별로 ga4_value를 가리킨다. 아래 줄은 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, "
-               "수집기가 속성마다 남기는 마지막 결과 ga4_collect_status이고, 수집기가 등록부를 ga4_property로 복사한다.")
+    """geohub_gold_db GA4: back/hub_storage/metrics-004.sql (back/analytics/schema.sql, operations.sql)."""
+    f = Figure("ga4", 510, "geohub_gold_db의 GA4 테이블 ERD. ga4_row와 ga4_users_window가 ga4_property를 가리키고, "
+               "차원 키는 kind별로 ga4_value를 가리킨다. ga4_property는 수집기가 입력 DB의 등록부에서 복사한다.")
     f.table("analytics.ga4_row", 70, 40, 290, "GA4 보고서 5종의 세션·사용자·조회·이벤트를 날짜·차원 조합별로 담는다.", [
         ("PK FK", "prop_key", "smallint"), ("PK", "report", "=1~5"), ("PK", "date", "date"),
         ("PK FK", "channel_key", "integer"), ("PK FK", "source_key", "integer"), ("PK FK", "device_key", "integer"),
@@ -440,27 +456,12 @@ def ga4() -> Figure:
          via=389, to="kind")
     f.fk("ga4_users_window", "prop_key", "ga4_property")
     f.fk("ga4_users_window", "page_key", "ga4_value", via=775, to="kind")
-    # the registry (2026-10-29): the administrator's list the collector reads; no key to ga4_property (copied by the collector)
-    f.table("analytics.ga4_registry_event", 70, 510, 300, "등록부의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
-        ("PK", "event_id", "bigint"), ("FK", "property_id", "text"), ("", "action", "=create|update|stop|resume"),
-        ("", "actor_id", "⇢ user_account"), ("", "changes", "jsonb"), ("", "occurred_at", "timestamptz")])
-    f.table("analytics.ga4_registry", 420, 510, 330, "관리자가 Admin › GA4 연동에서 정하는 수집 대상 속성과 시장·전환 기준이다.", [
-        ("PK", "property_id", "text (숫자)"), ("", "brand", "=Hyundai|Kia|Genesis"), ("", "country", "text (ISO-2)"),
-        ("", "conv_basis", "=1|2"), ("", "conv_events", "text[] (2일 때 1~50개)"), ("", "enabled", "boolean"),
-        ("", "created_at", "timestamptz"), ("", "updated_at", "timestamptz")],
-        notes=["UK (brand, country) WHERE enabled", "⇢ ga4_property.property_id (수집기가 복사)"])
-    f.table("analytics.ga4_collect_status", 800, 510, 300, "수집기가 속성마다 남기는 마지막 실행 결과이고, 실행마다 바뀐다.", [
-        ("PK FK", "property_id", "text"), ("", "checked_at", "timestamptz"),
-        ("", "status", "=collected|pending_grant|failed|stopped"), ("", "error", "text (≤500)"),
-        ("", "collected_at", "timestamptz"), ("", "collected_to", "date")])
-    f.fk("ga4_registry_event", "property_id", "ga4_registry", to="property_id")
-    f.fk("ga4_collect_status", "property_id", "ga4_registry", to="property_id")
     return f
 
 
 def seo() -> Figure:
-    """hmg_analytics SEO and build bookkeeping: back/analytics/schema.sql, operations.sql."""
-    f = Figure("seo", 610, "HUB 데이터 DB의 SEO 표와 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, "
+    """geohub_gold_db SEO and build bookkeeping: back/hub_storage/metrics-004.sql."""
+    f = Figure("seo", 610, "geohub_gold_db의 SEO 테이블과 ops 스키마 ERD. page_* 표는 빌드별로 쌓이고, "
                "ops.seo_active_build가 프로젝트·날짜마다 보여 줄 빌드를 정한다.")
     f.table("ops.build", 16, 40, 250, "SEO 데이터 빌드 한 번당 한 행으로, 규칙 버전·상태·검증 결과를 담는다.", [
         ("PK", "build_id", "bigint"), ("", "family", "text"), ("", "slice_key", "text"),
@@ -507,8 +508,8 @@ def seo() -> Figure:
 
 
 def ref() -> Figure:
-    """hmg_analytics ref dictionaries: back/analytics/schema.sql, operations.sql."""
-    f = Figure("ref", 672, "HUB 데이터 DB의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, "
+    """geohub_gold_db ref dictionaries: back/hub_storage/metrics-004.sql."""
+    f = Figure("ref", 672, "geohub_gold_db의 ref 사전 ERD. URL은 출처와 자사 기준 주소를, 출처는 분류와 경쟁 브랜드를, "
                "프로젝트는 국가를, 국가는 대륙을 가리킨다.")
     f.table("ref.dim_owned_base", 16, 100, 260, "자사 URL로 판정하는 주소 접두사와 그 브랜드·국가·언어를 담는다.", [
         ("PK", "owner_key", "smallint"), ("UK", "kind", "text"), ("UK", "prefix", "text"), ("", "host", "text"),
@@ -549,7 +550,7 @@ def ref() -> Figure:
     return f
 
 
-FIGURES = (operations, catalog, external, ga4, seo, ref, left_behind, metrics)
+FIGURES = (operations, catalog, external, ga4_registry_week, ga4, seo, ref, metrics)
 
 
 def render() -> dict[str, str]:

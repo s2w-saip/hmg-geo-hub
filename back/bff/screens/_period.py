@@ -29,6 +29,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from bff.metrics.display import point_change, relative_change
 from bff.screens._js import js_round, to_fixed
 
 # ── JS calendar arithmetic ─────────────────────────────────────────────────
@@ -209,12 +210,12 @@ def compare_delta_of(unit: str | None, prev: float | None, cur: float | None) ->
     if prev is None or cur is None:
         return None
     if unit == "pp":
-        return (cur - prev) * 100
+        return point_change(cur, prev)
     if unit == "rank":
         return cur - prev
     if prev == 0:
         return None
-    return ((cur - prev) / prev) * 100
+    return relative_change(cur, prev)
 
 
 # ── lib/kpi/calendar-month-window.ts ───────────────────────────────────────

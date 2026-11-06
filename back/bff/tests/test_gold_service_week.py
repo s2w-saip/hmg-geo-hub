@@ -1,9 +1,8 @@
 """Gold reads capped at the service week (2026-11-02, decisions '발행 시점 판정' · '기준 주 세부'): every global and website
 read stops at the week's last day — its calendar, its release builds, an explicit end, the comparison ledger, the
-website prompts' country moves, the ACR rounds, an answer's detail and the result cache — and a surface with no round
-in the week has no snapshot ('측정 없음'). The project surface and the reads of no round are not capped."""
+website prompts' country moves, the ACR rounds, an answer's detail and the live snapshot's id — and a surface with no
+round in the week has no snapshot ('측정 없음'). The project surface and the reads of no round are not capped."""
 import asyncio
-import contextlib
 import re
 import time
 import unittest
@@ -18,13 +17,19 @@ try:
     from starlette.datastructures import QueryParams
 
     from bff import api
-    from bff.gold_reader import acr, answers, cache, catalog, compare, readers, week_notes
+    from bff.gold_reader import acr, answers, catalog, compare, readers, week_notes
     from bff.gold_reader.context import SQL, Context
-    from bff.gold_reader.metrics import COUNTS
     from bff.hub_stores import service_week
+    from bff.metrics import serving
     from bff.tests.service_week_util import HubData, clock, hub, week_row
+    from bff.tests.test_gold_metrics import counts_row as answers_row
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_gold_service_week)") from exc
+
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
 
 D = date.fromisoformat
 OCT5, OCT11 = D("2026-10-05"), D("2026-10-11")
@@ -67,6 +72,8 @@ class GoldConn:
                      {"family": "report", "build_id": 900, "slice_key": "rpub:all", "round_date": None}]
             keyed = "i.slice_key" in sql.split("FROM gold.release_item i")[0]
             return [{k: v for k, v in item.items() if keyed or k != "slice_key"} for item in items]
+        if "SELECT DISTINCT f.answer_key" in sql:   # no ACR cell with several runs
+            return []
         if "SELECT DISTINCT c.round_date" in sql:
             cap = args[4] if DATES_BOUND.search(sql) else None   # the service week's last day
             return [{"round_date": d} for d in self.rounds if cap is None or d <= cap]
@@ -190,18 +197,14 @@ class Calendar(unittest.TestCase):
         self.assertEqual(seen, [None])
         self.assertEqual(data.connects, 0)
 
-    def test_reads_of_no_round_do_not_wait_on_the_week_through_the_cache(self):
-        # review r2-5 (2026-11-03): the screens read through api.get, whose result cache fingerprints every read with the
-        # service week. Before any week was read, a data DB that hangs held each read there for READ_TIMEOUT_S, the
-        # project list and the project pages among them. A read of a global or website round still waits for its week
-        # (bounded) and answers 503 without one
-        class Gold(GoldConn):
-            async def fetchval(self, sql, *args):
-                return "gold-state"   # cache.STATE_SQL
-
+    def test_reads_of_no_round_do_not_wait_on_the_week_through_the_snapshot(self):
+        # review r2-5 (2026-11-03): the screens read through api.get, which keys every metric read on the live snapshot
+        # (bff.metrics.serving), the service week in it. Before any week was read, a data DB that hangs held each read
+        # there for READ_TIMEOUT_S, the project list and the project pages among them. A read of a global or website round
+        # still waits for its week (bounded) and answers 503 without one
         @asynccontextmanager
         async def gold():
-            yield Gold(ROUNDS, {"WITH jobs AS": []})
+            yield GoldConn(ROUNDS, {"WITH jobs AS": [], "FROM gold.active_release": [{"release_id": 1, "version": 3}]})
 
         async def timed(path, params):
             started = time.monotonic()
@@ -211,15 +214,15 @@ class Calendar(unittest.TestCase):
                 return time.monotonic() - started, exc.status_code
             return time.monotonic() - started, 200
 
-        self.addCleanup(cache.clear)
+        self.addCleanup(serving.forget_snapshots)
         for path, params, waits in (("gold/projects", {}, False),
                                     ("source", {"surface": "project", "project_id": "p1"}, False),
-                                    ("source", {"surface": "global"}, True)):
+                                    ("source", {"surface": "global"}, True),
+                                    ("kpi/summary", {"surface": "global"}, True)):   # its snapshot waits as its read would
             with self.subTest(path=path, params=params):
-                cache.clear()
+                serving.forget_snapshots()
                 with hub(HubData(hang=True)), mock.patch.object(service_week, "READ_TIMEOUT_S", 0.5), \
-                        mock.patch.object(cache, "MAX_AGE_S", 600), mock.patch.object(cache, "connection", gold), \
-                        mock.patch.object(readers, "connection", gold):
+                        mock.patch.object(serving, "connection", gold), mock.patch.object(readers, "connection", gold):
                     took, status = run(timed(path, params))
                 if waits:
                     self.assertEqual(status, 503)
@@ -249,21 +252,19 @@ class Calendar(unittest.TestCase):
 
 
 def counts_row(day, **values):
-    row = dict.fromkeys(COUNTS, 0)
-    row.update(round_date=day, measured_prompts=0, mentioned_prompts=0, **values)
-    return row
+    return answers_row(round_date=day, **values)
 
 
 class LedgerConn:
     """The comparison's cycle ledger (one published cycle per round of `rounds`, `units` planned each, honouring a
-    bound on round_date the read binds) and one kpi row per selected round."""
+    bound on round_date the read binds) and one row of counts per selected round."""
 
     def __init__(self, rounds, units=100):
         self.rounds, self.units, self.ledger = rounds, units, []
 
     async def fetch(self, sql, *args):
-        if "FROM gold.kpi_cell" in sql:
-            selected = next(a for a in args if isinstance(a, list) and all(isinstance(x, date) for x in a))
+        if "FROM gold.answer_fact" in sql or "FROM gold.citation_fact" in sql or "f.answer_key AS a_" in sql:
+            selected = next((a for a in args if isinstance(a, list) and a and all(isinstance(x, date) for x in a)), [])
             return [counts_row(d, answers=100, tracked=40, cit_total=10, gap_base=100) for d in self.rounds if d in selected]
         if "FROM gold.dim_cycle" in sql:
             self.ledger.append((sql, args))
@@ -278,7 +279,7 @@ def compare_read(qs: str, rounds, dates, start: date = OCT5):
     """kpi/compare (visibility) on a Context capped at `start`'s week, the calendar `dates`."""
     ctx = Context(LedgerConn(rounds), QueryParams(f"surface=global&metrics=visibility&{qs}"))
     ctx.release = {"release_id": 1, "version": 1, "rule_signature": "test"}
-    ctx.builds = {"cell": [1]}
+    ctx.builds = {"fact": [1]}
     ctx.week = week(start)
     ctx.dates = dates
     ctx.selected_dates = dates[:1]
@@ -365,37 +366,34 @@ class Others(unittest.TestCase):
         self.assertIn(NOV2, args)
 
 
-class Fingerprint(unittest.TestCase):
-    def fingerprint(self, data):
-        class Conn:
-            async def fetchval(self, sql):
-                return "gold-state"
+class SnapshotId(unittest.TestCase):
+    """The live snapshot a metric read is kept under (bff.metrics.serving.current_snapshot) holds the service week."""
 
+    def snapshot(self, data, surface="global"):
         @asynccontextmanager
         async def gold():
-            yield Conn()
+            yield GoldConn(ROUNDS, {"FROM gold.active_release": [{"release_id": 1, "version": 3}]})
 
-        async def go():
-            # the week a capped read waits for in Context.create; the fingerprint takes the kept one (review r2-5)
-            with contextlib.suppress(service_week.ServiceWeekUnavailable):
-                await service_week.current()
-            return await cache._fingerprint()
+        with hub(data), mock.patch.object(serving, "connection", gold):
+            return run(serving.current_snapshot(surface))
 
-        with hub(data), mock.patch.object(cache, "connection", gold):
-            return run(go())
-
-    def test_another_week_is_another_state(self):
+    def test_another_week_is_another_snapshot(self):
         # an advance writes the HUB data DB, not Gold: without the week, answers read under the old week were served
-        # for up to HGH_GOLD_CACHE_S, and one page could mix two weeks
-        first = self.fingerprint(HubData(week_row(OCT5, seq=1)))
-        second = self.fingerprint(HubData(week_row(D("2026-10-12"), seq=2)))
-        republished = self.fingerprint(HubData(week_row(OCT5, seq=3)))
-        uncapped = self.fingerprint(None)
+        # on, and one page could mix two weeks
+        first = self.snapshot(HubData(week_row(OCT5, seq=1)))
+        second = self.snapshot(HubData(week_row(D("2026-10-12"), seq=2)))
+        republished = self.snapshot(HubData(week_row(OCT5, seq=3)))
+        uncapped = self.snapshot(None)
         self.assertEqual(len({first, second, republished, uncapped}), 4)
-        self.assertTrue(first.startswith("gold-state|"))
+        self.assertTrue(first.startswith("gold-release:1:3:"))
 
-    def test_a_week_that_cannot_be_read_still_fingerprints(self):
-        self.assertTrue(self.fingerprint(HubData(row=None)).startswith("gold-state|"))
+    def test_a_week_that_cannot_be_read_is_the_503_of_the_capped_reads(self):
+        with self.assertRaises(HTTPException) as cm:
+            self.snapshot(HubData(row=None))
+        self.assertEqual(cm.exception.status_code, 503)
+
+    def test_the_project_surface_holds_no_week(self):
+        self.assertTrue(self.snapshot(HubData(week_row(OCT5, seq=7)), "project").endswith(":-"))
 
 
 class WeekNotes(unittest.TestCase):
@@ -498,7 +496,7 @@ class WeekNotes(unittest.TestCase):
 
     def test_the_rounds_ask_what_the_calendar_asks(self):
         """The rounds' test of a cycle is the text Context.create's calendar asks it by (context.calendar_round), bounded
-        by the week's first and last day, over the releases the reads pick from (scope, live · card · grid, the one rule
+        by the week's first and last day, over the release the reads take (scope, live, the one rule
         signature)."""
         from bff.gold_reader import context as context_module
 
@@ -513,7 +511,7 @@ class WeekNotes(unittest.TestCase):
         sql = flat(week_notes.ROUNDS_SQL)
         self.assertIn(flat(f"WHERE c.surface=CASE a.scope WHEN 'global' THEN 1 ELSE 2 END AND "
                            f"{context_module.calendar_round('a.release_id', '$1::date')} AND c.round_date BETWEEN $3::date AND $4::date"), sql)
-        self.assertIn("FROM gold.active_release a WHERE a.scope IN ('global','website') AND a.read_mode IN ('live','card','grid') "
+        self.assertIn("FROM gold.active_release a WHERE a.scope IN ('global','website') AND a.read_mode='live' "
                       "AND ($2::text IS NULL OR a.rule_signature=$2)", sql)
 
     def test_only_on_the_global_and_website_surfaces(self):
@@ -534,7 +532,7 @@ class WeekNotes(unittest.TestCase):
         self.assertEqual((args[0], args[2], args[3], args[4], args[5], args[6]), (NOV2, OCT11, 2, ["de"], ["de"], ["gemini"]))
         for clause in (
                 # the active releases the screens pick from
-                "WHERE a.scope IN ('global','website') AND a.read_mode IN ('live','card','grid') "
+                "WHERE a.scope IN ('global','website') AND a.read_mode='live' "
                 "AND ($2::text IS NULL OR a.rule_signature=$2)",
                 # the cycles of surfaces 1 and 2 up to the week's last day, in the ISO week of their round; of the website,
                 # the sites of an account's or a page's brands with a job on its countries, languages and engines (the

@@ -51,6 +51,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from bff import api
+from bff.metrics.display import change_pct as change_of, share as share_pct
 from bff.hub_stores.analytics_reader import BRAND_NAMES
 from bff.screens import screen, split_context
 from bff.screens._days import blocks_of, days_of, period_choice, prev_period, reader_query
@@ -64,11 +65,11 @@ USER_AXES = ("engine", "device", "visitorType")
 
 
 def share(n: float | None, d: float | None) -> float | None:
-    return 100 * n / d if n is not None and d else None
+    return share_pct(n, d) if n is not None and d else None
 
 
 def change_pct(cur: float | None, prev: float | None) -> float | None:
-    return 100 * (cur - prev) / prev if cur is not None and prev else None
+    return change_of(cur, prev) if cur is not None and prev else None
 
 
 def gap(a: float | None, b: float | None) -> float | None:

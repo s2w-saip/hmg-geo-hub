@@ -14,6 +14,7 @@ from datetime import date
 from typing import Any
 
 from bff import api
+from bff.metrics.display import point_change, relative_change
 from bff.gold_reader.compare_logic import range_windows
 from bff.screens._convert import filter_notices
 from bff.screens._period import resolve_request_compare_period_shape
@@ -45,12 +46,12 @@ def legacy_compare_delta(unit: str | None, prev: float | None, cur: float | None
     if prev is None or cur is None:
         return None
     if unit == "pp":
-        return (cur - prev) * 100
+        return point_change(cur, prev)
     if unit == "rank":
         return cur - prev
     if prev == 0:
         return None
-    return ((cur - prev) / prev) * 100
+    return relative_change(cur, prev)
 
 
 _ITEM_FIELDS = (("cyclesPrev", "cycles_prev"), ("cyclesCur", "cycles_cur"), ("dataCyclesPrev", "data_cycles_prev"), ("dataCyclesCur", "data_cycles_cur"),

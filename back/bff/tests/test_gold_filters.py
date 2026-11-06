@@ -11,8 +11,14 @@ try:
     from bff.gold_reader import citations, context as context_module, drilldown, metrics
     from bff.gold_reader.context import Context
     from bff.screens import citation, citation_model
+    from bff.tests.test_gold_metrics import brand_row, counts_row
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_gold_filters)") from exc
+
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
 
 D = date(2026, 10, 5)
 
@@ -79,8 +85,9 @@ class SourcesConn:
 
     async def fetch(self, sql, *args):
         self.sql.append(sql)
-        if "FROM gold.citation_cell" in sql:
-            return []
+        if "bool_or(x.t_" in sql:  # GoldCurrentSource.type_category_counts
+            return [{"category_key": 1, "slug": "officialHmg", "name": "Official (HMG)", **dict.fromkeys((f"t_{t}" for t in metrics.TYPES), 0),
+                     "t_mention": 7, "t_final_choice": 2}]
         if "gold.dim_engine" in sql and "citation_fact" not in sql:
             return [{"engine_key": 1, "code": "chatgpt"}]
         if "GROUP BY f.engine_key,f.source_key" in sql:
@@ -102,9 +109,13 @@ class Sources(unittest.TestCase):
     def test_the_source_filter_narrows_the_type_matrix(self):
         # D: 출처 = 공식(HMG) still showed every category's type counts (1,400,034 for 452,842)
         conn = SourcesConn()
-        asyncio.run(citations.sources(context(conn, "surface=global&source=officialHmg")))
-        cells = next(s for s in conn.sql if "FROM gold.citation_cell" in s)
-        self.assertRegex(cells, r"f\.category_key IN \(SELECT category_key FROM gold\.dim_category WHERE slug=ANY\(\$\d+::text\[\]\)\)")
+        data = asyncio.run(citations.sources(context(conn, "surface=global&source=officialHmg")))["data"]
+        matrix = next(s for s in conn.sql if "FROM gold.answer_brand_fact x" in s)
+        self.assertRegex(matrix, r"f\.source_key IN \(SELECT s\.source_key FROM gold\.dim_source s JOIN gold\.dim_category d USING\(category_key\) WHERE d\.slug=ANY\(\$\d+::text\[\]\)\)")
+        types = {t["type"]: (t["total"], t["categories"]) for t in data["types"]}
+        self.assertEqual(types["mention"], (7, [{"category_key": 1, "citations": 7}]))
+        self.assertEqual(types["final_choice"], (2, [{"category_key": 1, "citations": 2}]))
+        self.assertEqual(types["comparison"], (0, []))
 
 
 class ToneConn:
@@ -161,20 +172,16 @@ class Tone(unittest.TestCase):
 
 class EngineConn:
     async def fetch(self, sql, *args):
-        if "gold.dim_engine" in sql and "kpi_cell" not in sql:
-            return [{"engine_key": 1, "code": "chatgpt"}, {"engine_key": 2, "code": "gemini"}]
-        if "FROM gold.kpi_cell" in sql:
-            row = dict.fromkeys(metrics.COUNTS, 0)
-            row.update(measured_prompts=0, mentioned_prompts=0, answers=100, tracked=80, own_mentions=40, total_mentions=100, n=0)
+        if "FROM gold.answer_fact" in sql or "f.answer_key AS a_" in sql:
+            own = {"tracked": 80, "own_mentions": 40, "total_mentions": 100}
             if "GROUP BY f.engine_key" in sql:
-                return [{**row, "engine_key": 1}, {**row, "engine_key": 2, "answers": 0}]
-            return [row]
-        if "FROM gold.brand_cell" in sql:
-            base = {"rank_sum": 0, "ranked": 0, "positive": 0, "neutral": 0, "mixed": 0, "negative": 0, "multi_answers": 0,
-                    "multi_mentions": 0, "prompts": 1, "multi_prompts": 0, **{f"t_{t}": 0 for t in metrics.TYPES}}
-            rows = [{**base, "brand_key": 9, "name": "Toyota", "own_bit": 0, "mentions": 30, "answers": 11},
-                    {**base, "brand_key": 7, "name": "Kia", "own_bit": 2, "mentions": 40, "answers": 80}]
+                return [counts_row(engine_key=1, answers=100, **own), counts_row(engine_key=2, answers=0, **own)]
+            return [counts_row(answers=100, **own)]
+        if "FROM gold.answer_brand_fact" in sql:
+            rows = [brand_row(D, 9, "Toyota", 0, 30, 11, prompts=1, multi_prompts=0), brand_row(D, 7, "Kia", 2, 40, 80, prompts=1, multi_prompts=0)]
             return [{**r, "engine_key": 1} for r in rows] if "f.engine_key" in sql else rows
+        if "gold.dim_engine" in sql:
+            return [{"engine_key": 1, "code": "chatgpt"}, {"engine_key": 2, "code": "gemini"}]
         raise AssertionError(sql[:120])
 
     async def fetchval(self, sql, *args):
@@ -258,6 +265,8 @@ class CreateConn:
             return [{"family": "cell", "build_id": 1, "round_date": D}, {"family": "fact", "build_id": 2, "round_date": D}]
         if "SELECT DISTINCT c.round_date" in sql:
             return [{"round_date": D}]
+        if "SELECT DISTINCT f.answer_key" in sql:   # no ACR cell with several runs
+            return []
         if "FROM gold.catalog_entry" in sql:
             self.catalog.append((sql, args))
             return [{"prompt_key": k} for k in self.prompts]

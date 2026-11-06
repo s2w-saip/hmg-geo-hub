@@ -29,7 +29,9 @@ import asyncpg
 from fastapi import HTTPException
 
 from bff import api
+from bff.metrics.display import share1
 from bff.access import reader_scope
+from bff.metrics import compute
 from bff.screens._competitors import rank_first_position_rows
 from bff.screens._compare import fetch_period_compare_api, period_shape, prev_period_filters
 from bff.screens._convert import as_of_date, pct1_or_zero, rank_avg, round1, suppression_of, whole_suppression
@@ -424,7 +426,8 @@ def to_mentions_live(p: dict) -> dict | None:
     trend = p.get("trend")
     out: dict = {"summary": {"total": d["totals"]["mentions_total"], "uniqueBrands": d["totals"]["brand_count"],
                              "totalPrompts": _nn(summary["data"]["params"].get("measured_prompts") if summary else None, None),
-                             "totalAnswers": d["totals"]["answers"]}}
+                             "totalAnswers": d["totals"]["answers"],
+                             "monitoringAnswers": _nn(d["totals"].get("answers_mon"), d["totals"]["answers"])}}
     if brands_truncated(brands_res):
         out["brandsTotal"] = d["totals"]["brand_count"]
     own = d["own"]
@@ -449,7 +452,9 @@ def to_sub_kpi_row(r: dict) -> dict:
     def n(k: str) -> Any:
         return _nn(r.get(k), 0)
     ranked = n("ranked")
-    return {"engine": r["engine"], "answers": n("answers"), "tracked": n("tracked"), "multi": n("multi"),
+    # 당사 언급 답변 of the monitoring answers, Top 3's denominator (SSOT); tracked counts the representative ones, 노출률's numerator
+    return {"engine": r["engine"], "answers": n("answers"), "tracked": n("tracked"), "trackedMon": _nn(r.get("tracked_mon"), n("tracked")),
+            "multi": n("multi"), "ranked": ranked,
             "top1": n("top1"), "top3": n("top3"), "avgPosition": n("rank_sum") / ranked if ranked > 0 else None,
             "totalMentions": n("total_mentions"), "trackedMentions": n("tracked_mentions"),
             "sentMentions": n("sent_mentions"), "positiveMentions": n("positive_mentions"),
@@ -645,15 +650,18 @@ def build_mention_sub_kpis(sub: dict | None) -> dict | None:
             s = s + r[k]
         return s
 
+    # Top 3's denominator is the monitoring answers that mention 당사 (SSOT); no position in the round at all, no value (D-16)
     tracked, answers, sent = total("tracked"), total("answers"), total("sentMentions")
+    top3 = compute.top3_rate(total("top3"), sum(_nn(r.get("trackedMon"), r["tracked"]) for r in rows), total("ranked")) or {"num": 0, "den": 0}
+    base = top3["den"]
     return {"missingPrompts": sub.get("promptsWithoutBrand"),
             "multiMentionAnswers": total("multi"),
-            "top3Rate": round1((100 * total("top3")) / tracked) if tracked > 0 else None,
-            "top3Count": total("top3") if tracked > 0 else None,
-            "top3Base": tracked if tracked > 0 else None,
+            "top3Rate": share1(top3["num"], base) if base > 0 else None,
+            "top3Count": top3["num"] if base > 0 else None,
+            "top3Base": base if base > 0 else None,
             "positiveKeywords": total("positiveMentions") if sent > 0 else None,
             "negativeKeywords": total("negativeMentions") if sent > 0 else None,
-            "ownMentionRate": round1((100 * tracked) / answers) if answers > 0 else None,
+            "ownMentionRate": share1(tracked, answers) if answers > 0 else None,
             "totalMentions": total("totalMentions"),
             "measuredPrompts": sub.get("measuredPrompts")}
 

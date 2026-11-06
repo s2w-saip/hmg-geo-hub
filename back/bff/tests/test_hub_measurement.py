@@ -125,14 +125,14 @@ class CacheStore(unittest.TestCase):
             try:
                 query = {"engine": ["chatgpt"], "marker": str(uuid4())}
                 old, new = f"test-{uuid4()}", f"test-{uuid4()}"
-                self.assertTrue(await cache_db.put(query, old, "v", {"n": 1}))
-                self.assertTrue(await cache_db.put(query, old, "v", {"n": 2}))
-                self.assertEqual(await cache_db.get(query, old, "v"), {"n": 2})
+                self.assertTrue(await cache_db.put(query, old, "v", '{"n": 1}'))
+                self.assertTrue(await cache_db.put(query, old, "v", '{"n": 2}'))
+                self.assertEqual(await cache_db.get(query, old, "v"), '{"n": 2}')
                 self.assertIsNone(await cache_db.get(query, new, "v"))
-                await cache_db.put(query, new, "v", {"n": 3})
-                self.assertGreaterEqual(await cache_db.purge_other_snapshots(new), 1)
+                await cache_db.put(query, new, "v", '{"n": 3}')
+                self.assertGreaterEqual(await cache_db.purge_other_snapshots([new]), 1)
                 self.assertIsNone(await cache_db.get(query, old, "v"))
-                self.assertEqual(await cache_db.purge_other_snapshots("none"), 1)
+                self.assertEqual(await cache_db.purge_other_snapshots(["none"]), 1)
             finally:
                 await cache_db.close_pool()
         asyncio.run(flow())

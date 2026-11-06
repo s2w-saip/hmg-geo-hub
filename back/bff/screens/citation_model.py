@@ -20,6 +20,7 @@ import math
 import re
 from typing import Any, Callable
 
+from bff.metrics.display import permille1_exact, plain1, share, share1, share_whole
 from bff.screens._convert import Exact, as_of_date, delta1, exact, pct1_or_zero, round1, whole_suppression
 from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import CITATION_CATEGORY_SLUGS, js_trim
@@ -545,7 +546,7 @@ def category_share(categories: list[dict] | None, name: str) -> float | None:
     if total <= 0:
         return None
     v = next((c["value"] for c in categories if c["name"] == name), None)
-    return round1((100 * _nn(v, 0)) / total)
+    return share1(_nn(v, 0), total)
 
 
 def category_bars(categories: list[dict] | None, total_override: float | None = None) -> list[dict]:
@@ -554,7 +555,7 @@ def category_bars(categories: list[dict] | None, total_override: float | None = 
         return []
     total = total_override if total_override is not None else _sum(c["value"] for c in categories)
     ordered = sort_by(list(categories), lambda a, b: (b["value"] - a["value"]) or locale_compare(a["name"], b["name"]))
-    return [{"name": c["name"], "value": c["value"], "pct": round1((100 * c["value"]) / total) if total > 0 else None}
+    return [{"name": c["name"], "value": c["value"], "pct": share1(c["value"], total) if total > 0 else None}
             for c in ordered]
 
 
@@ -593,7 +594,7 @@ def type_category_bars(rows: list[dict] | None) -> dict:
         segments = [s for s in segments if s["value"] > 0 or s["pct"] > 0]
         official = _nn(r["byCategory"].get(OFFICIAL_HMG_CATEGORY), 0)
         bars.append({"type": r["type"], "total": total, "segments": segments,
-                     "officialPct": round1((100 * official) / total) if total > 0 else None})
+                     "officialPct": share1(official, total) if total > 0 else None})
     return {"series": series, "bars": bars}
 
 
@@ -638,7 +639,7 @@ def prev_category_share(prev: dict | None, name: str) -> float | None:
     if not prev or prev["totals"]["total"] <= 0:
         return None
     v = _nn(prev["totals"]["byCategory"].get(name), 0)
-    return Exact(js_round((1000 * v) / prev["totals"]["total"]) / 10, (100 * v) / prev["totals"]["total"])
+    return permille1_exact(v, prev["totals"]["total"])
 
 
 def delta_pp(current: float | None, previous: float | None) -> float | None:
@@ -690,7 +691,7 @@ def donut_official_pct(categories: list[dict], total_override: float | None = No
     """CategoryDonut centre: round1(100 * official / total) (the status tile rounding); total 0 -> None."""
     total = total_override if total_override is not None else _sum(c["value"] for c in categories)
     official = _nn(next((c["value"] for c in categories if c["name"] == OFFICIAL_HMG_CATEGORY), None), 0)
-    return js_round(((100 * official) / total) * 10) / 10 if total > 0 else None
+    return plain1(official, total) if total > 0 else None
 
 
 def category_share_raw(categories: list[dict] | None, name: str) -> float | None:
@@ -701,7 +702,7 @@ def category_share_raw(categories: list[dict] | None, name: str) -> float | None
     if not total:
         return None
     v = _nn(next((c["value"] for c in categories if c["name"] == name), None), 0)
-    return (100 * v) / total
+    return share(v, total)
 
 
 def standard_status(live: dict, card: dict | None, prev: dict | None, active: list[str], sections: dict | None) -> dict:
@@ -761,7 +762,7 @@ def prompt_drilldown(detail: dict) -> dict:
     with_share = is_num(total) and total > 0
     prompts = detail["promptList"]
     for p in prompts:
-        p["share"] = (100 * p["citations"]) / total if with_share else None
+        p["share"] = share(p["citations"], total) if with_share else None
     by_text = sort_by(list(range(len(prompts))), lambda a, b: locale_compare(prompts[a]["promptText"], prompts[b]["promptText"]))
     by_text_desc = sort_by(list(range(len(prompts))), lambda a, b: -locale_compare(prompts[a]["promptText"], prompts[b]["promptText"]))
     by_cit = sort_by(list(range(len(prompts))), lambda a, b: prompts[a]["citations"] - prompts[b]["citations"])
@@ -795,7 +796,7 @@ def category_share_series(trend: dict | None) -> dict | None:
         total = _sum(_nn(v, 0) for v in vals)
         gap = bool(p.get("gap")) or all(v is None for v in vals)
         for i, s in enumerate(trend["series"]):
-            by_category[s].append(None if gap or total <= 0 else (100 * _nn(vals[i], 0)) / total)
+            by_category[s].append(None if gap or total <= 0 else share(_nn(vals[i], 0), total))
     return {"weeks": weeks, "byCategory": by_category}
 
 
@@ -832,7 +833,7 @@ def category_rows(live: dict, prev: dict | None, card: dict | None, picked: list
                     "prevPct": None if hidden else prev_category_share(prev, b["name"]), "delta": delta,
                     "deltaHidden": hidden, "trend": shares["byCategory"].get(b["name"]) if shares else None,
                     # whole percents, as the row tooltip shows them: rounded once (not 0.1 first)
-                    "top": [{"domain": d["domain"], "pct": js_round((100 * d["citations"]) / b["value"])} for d in own] if b["value"] > 0 else []})
+                    "top": [{"domain": d["domain"], "pct": share_whole(d["citations"], b["value"])} for d in own] if b["value"] > 0 else []})
     return out
 
 
@@ -876,8 +877,8 @@ def lens_view(lens_: dict) -> dict:
     s = out["split"]
     if s["kind"] == "ok":
         n = s["owned"] + s["uncited"]
-        s["ownedPct"] = js_round((100 * s["owned"]) / n) if n > 0 else None
-        s["uncitedPct"] = js_round((100 * s["uncited"]) / n) if n > 0 else None
+        s["ownedPct"] = share_whole(s["owned"], n) if n > 0 else None
+        s["uncitedPct"] = share_whole(s["uncited"], n) if n > 0 else None
     return out
 
 
@@ -891,12 +892,12 @@ def matrix(source: list[dict], order: list[str]) -> dict:
                 extra[k] = None
     rows = [*order, *sorted(extra, key=code_unit_key)]
     total = _sum(s["total"] for s in source)
-    base = {k: (100 * _sum(_nn(s["byCategory"].get(k), 0) for s in source)) / total if total > 0 else 0 for k in rows}
+    base = {k: share(_sum(_nn(s["byCategory"].get(k), 0) for s in source), total) if total > 0 else 0 for k in rows}
     # a column without citations has no share: None, uncoloured, outside the cap and the findings (2026-10-31 renewal
     # audit 9-1: a type no answer of the filter carries showed 0.0% everywhere; the original type chart said '—')
     cols = [{"key": s["key"], "n": s["total"],
              "counts": {k: _nn(s["byCategory"].get(k), 0) for k in rows},
-             "shares": {k: (100 * _nn(s["byCategory"].get(k), 0)) / s["total"] if s["total"] > 0 else None for k in rows}} for s in source]
+             "shares": {k: share(_nn(s["byCategory"].get(k), 0), s["total"]) if s["total"] > 0 else None for k in rows}} for s in source]
     valued = [c["key"] for c in cols if c["n"] > 0]
     live_cols = valued if len(valued) > 1 else []
     gaps = [abs(c["shares"][k] - base[k]) for c in cols if c["key"] in live_cols for k in rows]
@@ -1040,7 +1041,7 @@ def findings(rows: list[dict], hmg_delta: float | None, picked: list[str], engin
                         "target": "sec-mix", "key": OFFICIAL_HMG_CATEGORY, "axis": "type",
                         "params": {"rec": rec["shares"][OFFICIAL_HMG_CATEGORY], "gap": gap}})
     if split.get("kind") == "ok" and split["owned"] + split["uncited"] > 0 and split["uncited"] > 0:
-        sh = round1((100 * split["uncited"]) / (split["owned"] + split["uncited"]))
+        sh = share1(split["uncited"], split["owned"] + split["uncited"])
         # the sentence shows whole percents: rounded once from the exact share (50.49 → 50, not 50.5 → 51)
         out.append({"kind": "opportunity", "tone": "info", "pri": FINDING_ORDER["opportunity"], "target": "sec-overview", "href": "uncited",
                     "params": {"n": split["uncited"], "share": js_round(exact(sh))}})

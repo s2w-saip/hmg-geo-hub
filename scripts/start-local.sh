@@ -52,4 +52,9 @@ if ! listening 3333; then
     (cd "$repo/front" && HGH_LOCAL_READ_ONLY=1 HGH_API_BASE_URL=http://127.0.0.1:5555 NEXT_TELEMETRY_DISABLED=1 \
         nohup npm run dev >"$logs/front.log" 2>&1 &)
 fi
+# The unfiltered first screens' values: computed when the live snapshot or the definition version moved, else nothing happens. Until it
+# finishes, those screen parts show nothing (SSOT). In the background, so the API does not wait; see the log.
+if [ ${#hub_env[@]} -gt 0 ]; then
+    (cd "$repo" && HGH_HUB_NATIVE=1 nohup "$python" -X utf8 back/hub_storage/manage.py rollup >"$logs/rollup.log" 2>&1 &)
+fi
 echo 'Gold read-only API ready. Frontend: http://127.0.0.1:3333/ko/renewal/dashboard'

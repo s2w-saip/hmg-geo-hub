@@ -1,21 +1,28 @@
 """Gold citation readers (bff.gold_reader.citations, .drilldown) over a recording stand-in connection: the 자사
-citation each surface counts and the 자사 미인용 bucket, as Gold defines them (gold.citation_cell comment: 자사 판정은
-표면별 — global = owner_key = ANY(허용 배열), website = loc_owned ∨ tgt_hit, project = loc_owned; 자사 미인용 = 인용(호스트
-있는)은 1건 이상인데 자사 인용이 0 인 프롬프트). 2026-10-30 W6 review. And the Mention brand row's drill (prompts, citation
-sources, one source's detail) reads that brand (BrandTarget, 2026-10-31 renewal audit 7-2)."""
+citation each surface counts and the 자사 미인용 bucket, as the metric layer defines them (자사 판정은 표면별 — global =
+owner_key = ANY(허용 배열), website · project = loc_owned; 자사 미인용 = 인용(호스트 있는)은 1건 이상인데 자사 인용이 0 인
+프롬프트). 2026-10-30 W6 review. And the Mention brand row's drill (prompts, citation sources, one source's detail) reads
+that brand (BrandTarget, 2026-10-31 renewal audit 7-2)."""
 import asyncio
 import re
 import unittest
+from unittest import mock
 from datetime import date
 
 try:
     from fastapi import HTTPException
     from starlette.datastructures import QueryParams
 
+    from bff.metrics import gold_current
     from bff.gold_reader import citations, drilldown
     from bff.gold_reader.context import Context
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (bff.tests.test_gold_citations)") from exc
+
+
+def setUpModule():
+    from bff.tests.stand_ins import no_judged_answers
+    no_judged_answers()
 
 D1, D2 = date(2026, 10, 2), date(2026, 10, 9)
 
@@ -71,10 +78,13 @@ class OwnCitationBySurface(unittest.TestCase):
         asyncio.run(read(context(conn, qs)))
         return [s for s in conn.sql if "FILTER(WHERE" in s]
 
-    def test_website_counts_a_target_hit_as_own(self):
+    def test_website_counts_the_owned_urls_only(self):
+        # a target hit outside the owned URLs is no 자사 citation (2026-11-06)
         for read in (citations.domains, drilldown.citation_prompts):
-            (sql,) = self.statements("surface=website", read)
-            self.assertEqual(owned_filter(sql), "(f.loc_owned OR f.tgt_hit)", read.__name__)
+            with mock.patch("bff.metrics.gold_judged.owned_url_keys", mock.AsyncMock(return_value=[7])):
+                (sql,) = self.statements("surface=website", read)
+            self.assertIn("(f.project_key::bigint*4294967296+f.url_key) IN (SELECT unnest(", owned_filter(sql), read.__name__)
+            self.assertNotIn("loc_owned", sql)
 
     def test_project_and_global_keep_their_rules(self):
         for read in (citations.domains, drilldown.citation_prompts):
@@ -217,7 +227,7 @@ class BrandTarget(unittest.TestCase):
         self.assertEqual(len(reads), 2)
         for sql, args in reads:
             self.assertIn(MENTIONED, sql)
-            self.assertIn("ab.std_in AND ab.competitive AND ab.mention_count>0", sql)
+            self.assertIn("ab.mention_count>0", sql)
             self.assertIn(2406, args)
 
     def test_the_own_row_counts_the_answers_of_any_own_brand(self):
@@ -268,7 +278,7 @@ class ScoreSheet(unittest.TestCase):
     def test_urls_are_grouped_by_goldes_normal_form(self):
         tone = open(drilldown.__file__, encoding="utf8").read()
         self.assertIn("coalesce(u.url_norm,u.url)", tone)
-        self.assertIn("count(DISTINCT coalesce(u.url_norm,u.url))", open(citations.__file__, encoding="utf8").read())
+        self.assertIn("count(DISTINCT coalesce(u.url_norm,u.url))", open(gold_current.__file__, encoding="utf8").read())
 
 
 if __name__ == "__main__":

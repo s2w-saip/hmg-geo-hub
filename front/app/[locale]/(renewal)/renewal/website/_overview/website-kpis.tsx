@@ -153,7 +153,7 @@ function Tile({ tile, qs, deltas, end, periodMode, perCard }: { tile: TileView; 
                 <dd className="m-0 font-semibold text-rn-on-dark tabular-nums">{f.count(tile.ratio!.numerator!)}</dd>
               </div>
               <div data-rn-ratio={`${tile.key}.den`} className={ROW}>
-                <dt className="truncate text-rn-on-dark/72">{tKpi(copyKey(`ratio.${tile.key}.den`) as "ratio.visibility.den")}</dt>
+                <dt className="truncate text-rn-on-dark/72">{copy(`ratio.${tile.key}.den`)}</dt>
                 <dd className="m-0 font-semibold text-rn-on-dark tabular-nums">{f.count(tile.ratio!.denominator!)}</dd>
               </div>
             </>

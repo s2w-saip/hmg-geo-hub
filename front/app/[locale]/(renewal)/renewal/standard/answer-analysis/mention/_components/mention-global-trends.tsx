@@ -132,7 +132,7 @@ function ValueRow({ kpi }: { kpi: KpiTab }) {
         <DeltaWithBasis delta={hero.delta} />
       </>,
       <span className="ml-auto text-rn-12 text-rn-muted tabular-nums">
-        {tTip(kpi === "sov" ? "sovNumerator" : "exposureNumerator")} {numTxt(v.numerator, locale)} · {tTip(kpi === "sov" ? "sovDenominator" : "exposureDenominator")}{" "}
+        {tTip(kpi === "sov" ? "sovNumerator" : "exposureNumerator")} {numTxt(v.numerator, locale)} · {(kpi === "sov" ? tTip("sovDenominator") : t("hero.exposureDenominator"))}{" "}
         {numTxt(v.denominator, locale)}
       </span>,
       rv.degraded,
@@ -217,7 +217,7 @@ function useTrendData(kpi: KpiTab): TrendData {
   if (kpi === "exposure" || kpi === "sov") {
     const s = use(input.rateHero)[kpi].trend;
     const numL = tTip(kpi === "sov" ? "sovNumerator" : "exposureNumerator");
-    const denL = tTip(kpi === "sov" ? "sovDenominator" : "exposureDenominator");
+    const denL = kpi === "sov" ? tTip("sovDenominator") : t("hero.exposureDenominator");
     return {
       x: s.x,
       values: s.own,

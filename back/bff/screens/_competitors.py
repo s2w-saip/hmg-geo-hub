@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from bff.metrics.display import permille1, share
 from bff.screens._convert import delta1, pct1_or_zero, rank_avg
 from bff.screens._js import js_round
 from bff.screens._sort import code_unit_compare, locale_compare, sort_by
@@ -56,7 +57,7 @@ def competitor_value_of(b: dict, key: str) -> float | None:
         if not s:
             return None
         total = s["positive"] + s["neutral"] + s["negative"] + s["mixed"]
-        return js_round((1000 * s["positive"]) / total) / 10 if total > 0 else None
+        return permille1(s["positive"], total) if total > 0 else None
     return None
 
 
@@ -286,7 +287,7 @@ def competitor_citation_shares(domains: list[dict] | None, limit: int | None = 4
             acc[d["brand"]] = {"brand": d["brand"], "share": d["share"], "citations": d["citations"]}
     if total is not None and total > 0:
         for v in acc.values():
-            v["share"] = (100 * v["citations"]) / total
+            v["share"] = share(v["citations"], total)
     ranked = sort_by(list(acc.values()), lambda a, b: _sign(b["share"] - a["share"]) or locale_compare(a["brand"], b["brand"]))
     return [{"brand": v["brand"], "value": js_round(v["share"] * 10) / 10} for v in ranked[:limit]]
 

@@ -491,8 +491,9 @@ class ViewCards(unittest.IsolatedAsyncioTestCase):
     the user: a legacy KPI is reshaped, never dropped) — mention/view's summary, Sub KPI and Δ from the same reads."""
 
     @staticmethod
-    def row(tracked: int, answers: int, multi: int, top3: int, mentions: int) -> dict:
-        return {"tracked": tracked, "answers": answers, "sentMentions": 0, "multi": multi, "top3": top3,
+    def row(ranked: int, answers: int, multi: int, top3: int, mentions: int) -> dict:
+        # Top 3's denominator is the monitoring answers that mention 당사 (trackedMon), not the representative ones (tracked)
+        return {"tracked": ranked // 2, "trackedMon": ranked, "ranked": ranked, "answers": answers, "sentMentions": 0, "multi": multi, "top3": top3,
                 "positiveMentions": 0, "negativeMentions": 0, "totalMentions": mentions}
 
     def reads(self, data: dict | None, prev: dict | None) -> dict:

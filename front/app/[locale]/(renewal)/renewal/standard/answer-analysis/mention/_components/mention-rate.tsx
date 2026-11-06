@@ -118,7 +118,7 @@ export function HeroValue({ metric }: { metric: KpiMetric }) {
       {/* without a ratio the screen sends no parts (null → "—", not "0 / 0") */}
       <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-rn-line pt-3">
         <Stat label={tTip(metric === "sov" ? "sovNumerator" : "exposureNumerator")} value={numTxt(hero.numerator, locale)} />
-        <Stat label={tTip(metric === "sov" ? "sovDenominator" : "exposureDenominator")} value={numTxt(hero.denominator, locale)} />
+        <Stat label={metric === "sov" ? tTip("sovDenominator") : t("hero.exposureDenominator")} value={numTxt(hero.denominator, locale)} />
       </dl>
       {/* Global (2026-11-05 지표 정리): no '비교 13개 브랜드 중 1위 · 2위와 +45.2pp' — the board below holds the same place and gap */}
       {input.global ? null : (
@@ -183,7 +183,7 @@ export function HeroTrend({ metric, title }: { metric: KpiMetric; title?: string
   const name = useMetricShort(metric);
   // 당사's counts per round under its rate (the original's tooltip; its WoW % is not carried — HUB-made)
   const numLabel = tTip(metric === "sov" ? "sovNumerator" : "exposureNumerator");
-  const denLabel = tTip(metric === "sov" ? "sovDenominator" : "exposureDenominator");
+  const denLabel = metric === "sov" ? tTip("sovDenominator") : t("hero.exposureDenominator");
   const count = (v: number | null) => (v == null ? "—" : tTip("count", { n: numTxt(v, locale) }));
   const note = (i: number) => (s.ownNum[i] == null ? null : [`${numLabel} ${count(s.ownNum[i])}`, `${denLabel} ${count(s.ownDen[i])}`]);
   // the picked brands' lines (looked up); none picked = 당사's line alone (the competitors' average line was a HUB-made

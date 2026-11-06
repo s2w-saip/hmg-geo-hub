@@ -19,6 +19,7 @@ import math
 from typing import Any
 
 from bff import api
+from bff.metrics.display import pct1, share1
 from bff.screens._convert import Exact, delta1, filter_notices, pct1_or_null, pct1_or_zero, rank_avg, round1
 from bff.screens._js import js_round
 from bff.screens._period import iso_of_days, iso_parse_days, utc_day_of_week
@@ -140,7 +141,7 @@ def citation_share_numerator(c: dict) -> float:
 
 
 def _pct(n: float, d: Any) -> float:
-    return Exact(js_round((n / d) * 1000) / 10, (100 * n) / d) if isinstance(d, (int, float)) and d > 0 else 0
+    return pct1(n, d) if isinstance(d, (int, float)) and d > 0 else 0
 
 
 def overview_trend_values(b: dict) -> dict:
@@ -152,7 +153,7 @@ def overview_trend_values(b: dict) -> dict:
     if b["totalMentions"] > 0:
         values["shareOfVoice"] = _pct(b["trackedMentions"], b["totalMentions"])
     if b["sentMentions"] > 0:
-        values["sentiment"] = _round1((100 * b["positiveMentions"]) / b["sentMentions"])
+        values["sentiment"] = share1(b["positiveMentions"], b["sentMentions"])
     if b.get("avgPosition") is not None:
         values["position"] = b["avgPosition"]
     if not trend_gap_applies(gap, "citation") and b["totalCitations"] > 0:
@@ -617,8 +618,13 @@ def to_first_position_result(data: dict, opts: dict | None = None) -> dict:
                          "rankedAnswers": _num(r, "count")})
         buckets.append({"bucketStart": bucket_round_date(b), "measuredDays": _nn(b.get("measured_days"), 0),
                         "firstAt": None, "lastAt": None, "brands": rows})
+    # The rank charts start at the first round with a position: Gold has no text order before 2026-09-07 (global) · 09-11 (website),
+    # and a round that never had a value is no gap in the line (a round without one after that stays a gap).
+    grid = trend_grid_of(data)
+    if grid and buckets:
+        grid = [slot for slot in grid if slot["roundDate"] >= buckets[0]["bucketStart"]]
     out = {"unit": _nn(opts.get("unit"), "week"), "brands": [g["name"] for g in groups], "buckets": buckets,
-           "latest": [], "trendGrid": trend_grid_of(data)}
+           "latest": [], "trendGrid": grid}
     gaps = gap_keys(data)
     if gaps:
         out["gapBuckets"] = gaps
