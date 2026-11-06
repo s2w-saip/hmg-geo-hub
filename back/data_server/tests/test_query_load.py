@@ -118,6 +118,88 @@ class Digest(unittest.TestCase):
         self.assertNotEqual(q.inputs_digest(self.inputs(["p1", "p2"])), q.inputs_digest(self.inputs(["p1", "p2"], group=1)))
 
 
+class DisplayName(unittest.TestCase):
+    """The contract has no display name: a mention keeps the one it had, and an answer new here takes its entity's (without it new rounds drop out of Admin › 엔티티)."""
+    HELD = (7, 2, None, "Kia")
+
+    def test_a_mention_keeps_its_name(self):
+        self.assertEqual(q.shown_name({(1, "e"): "Kia Sportage"}, 1, "e", self.HELD), "Kia Sportage")
+
+    def test_a_new_answer_takes_the_entitys(self):
+        self.assertEqual(q.shown_name({}, 1, "e", self.HELD), "Kia")
+
+    def test_an_entity_with_no_name_stays_empty(self):
+        self.assertIsNone(q.shown_name({}, 1, "e", (7, 2, None, None)))
+        self.assertIsNone(q.shown_name({}, 1, None, None))
+
+
+class Moves(unittest.TestCase):
+    """A re-analysis changes a source's category or an entity's brand: the dimension the reads join follows the newest round that holds them."""
+
+    def dims(self):
+        d = q.Dims()
+        d.categories = {"Other": 13, "Official (HMG)": 1}
+        d.sources, d.marks = {"kia.com": 5}, {"kia.com": (13, 6)}
+        d.brands, d.bares = {"Kia": 2, "Genesis": 3}, {"kia": 2, "genesis": 3}
+        d.entities = {"e": (7, 2, None, "Kia")}
+        d.next_keys = {"source": 5, "brand": 3, "entity": 7}
+        return d
+
+    def test_the_same_values_move_nothing(self):
+        d = self.dims()
+        self.assertEqual(d.source("kia.com", "kia.com", "Other", "default", "r"), 5)
+        d.entity_brand("e", "Kia", {}, DAY)
+        self.assertEqual((d.moved_sources, d.moved_entities), ({}, {}))
+
+    def test_a_new_category_or_method_is_a_move(self):
+        d = self.dims()
+        d.source("kia.com", "kia.com", "Official (HMG)", "override", "r")
+        self.assertEqual(d.moved_sources, {"kia.com": (1, 1)})
+
+    def test_no_category_says_nothing(self):
+        d = self.dims()
+        d.source("kia.com", "kia.com", None, None, "r")
+        d.source("kia.com", "kia.com", "Unknown", "seed", "r")
+        self.assertEqual(d.moved_sources, {})
+
+    def test_a_new_brand_is_a_move_and_no_name_is_not(self):
+        d = self.dims()
+        d.entity_brand("e", "Genesis", {}, DAY)
+        self.assertEqual(d.moved_entities, {"e": 3})
+        d = self.dims()
+        d.entity_brand("e", q.NO_NAME, {}, DAY)
+        d.entity_brand("e", " ", {}, DAY)
+        d.entity_brand("unseen", "Kia", {}, DAY)
+        self.assertEqual(d.moved_entities, {})
+
+    def test_the_newest_round_decides(self):
+        class Gold:
+            def __init__(self, later):
+                self.later, self.sql = later, []
+
+            async def fetch(self, sql, *_):
+                return [{"k": k} for k in self.later if ("citation_fact" in sql) == isinstance(k, int)]
+
+            async def execute(self, sql, *args):
+                self.sql.append((sql, args))
+
+        d = self.dims()
+        d.source("kia.com", "kia.com", "Official (HMG)", "override", "r")
+        d.entity_brand("e", "Genesis", {}, DAY)
+        gold = Gold([])
+        self.assertEqual(asyncio.run(q.apply_moves(gold, d, DAY)), 2)
+        self.assertEqual([args for _, args in gold.sql], [(5, 1, 1), ("e", 3)])
+        self.assertEqual((d.marks["kia.com"], d.entities["e"][1], d.moved_sources, d.moved_entities), ((1, 1), 3, {}, {}))
+
+        d = self.dims()
+        d.source("kia.com", "kia.com", "Official (HMG)", "override", "r")
+        d.entity_brand("e", "Genesis", {}, DAY)
+        gold = Gold([5, "e"])
+        self.assertEqual(asyncio.run(q.apply_moves(gold, d, DAY)), 0)
+        self.assertEqual(gold.sql, [])
+        self.assertEqual((d.marks["kia.com"], d.entities["e"][1], d.moved_sources, d.moved_entities), ((13, 6), 2, {}, {}))
+
+
 class EntityTotals(unittest.TestCase):
     """Admin › 엔티티 lists the entities with totals: legacy counts brands with a display name there, not every product and feature."""
 

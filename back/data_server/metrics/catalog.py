@@ -131,7 +131,7 @@ METRICS: tuple[Metric, ...] = (
     # ── 언급: SSOT ──
     Metric("exposure", "AI 노출률", "언급", "rate", "tracked", "answers", REPRESENTATIVE, ssot=True, dims=_BRAND,
            screens="Overview · Mention · Website · Project", note="경쟁사 값은 brand_answers ÷ answers",
-           review="이전 Mention 화면은 모니터링 답변으로 셌다(2026-10-05 34,452/44,979 = 76.60%). SSOT 분모는 대표 답변(34,255/44,740 = 76.56%). 반복 측정이 많은 Project는 차이가 크다(예: 591/809 = 73.1% → 129/162 = 79.6%)"),
+           review="이전 Mention 화면은 모니터링 답변으로 셌다(2026-10-05 34,452/44,979 = 76.60%). SSOT 분모는 대표 답변(34,255/44,740 = 76.56%). 반복 측정이 많은 Project는 차이가 크다(예: 591/809 = 73.1% → 129/162 = 79.6%). 대표 답변은 레거시대로 cycle마다 1건이라, 같은 회차 날짜에 cycle이 둘 이상이면 SSOT 문구 '회차마다 1건'보다 많다. 회차 날짜로 묶으면 Global 07-13 75.98 → 76.70, 08-10 80.38 → 78.86, 08-17 76.96 → 76.54, 08-24 75.36 → 74.91"),
     Metric("share", "AI 점유율", "언급", "rate", "own_mentions", "total_mentions", MONITORING, ssot=True, dims=_BRAND,
            screens="Overview · Mention · Website · Project", note="한 답변 안 여러 번 언급 포함. 경쟁사 값은 brand_mentions ÷ total_mentions",
            review="이전 화면은 Overview 카드 38.91%(대표 답변) · Mention 38.72%(ACR 셀당 여러 답변)로 달랐다. SSOT 공통 조건의 모니터링 답변(ACR 셀당 1건)이면 323,266/830,518 = 38.92%"),

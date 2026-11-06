@@ -236,6 +236,10 @@ class Dims:
     new_brands: list[tuple] = field(default_factory=list)
     new_entities: list[tuple] = field(default_factory=list)
     new_sources: list[tuple] = field(default_factory=list)
+    #: a source's category and how it was judged, as gold.dim_source holds them; what a snapshot says otherwise waits in moved_*, until apply_moves
+    marks: dict[str, tuple[int, int]] = field(default_factory=dict)
+    moved_sources: dict[str, tuple[int, int]] = field(default_factory=dict)
+    moved_entities: dict[str, int] = field(default_factory=dict)
 
     def take(self, name: str) -> int:
         self.next_keys[name] += 1
@@ -276,6 +280,15 @@ class Dims:
         self.entities[entity_id] = (key, brand_key, role, name)
         return key
 
+    def entity_brand(self, entity_id: str | None, brand: str | None, own_names: Mapping[str, int], day: date) -> None:
+        """A snapshot's brand for an entity already here, when it is another: every row of an entity names one brand in a round (2026-11-07, three surfaces)."""
+        known = self.entities.get(entity_id or "")
+        clean = (brand or "").strip()
+        if known and clean and clean != NO_NAME:
+            key = self.brand(clean, own_names.get(clean.lower(), 0), day)
+            if key != known[1]:
+                self.moved_entities[entity_id] = key
+
     def source(self, skey: str | None, domain: str | None, category: str | None, method: str | None, rule: str | None) -> int:
         """The source's key by its group key. is_social is legacy's rule (back/ingest/project/apply/queries.py DIM_SOURCE). Its owned and competitor marks are not in the contract."""
         if not skey:
@@ -283,8 +296,11 @@ class Dims:
         key = self.sources.get(skey)
         if key is None:
             key = self.take("source")
-            self.new_sources.append((key, skey, domain, skey != domain, self.categories.get(category or "", self.categories.get("", 13)), CATEGORY_SOURCES.get(method or "", 6), 0, None, rule))
-            self.sources[skey] = key
+            mark = (self.categories.get(category or "", self.categories.get("", 13)), CATEGORY_SOURCES.get(method or "", 6))
+            self.new_sources.append((key, skey, domain, skey != domain, *mark, 0, None, rule))
+            self.sources[skey], self.marks[skey] = key, mark
+        elif category in self.categories and (mark := (self.categories[category], CATEGORY_SOURCES.get(method or "", 6))) != self.marks.get(skey):
+            self.moved_sources[skey] = mark
         return key
 
 
@@ -302,7 +318,8 @@ async def read_dims(gold: Any) -> Dims:
         if r["bare"]:
             d.bares[r["bare"]] = r["brand_key"]
     d.entities = {r["id"]: (r["entity_key"], r["brand_key"], r["registry_role"], r["rep_name"]) for r in await gold.fetch("SELECT entity_id::text AS id,entity_key,brand_key,registry_role,rep_name FROM gold.dim_entity WHERE entity_id IS NOT NULL")}
-    d.sources = {r["skey"]: r["source_key"] for r in await gold.fetch("SELECT skey,source_key FROM gold.dim_source WHERE skey<>''")}
+    for r in await gold.fetch("SELECT skey,source_key,category_key,category_src FROM gold.dim_source WHERE skey<>''"):
+        d.sources[r["skey"]], d.marks[r["skey"]] = r["source_key"], (r["category_key"], r["category_src"])
     d.categories = {r["name"]: r["category_key"] for r in await gold.fetch("SELECT name,category_key FROM gold.dim_category")}
     for r in await gold.fetch("SELECT owner_key,brand_code,prefix,geo_code FROM gold.dim_owned_base WHERE prefix IS NOT NULL ORDER BY owner_key"):
         d.owners.setdefault((r["brand_code"], r["prefix"]), []).append((r["owner_key"], r["geo_code"]))
@@ -325,6 +342,32 @@ async def flush_dims(gold: Any, d: Dims) -> None:
         await gold.copy_records_to_table("dim_source", schema_name="gold", columns=("source_key", "skey", "domain", "is_social", "category_key", "category_src", "owned_brand_bit", "competitor_brand_key", "rule_ver"),
                                          records=d.new_sources)
         d.new_sources = []
+
+
+async def apply_moves(gold: Any, d: Dims, day: date) -> int:
+    """A re-analysis reaches the dimensions the reads join (gold.dim_source's category, gold.dim_entity's brand): the newest round holding the source or entity decides, so loading an
+    older round again changes nothing here. Decision 2026-11-07. Returns how many moved."""
+    moved = 0
+    if d.moved_sources:
+        keys = {d.sources[skey]: skey for skey in d.moved_sources}
+        later = {r["k"] for r in await gold.fetch("SELECT DISTINCT source_key AS k FROM gold.citation_fact WHERE round_date>$1 AND source_key=ANY($2::int[])", day, list(keys))}
+        for key, skey in keys.items():
+            if key not in later:
+                category, method = d.moved_sources[skey]
+                await gold.execute("UPDATE gold.dim_source SET category_key=$2,category_src=$3 WHERE source_key=$1", key, category, method)
+                d.marks[skey] = (category, method)
+                moved += 1
+        d.moved_sources = {}
+    if d.moved_entities:
+        later = {str(r["k"]) for r in await gold.fetch("""SELECT DISTINCT m.entity_id AS k FROM gold.answer_mention_raw m JOIN gold.job_index j ON j.answer_key=m.answer_key
+            WHERE j.round_date>$1 AND m.entity_id=ANY($2::uuid[])""", day, list(d.moved_entities))}
+        for entity_id, brand_key in d.moved_entities.items():
+            if entity_id not in later:
+                await gold.execute("UPDATE gold.dim_entity SET brand_key=$2 WHERE entity_id=$1::uuid", entity_id, brand_key)
+                d.entities[entity_id] = (d.entities[entity_id][0], brand_key, *d.entities[entity_id][2:])
+                moved += 1
+        d.moved_entities = {}
+    return moved
 
 
 CATALOG_ENTRY = ("catalog_row_id", "prompt_key", "brand_bit", "kind", "presence_key", "funnel_key", "list_type_key", "depth1_key", "depth2_key", "depth3_key", "depth4_key", "build_id")
@@ -363,11 +406,17 @@ async def cycle_key(gold: Any, d: Dims, snap: Snapshot, answers: Sequence[Mappin
     return key
 
 
+def shown_name(names: Mapping[tuple[int, str | None], str], key: int, entity_id: str | None, held: tuple | None) -> str | None:
+    """A mention's display name: the contract has none, so it keeps the one it had, and an answer new here takes its entity's (null for a product not seen: no name is made up)."""
+    return names.get((key, entity_id)) or (held[3] if held else None)
+
+
 class Loader:
     def __init__(self, gold: Any, silver: Any, inputs: Inputs, dims: Dims, digest: str = "", catalog: Sequence[tuple] = ()) -> None:
         self.gold, self.silver, self.inputs, self.d, self.digest, self.catalog = gold, silver, inputs, dims, digest, catalog
         self.index = {p: i for i, p in enumerate(inputs.prompt_ids)}
         self.rollups: dict[tuple[str, date], dict[str, str]] = {}
+        self.moved = 0
 
     async def rollup_names(self, surface: str, day: date) -> dict[str, str]:
         """A rollup entity's name over the whole round: one site's snapshot may hold a product and not its brand's own row, and the two must fold alike."""
@@ -416,7 +465,7 @@ class Loader:
 
     async def load(self, snap: Snapshot) -> dict[str, int]:
         d, gold, silver, surface = self.d, self.gold, self.silver, snap.surface
-        counts = dict.fromkeys(("answers", "brands", "citations", "stances", "mentions", "occurrences", "cells", "skipped"), 0)
+        counts = dict.fromkeys(("answers", "brands", "citations", "stances", "mentions", "occurrences", "cells", "skipped", "unknown_codes"), 0)
         answers = await silver.fetch(ALL_ANSWERS, snap.snapshot_id)
         scope = Scope(surface, (snap.round_date,), EVERY_BIT, snapshot=snap.snapshot_id)
         source = SilverObtSource(silver, scope, self.inputs)
@@ -458,6 +507,8 @@ class Loader:
                 geo = d.countries.get(market or "", 0)
                 lang = d.langs.get((a["lang"] or "").upper(), 0)
                 engine = d.engines.get((a["engine"] or "").lower())
+                if (market and not geo) or (a["lang"] and not lang) or (a["engine"] and engine is None):
+                    counts["unknown_codes"] += 1   # a code the service's tables don't hold: the answer stays, under no country, language or engine
                 group = self.bgrp(surface, a["prompt_id"], a["project_id"])
                 finished = a["status"] == "completed"
                 jobs.append((key, a["id"], cyc, prompt_key, project, engine, geo, lang, group, sf, a["round_date"], a["measured_at"], status_code(a["status"]),
@@ -477,6 +528,8 @@ class Loader:
             await self._rows(snap, cyc, builds["fact"], info, names, bodies, counts)
             await self._brands(snap, cyc, builds["fact"], info, counts)
             await self._acr(snap, cyc, builds["acr"], counts)
+            await flush_dims(gold, d)
+            self.moved += await apply_moves(gold, d, snap.round_date)
             await gold.execute("""INSERT INTO gold.silver_load(cycle_id,snapshot_id,surface,round_date,answers,cells,inputs_digest) VALUES($1,$2,$3,$4,$5,$6,$7)
                 ON CONFLICT(cycle_id) DO UPDATE SET snapshot_id=EXCLUDED.snapshot_id,round_date=EXCLUDED.round_date,answers=EXCLUDED.answers,cells=EXCLUDED.cells,inputs_digest=EXCLUDED.inputs_digest,loaded_at=now()""",
                                snap.cycle_id, snap.snapshot_id, surface, snap.round_date, counts["answers"], counts["cells"], self.digest)
@@ -512,9 +565,10 @@ class Loader:
             for index, m in enumerate(array(row["rollups"]), 1):
                 entity_id = m.get("entity_id")
                 entity = d.entity(entity_id, m.get("entity_type"), m.get("brand"), self.role(entity_id or ""), self.inputs.own_names, day)
+                d.entity_brand(entity_id, m.get("brand"), self.inputs.own_names, day)
                 s = semantics.get(entity_id, {})
                 held = d.entities.get(entity_id or "")
-                mentions.append((key, index, sf, project, geo, group, entity_id, entity, held[2] if held else None, m.get("entity_type"), names.get((key, entity_id)), m.get("mention_count"),
+                mentions.append((key, index, sf, project, geo, group, entity_id, entity, held[2] if held else None, m.get("entity_type"), shown_name(names, key, entity_id, held), m.get("mention_count"),
                                  number(m.get("avg_position")), m.get("brand_rollup_entity_id"), m.get("surfaces") if isinstance(m.get("surfaces"), list) else None,
                                  s.get("sentiment_positive"), s.get("sentiment_neutral"), s.get("sentiment_negative"), s.get("sentiment_mixed"), s.get("type_mention"), s.get("type_recommendation"),
                                  s.get("type_comparison"), s.get("type_definition"), s.get("type_final_choice")))
@@ -530,7 +584,7 @@ class Loader:
                 stance_raw.append((key, s.get("turn_index"), entity_id, sf, project, geo, group, s.get("brand_label"), s.get("stance"), number(s.get("confidence")), s.get("evidence_text"),
                                    s.get("evidence_start"), s.get("evidence_end"), s.get("reason")))
                 if body[10] == "completed":
-                    stance_fact.append((build, sf, round_date, key, s.get("turn_index"), entity, d.entities[entity_id][1] or d.known_brand(s.get("brand_label")), cyc, self.own_bit(s.get("brand_label"), entity_id), STANCES.get(s.get("stance") or ""),
+                    stance_fact.append((build, sf, round_date, key, s.get("turn_index"), entity, d.moved_entities.get(entity_id) or d.entities[entity_id][1] or d.known_brand(s.get("brand_label")), cyc, self.own_bit(s.get("brand_label"), entity_id), STANCES.get(s.get("stance") or ""),
                                         s.get("turn_index") == 1, is_rep))
             if body[10] != "completed":
                 continue
@@ -667,7 +721,7 @@ async def _run(config: Mapping[str, Any]) -> dict:
     gold = await asyncpg.connect(config["dsn"], timeout=10, server_settings={"application_name": "hmg-geo-hub-query-load", "statement_timeout": "0", "synchronous_commit": "off", "work_mem": "128MB"})
     silver = await asyncpg.connect(os.environ["HGH_SILVER_DB_URL"], timeout=10, server_settings={"application_name": "hmg-geo-hub-query-load", "statement_timeout": "0", "default_transaction_read_only": "on", "work_mem": "256MB"})
     source = await asyncpg.connect(os.environ["HGH_INPUT_DB_URL"], timeout=10)
-    out: dict[str, Any] = {"loaded": 0, "failed": [], "totals": {}}
+    out: dict[str, Any] = {"loaded": 0, "totals": {}}
     try:
         if not await gold.fetchval("SELECT pg_try_advisory_lock($1)", LOCK):
             return {**out, "status": "busy"}
@@ -699,8 +753,13 @@ async def _run(config: Mapping[str, Any]) -> dict:
         if not config.get("rounds") and not config.get("limit"):
             states = await silver.fetch("SELECT cycle_id::text AS id,bool_or(status='public') AS public,bool_or(status IN ('loading','ready')) AS owed FROM ops.snapshot_manifest GROUP BY 1")
             await gold.execute(MIRROR_CYCLES, [r["id"] for r in states if r["owed"] and not r["public"]], [r["id"] for r in states if r["public"]])
+        out["moved"] = loader.moved
+        for name in ("skipped", "unknown_codes"):
+            if out["totals"].get(name):
+                log.warning("query load: %s %s; answers of prompts the input store lacks are left out, codes the service lacks count under none", out["totals"][name], name)
         if out["loaded"]:
-            for surface in {s.surface for s in todo}:
+            # a moved category or brand changes what the other rounds and surfaces read: they count again, too
+            for surface in ("global", "website", "project") if loader.moved else {s.surface for s in todo}:
                 await gold.execute("UPDATE gold.active_release SET version=version+1,updated_at=now(),as_of=(SELECT max(round_date) FROM gold.silver_load WHERE surface=$1) WHERE scope=$1 AND read_mode='live'", surface)
             if not config.get("rounds") and not config.get("limit"):
                 await refresh_entity_totals(gold)

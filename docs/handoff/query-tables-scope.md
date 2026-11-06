@@ -25,10 +25,12 @@
 | `is_social` | `domain_rows` · `source_counts` | 레거시 규칙 `group_key<>domain`(`back/ingest/project/apply/queries.py:687`)이 표본 출처 26,627건 모두와 같다 | Silver에서 채운다 |
 | 카테고리 목록 · 적용 프롬프트 | `source_categories` · `applied_prompts` | 테이블과 입력 DB에서 셀 수 있다 | 해소 |
 | `owned_brand_bit` · `competitor_brand_key` | `rival_citations` 등 | 레거시가 쓴 토큰 테이블이 입력 DB에 없다. `is_owned`는 경쟁사에도 true이고 `matched_brand`는 경쟁사에 비어 있다(표본) | 있는 출처는 유지, 새 출처는 빈칸 |
-| 제품 이름 `rep_name` · `display_name` | `acr_model_counts`, 답변 상세, Admin 엔티티 | OBT `brand`는 '(이름 없음)'이고 `surfaces`는 표시 이름과 다르다(표본) | 있는 엔티티는 유지, 새 엔티티는 빈칸 |
+| 제품 이름 `rep_name` · `display_name` | `acr_model_counts`, 답변 상세, Admin 엔티티 | OBT `brand`는 '(이름 없음)'이고 `surfaces`는 표시 이름과 다르다(표본) | 있는 엔티티는 유지, 새 엔티티는 빈칸. 새 답변의 `display_name`은 엔티티의 `rep_name`(교차검증 1회차) |
 | ACR 반복별 승자 · 후보 `acr_iter_*` | `acr_duel_counts` | 계약에는 셀 집계만 있다 | 있는 회차는 유지, 새 회차는 빈칸 |
 
 실제 Silver에도 이 값이 없으면 새 회차부터 ACR 모델 표 · 맞대결 · 경쟁사별 인용이 비거나 줄어든다. 추정해 채우지 않는다(`CLAUDE.md` 1절). T9.1에서 실제 컬럼을 확인한다.
+
+재분석이 바꾼 값: `dim_source`의 카테고리 · 판정 방식과 `dim_entity`의 브랜드는 그 출처 · 엔티티를 가진 가장 늦은 회차(세 표면 통틀어)의 값을 따른다. 적재 때 달라진 것만 고치고, 고치면 세 표면의 `active_release.version`을 올려 다시 센다. `dim_url`은 주소와 제목만 읽으므로 고치지 않고, 인용의 출처 · 소유는 `citation_fact` 행이 적재마다 새로 가진다. 입력에 없는 프롬프트의 답변(`skipped`)과 서비스 표에 없는 코드(`unknown_codes`)는 적재 결과와 로그에 나온다. 지금 둘 다 0건이다.
 
 그 밖의 답:
 

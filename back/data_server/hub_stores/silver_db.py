@@ -1,4 +1,4 @@
-"""Read-only access to the Silver OBT (HGH_SILVER_DB_URL), when HGH_METRIC_SOURCE=silver: public snapshots through silver_contract and the manifest, nothing else.
+"""Read-only access to the Silver OBT (HGH_SILVER_DB_URL), for the load job and the last resort: public snapshots through silver_contract and the manifest, nothing else.
 It is the pipeline's database. Until its connection details arrive a stand-in outside the service's architecture answers, and only this URL changes."""
 import os
 from contextlib import asynccontextmanager
