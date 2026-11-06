@@ -48,9 +48,10 @@ function lines(text: string): string[] {
   return text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 }
 
-/** A list of codes as typed: split on commas or spaces. */
-export function codes(text: string): string[] {
-  return text.split(/[\s,]+/).map((c) => c.trim().toUpperCase()).filter(Boolean);
+/** A list of codes as typed: split on commas or spaces, each as the reference values spell it (worldwide and SA-Dammam are not upper case). */
+export function codes(text: string, known: readonly string[] = []): string[] {
+  const spelled = new Map(known.map((k) => [k.toLowerCase(), k]));
+  return text.split(/[\s,]+/).map((c) => c.trim()).filter(Boolean).map((c) => spelled.get(c.toLowerCase()) ?? c.toUpperCase());
 }
 
 /** One model per line: "Tesla / Model Y", or the model alone. */
@@ -137,7 +138,7 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((f) => ({ ...f, [key]: value }));
   const toggle = (key: "brands" | "engines", value: string) =>
     setForm((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
-  const typedCountries = codes(form.countries);
+  const typedCountries = codes(form.countries, options.countries);
   const unknownCountries = options.countries.length ? typedCountries.filter((c) => !options.countries.includes(c)) : [];
   const repeats = form.acrRepeats.trim() === "" ? null : Number(form.acrRepeats);
   const badRepeats = repeats !== null && !(Number.isInteger(repeats) && repeats >= 1 && repeats <= 100);

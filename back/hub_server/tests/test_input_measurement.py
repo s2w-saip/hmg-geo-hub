@@ -19,6 +19,7 @@ except ModuleNotFoundError as exc:
 
 ACTOR = SimpleNamespace(user_id=uuid4())
 OPTIONS = [{"family": "engine", "item_key": "chatgpt", "definition": {"code": "chatgpt"}}, {"family": "country", "item_key": "KR", "definition": {"code": "KR"}},
+           {"family": "country", "item_key": "worldwide", "definition": {"code": "worldwide"}}, {"family": "country", "item_key": "SA-Dammam", "definition": {"code": "SA-Dammam"}},
            {"family": "brand_bit", "item_key": "2", "definition": {"bit": 2, "code": "kia"}}]
 
 
@@ -59,6 +60,16 @@ class Settings(unittest.TestCase):
     def write(self, **over):
         with mock.patch.object(m, "writing", writing(self.store)):
             return asyncio.run(m.write(self.project, body(**over), ACTOR))
+
+    def test_codes_keep_the_reference_values_spelling(self):
+        # worldwide and SA-Dammam are codes as they stand: upper-casing them refused 5 website sites' own values (cross-check, 2026-11-07)
+        out = self.write(countries=["worldwide", "SA-Dammam", "KR"])
+        self.assertEqual(out["item"]["countries"], ["worldwide", "SA-Dammam", "KR"])
+        out = self.write(expectedVersion=1, countries=["WORLDWIDE", " sa-dammam ", "kr", "worldwide"])
+        self.assertEqual(out["item"]["countries"], ["worldwide", "SA-Dammam", "KR"])
+        with self.assertRaises(HTTPException) as caught:
+            self.write(expectedVersion=1, countries=["XX"])
+        self.assertEqual(caught.exception.detail["details"]["unknown"], {"countries": ["XX"]})
 
     def test_a_write_is_one_new_version_in_the_stored_spelling(self):
         out = self.write(brands=["KIA", "kia"], countries=[" kr "], engines=["ChatGPT"], cadence="weekly", acrRepeats=5,
@@ -149,6 +160,12 @@ class AddProject(unittest.TestCase):
         definition = json.loads(calls[1][1][2])
         self.assertEqual((definition["domain"], definition["description"]), (None, None))
         self.assertEqual((calls[2][1][2], calls[2][1][8]), ([], []))
+
+    def test_a_country_in_the_reference_values_spelling(self):
+        for code in ("worldwide", "WORLDWIDE"):
+            out, calls = self.add(country=code)
+            self.assertEqual(calls[2][1][3], ["worldwide"], code)
+            self.assertEqual(json.loads(calls[1][1][2])["country"], "worldwide", code)
 
     def test_an_unknown_code_is_refused(self):
         for over in ({"country": "ZZ"}, {"engines": ["bard"]}, {"brand": "nope"}):

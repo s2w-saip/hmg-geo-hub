@@ -78,8 +78,14 @@ def clean_url(raw: str) -> str:
         raise refused(422, "invalid_value", "A URL must be one word of at most 500 characters", {"value": value[:100]})
     return value
 
-def settings_of(body: MeasurementWrite) -> dict:
+def spelled(values, known, default) -> list[str]:
+    """Codes as the reference values spell them, whatever the case they came in (worldwide and SA-Dammam are not upper case); one the values do not hold keeps the usual case, for check_known to name."""
+    by_fold = {k.casefold(): k for k in known}
+    return unique(by_fold.get(v.strip().casefold(), default(v.strip())) for v in values)
+
+def settings_of(body: MeasurementWrite, options: dict | None = None) -> dict:
     """The stored shape of a write: codes in the reference tables' spelling, no repeats, no blanks."""
+    known = options or {}
     targets, seen = [], set()
     for t in body.trackedTargets:
         name = t.name.strip()
@@ -87,8 +93,8 @@ def settings_of(body: MeasurementWrite) -> dict:
         if name and key not in seen:
             seen.add(key)
             targets.append({"kind": t.kind, "name": name, **({"brand": t.brand.strip()} if t.brand and t.brand.strip() else {})})
-    return {"brands": unique(v.strip().lower() for v in body.brands), "countries": unique(v.strip().upper() for v in body.countries),
-            "engines": unique(v.strip().lower() for v in body.engines), "cadence": body.cadence, "acr_repeats": body.acrRepeats,
+    return {"brands": spelled(body.brands, known.get("brands", ()), str.lower), "countries": spelled(body.countries, known.get("countries", ()), str.upper),
+            "engines": spelled(body.engines, known.get("engines", ()), str.lower), "cadence": body.cadence, "acr_repeats": body.acrRepeats,
             "web_units": [{"file_seq": u.fileSeq, "lang_codes": unique(c.strip().lower() for c in u.langCodes),
                            "base": clean_url(u.base) if u.base and u.base.strip() else None} for u in body.webUnits],
             "owned_urls": unique(clean_url(u) for u in body.ownedUrls if u.strip()),
@@ -161,7 +167,7 @@ async def listing() -> dict | None:
     return {"items": [listed(r) for r in rows], "options": options, "editing": _pool is not None}
 
 async def write(project_id: UUID, body: MeasurementWrite, actor: Principal) -> dict:
-    settings = settings_of(body)
+    settings_of(body)   # a bad value is refused before the lock
     async with writing() as conn:
         row = await conn.fetchrow(CURRENT_SQL, project_id)
         if row is None:
@@ -169,7 +175,9 @@ async def write(project_id: UUID, body: MeasurementWrite, actor: Principal) -> d
         current = row["version"] or 0
         if current != body.expectedVersion:
             raise refused(409, "version_conflict", "The settings were changed after you opened them; reload them", {"currentVersion": current})
-        check_known(settings, options_of(await conn.fetch(OPTIONS_SQL)))
+        options = options_of(await conn.fetch(OPTIONS_SQL))
+        settings = settings_of(body, options)
+        check_known(settings, options)
         sha = digest(settings)
         if row["sha256"] == sha:
             return {"item": view(row), "changed": False}

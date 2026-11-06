@@ -71,6 +71,8 @@ describe("project Setting › General", () => {
 
   it("reads the typed codes and model lines", () => {
     expect(codes("kr, us  de")).toEqual(["KR", "US", "DE"]);
+    // a code keeps the reference values' spelling: worldwide and SA-Dammam are not upper case (cross-check, 2026-11-07)
+    expect(codes("worldwide, sa-dammam KR zz", ["KR", "SA-Dammam", "worldwide"])).toEqual(["worldwide", "SA-Dammam", "KR", "ZZ"]);
     expect(modelsOf("Tesla / Model Y\nEV3\n")).toEqual([{ kind: "model", name: "Model Y", brand: "Tesla" }, { kind: "model", name: "EV3" }]);
   });
 

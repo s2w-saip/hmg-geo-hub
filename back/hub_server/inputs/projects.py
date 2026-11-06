@@ -26,11 +26,11 @@ class ProjectAdd(BaseModel):
     engines: list[str] = Field(max_length=measurement.LIST_MAX)
 
 
-def first_settings(body: ProjectAdd) -> dict:
+def first_settings(body: ProjectAdd, options: dict | None = None) -> dict:
     """The legacy form's seed: its brand, country and engines to measure, and its domain as the first owned URL."""
     domain = (body.domain or "").strip()
     return measurement.settings_of(measurement.MeasurementWrite(expectedVersion=0, brands=[body.brand] if body.brand and body.brand.strip() else [],
-                                                                countries=[body.country], engines=body.engines, ownedUrls=[domain] if domain else []))
+                                                                countries=[body.country], engines=body.engines, ownedUrls=[domain] if domain else []), options)
 
 
 def definition_of(project_id: str, body: ProjectAdd, name: str, settings: dict) -> dict:
@@ -48,11 +48,13 @@ async def add(body: ProjectAdd, actor: Principal) -> dict:
         raise refused(422, "country_required", "A project needs a country")
     if not any(e.strip() for e in body.engines):
         raise refused(422, "engines_required", "A project needs at least one AI engine")
-    settings = first_settings(body)
+    first_settings(body)   # a bad value is refused before the lock
     project_id = uuid4()
-    definition = definition_of(str(project_id), body, name, settings)
     async with project_prompts.writing() as conn:
-        measurement.check_known(settings, options_of(await conn.fetch(OPTIONS_SQL)))
+        options = options_of(await conn.fetch(OPTIONS_SQL))
+        settings = first_settings(body, options)
+        measurement.check_known(settings, options)
+        definition = definition_of(str(project_id), body, name, settings)
         await conn.execute(INSERT_PROJECT_SQL, project_id)
         await conn.execute(project_prompts.INSERT_PROJECT_REVISION_SQL, project_id, 1, encoded(definition), digest(None, definition), actor.user_id)
         await conn.execute(measurement.INSERT_SQL, project_id, 1, settings["brands"], settings["countries"], settings["engines"], settings["cadence"],
