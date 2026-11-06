@@ -318,8 +318,10 @@ def batch_groups(rows: list[dict]) -> list[dict]:
 @screen("catalog/prompts-timeline")
 async def prompts_timeline(q) -> dict:
     """One prompt's change timeline (the row's 이력 button): the latest 100, newest first, no window
-    (lib/hgh/prompt-timeline.ts fetchPromptTimelineApi). available = false as for the history tab."""
+    (lib/hgh/prompt-timeline.ts fetchPromptTimelineApi). available = false as for the history tab, and for an account with a scope: an id opens a prompt of any market."""
     _, sp = split_context(q)
+    if not reader_scope().get("all"):
+        return {"available": False, "rows": []}
     prompt_id = one(sp, "prompt_id")
     if not prompt_id or len(prompt_id) > 200:
         raise invalid("Invalid prompt id")

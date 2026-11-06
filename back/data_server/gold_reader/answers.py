@@ -1,14 +1,18 @@
 """Real answer bodies, citations, occurrences, and drill-down lists."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 from starlette.datastructures import QueryParams
 
-from data_server.gold_reader.context import Context, SQL, envelope, flag, limit
-from data_server.metrics.gold_judged import target_url, citation_keys, citations_of_row, in_keys, mention_keys, mentions_of_row, own_url
+from data_server.access import BRANDS as SCOPED_BRANDS
+from data_server.access import reader_scope, surface_countries
+from data_server.gold_reader.context import BRANDS, SQL, Context, envelope, flag, limit
+from data_server.metrics.gold_judged import citation_keys, citations_of_row, in_keys, mention_keys, mentions_of_row, own_url, target_url
 from data_server.metrics.judgments import analysis_gap
 
 SPLIT_KPIS = ("visibility", "shareOfVoice", "sentiment", "position", "citationShare")
@@ -103,9 +107,26 @@ async def listing(ctx: Context) -> dict:
     return envelope(ctx, {"items": items}, page={"limit": page_limit, "total": total, "next_cursor": str(offset + page_limit) if offset + page_limit < total else None})
 
 
+async def in_account_scope(conn: Any, job: Mapping[str, Any]) -> bool:
+    """An id names no brand or country for access.clamp to narrow, so the answer itself must be inside the account's scope, as the lists read one (Context.predicate): the surfaces a scoped
+    account reads, a catalog or site of its brands, a market of its countries."""
+    scope = reader_scope()
+    if scope.get("all"):
+        return True
+    surface = {1: "global", 2: "website"}.get(job["surface"])
+    bits = sum(BRANDS[b.lower()] for b in scope.get("brands") or () if b in SCOPED_BRANDS)
+    if surface is None or not bits or not (job["bgrp"] or 0) & (bits | 8 if surface == "global" else bits):
+        return False
+    countries = surface_countries(scope, surface)
+    if countries is None:
+        return True
+    code = await conn.fetchval("SELECT code FROM gold.dim_country WHERE geo_key=$1", job["geo_key"])
+    return code is not None and code.upper() in {c.upper() for c in countries}
+
+
 async def detail(ctx: Context, job_id: str) -> dict:
     job = await ctx.conn.fetchrow("SELECT * FROM gold.job_index WHERE job_id::text=$1", job_id)
-    if job is None:
+    if job is None or not await in_account_scope(ctx.conn, job):
         raise HTTPException(404, "Answer not present in Gold")
     if job["surface"] != ctx.sf or (job["surface"] == 3 and job["project_key"] != ctx.project_key):
         project = await ctx.conn.fetchrow("SELECT * FROM gold.dim_project WHERE project_key=$1", job["project_key"])

@@ -217,5 +217,6 @@ async def read(path: str, request: Request):
     if request.method != "GET":
         raise HTTPException(405, "This service is read-only")
     who = await hub_auth.principal(request.headers.get("authorization"))
-    data = await api.read(path, access.clamp(request.query_params, who.scope(), path))
+    with access.scoped(who.scope()):
+        data = await api.read(path, access.clamp(request.query_params, who.scope(), path))
     return EncodedJSON(data, headers={"Cache-Control": "no-store"})

@@ -1,6 +1,8 @@
 """The account's scope on every read: the clamp, and the routes through the data server's app with the internal token the hub server would send."""
+import asyncio
 import os
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 try:
@@ -8,6 +10,7 @@ try:
     from starlette.datastructures import QueryParams
 
     from data_server import access, api, screens
+    from data_server.gold_reader import answers
     from data_server.tests.signed_in import SECRET, call, run, token_for
     from shared import internal_token
 except ModuleNotFoundError as exc:
@@ -153,6 +156,97 @@ class Reads(unittest.TestCase):
             admin = token_for()
             for path in ("/v1/gold/projects", "/v1/screens/projects/list"):
                 self.assertEqual(run(call("GET", path, token=admin))[0], 200, path)
+
+
+class ById(unittest.TestCase):
+    """An id opens nothing outside the account's scope: a read by id has no brand or country filter of its own to clamp (cross-check, 2026-11-07)."""
+
+    KIA_KR = {"all": False, "brands": ["Kia"], "regions": [], "countries": ["KR"]}
+
+    class Reached(Exception):
+        pass
+
+    def open(self, scope, surface, country="KR", bgrp=2):
+        test = self
+
+        class Conn:
+            async def fetchrow(self, sql, *args):
+                if sql.startswith("SELECT * FROM gold.job_index"):
+                    return {"answer_key": 1, "surface": surface, "project_key": 57, "geo_key": 75, "bgrp": bgrp, "round_date": None}
+                raise test.Reached()
+
+            async def fetchval(self, sql, *args):
+                return country
+
+        ctx = SimpleNamespace(conn=Conn(), sf=surface, project_key=57, week=None, builds={"fact": []}, q=QueryParams(""))
+        with access.scoped(scope):
+            run(answers.detail(ctx, "job"))
+
+    def assert_opens(self, *args, **kwargs):
+        with self.assertRaises(self.Reached):
+            self.open(*args, **kwargs)
+
+    def assert_closed(self, *args, **kwargs):
+        with self.assertRaises(HTTPException) as caught:
+            self.open(*args, **kwargs)
+        self.assertEqual(caught.exception.status_code, 404)
+
+    def test_every_answer_for_every_scope(self):
+        for surface in (1, 2, 3):
+            self.assert_opens(access.ALL, surface, country="FR", bgrp=1)
+
+    def test_an_answer_inside_the_scope(self):
+        self.assert_opens(self.KIA_KR, 1)
+        self.assert_opens(self.KIA_KR, 2)
+        self.assert_opens(self.KIA_KR, 1, bgrp=3)   # a catalog of two brands, one of them the account's
+        self.assert_opens(self.KIA_KR, 1, bgrp=8)   # a catalog of every brand, as the lists read it
+        self.assert_opens({"all": False, "brands": ["Kia"], "regions": [], "countries": []}, 1, country="FR")   # no countries: every country of its brand
+
+    def test_an_answer_outside_the_scope(self):
+        self.assert_closed(self.KIA_KR, 3)              # the project surface is the administrator's
+        self.assert_closed(self.KIA_KR, 1, country="FR")
+        self.assert_closed(self.KIA_KR, 2, country="US")
+        self.assert_closed(self.KIA_KR, 1, bgrp=1)      # another brand's
+        self.assert_closed(self.KIA_KR, 2, bgrp=8)      # on a website the site's brand only
+        self.assert_closed(self.KIA_KR, 1, country=None)
+        self.assert_closed({"all": False, "brands": [], "regions": [], "countries": ["KR"]}, 1)
+
+    def test_the_read_route_runs_in_the_accounts_scope(self):
+        seen = {}
+
+        async def read(path, q):
+            seen["scope"] = access.reader_scope()
+            return {"data": {}}
+
+        with mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}), mock.patch.object(api, "read", read):
+            run(call("GET", "/v1/answers/x?surface=global", token=COUNTRY_TOKEN()))
+        self.assertEqual(seen["scope"].get("all"), False)
+
+    def test_accounts_of_different_scopes_share_no_read(self):
+        started = []
+
+        async def read_json(path, q):
+            started.append(access.reader_scope().get("all"))
+            await asyncio.sleep(0)
+            return "{}"
+
+        async def both():
+            async def one(scope):
+                with access.scoped(scope):
+                    await api.get("answers/x", {"surface": "global", "brand": "Kia", "country": "KR"})
+            await asyncio.gather(one(access.ALL), one(self.KIA_KR))
+
+        with mock.patch.object(api, "_read_json", read_json):
+            run(both())
+        self.assertEqual(sorted(started), [False, True])
+
+    def test_a_prompts_timeline_is_closed_as_the_history_tab_is(self):
+        async def history_rows(*args, **kwargs):
+            raise AssertionError("read for an account with a scope")
+
+        with mock.patch("data_server.screens.standard_prompts.catalog_editor.history_rows", history_rows), access.scoped(self.KIA_KR):
+            out = run(screens.build("catalog/prompts-timeline", QueryParams("prompt_id=0a34af78-8c07-44ff-b1e0-4cb5c6e53feb")))
+        self.assertEqual(out, {"available": False, "rows": []})
 
 
 if __name__ == "__main__":

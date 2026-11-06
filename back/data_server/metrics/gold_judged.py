@@ -177,7 +177,7 @@ async def target_url_keys(ctx: Any) -> list[int]:
     inputs = await read_inputs()
     if not inputs.prompt_targets:
         return []
-    key = ("target", tuple(sorted(ctx.builds.get("fact", []))), len(inputs.prompt_targets))
+    key = ("target", tuple(sorted(ctx.builds.get("fact", []))), hash(frozenset(inputs.prompt_targets.items())))
     if key not in _owned:
         if len(_owned) >= 8:
             _owned.clear()

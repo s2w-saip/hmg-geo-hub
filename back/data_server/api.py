@@ -58,7 +58,7 @@ async def get(path: str, params: Mapping[str, Any] | Iterable[tuple[str, Any]] |
     different scopes never share a read. The shared read holds the answer's JSON text and every caller
     parses its own copy (a screen may change what it reads)."""
     q = access.clamp(query(params), path=path)
-    key = f"{path}?{q}"
+    key = f"{sorted(access.reader_scope().items())}|{path}?{q}"   # an administrator's filter can equal a scoped account's clamp
     pending = _inflight.get(key)
     if pending is None:
         # The shared read is bounded too: a read that never returns (a connection lost mid-query) is

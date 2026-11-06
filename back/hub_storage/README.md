@@ -145,14 +145,13 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # 
 
 - **저장(`007_source_overrides`, 입력 DB):** `catalog.source_override`에 출처 키(Gold `dim_source.skey`, 소문자 · 앞 `www.` 제거)마다 카테고리(`gold.dim_category.slug`)와 상태(`active` · `cleared`)를 둔다. 지우지 않고, 원복은 `cleared`다. 바꿀 때마다 `source_override_event`(`changes = {필드: [전, 후]}`, 실린 목록의 `published_seq`)가 남는다.
 - **API 전달:** 쓰기마다 같은 트랜잭션에서 발행 함수 `catalog.publish_source_overrides()`가 활성 교정 전체를 기준값 종류 `source_override`(source `hub_edit`)의 새 set으로 기록한다(내용이 같으면 기록 안 함, catalog lock 617427413). 외부 API는 `GET /ext/v1/reference/source_override`로 내보내고, 공개는 `publish-reference source_override`로 승인한다. `hub_edit`은 `ext.meta.hub_reference`에 들지 않아 편집해도 `contract_version`이 바뀌지 않는다. Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.
-- **처음 값:** `import-source-overrides`가 Gold가 지금 적용 중인 교정(`dim_source.category_src = 1`)을 API 이미지 안에서 읽어 한 번 넣는다(`origin = gold_import`). HUB에 교정이 하나라도 있으면 거부한다. 2026-10-30 기준 2건(arxiv.org, danawa.com).
+- **처음 값:** Gold가 그때 적용 중이던 교정(`dim_source.category_src = 1`)을 한 번 넣었다(`origin = gold_import`, 2026-10-30 기준 2건: arxiv.org, danawa.com). 가져오는 명령은 T12.2에서 지웠다.
 - **계정과 권한:** 목록은 입력 DB 조회 계정과 Gold 조회 계정으로 읽고, 쓰기는 `HGH_SOURCE_OVERRIDE_EDITOR_DB_URL`(`hmg_source_override_editor`: `source_override` INSERT와 카테고리 · 상태 · 시각 · 행위자 UPDATE, `source_override_event` INSERT, 발행 함수 실행)로 한다. 키 · 출처 · 메모 변경, DELETE, `reference_set` 직접 쓰기(다른 역할이 `hub_edit` set을 쓰면 트리거가 거부), 다른 catalog 표, 운영 DB 접속은 없다.
 - **화면:** Gold 최신 회차(글로벌 live)의 인용 수 상위 500개 출처, HUB가 교정한 출처, Gold가 교정을 적용한 출처를 보인다. 행마다 Gold 값과 HUB 값을 비교해 반영됨 · 반영 대기로 표시한다. 카테고리를 고르면 바로 저장하고, 숫자에는 파이프라인이 목록을 가져가 Gold를 다시 만든 뒤 반영된다.
 - **API:** `GET /v1/hub/source-overrides`, `GET /v1/hub/source-overrides/history?skey=`, `POST /v1/hub/source-overrides`(`{skey, category}`), `POST /v1/hub/source-overrides/clear`(`{skey}`) (관리자만). 브라우저는 Next `/api/hub/source-overrides`를 거친다.
 
 ```bash
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                      # 007_source_overrides, hmg_source_override_editor, .env.source-override-db.local, .env.hub-edit.local에 연결 추가
-HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-overrides   # 처음 값(한 번만)
 HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh          # API 재시작 (Windows: ./scripts/start-gold.ps1)
 ```
 
@@ -163,13 +162,12 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh     
 - **저장(`008_source_lists`, 입력 DB):** `catalog.source_seed`(도메인 키 → 카테고리, `active` · `removed`), `catalog.source_social`(계정 키 = 표시 키의 소문자, 도메인, 매칭 규칙 `[{prefix, boundary}]` 1~10개, `active` · `stopped`, 카테고리는 Official (HMG) 고정), `catalog.source_code`(`category` 13개: 번호 = Gold `category_key` = `answer_fact.cit_c<k>`, `layer` 6개: 번호 = `category_src` = 우선순위; 이름(영 · 한) · 순서 · 설명). 표마다 이력 표(`*_event`)가 있고 지우지 않는다.
 - **버전(`013_source_versions`, 2026-11-03):** 교정 · 시드 · 공식 소셜 · 코드표 네 표는 행이 바뀔 때마다 트리거 `catalog.record_source_version()`이 행 전체를 다음 버전으로 `catalog.<표>_version`에 쌓는다. 키마다 1, 2, …로 번호를 매기고, 기록 시각 · 기록자(`updated_by`) · `change_seq`(프롬프트 버전과 같은 순번)를 담는다. 시각 · 기록자만 바뀐 UPDATE는 버전을 만들지 않는다. 트리거만 쓰고, 화면 역할과 조회 계정은 SELECT만 한다. 현재 행은 늘 최신 버전과 같다(`verify`가 확인). 013 전의 변경은 이력 표를 현재 행부터 거꾸로 되짚어 버전으로 옮겼고, 발행된 set 21개가 모두 그 시점의 버전과 같다(`data_server.tests.test_hub_source_versions`). 목록 단위 버전은 그대로 발행 set(`reference_set.version`)이다.
 - **API 전달:** 쓰기마다 `catalog.publish_source_seeds()` · `publish_source_socials()` · `publish_source_codes()`가 기준값 종류 `source_seed` · `source_social` · `source_code`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `publish-reference <종류>`.
-- **처음 값:** `import-source-lists`가 목록마다 한 번 넣는다(이미 있는 목록은 그대로 둔다). 코드표는 Gold `dim_category`(번호 · 영문 이름 · 순서)와 화면 문구(`citationCategories`, `hubSourceOverrides.source`), 시드는 `seed.json` 795개(영문 카테고리 이름 → slug), 공식 소셜은 `official-social.ts` 9개.
+- **처음 값:** 목록마다 한 번 넣었다(가져오는 명령은 T12.2에서 지웠다). 코드표는 Gold `dim_category`(번호 · 영문 이름 · 순서)와 화면 문구(`citationCategories`, `hubSourceOverrides.source`), 시드는 `seed.json` 795개(영문 카테고리 이름 → slug), 공식 소셜은 `official-social.ts` 9개.
 - **계정과 권한:** 교정과 같은 `hmg_source_override_editor`가 쓴다(화면 하나의 입력 묶음). 시드는 카테고리 · 상태, 소셜은 매칭 규칙 · 상태, 코드표는 이름 · 설명 · 순서만 UPDATE한다. 코드표 행 추가 · 삭제, 키 · 출처 · 메모 변경, DELETE, 공용 발행 함수 직접 실행은 없다.
 - **API:** `GET|POST /v1/hub/source-seeds`, `POST …/remove`, `GET …/history?skey=`; `GET|POST /v1/hub/source-socials`, `POST …/stop|resume`, `GET …/history?key=`; `GET|POST /v1/hub/source-codes`, `POST …/order`, `GET …/history?kind=&code=` (관리자만). 브라우저는 Next `/api/hub/source-seeds` · `source-socials` · `source-codes`를 거친다.
 
 ```bash
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                  # 008_source_lists (같은 역할에 권한 추가) · 013_source_versions (버전 표와 트리거)
-HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-lists   # 처음 값(목록마다 한 번)
 ```
 
 ## 고객 관심 데이터 (2026-11-02)
@@ -178,13 +176,12 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-lists  
 
 - **저장(`009_interest_inputs`, 입력 DB):** `catalog.interest_keyword`(키 = Gold `dim_keyword.term_norm`과 같은 규칙의 `catalog.interest_term_norm`, 수집 조건 `[{location_code, language_code}]`, 소스, 브랜드, `active` · `stopped`), `catalog.interest_source`(키 = 소문자 · scheme · 앞 `www.` · 쿼리 · 끝 `/` 뺀 URL, 입력한 URL, 채널, 브랜드, `active` · `stopped`)와 이력 표 `*_event`. 행은 지우지 않는다. 정규화는 ICU로 소문자를 만든다(이 저장소는 C 로케일이라 `lower()`가 비ASCII를 접지 못한다).
 - **API 전달:** 쓰기마다 `catalog.publish_interest_keywords()` · `publish_interest_sources()`가 기준값 종류 `interest_keyword` · `interest_source`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference interest_keyword interest_source`다.
-- **처음 값:** `import-interest-keywords`가 Gold 시드 행(`kw_suggestion.is_seed`, 기준값 종류 `keyword`와 같은 읽기)을 한 번 넣는다(`origin = gold_import`, 소스 Google Keyword, 브랜드 공통). HUB에 키워드가 하나라도 있으면 거부한다. 수집 소스는 Gold에 대응 목록이 없어 처음 값이 없다.
+- **처음 값:** Gold 시드 행(`kw_suggestion.is_seed`, 기준값 종류 `keyword`와 같은 읽기)을 한 번 넣었다, 가져오는 명령은 T12.2에서 지웠다(`origin = gold_import`, 소스 Google Keyword, 브랜드 공통). HUB에 키워드가 하나라도 있으면 거부한다. 수집 소스는 Gold에 대응 목록이 없어 처음 값이 없다.
 - **계정과 권한:** 쓰기는 `HGH_INTEREST_EDITOR_DB_URL`(`hmg_interest_editor`, 비밀번호 `.env.interest-db.local`)이다. 값 · 상태 · 메모 · 시각 · 행위자 열만 UPDATE하고, 키 · 원문 · 출처 변경, DELETE, 공용 발행 함수 직접 실행, 다른 catalog 표 읽기, 운영 DB 접속은 없다.
 - **API:** `GET|POST /v1/hub/interest-keywords`, `POST …/stop|resume`, `GET …/history?term=`; `GET|POST /v1/hub/interest-sources`, `POST …/stop|resume`, `GET …/history?url=`. 최상위 관리자 전용이고 쓰기는 catalog lock 안에서 한다.
 
 ```bash
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                       # 009_interest_inputs, hmg_interest_editor, .env.hub-edit.local
-HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-interest-keywords   # 처음 값(한 번만)
 ```
 
 ## 엔티티 역할 (2026-11-02)
@@ -193,13 +190,12 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-interest-keywo
 
 - **저장(`010_entity_roles`, 입력 DB):** `catalog.entity_role`(키 = Gold `entity_id`, 대표 이름, 역할 `own` · `excluded`, 자사 브랜드, 메모, `active` · `cleared`)과 이력 표 `entity_role_event`. 두 DB 사이에 키가 없어 데이터 서버가 쓰기 전에 Gold를 읽어 엔티티를 확인한다. 경쟁사로 되돌리면 행은 `cleared`로 남는다.
 - **API 전달:** 쓰기마다 `catalog.publish_entity_roles()`가 기준값 종류 `entity_role`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference entity_role`이다. 사람이 정한 역할만 내보내고, 분석이 찾은 엔티티는 내보내지 않는다.
-- **처음 값:** `import-entity-roles`가 Gold 명부(`dim_entity.registry_role`, 자사 5 · 제외 14)를 한 번 넣는다(`origin = gold_import`). HUB에 역할이 하나라도 있으면 거부한다.
+- **처음 값:** Gold 명부(`dim_entity.registry_role`, 자사 5 · 제외 14)를 한 번 넣었다(`origin = gold_import`). 가져오는 명령은 T12.2에서 지웠다.
 - **계정과 권한:** 쓰기는 `HGH_ENTITY_ROLE_EDITOR_DB_URL`(`hmg_entity_role_editor`, 비밀번호 `.env.entity-role-db.local`)이다. 역할 · 자사 브랜드 · 메모 · 상태 · 시각 · 행위자 열만 UPDATE하고, 엔티티 · 이름 · 출처 변경, DELETE, 공용 발행 함수 직접 실행, 다른 catalog 표 읽기, 운영 DB 접속은 없다.
 - **API:** `GET|POST /v1/hub/entity-roles`, `POST …/clear`, `GET …/history?entity=`, `GET …/mentions?entity=`. 최상위 관리자 전용이고 쓰기는 catalog lock 안에서 한다. 초안 · 미리보기 · 승인은 없다(결정 F).
 
 ```bash
 HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py init                  # 010_entity_roles, hmg_entity_role_editor, .env.hub-edit.local
-HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-entity-roles   # 처음 값(한 번만)
 ```
 
 ## 서비스 기준 주 (2026-11-02)
