@@ -46,7 +46,7 @@ DO $$ BEGIN
  BEGIN CREATE TABLE system.forbidden(id int); RAISE EXCEPTION 'Saved filter role can create schema objects'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 DELETE FROM system.saved_filter WHERE filter_id='ffffffff-ffff-4fff-8fff-fffffffffff3';
--- Accounts: the API's role writes the account tables and nothing else, in the shapes bff/hub_stores/accounts.py
+-- Accounts: the API's role writes the account tables and nothing else, in the shapes data_server/hub_stores/accounts.py
 -- uses; it never reads a password hash. A role's scope keeps its shape.
 SET LOCAL ROLE hmg_account_editor;
 INSERT INTO system.user_account(user_id,subject) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','rollback-only account fixture');

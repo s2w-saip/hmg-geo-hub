@@ -1,0 +1,158 @@
+"""Period comparison (K-2 GET /v1/kpi/compare) in the legacy CompareResult shape
+(port of front/lib/hgh/adapters/compare.ts).
+
+Call rule: no call (None = "draw the previous Δ") unless the URL period has both ends in order. The original API's
+2026-09-08 cut-off (meta.suppressed["*"] == "before_epoch", None = the previous Δ) is gone: the reader compares every
+period (⛔K 2026-10-31, HUB rule 5).
+`common` is the CommonFilters params dict of the screen (CommonQuery keys plus `cf.<uuid>` keys),
+built by the shared query module; the compare params are added on top of it.
+"""
+from __future__ import annotations
+
+import re
+from datetime import date
+from typing import Any
+
+from data_server import api
+from data_server.metrics.display import point_change, relative_change
+from data_server.gold_reader.compare_logic import range_windows
+from data_server.screens._convert import filter_notices
+from data_server.screens._period import resolve_request_compare_period_shape
+from data_server.screens._week import period_echo
+
+COMPARE_METRIC_TO_API = {"visibility": "visibility", "share": "share_of_voice", "favorability": "sentiment",
+                         "position": "position", "mentionsPerAnswer": "mentions_per_answer",
+                         "citationsPerAnswer": "citations_per_answer", "citationShare": "citation_share"}
+API_METRIC_TO_COMPARE = {v: k for k, v in COMPARE_METRIC_TO_API.items()}
+
+_ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}\Z", re.ASCII)
+
+
+def _gt0(v: Any) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
+
+
+def compare_measure_value(m: dict | None) -> float | None:
+    """Ratio -> num/den, RankAvg -> sum/count; empty denominator -> None."""
+    if not m:
+        return None
+    if "den" in m:
+        return m["num"] / m["den"] if _gt0(m["den"]) else None
+    return m["sum"] / m["count"] if _gt0(m.get("count")) else None
+
+
+def legacy_compare_delta(unit: str | None, prev: float | None, cur: float | None) -> float | None:
+    """Legacy deltaOf, unrounded: pp = (cur - prev) x 100, rank = cur - prev, pct = (cur - prev) / prev x 100."""
+    if prev is None or cur is None:
+        return None
+    if unit == "pp":
+        return point_change(cur, prev)
+    if unit == "rank":
+        return cur - prev
+    if prev == 0:
+        return None
+    return relative_change(cur, prev)
+
+
+_ITEM_FIELDS = (("cyclesPrev", "cycles_prev"), ("cyclesCur", "cycles_cur"), ("dataCyclesPrev", "data_cycles_prev"), ("dataCyclesCur", "data_cycles_cur"),
+                ("plannedPrev", "planned_prev"),
+                ("plannedCur", "planned_cur"), ("missingSharePrev", "missing_share_prev"),
+                ("missingShareCur", "missing_share_cur"))
+
+
+def to_compare_result(item: dict) -> dict | None:
+    """One CompareItem -> CompareResult, None for a metric the legacy screens never had (citation_share)."""
+    metric = API_METRIC_TO_COMPARE.get(item.get("metric"))
+    if not metric:
+        return None
+    prev = compare_measure_value(item.get("prev"))
+    cur = compare_measure_value(item.get("cur"))
+    out: dict = {"metric": metric}
+    if "unit" in item:
+        out["unit"] = item["unit"]
+    out.update({"prev": prev, "cur": cur,
+                "delta": None if item.get("suppressed") else legacy_compare_delta(item.get("unit"), prev, cur)})
+    if "suppressed" in item:
+        out["suppressed"] = item["suppressed"]
+    out["reason"] = item.get("reason")
+    for k, src in _ITEM_FIELDS:
+        if src in item:
+            out[k] = item[src]
+    return out
+
+
+def to_compare_results(items: list[dict], requested: list[str]) -> list[dict]:
+    """Items -> results in the requested order (a requested metric the answer lacks is skipped)."""
+    by_metric: dict[str, dict] = {}
+    for item in items:
+        r = to_compare_result(item)
+        if r and r["metric"] not in by_metric:
+            by_metric[r["metric"]] = r
+    return [by_metric[m] for m in requested if m in by_metric]
+
+
+def has_closed_period(filters: dict) -> bool:
+    """Both ends of the URL period set, ISO days, in order (filters.ts hasClosedPeriod)."""
+    f, t = filters.get("dateFrom"), filters.get("dateTo")
+    return bool(f and t and isinstance(f, str) and isinstance(t, str) and _ISO_DAY.match(f) and _ISO_DAY.match(t)
+                and f <= t)
+
+
+def compare_query(common: dict, req: dict) -> dict:
+    """Params of GET /v1/kpi/compare: common + kind, metrics (API names, deduped in order), card=true
+    off project (cardParam(surface, true)) unless the page shows live values (req card False: Mention,
+    Citation — the Δ compares the values the page shows; 2026-10-29 metric review R3).
+    req = {surface, kind, metrics, card?}."""
+    metrics = list(dict.fromkeys(COMPARE_METRIC_TO_API[m] for m in req["metrics"]))
+    extra: dict = {"kind": req["kind"], "metrics": metrics}
+    if req["surface"] != "project" and req.get("card", True):
+        extra["card"] = True
+    return {**common, **extra}
+
+
+async def fetch_period_compare_view(filters: dict, common: dict, req: dict) -> dict | None:
+    """fetchPeriodCompareView: None without a closed period, else {results, compare (meta.compare), notices}."""
+    if not has_closed_period(filters):
+        return None
+    res = await api.get("kpi/compare", compare_query(common, req))
+    meta = res.get("meta") or {}
+    out: dict = {"results": to_compare_results(res["data"], req["metrics"])}
+    if "compare" in meta:
+        out["compare"] = meta["compare"]
+    out["notices"] = filter_notices(meta)
+    return out
+
+
+async def fetch_period_compare_api(filters: dict, common: dict, req: dict) -> list[dict] | None:
+    """Drop-in for the legacy fetchPeriodCompare: CompareResult[] or None."""
+    view = await fetch_period_compare_view(filters, common, req)
+    return view["results"] if view else None
+
+
+# A Δ next to a period total compares it with the period just before — the window /v1/kpi/compare compares
+# 당사 with — for every row and tile, not only 당사 (2026-10-29 metric review R3: rivals, engines and the
+# Citation categories took their last round's Δ). Both stop at the service week: the windows, the kind and the days
+# are those of the URL period as the reads take it (screens._week.period_echo; 2026-11-02 review: for 09-28..10-25
+# under the week 10-05..10-11 당사 compared with 09-14..09-27 and every other row with 08-31..09-27).
+def prev_period_filters(filters: dict, week: Any) -> dict | None:
+    """The same filters on the period just before the URL period, its end the service week's last day at the latest
+    (`week`: screens._week.period_week); None outside period mode, and for a period after the week, which holds no
+    round (kpi/compare compares nothing there: no_data)."""
+
+    if not has_closed_period(filters):
+        return None
+    period = period_echo(filters["dateFrom"], filters["dateTo"], week)
+    if period is None:
+        return None
+    shape = resolve_request_compare_period_shape(period["from"], period["to"])
+    w = range_windows(shape["kind"], date.fromisoformat(period["from"]), date.fromisoformat(period["to"]))
+    if w is None or w.prev is None:
+        return None
+    return {**filters, "dateFrom": w.prev.lo.isoformat(), "dateTo": w.prev.hi.isoformat()}
+
+
+def period_shape(filters: dict, week: Any) -> dict:
+    """The compare shape (anchor axis: month -> week -> window) of the URL period as the reads take it: the kind
+    kpi/compare is asked for, its days and labels. A period after the service week is none (its compare: no_data)."""
+    period = period_echo(filters.get("dateFrom"), filters.get("dateTo"), week) or {}
+    return resolve_request_compare_period_shape(period.get("from"), period.get("to"))

@@ -71,7 +71,7 @@ DB 접속 정보는 프런트의 `NEXT_PUBLIC_*`에 넣지 않습니다. `script
 
 ## 데이터 수집과 화면 전환
 
-표준·웹사이트·프로젝트의 GA4 전환과 SEO 화면은 이 DB를 조회합니다. API는 `/v1/analytics/conversion`, `/v1/analytics/visibility`이며, 조회 코드는 `back/bff/hub_stores/analytics_reader.py`입니다.
+표준·웹사이트·프로젝트의 GA4 전환과 SEO 화면은 이 DB를 조회합니다. API는 `/v1/analytics/conversion`, `/v1/analytics/visibility`이며, 조회 코드는 `back/data_server/hub_stores/analytics_reader.py`입니다.
 Gold의 GA4/SEO 측정값을 복사하거나 가상 계정·샘플 데이터를 적재하지 않았습니다.
 
 ### GA4 수집기 (`ga4_collect.py`, 2026-10-29)
@@ -102,7 +102,7 @@ GA4 자격 증명을 인계받기 전이라 아직 실행하지 않았고, 지�
 | `ga4_users_window` | GA4가 중복을 뺀 사용자 수: 코호트 ai · general · total을 날마다, 그리고 마지막 적재일과 그 직전 같은 길이 기간의 끝에서 7 · 28 · 90일. 필터 조합(마스크)은 아직 없음 |
 
 수집한 날은 일별 `total` 창이 사용자 0명이라도 남습니다. 리더는 그 날에 행이 없는 값을 0으로 읽습니다(GA4는 모두 0인 행을 보내지 않음). 수집하지 않은 날은 `null`입니다.
-시험: `bff.tests.test_ga4_collect` — GA4 Data API 모사기로 수집한 행을 실제 리더에 넣어, 화면 숫자가 세션 원자료에서 직접 센 값과 같은지 봅니다. `HGH_GA4_TEST_DB_URL`(버려도 되는 DB)을 주면 PostgreSQL에 쓰고 리더 SQL로 다시 읽습니다.
+시험: `data_server.tests.test_ga4_collect` — GA4 Data API 모사기로 수집한 행을 실제 리더에 넣어, 화면 숫자가 세션 원자료에서 직접 센 값과 같은지 봅니다. `HGH_GA4_TEST_DB_URL`(버려도 되는 DB)을 주면 PostgreSQL에 쓰고 리더 SQL로 다시 읽습니다.
 
 GSC와 서버 크롤 로그(SEO) 수집기는 아직 없습니다.
 프로젝트 매핑은 로컬 참조의 UUID와 국가·브랜드로 해석합니다.

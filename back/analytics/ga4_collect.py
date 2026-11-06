@@ -3,7 +3,7 @@
 Reads the GA4 Data API (runReport, v1beta) for every property of the registry and replaces that property's rows
 for the collected days, one transaction per property. It writes with the HUB writer role
 (HGH_ANALYTICS_WRITER_DB_URL, .env.analytics-ingest.local); the GA4 credentials (.env.ga4.local) reach this
-process only. The BFF reads the stored rows (back/bff/hub_stores/analytics_reader.py) and never calls GA4.
+process only. The BFF reads the stored rows (back/data_server/hub_stores/analytics_reader.py) and never calls GA4.
 
 What a property gets per collected day — the reader's contract; reports are separate observations, never added
 together, and every report carries device × new/returning so the screen's filters cut all of them alike:
@@ -32,7 +32,7 @@ every collected day, not only the days read again. Each property's result goes t
   python -X utf8 back/analytics/ga4_collect.py --dry-run        # read GA4, print the counts, write nothing
 
 Registry: catalog.ga4_registry in the same database, kept on the renewal Admin › GA4 연동 screen
-(back/bff/hub_stores/ga4_registry.py); --dry-run reads it too."""
+(back/data_server/hub_stores/ga4_registry.py); --dry-run reads it too."""
 from __future__ import annotations
 
 import argparse
@@ -66,7 +66,7 @@ RETRYABLE = {0, 429, 500, 502, 503, 504}   # 0 = no answer
 ATTEMPTS = 5
 TIMEOUT_S = 60
 RUN_LOCK = 617427420        # one collector at a time (session advisory lock on the data connection)
-# HUB code tables; tests check them against bff.hub_stores.analytics_reader
+# HUB code tables; tests check them against data_server.hub_stores.analytics_reader
 BRAND_BITS = {"hyundai": 1, "kia": 2, "genesis": 4}
 # sessionSource host → the engine code of ref.dim_engine (the answer engines' codes; the filter panel's values)
 ENGINE_HOSTS = (("chatgpt.com", "chatgpt"), ("openai.com", "chatgpt"), ("gemini.google.com", "gemini"), ("bard.google.com", "gemini"),

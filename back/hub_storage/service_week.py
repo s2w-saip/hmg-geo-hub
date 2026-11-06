@@ -18,8 +18,8 @@ Rule A, per cycle of surfaces 1 and 2 in the ISO week of its round_date (checked
   complete and not hidden. A surface with no cycle that week holds it back until Gold lists a later cycle of it (before
   that the week may only not be loaded yet); after that the week was skipped and its screens show '측정 없음'.
 - the service week is the latest candidate, and it never moves back: an older latest candidate keeps the recorded week.
-The screens' per-week notes judge each cycle by the same rule in SQL (bff/gold_reader/week_notes.py NOTES_SQL, its
-twin): change the two together (each pinned clause by clause, bff.tests.test_hub_service_week.GoldReads and
+The screens' per-week notes judge each cycle by the same rule in SQL (data_server/gold_reader/week_notes.py NOTES_SQL, its
+twin): change the two together (each pinned clause by clause, data_server.tests.test_hub_service_week.GoldReads and
 test_gold_service_week.WeekNotes).
 
 catalog.service_week (data-011) gets a row only when the week or its cycle sets change; otherwise the run moves the

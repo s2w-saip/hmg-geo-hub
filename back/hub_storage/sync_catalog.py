@@ -31,7 +31,7 @@ import asyncpg
 
 RUN_LOCK = 617427415      # one import at a time (session lock on the data connection)
 CATALOG_LOCK = 617427413  # every catalog writer (this import, the HUB editor): change_seq order = commit order
-# HUB-owned code tables. Tests check them against bff.gold_reader (context.BRANDS/BRAND_NAMES, metrics.TYPES).
+# HUB-owned code tables. Tests check them against data_server.gold_reader (context.BRANDS/BRAND_NAMES, metrics.TYPES).
 SURFACES = {1: 'global', 2: 'website', 3: 'project'}
 BRAND_BITS = {1: 'hyundai', 2: 'kia', 4: 'genesis', 16: 'hyundai-n'}
 MENTION_TYPES = ('mention', 'recommendation', 'comparison', 'definition', 'final_choice')

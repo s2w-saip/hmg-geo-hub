@@ -8,7 +8,7 @@
 
 | 읽기 | 처음 계산하는 곳 | 비고 |
 |---|---|---|
-| `kpi/summary` · `kpi/engines` · `kpi/compare` · `trend` · `mentions/brands` · `geo` | `bff/metrics/gold_current.py` (`gold_reader/metrics.py`가 응답으로 조립) | 지표 계산 층 |
+| `kpi/summary` · `kpi/engines` · `kpi/compare` · `trend` · `mentions/brands` · `geo` | `data_server/metrics/gold_current.py` (`gold_reader/metrics.py`가 응답으로 조립) | 지표 계산 층 |
 | `mentions/types` · `citations/*` · `mentions/prompts` · `mentions/missing-prompts` · `mentions/market-gaps` · `funnel/acr*` · `prompts` | `gold_reader`의 답변 단위 SQL | 정의는 지표 계산 층과 같게 맞췄다. T9에서 어댑터 ②로 옮긴다 |
 | `filters/*` · `cycles/week-notes` · `gold/projects*` | `gold_reader` | 지표 값이 아니다. 첫 화면 값은 함께 사전 집계한다 |
 | `answers*` · `gold/keywords` · `gold/social` | `gold_reader` | 그대로 읽는다(사전 집계 · 캐시 안 함) |
@@ -112,7 +112,7 @@
 
 ## 레거시 KPI와 유지 지표
 
-대공사 T1.5의 결과다. 레거시 KPI는 통합할 수 있어도 없애지 않는다(`CLAUDE.md` 2절). 원본은 `back/bff/metrics/catalog.py`의 `screens`다.
+대공사 T1.5의 결과다. 레거시 KPI는 통합할 수 있어도 없애지 않는다(`CLAUDE.md` 2절). 원본은 `back/data_server/metrics/catalog.py`의 `screens`다.
 
 ### 레거시 화면에만 있는 값 (7개)
 

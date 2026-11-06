@@ -130,7 +130,7 @@ def service_host(store):
 
 def api_python(script, api_env=False):
     """Run a helper script where the API runs: inside its container, or this Python in native mode (BFF env; with `api_env` the API's
-    stores too and the back folder as the working directory, for a script that imports bff)."""
+    stores too and the back folder as the working directory, for a script that imports data_server)."""
     if analytics.NATIVE:
         files = ['.env.gold.local', *(['.env.analytics.local', '.env.operations.local', '.env.input.local', '.env.metrics.local', '.env.hub-edit.local', '.env.silver.local'] if api_env else [])]
         env = dict(os.environ)
@@ -780,12 +780,12 @@ def service_week(args):
 
 def rollup(args):
     """rollup: compute the unfiltered first screens' values into Gold for the surfaces whose live snapshot or definition version moved
-    (bff/metrics/rollup.py). --force runs them although nothing moved; params name surfaces (global · website · project), default all."""
+    (data_server/metrics/rollup.py). --force runs them although nothing moved; params name surfaces (global · website · project), default all."""
     metrics = analytics.env_file(METRICS_SECRET)
     config = {'dsn': f"postgresql://hmg_rollup_writer:{metrics['ROLLUP_WRITER_PASSWORD']}@{service_host('metrics')}/{STORES['metrics'].database}",
               'surfaces': args.params or None, 'force': args.force}
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.
-    print(api_python('from bff.metrics.rollup import run\nrun(' + repr(config) + ')\n', api_env=True).strip())
+    print(api_python('from data_server.metrics.rollup import run\nrun(' + repr(config) + ')\n', api_env=True).strip())
 
 
 def verify():
@@ -832,7 +832,7 @@ def set_admin():
     """Register the top-level administrator, or reset its password (its open sessions end). An account of another
     role becomes an administrator; the password is the one typed here, so no change is asked at sign-in."""
     sys.path.insert(0, str(ROOT / 'back'))
-    from bff.hub_stores.passwords import hash_password
+    from data_server.hub_stores.passwords import hash_password
     login = input('Login ID: ').strip()
     if not re.fullmatch(r'[A-Za-z0-9._@-]{3,200}', login):
         raise ValueError('Login ID: 3-200 characters of letters, digits and . _ @ -')

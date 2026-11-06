@@ -18,7 +18,7 @@ try {
         docker network inspect hgh-operations-network 1>$null 2>$null
         if ($LASTEXITCODE -ne 0) { throw 'Start HUB storage with scripts/start-hub-storage.ps1 first.' }
     }
-    docker build -t hgh-gold-api:local back/bff
+    docker build -t hgh-gold-api:local back/data_server
     if ($LASTEXITCODE -ne 0) { throw 'Gold API build failed.' }
     $existingContainer = docker ps -aq --filter 'name=^hgh-gold-api$'
     if ($existingContainer) {

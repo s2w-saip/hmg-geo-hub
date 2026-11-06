@@ -56,7 +56,7 @@ bff)
         [ -f "$f" ] || { echo "$f is missing: run back/hub_storage/manage.py init first" >&2; exit 1; }
         hub_env+=(--env-file "$f")
     done
-    docker build -q -t hgh-gold-api:local back/bff >/dev/null
+    docker build -q -t hgh-gold-api:local back/data_server >/dev/null
     replace hgh-gold-api
     docker run -d --name hgh-gold-api --restart unless-stopped "${logs[@]}" --env-file .env.gold.local \
         "${hub_env[@]}" -p 127.0.0.1:18091:8000 hgh-gold-api:local >/dev/null

@@ -97,7 +97,7 @@ describe("Overview 원천 밖 read 는 누적 의미론 그대로다", () => {
 
   it("언급 화면은 여전히 `cumulative: true` 를 만든다 (다른 지표용, back/bff/screens/mention_data.py)", () => {
     const SCREEN = readFileSync(
-      fileURLToPath(new URL("../../../../../../../back/bff/screens/mention_data.py", import.meta.url)),
+      fileURLToPath(new URL("../../../../../../../back/data_server/screens/mention_data.py", import.meta.url)),
       "utf8",
     );
     expect(SCREEN).toContain('filters = {**read_standard_filters(sp, scope), "cumulative": True}');

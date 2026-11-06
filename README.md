@@ -14,9 +14,9 @@ GA4·SEO 화면은 `gold_db`를 읽고, 수집기는 GA4 자격 증명을 인계
 4. 이후 API만 재시작하려면 `powershell -File scripts/start-gold.ps1`을 실행합니다. 각 DB의 조회 계정만 API에 전달합니다.
 
 포트는 프론트 `3333`, API `5555`로 고정합니다. Docker 없는 macOS·Linux에서는 `HGH_PYTHON=<Python 3.12 경로> bash scripts/start-local.sh`로
-Gold만 연결해 API와 프론트를 시작합니다. 이 Python에는 `back/bff/requirements.txt`가 설치되어 있어야 하며, HUB 두 DB는 연결하지 않습니다.
+Gold만 연결해 API와 프론트를 시작합니다. 이 Python에는 `back/data_server/requirements.txt`가 설치되어 있어야 하며, HUB 두 DB는 연결하지 않습니다.
 
-현재 FastAPI BFF/API는 `back/bff/`에 있습니다(화면 계층 `screens/`, `gold_db` 읽기 `gold_reader/`, HUB 자체 저장소 읽기 `hub_stores/`). Gold는 `active_release`와 검증 완료된 빌드를 고정해서 조회합니다.
+현재 FastAPI BFF/API는 `back/data_server/`에 있습니다(화면 계층 `screens/`, `gold_db` 읽기 `gold_reader/`, HUB 자체 저장소 읽기 `hub_stores/`). Gold는 `active_release`와 검증 완료된 빌드를 고정해서 조회합니다.
 서비스의 DB 조회는 읽기 전용 트랜잭션입니다. 관리 명령은 별도 쓰기 계정으로 실제 카탈로그 정의와 UUID 참조를 등록합니다.
 합성 DB·시드·가상 계정·측정값 생성기는 사용하지 않습니다.
 시장별 현황은 기존 GeoJSON 지도에 Gold 국가별 KPI를 연결합니다. 원천에서 제공되지 않는 값은 채우지 않습니다.
@@ -41,9 +41,9 @@ Next.js는 화면 렌더링과 API 호출을 담당하고, FastAPI가 BFF와 데
 FastAPI는 세 DB에 독립된 읽기 전용 연결을 사용합니다. 외부 호출자에게는 별도의 외부 API(`back/ext`, 로컬 :5560)가 현재 저장된 프롬프트와 그 수집·가공에 필요한 값을 API 키별 범위로 읽기 전용 제공합니다(정본 문서 `#ext`, 운영 명령은 [HUB 저장소 안내](back/hub_storage/README.md)).
 
 검증: `front`에서 `npm run typecheck`. API 실행 후 저장소 루트에서
-`$env:HGH_GOLD_TEST_BASE_URL='http://127.0.0.1:5555'; python -X utf8 -m unittest discover -s back/bff/tests -v`.
+`$env:HGH_GOLD_TEST_BASE_URL='http://127.0.0.1:5555'; python -X utf8 -m unittest discover -s back/data_server/tests -v`.
 API 계약 검사에는 개발 환경의 `jsonschema`가 필요합니다.
-집계 규칙 단위 검증은 `Get-Content -Raw back/bff/tests/test_analytics.py | docker exec -i hgh-gold-api python -`로 실행합니다.
+집계 규칙 단위 검증은 `Get-Content -Raw back/data_server/tests/test_analytics.py | docker exec -i hgh-gold-api python -`로 실행합니다.
 
 아래 내용은 이전 재설계 스냅샷의 기록입니다. 현재 로컬 서비스의 실행 방법은 위 안내를 사용합니다.
 

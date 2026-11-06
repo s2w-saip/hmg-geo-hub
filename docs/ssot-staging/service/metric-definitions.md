@@ -1,6 +1,6 @@
 # 지표 정의 (스테이징)
 
-서비스(BFF)가 정의하고 계산하는 지표 전체다. 코드 `back/bff/metrics/catalog.py`에서 만든 문서이므로 여기를 직접 고치지 않는다. SSOT `service/metric-definitions.md`의 지표 19개와 공통 조건 7개에, 화면에 나오지만 SSOT에 없는 값을 더했다. SSOT 반영은 SSOT 세션이 한다.
+서비스(BFF)가 정의하고 계산하는 지표 전체다. 코드 `back/data_server/metrics/catalog.py`에서 만든 문서이므로 여기를 직접 고치지 않는다. SSOT `service/metric-definitions.md`의 지표 19개와 공통 조건 7개에, 화면에 나오지만 SSOT에 없는 값을 더했다. SSOT 반영은 SSOT 세션이 한다.
 
 지표 정의 버전: `2026-11-06.8`
 
@@ -181,7 +181,7 @@
 
 ## 기본 집계값과 gold_db 대응
 
-데이터 소스 어댑터가 세는 값이다. Silver 어댑터는 같은 값을 OBT에서 센다. 값 대조: `bff.tests.test_metrics_live`.
+데이터 소스 어댑터가 세는 값이다. Silver 어댑터는 같은 값을 OBT에서 센다. 값 대조: `data_server.tests.test_metrics_live`.
 
 | 기본 집계값 | 단위 | 뜻 | 어댑터 ① gold_db |
 |---|---|---|---|

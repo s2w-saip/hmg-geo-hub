@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # macOS/Linux counterpart of start-gold.ps1 without Docker: API on 127.0.0.1:5555, Next on 127.0.0.1:3333.
-# HGH_PYTHON selects a Python 3.12 that has back/bff/requirements.txt installed (default: python3).
+# HGH_PYTHON selects a Python 3.12 that has back/data_server/requirements.txt installed (default: python3).
 # The HUB data/operations stores (native mode, scripts/start-hub-storage.sh) are started and connected when they exist,
 # and the service week is checked against Gold before the API starts.
 set -euo pipefail
@@ -37,7 +37,7 @@ if listening 5555; then echo 'Port 5555 is in use by another process.' >&2; exit
 (
     cd "$repo/back"
     set -a; . "$secret"; for f in ${hub_env[@]+"${hub_env[@]}"}; do . "$f"; done; set +a
-    nohup "$python" -m uvicorn bff.app:app --host 127.0.0.1 --port 5555 >"$logs/api.log" 2>&1 &
+    nohup "$python" -m uvicorn data_server.app:app --host 127.0.0.1 --port 5555 >"$logs/api.log" 2>&1 &
     echo $! >"$logs/api.pid"
 )
 ready=
