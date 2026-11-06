@@ -12,12 +12,14 @@ from unittest import mock
 try:
     from fastapi import HTTPException
 
-    from data_server.hub_stores import operations_db
-    from data_server.hub_stores import source_overrides as so
-    from data_server.tests.signed_in import Conn, Tables, sign_in
-    from data_server.tests.test_hub_editing import SECRET, T0, Ctx, Pool, call, run
+    from hub_server import operations_db
+    from data_server.hub_stores import source_overrides as so_data
+    from hub_server.inputs import source_overrides as so
+    from hub_server.tests.test_accounts import Conn, Tables
+    from hub_server.tests.util import connect_data_server, sign_in
+    from hub_server.tests.util import SECRET, T0, Ctx, Pool, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_source_overrides)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_source_overrides)") from exc
 
 
 CATEGORIES = [{"slug": s, "name": n, "ord": i} for i, (s, n) in enumerate(
@@ -64,7 +66,7 @@ class StoreConn:
 
     async def fetch(self, sql, *args):
         s = self.s
-        if sql is so.HUB_ROWS_SQL:
+        if sql is so_data.HUB_ROWS_SQL:
             return [{"skey": k, **r} for k, r in s.rows.items()]
         if sql is so.HISTORY_SQL:
             return [e for e in reversed(s.events) if e["skey"] == args[0]][: args[1]]
@@ -77,7 +79,7 @@ class StoreConn:
         if sql is so.ONE_SQL:
             r = s.rows.get(args[0])
             return {"skey": args[0], **r} if r else None
-        if sql is so.PUBLISHED_SQL:
+        if sql is so_data.PUBLISHED_SQL:
             return s.published()
         if sql is so.PUBLISH_SQL:
             return s.publish()
@@ -102,8 +104,8 @@ class StoreConn:
             key, actor = args
             s.rows[key].update(status="cleared", updated_at=s.tick(), updated_by=actor)
         elif sql is so.EVENT_SQL:
-            key, action, actor, changes, seq = args
-            s.events.append({"event_id": len(s.events) + 1, "skey": key, "action": action, "actor_id": actor,
+            key, action, actor, login, name, changes, seq = args
+            s.events.append({"event_id": len(s.events) + 1, "skey": key, "action": action, "actor_id": actor, "actor_login": login, "actor_name": name,
                              "changes": json.loads(changes), "published_seq": seq, "occurred_at": s.tick()})
         else:
             raise AssertionError(sql)
@@ -122,29 +124,29 @@ class Rules(unittest.TestCase):
     def test_state_compares_the_hub_with_gold(self):
         active = {"status": "active", "category": "newsMedia"}
         cleared = {"status": "cleared", "category": "newsMedia"}
-        self.assertEqual(so.state_of(active, gold_row("x.com", 1, "newsMedia", 1)), "applied")
+        self.assertEqual(so_data.state_of(active, gold_row("x.com", 1, "newsMedia", 1)), "applied")
         # Gold applies another category, or none yet, or has no such source: not applied
-        self.assertEqual(so.state_of(active, gold_row("x.com", 1, "other", 1)), "pending")
-        self.assertEqual(so.state_of(active, gold_row("x.com", 4, "newsMedia", 1)), "pending")
-        self.assertEqual(so.state_of(active, None), "pending")
+        self.assertEqual(so_data.state_of(active, gold_row("x.com", 1, "other", 1)), "pending")
+        self.assertEqual(so_data.state_of(active, gold_row("x.com", 4, "newsMedia", 1)), "pending")
+        self.assertEqual(so_data.state_of(active, None), "pending")
         # a revert is applied once Gold no longer applies a correction
-        self.assertEqual(so.state_of(cleared, gold_row("x.com", 1, "newsMedia", 1)), "pending")
-        self.assertIsNone(so.state_of(cleared, gold_row("x.com", 5, "blogsReviews", 1)))
-        self.assertEqual(so.state_of(None, gold_row("x.com", 1, "newsMedia", 1)), "upstream")
-        self.assertIsNone(so.state_of(None, gold_row("x.com", 6, "other", 1)))
+        self.assertEqual(so_data.state_of(cleared, gold_row("x.com", 1, "newsMedia", 1)), "pending")
+        self.assertIsNone(so_data.state_of(cleared, gold_row("x.com", 5, "blogsReviews", 1)))
+        self.assertEqual(so_data.state_of(None, gold_row("x.com", 1, "newsMedia", 1)), "upstream")
+        self.assertIsNone(so_data.state_of(None, gold_row("x.com", 6, "other", 1)))
 
     def test_a_row_keeps_golds_values_next_to_the_hubs(self):
         hub = {"category": "newsMedia", "note": None, "status": "active", "origin": "hub", "created_at": T0, "updated_at": T0}
-        row = so.row_view("kia.com", hub, gold_row("kia.com", 3, "officialHmg", 70, owned=2))
+        row = so_data.row_view("kia.com", hub, gold_row("kia.com", 3, "officialHmg", 70, owned=2))
         self.assertEqual((row["category"], row["source"], row["gold"], row["state"], row["shadowsOwned"]),
                          ("newsMedia", "override", {"category": "officialHmg", "source": "owned"}, "pending", True))
-        plain = so.row_view("x.com", None, gold_row("x.com", 4, "newsMedia", 5, owned=0))
+        plain = so_data.row_view("x.com", None, gold_row("x.com", 4, "newsMedia", 5, owned=0))
         self.assertEqual((plain["category"], plain["source"], plain["override"], plain["state"], plain["shadowsOwned"]),
                          ("newsMedia", "seed", None, None, False))
         # a cleared correction shows Gold's own category and layer again
-        row = so.row_view("x.com", {**hub, "status": "cleared"}, gold_row("x.com", 1, "newsMedia", 5))
+        row = so_data.row_view("x.com", {**hub, "status": "cleared"}, gold_row("x.com", 1, "newsMedia", 5))
         self.assertEqual((row["category"], row["source"], row["state"]), ("newsMedia", "override", "pending"))
-        social = so.row_view("instagram.com/hyundai", None, gold_row("instagram.com/hyundai", 2, "officialHmg", 3, social=True, domain="instagram.com"))
+        social = so_data.row_view("instagram.com/hyundai", None, gold_row("instagram.com/hyundai", 2, "officialHmg", 3, social=True, domain="instagram.com"))
         self.assertEqual((social["skey"], social["domain"], social["isSocial"], social["source"]),
                          ("instagram.com/hyundai", "instagram.com", True, "social"))
 
@@ -169,31 +171,28 @@ class Routes(unittest.TestCase):
         async def data():
             yield StoreConn(s)
 
-        async def actors(ids):
-            return {i: {"login": t.accounts[u]["subject"], "displayName": t.accounts[u]["display_name"]}
-                    for u in t.accounts for i in ids if str(u) == i}
-
         async def gold_list(keys):
             self.asked_keys.append(keys)
             # Gold picks the HUB's keys and its own corrections whatever their count (GOLD_ROWS_SQL)
-            rows = [r for r in self.gold if r["in_top"] or r["category_src"] == 1 or so.key_of_gold(r["skey"]) in keys]
+            rows = [r for r in self.gold if r["in_top"] or r["category_src"] == 1 or so_data.key_of_gold(r["skey"]) in keys]
             return {"asOf": date(2026, 10, 27), "categories": CATEGORIES, "rows": rows}
 
         async def gold_check(key, category):
             self.gold_calls.append((key, category, s.locks))
             if category is not None and category not in {c["slug"] for c in CATEGORIES}:
                 raise so.invalid("The category is one of Gold's source categories", "category")
-            return next((r for r in self.gold if so.key_of_gold(r["skey"]) == key), None)
+            return next((r for r in self.gold if so_data.key_of_gold(r["skey"]) == key), None)
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(so.input_db, "connection", data),
-                  mock.patch.object(so, "actors", actors),
-                  mock.patch.object(so, "gold_list", gold_list),
-                  mock.patch.object(so, "gold_check", gold_check),
+                  mock.patch.object(so_data.input_db, "connection", data),
+                  mock.patch.object(so_data, "gold_list", gold_list),
+                  mock.patch.object(so_data, "gold_check", gold_check),
                   mock.patch.object(so, "_pool", Pool(StoreConn(s)))):
             p.start()
             self.addCleanup(p.stop)
+        connect_data_server(self)
         self.token = self.sign_in("admin@hub")
 
     def sign_in(self, login):

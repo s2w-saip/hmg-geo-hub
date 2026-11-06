@@ -517,6 +517,27 @@ def install_input():
     migrate('input-001.sql', '001_input_store', store='input')
     migrate('input-002.sql', '002_measurement_reference_contract', store='input')
     migrate('input-003.sql', '003_ga4_properties_service_week', store='input')
+    migrate('input-004.sql', '004_actor_names', store='input')
+    backfill_actor_names()
+
+
+ACTOR_TABLES = ('source_override_event', 'source_seed_event', 'source_social_event', 'source_code_event', 'interest_keyword_event', 'interest_source_event',
+                'entity_role_event', 'ga4_registry_event')
+
+
+def backfill_actor_names():
+    """Rows recorded before input-004 name their account by id only: copy its login and name over from the operations DB, once. An account that no longer exists stays
+    NULL, as its history showed no name before. Run as the admin role, with the append-only triggers off for these two columns' sake."""
+    accounts = sql("SELECT json_agg(json_build_object('id',user_id,'login',subject,'name',display_name)) FROM system.user_account;", store='operations').stdout.strip()
+    statements = []
+    for a in json.loads(accounts or 'null') or []:
+        login, name = analytics.literal(a['login']), analytics.literal(a['name']) if a['name'] is not None else 'NULL'
+        uid = analytics.literal(a['id'])
+        statements.append(f"UPDATE catalog.prompt_version SET recorded_by_login={login},recorded_by_name={name} WHERE recorded_by={uid} AND recorded_by_login IS NULL;")
+        statements += [f"UPDATE catalog.{t} SET actor_login={login},actor_name={name} WHERE actor_id={uid} AND actor_login IS NULL;" for t in ACTOR_TABLES]
+    if statements:
+        sql('BEGIN; SET LOCAL session_replication_role=replica;\n' + '\n'.join(statements) + '\nCOMMIT;', store='input')
+    print('actor names: filled from the operations DB')
 
 
 def metrics_server_sql(query):
@@ -1308,6 +1329,7 @@ COMMANDS = {
     'sync-service-week': service_week,
     'internal-token': lambda a: internal_token(),
     'load-query-tables': load_query_tables,
+    'backfill-actor-names': lambda a: backfill_actor_names(),
     'rollup': rollup,
 }
 

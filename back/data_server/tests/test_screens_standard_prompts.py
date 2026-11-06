@@ -323,14 +323,14 @@ class History(unittest.TestCase):
 
     def test_a_revision_becomes_a_history_row(self):
         from datetime import datetime, timezone
-        from data_server.hub_stores import catalog_editor as ed
+        from shared import prompt_revisions as ed
         at = datetime(2026, 10, 28, tzinfo=timezone.utc)
         row = {"prompt_id": self.PID, "version": 2, "text": "new", "definition": {"kind": "single"}, "recorded_at": at, "recorded_by": None,
                "prev_version": 1, "prev_text": "old", "prev_definition": {"kind": "single"}}
-        out = ed.audit_row(row, {})
+        out = ed.audit_row({**row, "recorded_by_login": None})
         self.assertEqual((out["event_type"], out["changes"]["text"], out["batch_id"], out["actor_type"]),
                          ("text_updated", {"old": "old", "new": "new"}, at.isoformat(), "system"))
-        first = ed.audit_row({**row, "version": 1, "prev_version": None, "prev_text": None, "prev_definition": None}, {})
+        first = ed.audit_row({**row, "recorded_by_login": None, "version": 1, "prev_version": None, "prev_text": None, "prev_definition": None})
         self.assertEqual((first["event_type"], first["changes"]), ("created", {}))
 
     def test_consecutive_rows_of_one_batch_fold(self):
@@ -412,7 +412,7 @@ class AdminClassification(unittest.TestCase):
     it read the prompt level (dim_prompt), and Gold keeps these values per brand row (catalog_entry, definition.catalogs)."""
 
     def test_a_label_falls_back_to_the_first_catalog_row(self):
-        from data_server.hub_stores import catalog_editor as ed
+        from shared import prompt_revisions as ed
         row = {"list_type": "Consumer base Response", "depth1": "1. Car+Features", "brand_presence": "unbranded"}
         snap = ed.snapshot("t", {"kind": "single", "depth1": None, "catalogs": [row, {"depth1": "other"}]})
         self.assertEqual((snap["listType"], snap["depth1"], snap["brandPresence"]), ("Consumer base Response", "1. Car+Features", "unbranded"))
@@ -420,7 +420,7 @@ class AdminClassification(unittest.TestCase):
         self.assertIsNone(ed.snapshot("t", {})["depth1"])
 
     def test_the_list_filters_and_sorts_on_the_same_value(self):
-        from data_server.hub_stores import catalog_editor as ed
+        from hub_server.inputs import catalog_editor as ed
         self.assertIn("catalogs'->0->>'list_type'", ed.SORTS["listType"])
 
 

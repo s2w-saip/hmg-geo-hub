@@ -19,8 +19,8 @@ NOT_SENT = HOP | {"host", "content-length", "authorization"}
 NOT_RETURNED = HOP | {"server", "date"}
 # The data server bounds its own reads; this only ends a request whose answer never comes. Next's longest wait is a download's.
 TIMEOUT = httpx.Timeout(connect=5, read=300, write=30, pool=5)
-# One page sends all its sections at once; keep them on open connections.
-LIMITS = httpx.Limits(max_connections=200, max_keepalive_connections=100, keepalive_expiry=30)
+# One page sends all its sections at once; keep them on open connections, for less time than uvicorn keeps one idle (5 seconds).
+LIMITS = httpx.Limits(max_connections=200, max_keepalive_connections=100, keepalive_expiry=3)
 
 _client: httpx.AsyncClient | None = None
 
@@ -39,6 +39,14 @@ async def close_client() -> None:
     if _client is not None:
         await _client.aclose()
         _client = None
+
+
+async def send(outgoing: httpx.Request, *, stream: bool = False) -> httpx.Response:
+    """One read, read again once when the data server closed the connection before answering (uvicorn does after an unhandled 500 or when idle): reads are safe to repeat."""
+    try:
+        return await _client.send(outgoing, stream=stream)
+    except httpx.RemoteProtocolError:
+        return await _client.send(outgoing, stream=stream)
 
 
 def _target(request: Request) -> httpx.URL:
@@ -67,7 +75,7 @@ async def forward(request: Request, internal: str) -> Response:
     # httpx.Request, not client.build_request: the client's default headers would be added to the request.
     outgoing = httpx.Request(request.method, _target(request), headers=headers, content=body or None)
     try:
-        upstream = await _client.send(outgoing, stream=True)
+        upstream = await send(outgoing, stream=True)
     except httpx.TimeoutException as exc:
         log.error("data server timed out: %s path=%s", type(exc).__name__, request.url.path)
         return failure(504, "timeout", "The data server did not answer in time")

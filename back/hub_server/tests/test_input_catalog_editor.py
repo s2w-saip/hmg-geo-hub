@@ -1,6 +1,5 @@
 """Global prompt editing: the definition rules, and the routes
 end to end through the ASGI app against an in-memory catalog (no database)."""
-import asyncio
 import json
 import os
 import unittest
@@ -12,14 +11,12 @@ from uuid import UUID, uuid4
 try:
     import asyncpg
 
-    from data_server import app as bff_app
-    from data_server.hub_stores import catalog_editor as ce
-    from data_server.hub_stores import hub_catalog
-    from data_server.tests.signed_in import SECRET, token_for
-    from shared import internal_token
-    from shared.account import Principal
+    from hub_server.inputs import catalog_editor as ce
+    from hub_server.inputs import hub_catalog
+    from hub_server import auth as hub_auth
+    from hub_server.tests.util import SECRET, call, run, token_of
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_editing)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_catalog_editor)") from exc
 
 T0 = datetime(2026, 10, 27, 9, 0, tzinfo=UTC)
 
@@ -55,7 +52,8 @@ class Catalog:
         self.versions[pid] = []
         for v in range(1, versions + 1):
             self.versions[pid].append({"version": v, "text": text, "definition": json.dumps(definition),
-                                       "sha256": ce.digest(text, definition), "recorded_at": T0 + timedelta(minutes=v), "recorded_by": None})
+                                       "sha256": ce.digest(text, definition), "recorded_at": T0 + timedelta(minutes=v), "recorded_by": None,
+                                       "recorded_by_login": None, "recorded_by_name": None})
         return pid
 
     def current(self, pid):
@@ -83,11 +81,11 @@ class Conn:
             self.c.prompts[pid] = {"project_id": project, "origin": "hub", "registered_at": T0}
             self.c.versions[pid] = []
         elif "INSERT INTO catalog.prompt_version" in sql:
-            pid, version, text, definition, sha, by = args
+            pid, version, text, definition, sha, by, login, name = args
             if any(v["version"] == version for v in self.c.versions[pid]):
                 raise asyncpg.UniqueViolationError("duplicate key")
             self.c.versions[pid].append({"version": version, "text": text, "definition": definition, "sha256": sha,
-                                         "recorded_at": T0 + timedelta(hours=version), "recorded_by": by})
+                                         "recorded_at": T0 + timedelta(hours=version), "recorded_by": by, "recorded_by_login": login, "recorded_by_name": name})
         else:
             raise AssertionError(sql)
 
@@ -164,39 +162,6 @@ class Accounts:
             async def fetch(self, sql, ids):
                 return [{"user_id": accounts.row["user_id"], "subject": "admin", "display_name": "Admin"}] if accounts.row["user_id"] in ids else []
         yield C()
-
-
-async def call(method, path, body=None, token=None, raw=None):
-    """One request through the real FastAPI app (routing, handlers, error envelope)."""
-    path, _, query = path.partition("?")
-    payload = raw if raw is not None else (json.dumps(body).encode() if body is not None else b"")
-    headers = [(b"content-type", b"application/json")] if payload else []
-    if token:
-        headers.append((b"authorization", f"Bearer {token}".encode()))
-    scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": method, "path": path,
-             "raw_path": path.encode(), "query_string": query.encode(), "headers": headers, "client": ("127.0.0.1", 1),
-             "server": ("127.0.0.1", 5555), "scheme": "http", "root_path": ""}
-    sent, out = False, {"status": None, "body": b""}
-
-    async def receive():
-        nonlocal sent
-        if sent:
-            return {"type": "http.disconnect"}
-        sent = True
-        return {"type": "http.request", "body": payload, "more_body": False}
-
-    async def send(message):
-        if message["type"] == "http.response.start":
-            out["status"] = message["status"]
-        elif message["type"] == "http.response.body":
-            out["body"] += message.get("body", b"")
-
-    await bff_app.app(scope, receive, send)
-    return out["status"], json.loads(out["body"] or b"null")
-
-
-def run(coro):
-    return asyncio.run(coro)
 
 
 GOLD_DEF = {"surface": 1, "kind": "single", "language": "ko", "regions": ["KR", "x:ww"], "funnel": "awareness",
@@ -324,33 +289,18 @@ class Routes(unittest.TestCase):
         async def reader():
             yield Conn(self.catalog)
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
-                  mock.patch.object(ce.operations_db, "connection", self.accounts.connection),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
+                  mock.patch.object(hub_auth.operations_db, "connection", self.accounts.connection),
                   mock.patch.object(ce.input_db, "connection", reader),
                   mock.patch.object(ce, "_pool", Pool(Conn(self.catalog)))):
             p.start()
             self.addCleanup(p.stop)
 
     def token(self):
-        return token_for(self.accounts.row["user_id"])
+        return token_of(self.accounts.row)
 
     def new(self, token, **kw):
         return run(call("POST", "/v1/hub/global-prompts", {"text": "새 프롬프트", "language": "ko", "regions": ["kr"], **kw}, token))
-
-    def test_without_a_key_the_data_server_refuses(self):
-        with mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": "short"}):
-            self.assertEqual(run(call("GET", "/v1/hub/global-prompts", token="i1.a.b"))[0], 503)
-
-    def test_a_login_token_or_an_expired_token_is_refused(self):
-        expired = internal_token.sign(SECRET.encode(), Principal(self.accounts.row["user_id"], "", None, None, "admin"), 1000.0)
-        for token in ("v1.a.b", expired, self.token() + "x"):
-            self.assertEqual(run(call("GET", "/v1/screens/overview/cards", token=token))[0], 401, token)
-
-    # ── login and accounts live on the hub server ─────────────────────────────────────────────────────────
-    def test_login_and_accounts_are_not_here(self):
-        self.assertEqual(run(call("GET", "/v1/auth/me"))[0], 401)   # the read catch-all, which needs a token
-        self.assertEqual(run(call("POST", "/v1/auth/login", {"login": "admin", "password": "x"}))[0], 405)
-        self.assertEqual(run(call("POST", "/v1/hub/accounts", {}, self.token()))[0], 405)
 
     def test_every_editing_route_needs_the_administrator(self):
         pid = str(self.gold)

@@ -107,20 +107,18 @@ class Proxy(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reply.headers["x-content-type-options"], "nosniff")
         self.assertEqual(reply.headers["content-length"], str(len(BINARY)))
 
-    async def test_a_write_keeps_its_method_and_body(self):
-        seen = {}
-
-        def data_server(request: httpx.Request) -> httpx.Response:
-            seen.update(method=request.method, body=request.content, kind=request.headers.get("content-type"))
-            return answer(201)
-
-        self.use(data_server)
+    async def test_the_proxy_carries_reads_only(self):
+        self.use(lambda request: self.fail("reached the data server"))
         for method in ("POST", "PUT", "PATCH", "DELETE"):
             async with hub() as c:
-                reply = await c.request(method, "/v1/hub/global-prompts/x", content=b'{"name": "\xed\x95\x9c"}',
-                                        headers={"Authorization": "Bearer t", "Content-Type": "application/json"})
-            self.assertEqual(reply.status_code, 201)
-            self.assertEqual(seen, {"method": method, "body": b'{"name": "\xed\x95\x9c"}', "kind": "application/json"})
+                reply = await c.request(method, "/v1/hub/something", content=b"{}", headers={"Content-Type": "application/json"})
+            self.assertEqual((reply.status_code, reply.json()["error"]["code"]), (405, "read_only"), method)
+
+    async def test_a_method_on_a_read_only_path_is_refused_without_a_session(self):
+        self.use(lambda request: self.fail("reached the data server"))
+        with mock.patch.object(hub_auth, "principal", side_effect=AssertionError("no account is read for a refused write")):
+            async with hub() as c:
+                self.assertEqual((await c.post("/v1/kpi/summary")).status_code, 405)
 
     async def test_the_account_goes_on_in_the_internal_token_and_the_login_token_stops_here(self):
         seen = {}
@@ -136,8 +134,7 @@ class Proxy(unittest.IsolatedAsyncioTestCase):
         scheme, _, token = seen["auth"].partition(" ")
         self.assertEqual(scheme, "Bearer")
         self.assertNotIn("the-login-token", seen["auth"])
-        who = internal_token.verify(KEY.encode(), token, time.time())
-        self.assertEqual((who.user_id, who.role, who.scope()), (self.signed_in.user_id, "country", self.signed_in.scope()))
+        self.assertEqual(internal_token.verify(KEY.encode(), token, time.time()), self.signed_in.scope())
         self.assertIsNone(internal_token.verify(KEY.encode(), token, time.time() + internal_token.TTL_S + 1))
 
     async def test_a_refused_account_never_reaches_the_data_server(self):
@@ -190,6 +187,32 @@ class Proxy(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("date", reply.headers)
         self.assertEqual(reply.headers["x-request-id"], "r")
         self.assertEqual(reply.headers["set-cookie"], "a=1")
+
+    async def test_a_connection_the_data_server_closed_is_read_again_once(self):
+        # uvicorn closes a connection after an unhandled 500 or when idle; a read must not fail for that (seen in the 1f comparison).
+        tries = []
+
+        def closes_once(request: httpx.Request) -> httpx.Response:
+            tries.append(request.url.path)
+            if len(tries) == 1:
+                raise httpx.RemoteProtocolError("Server disconnected")
+            return answer()
+
+        self.use(closes_once)
+        async with hub() as c:
+            self.assertEqual((await c.get("/v1/source")).status_code, 200)
+        self.assertEqual(len(tries), 2)
+
+        tries.clear()
+
+        def closes_always(request: httpx.Request) -> httpx.Response:
+            tries.append(request.url.path)
+            raise httpx.RemoteProtocolError("Server disconnected")
+
+        self.use(closes_always)
+        async with hub() as c:
+            self.assertEqual((await c.get("/v1/source")).status_code, 503)
+        self.assertEqual(len(tries), 2)
 
     async def test_a_data_server_that_does_not_answer_is_an_error_in_the_services_shape(self):
         def unreachable(request: httpx.Request) -> httpx.Response:

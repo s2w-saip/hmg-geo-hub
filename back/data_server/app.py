@@ -1,16 +1,11 @@
 """The data server: screens and metrics over gold_db, the Silver OBT and the input store. It sits behind the hub server, which signs in the
-account and sends it here in an internal token (hub_stores/hub_auth.py): every route but /healthz refuses a request without one, and
-screens and data reads run inside the token's scope (data_server/access.py). Read-only, except what the hub server has not taken over yet:
-the top-level administrator edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
-registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides), the customer-interest
-inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources), the entity roles (/v1/hub/entity-roles) and the project
-prompts with their tags (/v1/hub/projects/{id}/prompts, /v1/hub/projects/{id}/prompt-tags, /v1/hub/projects/{id}/prompt-fields)."""
+account and sends its scope here in an internal token (hub_stores/hub_auth.py): every route but /healthz refuses a request without one, and
+screens and data reads run inside that scope (data_server/access.py). It writes only the cache."""
 from __future__ import annotations
 
 import json
 import logging
 from contextlib import asynccontextmanager
-from uuid import UUID
 
 import asyncpg
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -19,8 +14,9 @@ from fastapi.responses import JSONResponse
 
 from data_server import access, api, screens
 from data_server.gold_reader.db import close_pool, connection, open_pool
-from data_server.hub_stores import (silver_db, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, metrics_db, hub_auth, hub_catalog, input_db, measurement, interest,
-                             operations_db, project_prompts, source_lists, source_overrides)
+from data_server.hub_stores import (silver_db, analytics_db, cache_db, entity_roles, ga4_registry, metrics_db, hub_auth, input_db, interest,
+                             source_lists, source_overrides)
+from shared.input_common import entity_key
 
 log = logging.getLogger("hgh.gold")
 
@@ -33,14 +29,6 @@ async def lifespan(app: FastAPI):
     await silver_db.open_pool()
     await cache_db.open_pool()
     await metrics_db.open_pool()
-    await measurement.open_pool()
-    await operations_db.open_pool()
-    await catalog_editor.open_pool()
-    await ga4_registry.open_pool()
-    await source_overrides.open_pool()
-    await interest.open_pool()
-    await entity_roles.open_pool()
-    await project_prompts.open_pool()
     try:
         yield
     finally:
@@ -50,14 +38,6 @@ async def lifespan(app: FastAPI):
         await silver_db.close_pool()
         await cache_db.close_pool()
         await metrics_db.close_pool()
-        await measurement.close_pool()
-        await operations_db.close_pool()
-        await catalog_editor.close_pool()
-        await ga4_registry.close_pool()
-        await source_overrides.close_pool()
-        await interest.close_pool()
-        await entity_roles.close_pool()
-        await project_prompts.close_pool()
 
 
 app = FastAPI(title="HMG GEO HUB data server", lifespan=lifespan)
@@ -116,23 +96,16 @@ async def healthz():
     async with connection() as conn:
         info = dict(await conn.fetchrow("SELECT current_database() AS database,current_user AS role,current_setting('transaction_read_only') AS read_only"))
     return {"ok": True, "source": "gold", **info, "analytics": await analytics_db.health(),
-            "operations": await operations_db.health(), "input": await input_db.health(), "cache": await cache_db.health()}
+            "input": await input_db.health(), "cache": await cache_db.health()}
 
 
-# ─── Input editing ──────────────────────────────────────────────────────────────────────────────────────
-# Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
+# ─── Input lists that need gold_db (D-26), and the checks before a save ─────────────────────────────────
+# Registered before the read catch-all so these paths reach their own handlers. The hub server edits the inputs.
 
 def hub_json(data, status: int = 200, database: str = "input_db") -> JSONResponse:
     source = {"operations_db": "hub_operations", "input_db": "hub_input"}.get(database, "hub_data")
     return JSONResponse(jsonable_encoder({"data": data, "meta": {"source": source, "database": database}}),
                         status_code=status, headers={"Cache-Control": "no-store"})
-
-
-async def json_body(request: Request):
-    try:
-        return await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        raise HTTPException(422, "Request body must be JSON") from None
 
 
 # Admin › GA4 연동 (hub_stores/ga4_registry.py): the top-level administrator only.
@@ -142,44 +115,10 @@ def ga4_property_id(property_id: str) -> str:
     return property_id
 
 
-@app.get("/v1/hub/ga4-properties")
-async def ga4_property_list(request: Request):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.listing())
-
-
-@app.post("/v1/hub/ga4-properties")
-async def ga4_property_create(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(ga4_registry.PropertyCreate, await json_body(request), "GA4 property")
-    return hub_json(await ga4_registry.create(body, actor), 201)
-
-
-@app.get("/v1/hub/ga4-properties/{property_id}")
-async def ga4_property(property_id: str, request: Request):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.detail(ga4_property_id(property_id)))
-
-
-@app.put("/v1/hub/ga4-properties/{property_id}")
-async def ga4_property_update(property_id: str, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(ga4_registry.PropertyUpdate, await json_body(request), "GA4 property")
-    return hub_json(await ga4_registry.update(ga4_property_id(property_id), body, actor))
-
-
 @app.get("/v1/hub/ga4-properties/{property_id}/events")
 async def ga4_property_events(property_id: str, request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
     return hub_json(await ga4_registry.events(ga4_property_id(property_id)))
-
-
-@app.post("/v1/hub/ga4-properties/{property_id}/{action}")
-async def ga4_property_action(property_id: str, action: str, request: Request):
-    if action not in ("stop", "resume"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await ga4_registry.set_enabled(ga4_property_id(property_id), action == "resume", actor))
 
 
 # Admin › 인용 출처 분류 (hub_stores/source_overrides.py): the top-level administrator only. A source key can hold a
@@ -190,26 +129,6 @@ async def source_override_list(request: Request):
     return hub_json(await source_overrides.listing())
 
 
-@app.get("/v1/hub/source-overrides/history")
-async def source_override_history(request: Request, skey: str | None = Query(None, max_length=400)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await source_overrides.history(skey))
-
-
-@app.post("/v1/hub/source-overrides")
-async def source_override_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_overrides.OverrideSet, await json_body(request), "source correction")
-    return hub_json(await source_overrides.set_category(body, actor))
-
-
-@app.post("/v1/hub/source-overrides/clear")
-async def source_override_clear(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_overrides.OverrideClear, await json_body(request), "source correction")
-    return hub_json(await source_overrides.clear(body, actor))
-
-
 # Admin › 인용 출처 분류, the seed / official social / code table tabs (hub_stores/source_lists.py): the top-level
 # administrator only; keys travel in the body or the query.
 @app.get("/v1/hub/source-seeds")
@@ -218,79 +137,16 @@ async def source_seed_list(request: Request):
     return hub_json(await source_lists.seeds())
 
 
-@app.get("/v1/hub/source-seeds/history")
-async def source_seed_history(request: Request, skey: str | None = Query(None, max_length=400)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await source_lists.seed_history(skey))
-
-
-@app.post("/v1/hub/source-seeds")
-async def source_seed_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_lists.SeedSet, await json_body(request), "seed")
-    return hub_json(await source_lists.set_seed(body, actor))
-
-
-@app.post("/v1/hub/source-seeds/remove")
-async def source_seed_remove(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_lists.SeedKey, await json_body(request), "seed")
-    return hub_json(await source_lists.remove_seed(body, actor))
-
-
 @app.get("/v1/hub/source-socials")
 async def source_social_list(request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
     return hub_json(await source_lists.socials())
 
 
-@app.get("/v1/hub/source-socials/history")
-async def source_social_history(request: Request, key: str | None = Query(None, max_length=400)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await source_lists.social_history(key))
-
-
-@app.post("/v1/hub/source-socials")
-async def source_social_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_lists.SocialSet, await json_body(request), "social account")
-    return hub_json(await source_lists.set_social(body, actor))
-
-
-@app.post("/v1/hub/source-socials/{action}")
-async def source_social_status(action: str, request: Request):
-    if action not in ("stop", "resume"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_lists.SocialKey, await json_body(request), "social account")
-    return hub_json(await source_lists.set_social_status(body, action == "stop", actor))
-
-
 @app.get("/v1/hub/source-codes")
 async def source_code_list(request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
     return hub_json(await source_lists.codes())
-
-
-@app.get("/v1/hub/source-codes/history")
-async def source_code_history(request: Request, kind: str | None = Query(None, max_length=20),
-                              code: str | None = Query(None, max_length=64)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await source_lists.code_history(kind, code))
-
-
-@app.post("/v1/hub/source-codes")
-async def source_code_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_lists.CodeSet, await json_body(request), "code")
-    return hub_json(await source_lists.set_code(body, actor))
-
-
-@app.post("/v1/hub/source-codes/order")
-async def source_code_order(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(source_lists.CodeOrder, await json_body(request), "code order")
-    return hub_json(await source_lists.order_codes(body, actor))
 
 
 # Admin › 고객 관심 데이터 관리 (hub_stores/interest.py): the top-level administrator only. A keyword or a URL can hold any
@@ -301,54 +157,10 @@ async def interest_keyword_list(request: Request):
     return hub_json(await interest.keywords())
 
 
-@app.get("/v1/hub/interest-keywords/history")
-async def interest_keyword_history(request: Request, term: str | None = Query(None, max_length=400)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await interest.keyword_history(term))
-
-
-@app.post("/v1/hub/interest-keywords")
-async def interest_keyword_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(interest.KeywordSet, await json_body(request), "keyword")
-    return hub_json(await interest.set_keyword(body, actor))
-
-
-@app.post("/v1/hub/interest-keywords/{action}")
-async def interest_keyword_status(action: str, request: Request):
-    if action not in ("stop", "resume"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(interest.KeywordKey, await json_body(request), "keyword")
-    return hub_json(await interest.set_keyword_status(body, action == "stop", actor))
-
-
 @app.get("/v1/hub/interest-sources")
 async def interest_source_list(request: Request):
     await hub_auth.admin(request.headers.get("authorization"))
     return hub_json(await interest.sources())
-
-
-@app.get("/v1/hub/interest-sources/history")
-async def interest_source_history(request: Request, url: str | None = Query(None, max_length=600)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await interest.source_history(url))
-
-
-@app.post("/v1/hub/interest-sources")
-async def interest_source_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(interest.SourceSet, await json_body(request), "source")
-    return hub_json(await interest.set_source(body, actor))
-
-
-@app.post("/v1/hub/interest-sources/{action}")
-async def interest_source_status(action: str, request: Request):
-    if action not in ("stop", "resume"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(interest.SourceKey, await json_body(request), "source")
-    return hub_json(await interest.set_source_status(body, action == "stop", actor))
 
 
 # Admin › 엔티티 카탈로그 (hub_stores/entity_roles.py): the top-level administrator only.
@@ -358,147 +170,22 @@ async def entity_role_list(request: Request):
     return hub_json(await entity_roles.listing())
 
 
-@app.get("/v1/hub/entity-roles/history")
-async def entity_role_history(request: Request, entity: str | None = Query(None, max_length=40)):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await entity_roles.history(entity))
-
-
 @app.get("/v1/hub/entity-roles/mentions")
 async def entity_role_mentions(request: Request, entity: str | None = Query(None, max_length=40)):
     await hub_auth.admin(request.headers.get("authorization"))
     return hub_json(await entity_roles.mentions(entity))
 
 
-@app.post("/v1/hub/entity-roles")
-async def entity_role_set(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(entity_roles.RoleSet, await json_body(request), "entity role")
-    return hub_json(await entity_roles.set_role(body, actor))
-
-
-@app.post("/v1/hub/entity-roles/clear")
-async def entity_role_clear(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(entity_roles.RoleClear, await json_body(request), "entity role")
-    return hub_json(await entity_roles.clear(body, actor))
-
-
-# Project › Prompt (hub_stores/project_prompts.py): the top-level administrator only (project pages are, decision J).
-@app.get("/v1/hub/projects/{project_id}/measurement")
-async def project_measurement_read(project_id: UUID, request: Request):
+@app.get("/v1/hub/source-overrides/check")
+async def source_override_check(request: Request, skey: str = Query(max_length=400), category: str | None = Query(None, max_length=64)):
     await hub_auth.admin(request.headers.get("authorization"))
-    value = await measurement.read(project_id)
-    if value is None:
-        raise HTTPException(404, "The input store does not hold this project")
-    return hub_json(value)
+    return hub_json({"gold": await source_overrides.gold_check(skey, category)})
 
 
-@app.post("/v1/hub/projects/{project_id}/measurement")
-async def project_measurement_write(project_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(measurement.MeasurementWrite, await json_body(request), "measurement")
-    return hub_json(await measurement.write(project_id, body, actor))
-
-
-@app.post("/v1/hub/projects/{project_id}/prompts")
-async def project_prompt_add(project_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(project_prompts.PromptAdd, await json_body(request))
-    return hub_json(await project_prompts.add(project_id, body, actor), 201)
-
-
-@app.get("/v1/hub/projects/{project_id}/prompts/{prompt_id}/history")
-async def project_prompt_history(project_id: UUID, prompt_id: UUID, request: Request):
+@app.get("/v1/hub/entity-roles/check")
+async def entity_role_check(request: Request, entity: str = Query(max_length=40)):
     await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await project_prompts.prompt_history(project_id, prompt_id))
-
-
-@app.post("/v1/hub/projects/{project_id}/prompts/{prompt_id}")
-async def project_prompt_edit(project_id: UUID, prompt_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(project_prompts.PromptEdit, await json_body(request))
-    return hub_json(await project_prompts.update(project_id, prompt_id, body, actor))
-
-
-@app.post("/v1/hub/projects/{project_id}/prompts/{prompt_id}/{action}")
-async def project_prompt_lifecycle(project_id: UUID, prompt_id: UUID, action: str, request: Request):
-    if action not in project_prompts.LIFECYCLE:
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(project_prompts.VersionRef, await json_body(request))
-    return hub_json(await project_prompts.lifecycle(project_id, prompt_id, action, body, actor))
-
-
-@app.post("/v1/hub/projects/{project_id}/prompt-tags")
-async def project_prompt_tags(project_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(project_prompts.TagSet, await json_body(request), "tag")
-    return hub_json(await project_prompts.set_tags(project_id, body, actor))
-
-
-@app.post("/v1/hub/projects/{project_id}/prompt-fields")
-async def project_prompt_field_add(project_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(project_prompts.FieldAdd, await json_body(request), "tag")
-    return hub_json(await project_prompts.add_field(project_id, body, actor), 201)
-
-
-@app.post("/v1/hub/projects/{project_id}/prompt-fields/{field_id}/{action}")
-async def project_prompt_field_status(project_id: UUID, field_id: str, action: str, request: Request):
-    if action not in ("archive", "restore"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await project_prompts.set_field_archived(project_id, field_id, action == "archive", actor))
-
-
-@app.get("/v1/hub/global-prompts")
-async def global_prompts(request: Request):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await catalog_editor.listing(dict(request.query_params)))
-
-
-@app.get("/v1/hub/global-prompts/options")
-async def global_prompt_options(request: Request):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await catalog_editor.options())
-
-
-@app.post("/v1/hub/global-prompts")
-async def global_prompt_create(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(catalog_editor.PromptFields, await json_body(request))
-    return hub_json(await catalog_editor.create(body, actor), 201)
-
-
-@app.get("/v1/hub/global-prompts/{prompt_id}")
-async def global_prompt(prompt_id: UUID, request: Request):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await catalog_editor.detail(prompt_id))
-
-
-@app.put("/v1/hub/global-prompts/{prompt_id}")
-async def global_prompt_update(prompt_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(catalog_editor.PromptWrite, await json_body(request))
-    return hub_json(await catalog_editor.update(prompt_id, body, actor))
-
-
-@app.post("/v1/hub/global-prompts/{prompt_id}/{action}")
-async def global_prompt_status(prompt_id: UUID, action: str, request: Request):
-    if action not in ("archive", "restore"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(catalog_editor.VersionRef, await json_body(request))
-    return hub_json(await catalog_editor.set_status(prompt_id, body, "archived" if action == "archive" else "active", actor))
-
-
-@app.get("/v1/hub/{kind}")
-async def catalog(kind: str, request: Request, limit: int = Query(100, ge=1, le=1000),
-                  offset: int = Query(0, ge=0), project_id: str | None = None):
-    await hub_auth.admin(request.headers.get("authorization"))
-    return JSONResponse(jsonable_encoder(await hub_catalog.listing(kind,limit,offset,project_id)),
-                        headers={"Cache-Control":"no-store"})
+    return hub_json({"gold": await entity_roles.gold_entity(entity_key(entity))})
 
 
 @app.get("/v1/screens/{path:path}")

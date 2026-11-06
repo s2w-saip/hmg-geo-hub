@@ -1117,7 +1117,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="876" y="185" text-anchor="end">uuid</text>
 <text class="m" x="674" y="203">registered_at</text>
 <text class="m sm ty" x="876" y="203" text-anchor="end">timestamptz</text>
-<rect class="tbox" x="936" y="40" width="248" height="230" rx="6"/>
+<rect class="tbox" x="936" y="40" width="248" height="266" rx="6"/>
 <path class="th" d="M936,70V46q0,-6 6,-6H1178q6,0 6,6V70z"/>
 <line class="rule" x1="936" y1="70" x2="1184" y2="70"/>
 <line class="hair" x1="948" y1="112" x2="1172" y2="112"/>
@@ -1140,8 +1140,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="1174" y="221" text-anchor="end">timestamptz</text>
 <text class="m" x="984" y="239">recorded_by</text>
 <text class="m sm lref" x="1174" y="239" text-anchor="end">⇢ user_account</text>
-<text class="m" x="984" y="257">change_seq</text>
-<text class="m sm ty" x="1174" y="257" text-anchor="end">bigint</text>
+<text class="m" x="984" y="257">recorded_by_login</text>
+<text class="m sm ty" x="1174" y="257" text-anchor="end">text</text>
+<text class="m" x="984" y="275">recorded_by_name</text>
+<text class="m sm ty" x="1174" y="275" text-anchor="end">text</text>
+<text class="m" x="984" y="293">change_seq</text>
+<text class="m sm ty" x="1174" y="293" text-anchor="end">bigint</text>
 <rect class="tbox" x="16" y="290" width="280" height="392" rx="6"/>
 <path class="th" d="M16,320V296q0,-6 6,-6H290q6,0 6,6V320z"/>
 <line class="rule" x1="16" y1="320" x2="296" y2="320"/>
@@ -1395,7 +1399,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="886" y="531" text-anchor="end">timestamptz</text>
 <text class="m" x="674" y="549">revoked_by</text>
 <text class="m sm ty" x="886" y="549" text-anchor="end">text</text>
-<rect class="tbox" x="16" y="650" width="280" height="212" rx="6"/>
+<rect class="tbox" x="16" y="650" width="280" height="248" rx="6"/>
 <path class="th" d="M16,680V656q0,-6 6,-6H290q6,0 6,6V680z"/>
 <line class="rule" x1="16" y1="680" x2="296" y2="680"/>
 <line class="hair" x1="28" y1="722" x2="284" y2="722"/>
@@ -1412,12 +1416,16 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm val" x="286" y="777" text-anchor="end">import|set|clear</text>
 <text class="m" x="64" y="795">actor_id</text>
 <text class="m sm ty" x="286" y="795" text-anchor="end">uuid</text>
-<text class="m" x="64" y="813">changes</text>
-<text class="m sm ty" x="286" y="813" text-anchor="end">jsonb</text>
-<text class="m" x="64" y="831">published_seq</text>
-<text class="m sm ty" x="286" y="831" text-anchor="end">bigint</text>
-<text class="m" x="64" y="849">occurred_at</text>
-<text class="m sm ty" x="286" y="849" text-anchor="end">timestamptz</text>
+<text class="m" x="64" y="813">actor_login</text>
+<text class="m sm ty" x="286" y="813" text-anchor="end">text</text>
+<text class="m" x="64" y="831">actor_name</text>
+<text class="m sm ty" x="286" y="831" text-anchor="end">text</text>
+<text class="m" x="64" y="849">changes</text>
+<text class="m sm ty" x="286" y="849" text-anchor="end">jsonb</text>
+<text class="m" x="64" y="867">published_seq</text>
+<text class="m sm ty" x="286" y="867" text-anchor="end">bigint</text>
+<text class="m" x="64" y="885">occurred_at</text>
+<text class="m sm ty" x="286" y="885" text-anchor="end">timestamptz</text>
 <rect class="tbox" x="336" y="650" width="250" height="248" rx="6"/>
 <path class="th" d="M336,680V656q0,-6 6,-6H580q6,0 6,6V680z"/>
 <line class="rule" x1="336" y1="680" x2="586" y2="680"/>
@@ -1525,7 +1533,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="64" y="1195">updated_by</text>
 <text class="m sm ty" x="286" y="1195" text-anchor="end">uuid</text>
 <text class="mu sm" x="28" y="1213">이름·설명·순서만 고침 → set source_code</text>
-<rect class="tbox" x="336" y="960" width="250" height="212" rx="6"/>
+<rect class="tbox" x="336" y="960" width="250" height="248" rx="6"/>
 <path class="th" d="M336,990V966q0,-6 6,-6H580q6,0 6,6V990z"/>
 <line class="rule" x1="336" y1="990" x2="586" y2="990"/>
 <line class="hair" x1="348" y1="1032" x2="574" y2="1032"/>
@@ -1542,12 +1550,16 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm val" x="576" y="1087" text-anchor="end">import|add|set|…</text>
 <text class="m" x="384" y="1105">actor_id</text>
 <text class="m sm ty" x="576" y="1105" text-anchor="end">uuid</text>
-<text class="m" x="384" y="1123">changes</text>
-<text class="m sm ty" x="576" y="1123" text-anchor="end">jsonb</text>
-<text class="m" x="384" y="1141">published_seq</text>
-<text class="m sm ty" x="576" y="1141" text-anchor="end">bigint</text>
-<text class="m" x="384" y="1159">occurred_at</text>
-<text class="m sm ty" x="576" y="1159" text-anchor="end">timestamptz</text>
+<text class="m" x="384" y="1123">actor_login</text>
+<text class="m sm ty" x="576" y="1123" text-anchor="end">text</text>
+<text class="m" x="384" y="1141">actor_name</text>
+<text class="m sm ty" x="576" y="1141" text-anchor="end">text</text>
+<text class="m" x="384" y="1159">changes</text>
+<text class="m sm ty" x="576" y="1159" text-anchor="end">jsonb</text>
+<text class="m" x="384" y="1177">published_seq</text>
+<text class="m sm ty" x="576" y="1177" text-anchor="end">bigint</text>
+<text class="m" x="384" y="1195">occurred_at</text>
+<text class="m sm ty" x="576" y="1195" text-anchor="end">timestamptz</text>
 <rect class="tbox" x="626" y="960" width="270" height="266" rx="6"/>
 <path class="th" d="M626,990V966q0,-6 6,-6H890q6,0 6,6V990z"/>
 <line class="rule" x1="626" y1="990" x2="896" y2="990"/>
@@ -1743,7 +1755,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       <!-- erd:ga4reg -->
 <svg viewBox="0 0 1200 660" role="img" aria-label="입력 DB의 GA4 속성과 서비스 기준 주. 관리자가 고치는 속성 등록부 ga4_registry와 그 변경 이력, 수집기가 속성마다 남기는 마지막 결과 ga4_collect_status, 바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 gold_db의 ga4_property로 복사한다.">
 <defs><marker id="ga4reg-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="ga4reg-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
-<rect class="tbox" x="70" y="40" width="300" height="194" rx="6"/>
+<rect class="tbox" x="70" y="40" width="300" height="230" rx="6"/>
 <path class="th" d="M70,70V46q0,-6 6,-6H364q6,0 6,6V70z"/>
 <line class="rule" x1="70" y1="70" x2="370" y2="70"/>
 <line class="hair" x1="82" y1="112" x2="358" y2="112"/>
@@ -1760,10 +1772,14 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm val" x="360" y="167" text-anchor="end">create|update|stop|resume</text>
 <text class="m" x="118" y="185">actor_id</text>
 <text class="m sm lref" x="360" y="185" text-anchor="end">⇢ user_account</text>
-<text class="m" x="118" y="203">changes</text>
-<text class="m sm ty" x="360" y="203" text-anchor="end">jsonb</text>
-<text class="m" x="118" y="221">occurred_at</text>
-<text class="m sm ty" x="360" y="221" text-anchor="end">timestamptz</text>
+<text class="m" x="118" y="203">actor_login</text>
+<text class="m sm ty" x="360" y="203" text-anchor="end">text</text>
+<text class="m" x="118" y="221">actor_name</text>
+<text class="m sm ty" x="360" y="221" text-anchor="end">text</text>
+<text class="m" x="118" y="239">changes</text>
+<text class="m sm ty" x="360" y="239" text-anchor="end">jsonb</text>
+<text class="m" x="118" y="257">occurred_at</text>
+<text class="m sm ty" x="360" y="257" text-anchor="end">timestamptz</text>
 <rect class="tbox" x="420" y="40" width="330" height="302" rx="6"/>
 <path class="th" d="M420,70V46q0,-6 6,-6H744q6,0 6,6V70z"/>
 <line class="rule" x1="420" y1="70" x2="750" y2="70"/>

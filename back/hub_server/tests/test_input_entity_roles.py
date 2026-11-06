@@ -15,12 +15,14 @@ try:
     import asyncpg
     from fastapi import HTTPException
 
-    from data_server.hub_stores import entity_roles as er
-    from data_server.hub_stores import operations_db
-    from data_server.tests.signed_in import Conn, Tables, sign_in
-    from data_server.tests.test_hub_editing import SECRET, call, run
+    from data_server.hub_stores import entity_roles as er_data
+    from hub_server.inputs import entity_roles as er
+    from hub_server import operations_db
+    from hub_server.tests.test_accounts import Conn, Tables
+    from hub_server.tests.util import connect_data_server, sign_in
+    from hub_server.tests.util import SECRET, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_entity_roles)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_entity_roles)") from exc
 
 ID = "11111111-1111-4111-8111-111111111111"
 
@@ -51,7 +53,7 @@ class Rules(unittest.TestCase):
             self.assertEqual(e.exception.detail["details"]["fields"], [field], (role, brand))
 
     def test_a_role_compares_with_golds_role_and_own_brand(self):
-        state = er.state_of
+        state = er_data.state_of
         own = gold("own", "Hyundai", 1)
         self.assertEqual(state(hub(), own), "applied")
         self.assertEqual(state(hub(brand="Kia"), own), "pending")  # the own brand differs
@@ -66,19 +68,19 @@ class Rules(unittest.TestCase):
         self.assertIsNone(state(None, None))
 
     def test_a_row_means_the_hub_role_then_golds_then_the_default(self):
-        self.assertEqual(er.row_view(ID, None, gold())["role"], "competitor")
-        upstream = er.row_view(ID, None, gold("own", "Hyundai", 1, "현대자동차"))
+        self.assertEqual(er_data.row_view(ID, None, gold())["role"], "competitor")
+        upstream = er_data.row_view(ID, None, gold("own", "Hyundai", 1, "현대자동차"))
         self.assertEqual((upstream["role"], upstream["brand"], upstream["hub"], upstream["state"]), ("own", "Hyundai", None, "upstream"))
-        active = er.row_view(ID, hub("excluded", None), gold("own", "Hyundai", 1))
+        active = er_data.row_view(ID, hub("excluded", None), gold("own", "Hyundai", 1))
         self.assertEqual((active["role"], active["brand"], active["gold"]["role"], active["state"]), ("excluded", None, "own", "pending"))
-        cleared = er.row_view(ID, hub(status="cleared"), gold("own", "Hyundai", 1))
+        cleared = er_data.row_view(ID, hub(status="cleared"), gold("own", "Hyundai", 1))
         self.assertEqual((cleared["role"], cleared["brand"], cleared["state"]), ("competitor", None, "pending"))
 
     def test_golds_values_are_passed_as_they_are(self):
-        row = er.row_view(ID, None, {**gold(brand="Apple", kind=3, name="Apple Inc"), "answers": 36111, "mentions": 47271})
+        row = er_data.row_view(ID, None, {**gold(brand="Apple", kind=3, name="Apple Inc"), "answers": 36111, "mentions": 47271})
         self.assertEqual((row["name"], row["displayBrand"], row["kind"], row["answers"], row["mentions"]), ("Apple Inc", "Apple", "nonCompetitor", 36111, 47271))
-        self.assertIsNone(er.row_view(ID, None, gold(brand=None, kind=0))["kind"])
-        self.assertEqual(er.row_view(ID, hub(), None)["name"], "BMW")  # a role whose entity left Gold stays listed
+        self.assertIsNone(er_data.row_view(ID, None, gold(brand=None, kind=0))["kind"])
+        self.assertEqual(er_data.row_view(ID, hub(), None)["name"], "BMW")  # a role whose entity left Gold stays listed
 
 
 class Routes(unittest.TestCase):
@@ -101,13 +103,15 @@ class Routes(unittest.TestCase):
         async def no_gold(key):
             return None
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(er, "reading", unreachable),
-                  mock.patch.object(er, "gold_entity", no_gold),
+                  mock.patch.object(er_data, "reading", unreachable),
+                  mock.patch.object(er_data, "gold_entity", no_gold),
                   mock.patch.object(er, "_pool", None)):
             p.start()
             self.addCleanup(p.stop)
+        connect_data_server(self)
         status, body = sign_in(self.t, "admin@hub")
         self.assertEqual(status, 200, body)
         self.token = body["data"]["token"]
@@ -182,7 +186,8 @@ class Store(unittest.TestCase):
             return {}
 
         patches = [mock.patch.object(er, "writing", writing), mock.patch.object(er, "reading", reading),
-                   mock.patch.object(er, "gold_entity", gold_entity), mock.patch.object(er, "gold_rows", gold_rows),
+                  mock.patch.object(er_data, "reading", reading),
+                   mock.patch.object(er_data, "gold_entity", gold_entity), mock.patch.object(er_data, "gold_rows", gold_rows),
                    mock.patch("data_server.hub_stores.source_lists.actors", no_actors)]
         for p in patches:
             p.start()
@@ -210,7 +215,7 @@ class Store(unittest.TestCase):
 
         changed = await er.set_role(er.RoleSet(entityId=one, role="excluded", note="메모"), actor)
         self.assertEqual((changed["role"]["role"], changed["role"]["brand"]), ("excluded", None))
-        listed = {i["entityId"]: i for i in (await er.listing())["items"]}
+        listed = {i["entityId"]: i for i in (await er_data.listing())["items"]}
         self.assertEqual((listed[one]["role"], listed[one]["state"]), ("excluded", "pending"))
         self.assertEqual((listed[two]["role"], listed[two]["state"], listed[two]["hub"]), ("excluded", "upstream", None))
 
@@ -226,7 +231,7 @@ class Store(unittest.TestCase):
         self.assertEqual((upstream["role"]["status"], upstream["role"]["origin"], upstream["role"]["role"]), ("cleared", "hub", "excluded"))
         self.assertIsNone(upstream["published"])
         self.assertIsNone(await self.definition(conn, two))
-        listed = {i["entityId"]: i for i in (await er.listing())["items"]}
+        listed = {i["entityId"]: i for i in (await er_data.listing())["items"]}
         self.assertEqual((listed[two]["role"], listed[two]["state"]), ("competitor", "pending"))
 
         history = (await er.history(one))["history"]

@@ -1,0 +1,417 @@
+"""Global prompts in the input store (input_db), managed by the top-level administrator (2026-10-27).
+
+Every Global prompt is created, edited, archived and restored here (2026-11-06, T4.2: the service holds the source of the prompts, as
+Project › Prompt has since 2026-11-03). The first HUB revision of a Gold-imported prompt makes it HUB-owned: sync_catalog.py keeps its
+text and HUB keys from then on and still records Gold's own keys (surface, catalog rows). Reaching the measurement waits for 앤써 to read
+the prompt and reference API (docs/handoff/architecture-rebuild.md 2.5).
+Every change is one more catalog.prompt_version row written by the INSERT-only editor role
+(HGH_CATALOG_EDITOR_DB_URL); an archive is a revision with status=archived, so ids and history stay.
+A write names the version it was made against and a stale one is refused with 409 (the revision
+primary key is the last guard). Codes must be Gold's: the taxonomy fields take the codes of the taxonomy the
+last Gold import recorded (catalog.current_reference, family taxon; Gold itself is never called while the
+catalog lock is held), and depth2/depth3 must sit under the depth1/depth2 chosen with them. Language and
+markets take the ones the Global catalog already uses. A Gold prompt that left Gold without a HUB revision is
+`removed` and stays read only."""
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+import os
+from contextlib import asynccontextmanager
+from typing import Literal
+from uuid import UUID, uuid4
+
+import asyncpg
+from fastapi import HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+from hub_server import input_db
+from shared.account import Principal
+from shared.errors import parse, refused  # noqa: F401
+from shared.prompt_revisions import (CONTROL, GLOBAL_PROJECT_SQL, LABELS, definition_of, encoded, history,
+                                     normalize_region, snapshot, status_of)
+
+log = logging.getLogger("hgh.hub")
+
+def label_sql(key: str) -> str:
+    """A label as the list reads it: the prompt's own, else its first catalog row's. Gold keeps the classification per
+    brand row (catalog_entry); dim_prompt has none for Global prompts, so the definition's top level is empty."""
+    return f"coalesce(p.definition->>'{key}',p.definition->'catalogs'->0->>'{key}')"
+
+# gold.dim_taxon axis -> API field (Gold has no depth4 axis)
+TAXON_AXES = {"funnel": "funnel", "presence": "brandPresence", "list_type": "listType",
+              "depth1": "depth1", "depth2": "depth2", "depth3": "depth3", "depth4": "depth4"}
+
+# The taxonomy as the last Gold import recorded it; path = the ancestor codes (depth3: depth1, depth2).
+TAXON_SQL = """SELECT definition->>'axis' AS axis,definition->>'code' AS code,definition->'path' AS path
+    FROM catalog.current_reference WHERE family='taxon'"""
+
+TEXT_MAX = 2000
+
+CODE_MAX = 200
+
+REGIONS_MAX = 300
+
+LIST_LIMIT_MAX = 200
+
+HISTORY_LIMIT = 100
+
+CATALOG_LOCK = 617427413   # the Gold import's lock (sync_catalog.py): one catalog writer at a time
+
+LOCK_TIMEOUT = "5s"        # a write waits this long for a running Gold import, then 503
+
+STATUSES = ("active", "archived", "removed")
+
+CURRENT_SQL = """SELECT p.prompt_id,p.project_id,p.origin,p.registered_at,v.version,v.text,v.definition,v.sha256,v.recorded_at
+    FROM catalog.prompt p JOIN LATERAL (SELECT version,text,definition,sha256,recorded_at FROM catalog.prompt_version
+    WHERE prompt_id=p.prompt_id ORDER BY version DESC LIMIT 1) v ON true WHERE p.prompt_id=$1"""
+
+VERSIONS_SQL = """SELECT version,text,definition,recorded_at,recorded_by,recorded_by_login,recorded_by_name FROM catalog.prompt_version
+    WHERE prompt_id=$1 ORDER BY version DESC LIMIT $2"""
+
+SCALARS = {"language": "language", **LABELS}
+
+# sort= of a list page -> its column (the management list's sortable columns)
+SORTS = {"changed": "p.recorded_at", "text": "p.text", "origin": "p.origin",
+         "status": "coalesce(p.definition->>'status','active')", "kind": "p.definition->>'kind'",
+         "language": "p.definition->>'language'", "region": "p.definition->'regions'->>0",
+         **{api: label_sql(key) for api, key in LABELS.items()}}
+
+VOCABULARY_SQL = f"""SELECT k.key,k.value,count(*)::int AS n FROM catalog.current_prompt p
+    CROSS JOIN LATERAL (VALUES {",".join(f"('{api}',{label_sql(key)})" for api, key in SCALARS.items())}) k(key,value)
+    WHERE p.project_id=$1 AND k.value<>'' GROUP BY 1,2
+    UNION ALL
+    SELECT 'regions',r.value,count(*)::int FROM catalog.current_prompt p CROSS JOIN LATERAL jsonb_array_elements_text(
+        CASE WHEN jsonb_typeof(p.definition->'regions')='array' THEN p.definition->'regions' ELSE '[]'::jsonb END) r(value)
+    WHERE p.project_id=$1 AND r.value<>'' GROUP BY 2"""
+
+DUPLICATE_SQL = """SELECT prompt_id FROM catalog.current_prompt WHERE project_id=$1 AND text=$2
+    AND coalesce(lower(definition->>'language'),'')=$3 AND coalesce(definition->>'status','active')='active'
+    AND ($4::uuid IS NULL OR prompt_id<>$4) LIMIT 1"""
+
+COUNTS_SQL = """SELECT count(*)::int AS total,count(*) FILTER (WHERE origin='hub')::int AS hub,
+    count(*) FILTER (WHERE origin='gold')::int AS gold,
+    count(*) FILTER (WHERE coalesce(definition->>'status','active')='archived')::int AS archived,
+    count(*) FILTER (WHERE coalesce(definition->>'status','active')='removed')::int AS removed
+    FROM catalog.current_prompt WHERE project_id=$1"""
+
+class PromptFields(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(max_length=4 * TEXT_MAX)
+    kind: Literal["single", "acr"] = "single"
+    language: str | None = Field(None, max_length=CODE_MAX)
+    regions: list[str] = Field(default_factory=list, max_length=REGIONS_MAX)
+    funnel: str | None = Field(None, max_length=CODE_MAX)
+    brandPresence: str | None = Field(None, max_length=CODE_MAX)
+    listType: str | None = Field(None, max_length=CODE_MAX)
+    depth1: str | None = Field(None, max_length=CODE_MAX)
+    depth2: str | None = Field(None, max_length=CODE_MAX)
+    depth3: str | None = Field(None, max_length=CODE_MAX)
+    depth4: str | None = Field(None, max_length=CODE_MAX)
+
+class PromptWrite(PromptFields):
+    expectedVersion: int = Field(ge=1)
+
+class VersionRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expectedVersion: int = Field(ge=1)
+
+def clean(value: str | None) -> str | None:
+    value = (value or "").strip()
+    if CONTROL.search(value):
+        raise refused(422, "invalid_value", "Codes must not contain control characters")
+    return value or None
+
+def normalize(fields: PromptFields) -> tuple[str, dict]:
+    """The text and definition to record (status is added by the caller)."""
+    text = fields.text.strip()
+    if not text:
+        raise refused(422, "invalid_value", "Prompt text is required", {"fields": ["text"]})
+    if len(text) > TEXT_MAX:
+        raise refused(422, "invalid_value", f"Prompt text is longer than {TEXT_MAX} characters", {"fields": ["text"]})
+    if CONTROL.search(text):
+        raise refused(422, "invalid_value", "Prompt text must be one line without control characters", {"fields": ["text"]})
+    language = clean(fields.language)
+    regions = sorted({r for r in (normalize_region(clean(x) or "") for x in fields.regions) if r})
+    definition = {"surface": 1, "kind": fields.kind, "language": language.lower() if language else None, "regions": regions}
+    for api, key in LABELS.items():
+        definition[key] = clean(getattr(fields, api))
+    return text, definition
+
+def check_vocabulary(definition: dict, vocabulary: dict[str, list[dict]]) -> None:
+    """Every code must be one `vocabulary` offers: Gold's taxonomy, the catalog's languages and markets."""
+    known = {k: {v["value"] for v in values} for k, values in vocabulary.items()}
+    unknown = []
+    for api, key in SCALARS.items():
+        value = definition.get(key)
+        if value is not None and value not in known.get(api, set()):
+            unknown.append(api)
+    if any(r not in known.get("regions", set()) for r in definition["regions"]):
+        unknown.append("regions")
+    if unknown:
+        raise refused(422, "unknown_code", "Use Gold's taxonomy codes and the languages and markets the Global catalog uses", {"fields": unknown})
+
+def check_taxonomy_path(definition: dict, taxa: list[tuple[str, str, tuple]]) -> None:
+    """depth2 must sit under the chosen depth1, depth3 under depth1/depth2: the same code exists under
+    several parents (RAV4 under 9 depth2 codes). No recorded taxonomy yet: nothing to check against."""
+    known = {(field, path, code) for field, code, path in taxa}
+    if not known:
+        return
+    chain = []
+    for n in (1, 2, 3):
+        code = definition.get(f"depth{n}")
+        if code is None:
+            deeper = [f"depth{m}" for m in range(n + 1, 4) if definition.get(f"depth{m}") is not None]
+            if deeper:
+                raise refused(422, "invalid_taxonomy", f"Choose depth{n} before {deeper[0]}", {"fields": deeper})
+            return
+        if (f"depth{n}", tuple(chain), code) not in known:
+            raise refused(422, "invalid_taxonomy", f"depth{n} {code} is not under {' / '.join(chain) or 'the top level'}",
+                          {"fields": [f"depth{n}"]})
+        chain.append(code)
+
+def digest(text: str, definition: dict) -> str:
+    return hashlib.sha256(encoded({"definition": definition, "text": text}).encode()).hexdigest()
+
+def item_view(row) -> dict:
+    return {"id": str(row["prompt_id"]), "origin": row["origin"], "editable": status_of(definition_of(row)) != "removed",
+            "version": row["version"], **snapshot(row["text"], definition_of(row)),
+            "recordedAt": row["recorded_at"], "registeredAt": row["registered_at"]}
+
+_pool = None
+
+async def open_pool():
+    global _pool
+    dsn = os.environ.get("HGH_CATALOG_EDITOR_DB_URL")
+    if dsn:
+        _pool = await asyncpg.create_pool(
+            dsn, min_size=0, max_size=2, timeout=5, command_timeout=20, statement_cache_size=0,
+            server_settings={"application_name": "hmg-geo-hub-catalog-editor", "statement_timeout": "15000"},
+        )
+
+async def close_pool():
+    global _pool
+    if _pool is not None:
+        await _pool.close()
+        _pool = None
+
+@asynccontextmanager
+async def writing():
+    if _pool is None:
+        raise HTTPException(503, "HUB catalog editing is not configured (HGH_CATALOG_EDITOR_DB_URL)")
+    async with _pool.acquire() as conn, conn.transaction():
+        await conn.execute(f"SET LOCAL lock_timeout='{LOCK_TIMEOUT}'")
+        try:
+            await conn.execute("SELECT pg_advisory_xact_lock($1)", CATALOG_LOCK)
+        except asyncpg.LockNotAvailableError:
+            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
+        yield conn
+
+@asynccontextmanager
+async def reading():
+    try:
+        async with input_db.connection() as conn:
+            yield conn
+    except ConnectionError:
+        raise HTTPException(503, "HUB input store is not configured") from None
+
+async def global_project(conn) -> UUID:
+    rows = await conn.fetch(GLOBAL_PROJECT_SQL)
+    if len(rows) != 1:
+        raise HTTPException(503, "The Global project is not in the HUB catalog; restore the input store")
+    return rows[0]["project_id"]
+
+async def taxonomy(conn) -> list[tuple[str, str, tuple]]:
+    """(API field, code, ancestor codes) for every taxon the last Gold import recorded; none before the first
+    import (then only the codes the HUB catalog already uses are offered and accepted)."""
+    out = []
+    for r in await conn.fetch(TAXON_SQL):
+        if r["axis"] in TAXON_AXES and r["code"]:
+            path = json.loads(r["path"]) if isinstance(r["path"], str) else (r["path"] or [])
+            out.append((TAXON_AXES[r["axis"]], r["code"], tuple(path)))
+    if not out:
+        log.warning("No recorded taxonomy for Global prompt codes; restore the input store")
+    return out
+
+async def vocabulary(conn, project: UUID, taxa: list[tuple[str, str, tuple]] | None = None) -> dict[str, list[dict]]:
+    """Codes per field with their use in the Global catalog: language and markets as used, the taxonomy
+    fields as Gold defines them (an unused code counts 0)."""
+    out: dict[str, list[dict]] = {api: [] for api in ("language", "regions", *LABELS)}
+    for r in await conn.fetch(VOCABULARY_SQL, project):
+        value = r["value"].lower() if r["key"] == "language" else normalize_region(r["value"]) if r["key"] == "regions" else r["value"]
+        out[r["key"]].append({"value": value, "count": r["n"]})
+    for field, code, _ in taxa if taxa is not None else await taxonomy(conn):
+        out[field].append({"value": code, "count": 0})
+    for key, values in out.items():
+        merged: dict[str, int] = {}
+        for v in values:   # Gold spellings that normalize alike (x:ww / x:WW) count as one code
+            merged[v["value"]] = merged.get(v["value"], 0) + v["count"]
+        out[key] = [{"value": v, "count": n} for v, n in sorted(merged.items(), key=lambda kv: (-kv[1], kv[0]))]
+    return out
+
+def list_filters(q: dict, project: UUID) -> tuple[str, list]:
+    conds, args = ["p.project_id=$1"], [project]
+
+    def bind(sql: str, value) -> None:
+        args.append(value)
+        conds.append(sql.replace("$?", f"${len(args)}"))
+
+    status = q.get("status") or "active"
+    if status not in (*STATUSES, "all"):
+        raise refused(422, "invalid_value", "status must be active, archived, removed or all")
+    if status != "all":
+        bind("coalesce(p.definition->>'status','active')=$?", status)
+    origin = q.get("origin") or "all"
+    if origin not in ("hub", "gold", "all"):
+        raise refused(422, "invalid_value", "origin must be hub, gold or all")
+    if origin != "all":
+        bind("p.origin=$?", origin)
+    if q.get("kind"):
+        if q["kind"] not in ("single", "acr"):
+            raise refused(422, "invalid_value", "kind must be single or acr")
+        bind("p.definition->>'kind'=$?", q["kind"])
+    if q.get("language"):
+        bind("lower(p.definition->>'language')=$?", q["language"].strip().lower())
+    # the label codes and one market, as the options list them (the list's filter panel)
+    for api, key in LABELS.items():
+        if q.get(api):
+            bind(f"{label_sql(key)}=$?", code_param(q[api], api))
+    if q.get("region"):
+        bind("p.definition->'regions' @> jsonb_build_array($?::text)", normalize_region(code_param(q["region"], "region")))
+    search = (q.get("q") or "").strip()
+    if search:
+        if len(search) > 200 or CONTROL.search(search):
+            raise refused(422, "invalid_value", "Search text is too long or has control characters")
+        bind("strpos(lower(p.text),lower($?))>0", search)
+    return " AND ".join(conds), args
+
+def code_param(value: str, name: str) -> str:
+    if len(value) > CODE_MAX or CONTROL.search(value):
+        raise refused(422, "invalid_value", f"{name} is too long or has control characters")
+    return value
+
+def list_order(q: dict) -> str:
+    """ORDER BY of a list page: the sort column (sort=, order=asc|desc), then the latest change first."""
+    sort = q.get("sort") or "changed"
+    if sort not in SORTS:
+        raise refused(422, "invalid_value", f"sort must be one of {', '.join(SORTS)}")
+    order = q.get("order") or ("desc" if sort == "changed" else "asc")
+    if order not in ("asc", "desc"):
+        raise refused(422, "invalid_value", "order must be asc or desc")
+    return f"{SORTS[sort]} {order.upper()} NULLS LAST,p.recorded_at DESC,p.prompt_id"
+
+def page_bounds(q: dict) -> tuple[int, int]:
+    try:
+        limit, offset = int(q.get("limit") or 50), int(q.get("offset") or 0)
+    except ValueError:
+        raise refused(422, "invalid_value", "limit and offset must be integers") from None
+    if not (1 <= limit <= LIST_LIMIT_MAX) or offset < 0:
+        raise refused(422, "invalid_value", f"limit must be 1..{LIST_LIMIT_MAX} and offset >= 0")
+    return limit, offset
+
+async def listing(q: dict) -> dict:
+    limit, offset = page_bounds(q)
+    async with reading() as conn:
+        project = await global_project(conn)
+        where, args = list_filters(q, project)
+        order = list_order(q)
+        total = await conn.fetchval(f"SELECT count(*) FROM catalog.current_prompt p WHERE {where}", *args)
+        rows = await conn.fetch(f"""SELECT p.* FROM catalog.current_prompt p WHERE {where}
+            ORDER BY {order} LIMIT ${len(args) + 1} OFFSET ${len(args) + 2}""", *args, limit, offset)
+        counts = dict(await conn.fetchrow(COUNTS_SQL, project))
+    return {"items": [item_view(r) for r in rows], "page": {"total": total, "limit": limit, "offset": offset}, "counts": counts}
+
+async def options() -> dict:
+    async with reading() as conn:
+        taxa = await taxonomy(conn)
+        vocab = await vocabulary(conn, await global_project(conn), taxa)
+    # the depth codes under their parents, as check_taxonomy_path checks them (the form's depth cascade)
+    tree = [{"field": field, "code": code, "path": list(path)} for field, code, path in taxa if field.startswith("depth")]
+    return {"kinds": ["single", "acr"], **vocab, "taxonomy": tree}
+
+async def detail(prompt_id: UUID) -> dict:
+    async with reading() as conn:
+        project = await global_project(conn)
+        row = await conn.fetchrow(CURRENT_SQL, prompt_id)
+        if row is None or row["project_id"] != project:
+            raise HTTPException(404, "Global prompt not found")
+        versions = await conn.fetch(VERSIONS_SQL, prompt_id, HISTORY_LIMIT + 1)
+    # one revision more than shown: the oldest shown one is compared with it
+    events = history(list(reversed(versions)))[:HISTORY_LIMIT]
+    return {"item": item_view(row), "history": events}
+
+def version_conflict(current: int) -> HTTPException:
+    return refused(409, "version_conflict", "The prompt was changed after you opened it; reload it", {"currentVersion": current})
+
+async def refuse_duplicate(conn, project: UUID, text: str, definition: dict, own: UUID | None) -> None:
+    other = await conn.fetchval(DUPLICATE_SQL, project, text, definition.get("language") or "", own)
+    if other:
+        raise refused(409, "duplicate", "An active Global prompt already has this text and language", {"promptId": str(other)})
+
+async def editable(conn, prompt_id: UUID, project: UUID, expected: int):
+    row = await conn.fetchrow(CURRENT_SQL, prompt_id)
+    if row is None or row["project_id"] != project:
+        raise HTTPException(404, "Global prompt not found")
+    if status_of(definition_of(row)) == "removed":
+        raise refused(409, "removed", "This prompt left Gold; it is read only")
+    if row["version"] != expected:
+        raise version_conflict(row["version"])
+    return row
+
+async def check_codes(conn, project: UUID, definition: dict) -> None:
+    taxa = await taxonomy(conn)
+    check_vocabulary(definition, await vocabulary(conn, project, taxa))
+    check_taxonomy_path(definition, taxa)
+
+async def record(conn, prompt_id: UUID, version: int, text: str, definition: dict, actor: Principal) -> None:
+    try:
+        await conn.execute("""INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by,recorded_by_login,recorded_by_name)
+            VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)""", prompt_id, version, text, encoded(definition), digest(text, definition), actor.user_id, actor.login, actor.display_name)
+    except asyncpg.UniqueViolationError:
+        raise version_conflict(version - 1) from None
+
+async def create(body: PromptFields, actor: Principal) -> dict:
+    text, definition = normalize(body)
+    definition["status"] = "active"
+    async with writing() as conn:
+        project = await global_project(conn)
+        await check_codes(conn, project, definition)
+        await refuse_duplicate(conn, project, text, definition, None)
+        prompt_id = uuid4()
+        await conn.execute("INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES($1,$2,'hub')", prompt_id, project)
+        await record(conn, prompt_id, 1, text, definition, actor)
+        row = await conn.fetchrow(CURRENT_SQL, prompt_id)
+    return {"item": item_view(row), "changed": True}
+
+async def update(prompt_id: UUID, body: PromptWrite, actor: Principal) -> dict:
+    text, definition = normalize(body)
+    definition["status"] = "active"
+    async with writing() as conn:
+        project = await global_project(conn)
+        row = await editable(conn, prompt_id, project, body.expectedVersion)
+        stored = definition_of(row)
+        if status_of(stored) == "archived":
+            raise refused(409, "archived", "Restore the prompt before editing it")
+        # What the screen does not edit stays: a Gold-imported prompt's catalog rows and its other Gold keys.
+        definition = {**stored, **definition}
+        if snapshot(text, definition) == snapshot(row["text"], stored):
+            return {"item": item_view(row), "changed": False}
+        await check_codes(conn, project, definition)
+        await refuse_duplicate(conn, project, text, definition, prompt_id)
+        await record(conn, prompt_id, row["version"] + 1, text, definition, actor)
+        row = await conn.fetchrow(CURRENT_SQL, prompt_id)
+    return {"item": item_view(row), "changed": True}
+
+async def set_status(prompt_id: UUID, body: VersionRef, status: Literal["active", "archived"], actor: Principal) -> dict:
+    async with writing() as conn:
+        project = await global_project(conn)
+        row = await editable(conn, prompt_id, project, body.expectedVersion)
+        definition = definition_of(row)
+        if status_of(definition) == status:
+            return {"item": item_view(row), "changed": False}
+        if status == "active":
+            await refuse_duplicate(conn, project, row["text"], definition, prompt_id)
+        await record(conn, prompt_id, row["version"] + 1, row["text"], {**definition, "status": status}, actor)
+        row = await conn.fetchrow(CURRENT_SQL, prompt_id)
+    return {"item": item_view(row), "changed": True}

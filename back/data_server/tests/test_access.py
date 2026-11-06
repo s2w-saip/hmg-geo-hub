@@ -8,14 +8,14 @@ try:
     from starlette.datastructures import QueryParams
 
     from data_server import access, api, screens
-    from data_server.tests.signed_in import SECRET, token_for
-    from data_server.tests.test_hub_editing import call, run
+    from data_server.tests.signed_in import SECRET, call, run, token_for
+    from shared import internal_token
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_access)") from exc
 
 
 def COUNTRY_TOKEN():
-    return token_for(role="country", brands=["Kia"], regions=["kia-north-america"], countries=["US"])
+    return token_for("country", ["Kia"], ["kia-north-america"], ["US"])
 
 
 class Clamp(unittest.TestCase):
@@ -89,6 +89,26 @@ class Reads(unittest.TestCase):
         patch = mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET})
         patch.start()
         self.addCleanup(patch.stop)
+
+    def test_without_a_key_the_data_server_refuses(self):
+        with mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": "short"}):
+            self.assertEqual(run(call("GET", "/v1/screens/overview/cards", token="i1.a.b"))[0], 503)
+
+    def test_a_login_token_or_an_expired_token_is_refused(self):
+        expired = internal_token.sign(SECRET.encode(), {"all": True}, 1000.0)
+        for token in ("v1.a.b", expired, token_for() + "x", None):
+            self.assertEqual(run(call("GET", "/v1/screens/overview/cards", token=token))[0], 401, token)
+
+    def test_a_scoped_token_is_no_administrator(self):
+        status, out = run(call("GET", "/v1/hub/source-overrides", token=COUNTRY_TOKEN()))
+        self.assertEqual((status, out["error"]["code"]), (403, "forbidden"))
+
+    def test_login_accounts_and_editing_are_not_here(self):
+        admin = token_for()
+        self.assertEqual(run(call("POST", "/v1/auth/login", {"login": "admin", "password": "x"}))[0], 405)
+        for method, path in (("POST", "/v1/hub/accounts"), ("POST", "/v1/hub/saved-filters"), ("POST", "/v1/hub/global-prompts"), ("POST", "/v1/hub/source-overrides"),
+                             ("POST", "/v1/hub/entity-roles"), ("POST", "/v1/hub/ga4-properties"), ("POST", "/v1/hub/interest-keywords")):
+            self.assertEqual(run(call(method, path, {}, admin))[0], 405, path)
 
     def test_screens_and_reads_run_in_the_accounts_scope(self):
         seen = {}

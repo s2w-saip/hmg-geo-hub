@@ -12,12 +12,14 @@ from unittest import mock
 try:
     from fastapi import HTTPException
 
-    from data_server.hub_stores import ga4_registry as reg
-    from data_server.hub_stores import operations_db
-    from data_server.tests.signed_in import Conn, Tables, sign_in
-    from data_server.tests.test_hub_editing import SECRET, T0, Pool, call, run
+    from data_server.hub_stores import ga4_registry as reg_data
+    from hub_server.inputs import ga4_registry as reg
+    from hub_server import operations_db
+    from hub_server.tests.test_accounts import Conn, Tables
+    from hub_server.tests.util import connect_data_server, sign_in
+    from hub_server.tests.util import SECRET, T0, Pool, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_ga4_registry)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_ga4_registry)") from exc
 
 
 # ═══ fakes ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -45,7 +47,7 @@ class RegistryConn:
         self.r = r
 
     def transaction(self):
-        from data_server.tests.test_hub_editing import Ctx
+        from hub_server.tests.util import Ctx
         return Ctx()
 
     async def fetchrow(self, sql, pid):
@@ -58,13 +60,15 @@ class RegistryConn:
             return sorted((r.row(p) for p in r.props), key=lambda x: (x["brand"], x["country"], x["property_id"]))
         if sql is reg.HISTORY_SQL:
             return list(reversed([e for e in r.events if e["property_id"] == args[0]]))
-        if sql is reg.EVENTS_SQL:
+        if sql is reg_data.EVENTS_SQL:
             pid, days = args
             self.r.asked_days = days
             return r.stored.get(pid, [])
         raise AssertionError(sql)
 
     async def fetchval(self, sql, *args):
+        if sql is reg_data.EXISTS_SQL:
+            return 1 if args[0] in self.r.props else None
         r = self.r
         if sql is reg.TAKEN_SQL:
             return 1 if args[0] in r.props else None
@@ -88,8 +92,8 @@ class RegistryConn:
         elif sql is reg.ENABLED_SQL:
             r.props[args[0]].update(enabled=args[1], updated_at=r.tick())
         elif sql is reg.EVENT_SQL:
-            pid, action, actor, changes = args
-            r.events.append({"event_id": len(r.events) + 1, "property_id": pid, "action": action, "actor_id": actor,
+            pid, action, actor, login, name, changes = args
+            r.events.append({"event_id": len(r.events) + 1, "property_id": pid, "action": action, "actor_id": actor, "actor_login": login, "actor_name": name,
                              "changes": json.loads(changes), "occurred_at": r.tick()})
         else:
             raise AssertionError(sql)
@@ -147,18 +151,15 @@ class Routes(unittest.TestCase):
         async def data():
             yield RegistryConn(r)
 
-        async def actors(ids):
-            return {i: {"login": t.accounts[u]["subject"], "displayName": t.accounts[u]["display_name"]}
-                    for u in t.accounts for i in ids if str(u) == i}
-
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(reg.input_db, "connection", data),
-                  mock.patch.object(reg.analytics_db, "connection", data),
-                  mock.patch.object(reg, "actors", actors),
+                  mock.patch.object(reg_data.analytics_db, "connection", data),
+                  mock.patch.object(reg_data.input_db, "connection", data),
                   mock.patch.object(reg, "_pool", Pool(RegistryConn(r)))):
             p.start()
             self.addCleanup(p.stop)
+        connect_data_server(self)
         self.token = self.sign_in("admin@hub")
 
     def sign_in(self, login):

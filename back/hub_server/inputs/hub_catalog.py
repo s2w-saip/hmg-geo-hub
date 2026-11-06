@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from data_server.hub_stores import input_db
+from hub_server import input_db
 
 
 async def listing(kind, limit, offset, project_id=None):

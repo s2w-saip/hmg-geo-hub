@@ -10,10 +10,7 @@ from uuid import UUID, uuid4
 
 try:
     import asyncpg
-    from fastapi.responses import JSONResponse
-
     from hub_server import auth as hub_auth
-    from hub_server import proxy
     from hub_server import saved_filters as sf
     from hub_server.tests.util import SECRET, T0, Ctx, Pool, call, run
 except ModuleNotFoundError as exc:
@@ -284,12 +281,9 @@ class Routes(unittest.TestCase):
             self.assertEqual((status, body["error"]["code"]), (503, "source_unavailable"))
 
     def test_routes_keep_their_neighbours(self):
-        # A method the hub server does not answer goes on to the data server, which refuses it as before.
-        with mock.patch.object(proxy, "forward", mock.AsyncMock(return_value=JSONResponse({}, status_code=405))) as forward, \
-                mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": "i" * 40}):
-            status, body = run(call("PUT", f"/v1/hub/saved-filters/{uuid4()}", {"name": "x"}, self.token()))
-        self.assertEqual(status, 405)
-        forward.assert_awaited_once()
+        # A method this path does not answer is refused like every write that is not the hub server's own.
+        status, body = run(call("PUT", f"/v1/hub/saved-filters/{uuid4()}", {"name": "x"}, self.token()))
+        self.assertEqual((status, body["error"]["code"]), (405, "read_only"))
         status, body = run(call("PATCH", "/v1/hub/saved-filters/not-a-uuid", {"name": "x"}, self.token()))
         self.assertEqual(status, 422)
         self.assertEqual(UUID(self.save("A")["item"]["id"]).version, 4)

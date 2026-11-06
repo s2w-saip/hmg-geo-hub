@@ -32,7 +32,7 @@ every collected day, not only the days read again. Each property's result goes t
   python -X utf8 back/analytics/ga4_collect.py --dry-run        # read GA4, print the counts, write nothing
 
 Registry: catalog.ga4_registry in the same database, kept on the renewal Admin › GA4 연동 screen
-(back/data_server/hub_stores/ga4_registry.py); --dry-run reads it too."""
+(back/hub_server/inputs/ga4_registry.py); --dry-run reads it too."""
 from __future__ import annotations
 
 import argparse

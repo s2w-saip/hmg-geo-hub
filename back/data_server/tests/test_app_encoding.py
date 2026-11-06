@@ -140,7 +140,7 @@ class Routes(unittest.TestCase):
         answer = ANSWERS[0] | {"rows": [{"skey": "kia.com", "round": date(2026, 10, 5), "share": Exact(38.9, 38.94)}]}
 
         async def principal(*a, **k):
-            return hub_auth.Principal(user_id=UUID(int=9), login="admin", email=None, display_name=None, role="admin")
+            return hub_auth.Reader({"all": True})
 
         async def build(path, q):
             return answer

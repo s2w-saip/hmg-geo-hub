@@ -214,7 +214,7 @@ def operations() -> Figure:
 
 
 def catalog() -> Figure:
-    """input_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
+    """input_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql, input-004.sql."""
     f = Figure("cat", 740, "입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
                "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
@@ -230,7 +230,7 @@ def catalog() -> Figure:
     f.table("catalog.prompt_version", 936, 40, 248, "프롬프트 본문과 분류 정의를 버전별로 쌓고, HUB 편집이면 기록자를 남긴다.", [
         ("PK FK", "prompt_id", "uuid"), ("PK", "version", "integer"), ("", "text", "text"),
         ("", "definition", "jsonb"), ("", "sha256", "text"), ("", "recorded_at", "timestamptz"),
-        ("", "recorded_by", "⇢ user_account"), ("", "change_seq", "bigint")])
+        ("", "recorded_by", "⇢ user_account"), ("", "recorded_by_login", "text"), ("", "recorded_by_name", "text"), ("", "change_seq", "bigint")])
     f.table("catalog.project_measurement_version", 16, 290, 280, "프로젝트 측정 설정을 바꿀 때마다 한 버전을 쌓는다. 최신 버전이 현재 값이다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "brands", "text[]"), ("", "countries", "text[]"),
         ("", "engines", "text[]"), ("", "cadence", "=weekly|biweekly|monthly"), ("", "acr_repeats", "integer"), ("", "web_units", "jsonb"),
@@ -294,7 +294,7 @@ def external() -> Figure:
         ("", "revoked_by", "text")])
     y3 = 650
     f.table("catalog.source_override_event", 16, y3, 280, "출처 교정의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
-        ("PK", "event_id", "bigint"), ("FK", "skey", "text"), ("", "action", "=import|set|clear"), ("", "actor_id", "uuid"),
+        ("PK", "event_id", "bigint"), ("FK", "skey", "text"), ("", "action", "=import|set|clear"), ("", "actor_id", "uuid"), ("", "actor_login", "text"), ("", "actor_name", "text"),
         ("", "changes", "jsonb"), ("", "published_seq", "bigint"), ("", "occurred_at", "timestamptz")])
     f.table("catalog.source_override", 336, y3, 250, "관리자가 Admin › 인용 출처 분류에서 정한 출처 카테고리 교정이다.", [
         ("PK", "skey", "text"), ("", "category", "dim_category.slug"), ("", "note", "text"), ("", "status", "=active|cleared"),
@@ -315,7 +315,7 @@ def external() -> Figure:
         ("", "updated_by", "uuid")], notes=["이름·설명·순서만 고침 → set source_code"])
     f.table("catalog.*_event", 336, y4, 250, "시드부터 역할까지 입력 여섯 종의 변경 이력(같은 모양)이다.", [
         ("PK", "event_id", "bigint"), ("FK", "(표마다 키)", "text"), ("", "action", "=import|add|set|…"),
-        ("", "actor_id", "uuid"), ("", "changes", "jsonb"), ("", "published_seq", "bigint"), ("", "occurred_at", "timestamptz")])
+        ("", "actor_id", "uuid"), ("", "actor_login", "text"), ("", "actor_name", "text"), ("", "changes", "jsonb"), ("", "published_seq", "bigint"), ("", "occurred_at", "timestamptz")])
     f.table("catalog.interest_keyword", 626, y4, 270, "HUB가 정본인 시드 키워드와 수집 조건이다. 처음 값은 Gold 시드 행이다.", [
         ("PK", "term_norm", "text"), ("", "term", "text"), ("", "conditions", "jsonb"), ("", "source_types", "text[]"),
         ("", "brands", "text[]"), ("", "note", "text"), ("", "status", "=active|stopped"), ("", "origin", "=gold_import|hub"),
@@ -372,7 +372,7 @@ def ga4_registry_week() -> Figure:
                "바뀔 때만 한 행을 쌓는 service_week다. 수집기가 등록부를 gold_db의 ga4_property로 복사한다.")
     f.table("catalog.ga4_registry_event", 70, 40, 300, "등록부의 변경 이력이다. changes는 {필드: [전, 후]}이고 지우지 않는다.", [
         ("PK", "event_id", "bigint"), ("FK", "property_id", "text"), ("", "action", "=create|update|stop|resume"),
-        ("", "actor_id", "⇢ user_account"), ("", "changes", "jsonb"), ("", "occurred_at", "timestamptz")])
+        ("", "actor_id", "⇢ user_account"), ("", "actor_login", "text"), ("", "actor_name", "text"), ("", "changes", "jsonb"), ("", "occurred_at", "timestamptz")])
     f.table("catalog.ga4_registry", 420, 40, 330, "관리자가 Admin › GA4 연동에서 정하는 수집 대상 속성과 시장·전환 기준이다.", [
         ("PK", "property_id", "text (숫자)"), ("", "brand", "=Hyundai|Kia|Genesis"), ("", "country", "text (ISO-2)"),
         ("", "conv_basis", "=1|2"), ("", "conv_events", "text[] (2일 때 1~50개)"), ("", "enabled", "boolean"),

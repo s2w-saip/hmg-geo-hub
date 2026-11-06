@@ -14,12 +14,13 @@ try:
     import asyncpg
     from fastapi import HTTPException
 
-    from data_server.hub_stores import operations_db
-    from data_server.hub_stores import project_prompts as pp
-    from data_server.tests.signed_in import Conn, Tables, sign_in
-    from data_server.tests.test_hub_editing import SECRET, call, run
+    from hub_server import operations_db
+    from hub_server.inputs import project_prompts as pp
+    from hub_server.tests.test_accounts import Conn, Tables
+    from hub_server.tests.util import sign_in
+    from hub_server.tests.util import SECRET, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_project_prompts)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_project_prompts)") from exc
 
 PID = "35ae7ec0-a80a-4c88-a431-9698470aa94b"
 PROMPT = "11111111-1111-4111-8111-111111111111"
@@ -101,7 +102,7 @@ class Routes(unittest.TestCase):
             raise AssertionError("the store is not read for a refused request")
             yield
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(pp, "reading", unreachable),
                   mock.patch.object(pp, "_pool", None)):

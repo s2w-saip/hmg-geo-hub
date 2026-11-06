@@ -1,8 +1,15 @@
 """The routes end to end through the real FastAPI app, without a database."""
 import asyncio
 import json
+import os
+import time
 from datetime import UTC, datetime
+from unittest import mock
 
+import httpx
+
+from hub_server import auth as hub_auth
+from hub_server import proxy
 from hub_server.app import app
 
 SECRET = "s" * 40
@@ -58,3 +65,24 @@ async def call(method, path, body=None, token=None, raw=None):
 
 def run(coro):
     return asyncio.run(coro)
+
+
+def sign_in(t, login: str):
+    """A session of an account in a Tables, without the password work: what the login answers."""
+    uid = next(u for u, a in t.accounts.items() if a["subject"] == login)
+    token = hub_auth.issue(SECRET.encode(), uid, hub_auth.credential_version(t.creds[uid]["changed_at"]), time.time())[0]
+    return 200, {"data": {"token": token}}
+
+
+def token_of(row) -> str:
+    """A session of one account row (user_id, changed_at), without the password work."""
+    return hub_auth.issue(SECRET.encode(), row["user_id"], hub_auth.credential_version(row["changed_at"]), time.time())[0]
+
+
+def connect_data_server(test) -> None:
+    """The hub server talking to the real data server app in process: a list or a check before a save runs through both servers."""
+    from data_server.app import app as data_app
+    for patch in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": "i" * 40}),
+                  mock.patch.object(proxy, "_client", httpx.AsyncClient(transport=httpx.ASGITransport(app=data_app)))):
+        patch.start()
+        test.addCleanup(patch.stop)

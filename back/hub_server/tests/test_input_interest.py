@@ -14,12 +14,14 @@ try:
     import asyncpg
     from fastapi import HTTPException
 
-    from data_server.hub_stores import operations_db
-    from data_server.hub_stores import interest as it
-    from data_server.tests.signed_in import Conn, Tables, sign_in
-    from data_server.tests.test_hub_editing import SECRET, call, run
+    from hub_server import operations_db
+    from data_server.hub_stores import interest as it_data
+    from hub_server.inputs import interest as it
+    from hub_server.tests.test_accounts import Conn, Tables
+    from hub_server.tests.util import connect_data_server, sign_in
+    from hub_server.tests.util import SECRET, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_interest)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_interest)") from exc
 
 AT = datetime.datetime(2026, 10, 7, tzinfo=datetime.timezone.utc)
 KR, US = {"location_code": 2410, "language_code": "ko"}, {"location_code": 2840, "language_code": "en"}
@@ -63,14 +65,14 @@ class Rules(unittest.TestCase):
     def test_a_source_key_drops_scheme_www_query_and_the_last_slash(self):
         self.assertEqual(it.source_key(" https://www.Bobaedream.co.kr/List/?a=1#x "), ("https://www.Bobaedream.co.kr/List/?a=1#x", "bobaedream.co.kr/list"))
         self.assertEqual(it.source_key("reddit.com/r/cars/")[1], "reddit.com/r/cars")
-        self.assertEqual(it.host_of("reddit.com/r/cars"), "reddit.com")
+        self.assertEqual(it_data.host_of("reddit.com/r/cars"), "reddit.com")
         for bad in ("", "nodot", "a b.example", "https://nodot/x", ".", "x" * 301 + ".com"):
             with self.assertRaises(HTTPException, msg=bad) as e:
                 it.source_key(bad)
             self.assertEqual(e.exception.detail["details"]["fields"], ["url"])
 
     def test_a_keyword_compares_with_golds_seed_rows(self):
-        state = it.keyword_state
+        state = it_data.keyword_state
         self.assertEqual(state(hub_keyword(), [seed()]), "applied")
         self.assertEqual(state(hub_keyword((KR, US)), [seed()]), "pending")  # one condition is not collected yet
         self.assertEqual(state(hub_keyword(), [seed(location=2840, language="en")]), "pending")
@@ -80,27 +82,27 @@ class Rules(unittest.TestCase):
         self.assertIsNone(state(None, []))
 
     def test_a_row_carries_the_hub_values_and_golds_collections(self):
-        row = it.keyword_view("suv", hub_keyword((KR, US)), [seed(), seed(location=2356, language="en", at=AT - datetime.timedelta(days=1))])
+        row = it_data.keyword_view("suv", hub_keyword((KR, US)), [seed(), seed(location=2356, language="en", at=AT - datetime.timedelta(days=1))])
         self.assertEqual((row["conditions"], row["collected"], row["state"]), ([KR, US], 1, "pending"))
         self.assertEqual(row["gold"]["observedAt"], AT)
         self.assertEqual([c["location_code"] for c in row["gold"]["conditions"]], [2356, 2410])
-        upstream = it.keyword_view("suv", None, [seed(location=2840, language="en"), seed()])
+        upstream = it_data.keyword_view("suv", None, [seed(location=2840, language="en"), seed()])
         self.assertEqual((upstream["term"], upstream["conditions"], upstream["collected"], upstream["status"], upstream["state"]),
                          ("SUV", [KR, US], 2, None, "upstream"))
 
     def test_a_source_compares_with_the_corpus_without_saying_it_was_applied(self):
         g = {"entities": 3, "mentions": 9, "category": "communityForums"}
-        self.assertEqual(it.source_state({"status": "active"}, g), "observed")
-        self.assertEqual(it.source_state({"status": "stopped"}, g), "observed")
-        self.assertEqual(it.source_state({"status": "active"}, None), "unseen")
-        self.assertEqual(it.source_state(None, g), "upstream")
+        self.assertEqual(it_data.source_state({"status": "active"}, g), "observed")
+        self.assertEqual(it_data.source_state({"status": "stopped"}, g), "observed")
+        self.assertEqual(it_data.source_state({"status": "active"}, None), "unseen")
+        self.assertEqual(it_data.source_state(None, g), "upstream")
         hub = {"url": "reddit.com/r/cars", "channel": "community", "brands": ["Kia"], "note": None, "status": "active", "updated_at": None}
-        row = it.source_view("reddit.com/r/cars", hub, g)
+        row = it_data.source_view("reddit.com/r/cars", hub, g)
         self.assertEqual((row["host"], row["gold"], row["state"]), ("reddit.com", g, "observed"))
-        self.assertEqual(it.source_view("arca.live", None, g)["url"], "arca.live")
-        self.assertIsNone(it.source_view("arca.live", None, {"entities": 3, "mentions": 9, "category": None})["gold"]["category"])
-        self.assertIn("gold.dim_source", it.GOLD_HOSTS_SQL)  # only the exact host: no subdomain takes a parent's category
-        self.assertIn("s.skey=d.host", it.GOLD_HOSTS_SQL)
+        self.assertEqual(it_data.source_view("arca.live", None, g)["url"], "arca.live")
+        self.assertIsNone(it_data.source_view("arca.live", None, {"entities": 3, "mentions": 9, "category": None})["gold"]["category"])
+        self.assertIn("gold.dim_source", it_data.GOLD_HOSTS_SQL)  # only the exact host: no subdomain takes a parent's category
+        self.assertIn("s.skey=d.host", it_data.GOLD_HOSTS_SQL)
 
 
 class Routes(unittest.TestCase):
@@ -120,12 +122,14 @@ class Routes(unittest.TestCase):
             raise AssertionError("the store is not read for a refused request")
             yield
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(it, "reading", unreachable),
+                  mock.patch.object(it_data, "reading", unreachable),
                   mock.patch.object(it, "_pool", None)):
             p.start()
             self.addCleanup(p.stop)
+        connect_data_server(self)
         status, body = sign_in(self.t, "admin@hub")
         self.assertEqual(status, 200, body)
         self.token = body["data"]["token"]
@@ -204,7 +208,8 @@ class Store(unittest.TestCase):
             return {}
 
         patches = [mock.patch.object(it, "writing", writing), mock.patch.object(it, "reading", reading),
-                   mock.patch.object(it, "gold_seeds", gold_seeds), mock.patch.object(it, "gold_hosts", gold_hosts),
+                  mock.patch.object(it_data, "reading", reading),
+                   mock.patch.object(it_data, "gold_seeds", gold_seeds), mock.patch.object(it_data, "gold_hosts", gold_hosts),
                    mock.patch("data_server.hub_stores.source_lists.actors", no_actors)]
         for p in patches:
             p.start()
@@ -232,7 +237,7 @@ class Store(unittest.TestCase):
                          ("ZZ-Interest SUV", "zz-interest suv", "hub", "메모"))
         self.assertIsNotNone(out["published"])
         self.assertIsNone((await it.set_keyword(it.KeywordSet(**body), actor))["published"])
-        listed = {i["termNorm"]: i for i in (await it.keywords())["items"]}
+        listed = {i["termNorm"]: i for i in (await it_data.keywords())["items"]}
         self.assertEqual(listed["zz-interest suv"]["state"], "applied")
         self.assertEqual((listed["zz-upstream"]["state"], listed["zz-upstream"]["status"]), ("upstream", None))
 
@@ -244,7 +249,7 @@ class Store(unittest.TestCase):
         self.assertEqual((definition["term"], definition["conditions"], definition["source_types"], definition["brands"]),
                          ("ZZ-Interest SUV", [KR, US], ["google_keyword", "community_voc"], ["Kia"]))
         self.assertNotIn("key", definition)
-        listed = {i["termNorm"]: i for i in (await it.keywords())["items"]}
+        listed = {i["termNorm"]: i for i in (await it_data.keywords())["items"]}
         self.assertEqual((listed["zz-interest suv"]["state"], listed["zz-interest suv"]["collected"]), ("pending", 1))
 
         stopped = await it.set_keyword_status(it.KeywordKey(term="ZZ-INTEREST SUV"), True, actor)
@@ -268,7 +273,7 @@ class Store(unittest.TestCase):
         out = await it.set_source(it.SourceSet(url="https://www.ZZ-Interest.example/Forum/", channel="community", brands=["Kia"], note="메모"), actor)
         self.assertEqual((out["key"], out["source"]["url"], out["source"]["status"]), ("zz-interest.example/forum", "https://www.ZZ-Interest.example/Forum/", "active"))
         self.assertIsNone((await it.set_source(it.SourceSet(url="zz-interest.example/forum", channel="community", brands=["Kia"], note="메모"), actor))["published"])
-        listing = await it.sources()
+        listing = await it_data.sources()
         self.assertEqual(listing["snapshot"], {"takenAt": datetime.date(2026, 7, 7), "sources": 606})  # Gold's own count
         listed = {i["key"]: i for i in listing["items"]}
         # compared by the host; the host of a registered source is no longer an upstream row

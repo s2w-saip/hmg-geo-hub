@@ -14,13 +14,15 @@ try:
     import asyncpg
     from fastapi import HTTPException
 
-    from data_server.hub_stores import operations_db
-    from data_server.hub_stores import source_lists as sl
-    from data_server.hub_stores import source_overrides as so
-    from data_server.tests.signed_in import Conn, Tables, sign_in
-    from data_server.tests.test_hub_editing import SECRET, call, run
+    from hub_server import operations_db
+    from data_server.hub_stores import source_lists as sl_data
+    from hub_server.inputs import source_lists as sl
+    from hub_server.inputs import source_overrides as so
+    from hub_server.tests.test_accounts import Conn, Tables
+    from hub_server.tests.util import connect_data_server, sign_in
+    from hub_server.tests.util import SECRET, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_source_lists)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_source_lists)") from exc
 
 
 def gold(skey, src, slug=None, citations=0):
@@ -65,7 +67,7 @@ class Rules(unittest.TestCase):
                 sl.clean_name(bad, "nameEn")
 
     def test_a_seed_compares_with_golds_layer(self):
-        state = sl.seed_state
+        state = sl_data.seed_state
         self.assertEqual(state(hub_seed(), gold("a.example", 4, "newsMedia")), "applied")
         self.assertEqual(state(hub_seed(), gold("a.example", 4, "blogsReviews")), "pending")
         self.assertEqual(state(hub_seed(), gold("a.example", 5, "newsMedia")), "pending")
@@ -78,7 +80,7 @@ class Rules(unittest.TestCase):
         self.assertIsNone(state(None, gold("a.example", 5, "newsMedia")))
 
     def test_an_account_compares_with_golds_layer(self):
-        state, active, stopped = sl.social_state, {"status": "active"}, {"status": "stopped"}
+        state, active, stopped = sl_data.social_state, {"status": "active"}, {"status": "stopped"}
         self.assertEqual((state(active, gold("x.com/a", 2)), state(active, gold("x.com/a", 7)), state(active, None)),
                          ("applied", "pending", None))
         self.assertEqual((state(stopped, gold("x.com/a", 2)), state(stopped, None)), ("pending", None))
@@ -111,12 +113,14 @@ class Routes(unittest.TestCase):
             raise AssertionError("the store is not read for a refused request")
             yield
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(sl, "reading", unreachable),
+                  mock.patch.object(sl_data, "reading", unreachable),
                   mock.patch.object(so, "_pool", None)):
             p.start()
             self.addCleanup(p.stop)
+        connect_data_server(self)
         status, body = sign_in(self.t, "admin@hub")
         self.assertEqual(status, 200, body)
         self.token = body["data"]["token"]
@@ -200,7 +204,8 @@ class Store(unittest.TestCase):
             return {}
 
         patches = [mock.patch.object(sl, "writing", writing), mock.patch.object(sl, "reading", reading),
-                   mock.patch.object(sl, "gold_sources", gold_sources), mock.patch.object(sl, "gold_categories", gold_categories),
+                  mock.patch.object(sl_data, "reading", reading),
+                   mock.patch.object(sl_data, "gold_sources", gold_sources), mock.patch.object(sl_data, "gold_categories", gold_categories),
                    mock.patch.object(sl, "actors", no_actors)]
         for p in patches:
             p.start()
@@ -224,7 +229,7 @@ class Store(unittest.TestCase):
         self.assertIsNotNone(out["published"])
         self.assertIsNone((await sl.set_seed(sl.SeedSet(skey="seed-test.example", category="newsMedia"), actor))["published"])
         await sl.set_seed(sl.SeedSet(skey="seed-test.example", category="blogsReviews"), actor)
-        listed = {i["skey"]: i for i in (await sl.seeds())["items"]}
+        listed = {i["skey"]: i for i in (await sl_data.seeds())["items"]}
         self.assertEqual((listed["seed-test.example"]["state"], listed["seed-test.example"]["gold"]["citations"]), ("applied", 7))
         removed = await sl.remove_seed(sl.SeedKey(skey="seed-test.example"), actor)
         self.assertEqual(removed["seed"]["status"], "removed")
@@ -252,7 +257,7 @@ class Store(unittest.TestCase):
         m2 = m + [sl.Matcher(prefix="x-test.example/posts/acct_", boundary=False)]
         changed = await sl.set_social(sl.SocialSet(key="x-test.example/acct", matchers=m2), actor)
         self.assertEqual((changed["key"], len(changed["account"]["matchers"])), ("x-test.example/Acct", 2))
-        listed = {i["accountKey"]: i for i in (await sl.socials())["items"]}
+        listed = {i["accountKey"]: i for i in (await sl_data.socials())["items"]}
         self.assertEqual(listed["x-test.example/acct"]["state"], "applied")
         stopped = await sl.set_social_status(sl.SocialKey(key="x-test.example/acct"), True, actor)
         self.assertEqual(stopped["account"]["status"], "stopped")
@@ -270,7 +275,7 @@ class Store(unittest.TestCase):
         out = await sl.set_code(sl.CodeSet(kind="category", code="zzTestA", nameEn=" Test A2 ", nameKo="시험 A", description="설명"), actor)
         self.assertEqual((out["row"]["nameEn"], out["row"]["description"]), ("Test A2", "설명"))
         self.assertIsNone((await sl.set_code(sl.CodeSet(kind="category", code="zzTestA", nameEn="Test A2", nameKo="시험 A", description="설명"), actor))["published"])
-        listing = await sl.codes()
+        listing = await sl_data.codes()
         order = [c["code"] for c in listing["categories"]]
         swapped = order[:-2] + [order[-1], order[-2]]
         moved = await sl.order_codes(sl.CodeOrder(codes=swapped), actor)

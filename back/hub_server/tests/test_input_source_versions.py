@@ -15,10 +15,10 @@ from unittest import mock
 try:
     import asyncpg
 
-    from data_server.hub_stores import source_lists as sl
-    from data_server.hub_stores import source_overrides as so
+    from hub_server.inputs import source_lists as sl
+    from hub_server.inputs import source_overrides as so
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_source_versions)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (test_input_source_versions)") from exc
 
 DB_URL = os.environ.get("HGH_SOURCE_LISTS_TEST_DB_URL")
 
