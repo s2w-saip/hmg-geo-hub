@@ -357,7 +357,7 @@ class GoldCurrentSource:
         sql = f"""WITH t AS (SELECT x.build_id,x.surface,x.round_date,x.answer_key,{marks} FROM gold.answer_brand_fact x WHERE {answers} GROUP BY 1,2,3,4),
             a AS (SELECT f.source_key,{counts} FROM gold.citation_fact f
                   JOIN t ON (t.build_id,t.surface,t.round_date,t.answer_key)=(f.build_id,f.surface,f.round_date,f.answer_key)
-                  WHERE {where} GROUP BY f.source_key)
+                  WHERE {where} AND f.source_key<>0 GROUP BY f.source_key)
             SELECT c.category_key,c.slug,c.name,{sums} FROM a {CATEGORY_JOIN} GROUP BY c.category_key,c.slug,c.name"""
         return await self._rows(sql, b.args)
 

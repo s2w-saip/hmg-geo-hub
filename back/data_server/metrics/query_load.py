@@ -17,7 +17,7 @@ import os
 import time
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -62,6 +62,7 @@ ALL_ANSWERS = """SELECT answer_key::text AS id,prompt_id::text AS prompt_id,proj
     s1_normalize_is_dropped AS dropped,s1_normalize_anchor_date AS anchor_date,s1_normalize_round_date AS round_date,s1_normalize_view_anchor_date AS view_date,
     s1_normalize_is_default_engine AS dflt,s1_normalize_anchor_source AS anchor_src,analysis_state,analysis_label
     FROM silver_contract.answer_analysis WHERE run_key=$1"""
+KST = timezone(timedelta(hours=9))
 ROLLUP_NAMES = """SELECT DISTINCT ON (o.entity_id) o.entity_id,o.brand FROM silver_contract.answer_analysis y
     CROSS JOIN LATERAL jsonb_to_recordset(y.s2_mention_rollups) o(entity_id text,brand text,brand_rollup_entity_id text)
     WHERE y.surface=$1 AND y.s1_normalize_round_date=$2 AND y.s1_normalize_answer_status='completed' AND jsonb_typeof(y.s2_mention_rollups)='array'
@@ -614,7 +615,7 @@ class Loader:
             group = self.bgrp(snap.surface, r["prompt_id"], r["project_id"])
             project = d.projects.get(r["project_id"], prompt[1])
             facts.append((build, cell, sf, cyc, prompt[0], project, d.engines.get((r["engine"] or "").lower()), d.countries.get(r["country"] or "", 0), d.langs.get((r["lang"] or "").upper(), 0), group,
-                          snap.round_date, r["measured_at"].date() if r["measured_at"] else None, r["planned"], r["valid_turn1"], r["valid_acr"], r["co_single"], r["co_conditional"], r["co_generic"],
+                          snap.round_date, kst_day(r["measured_at"]), r["planned"], r["valid_turn1"], r["valid_acr"], r["co_single"], r["co_conditional"], r["co_generic"],
                           r["co_off_shortlist"], r["co_unresolved"], r["co_none"], bool(judge["last_measured"] and judge["acr_in"]), bool(judge["acr_in"]), snap.rule_version))
             counts["cells"] += 1
             for e in array(r["entities"]):
@@ -635,6 +636,11 @@ class Loader:
         await flush_dims(gold, d)
         await gold.copy_records_to_table("acr_cell_fact", schema_name="gold", columns=ACR_CELL, records=facts)
         await gold.copy_records_to_table("acr_entity_fact", schema_name="gold", columns=ACR_ENTITY, records=entities)
+
+
+def kst_day(moment: datetime | None) -> date | None:
+    """The day a measurement counts for, in Korea as legacy stored it. The time arrives in UTC: its date alone is the day before for the evening's runs."""
+    return moment.astimezone(KST).date() if moment else None
 
 
 async def refresh_entity_totals(gold: Any) -> None:

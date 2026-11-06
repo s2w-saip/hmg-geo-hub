@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 
 from data_server.metrics import query_load as q
 
@@ -146,6 +146,10 @@ class EntityTotals(unittest.TestCase):
 
 
 class Small(unittest.TestCase):
+    def test_a_measurement_counts_for_its_day_in_korea(self):
+        self.assertEqual(q.kst_day(datetime(2026, 10, 4, 21, 7, tzinfo=timezone.utc)), DAY)
+        self.assertIsNone(q.kst_day(None))
+
     def test_a_json_column(self):
         self.assertEqual(q.array('[{"a": 1}]'), [{"a": 1}])
         self.assertEqual(q.array(None), [])

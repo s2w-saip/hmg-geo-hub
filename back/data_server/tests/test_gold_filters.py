@@ -106,6 +106,12 @@ class Sources(unittest.TestCase):
         top = {c["category"]["slug"]: [(s["skey"], s["citations"]) for s in c["top_sources"]] for c in data["categories"]}
         self.assertEqual(top, {"officialHmg": [("kia.com", 50)], "academicResearch": [("a.com", 5), ("b.org", 4), ("c.edu", 3)]})
 
+    def test_the_type_matrix_counts_citations_with_a_source(self):
+        # T9.8: its totals held the host-less citations the other citation counts leave out (575,083 against 575,079 on Global 10-05)
+        conn = SourcesConn()
+        asyncio.run(citations.sources(context(conn, "surface=global")))
+        self.assertIn("f.source_key<>0", next(s for s in conn.sql if "FROM gold.answer_brand_fact x" in s))
+
     def test_the_source_filter_narrows_the_type_matrix(self):
         # D: 출처 = 공식(HMG) still showed every category's type counts (1,400,034 for 452,842)
         conn = SourcesConn()

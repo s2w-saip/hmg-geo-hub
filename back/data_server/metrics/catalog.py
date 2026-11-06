@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Stored with every precomputed (Gold) and cached value. A definition change moves it.
-DEFINITION_VERSION = "2026-11-07.1"
+DEFINITION_VERSION = "2026-11-07.2"
 
 # Populations (SSOT 공통 조건)
 MONITORING = "monitoring"                 # 모니터링 답변
@@ -167,7 +167,7 @@ METRICS: tuple[Metric, ...] = (
     Metric("positive_mentions", "긍정 키워드 언급 수", "언급", "count", "sent_pos", population=MONITORING, dims=_MARKET, screens="레거시 · Website Mention"),
     Metric("negative_mentions", "부정 키워드 언급 수", "언급", "count", "sent_neg", population=MONITORING, dims=_MARKET, screens="레거시 · Website Mention"),
     Metric("mentions_per_answer", "답변당 언급 수", "언급", "avg", "own_mentions", "answers", MONITORING, dims=("전체",), screens="레거시 기간 비교", note="증감률로 표시"),
-    Metric("brand_count", "언급 브랜드 수", "언급", "derived", "경쟁 브랜드 행 수 + 당사 1행", dims=("전체",), screens="레거시 · Website Mention · Mention"),
+    Metric("brand_count", "언급 브랜드 수", "언급", "derived", "경쟁 브랜드 행 수 + 당사 1행 + 명부 제외 브랜드 행 수", dims=("전체",), screens="레거시 · Website Mention · Mention"),
     Metric("unmentioned_prompts", "미언급 프롬프트 수", "언급", "derived", "measured_prompts − mentioned_prompts", dims=("전체",), screens="레거시 · Website Mention"),
     Metric("unmentioned_split", "다른 브랜드 언급 · 브랜드 언급 없음 · 일부 엔진만 빠짐", "언급", "derived", "미언급 프롬프트를 전체 언급 유무로 나눈 수, 측정 엔진보다 언급 엔진이 적은 프롬프트 수", dims=("전체",), screens="Website Mention"),
     Metric("market_gaps", "브랜드 언급 없는 답변 · 언급 답변 변화", "언급", "derived", "국가별 전체 언급이 0인 모니터링 답변 수, tracked의 Δ", dims=("국가",), screens="Website Mention"),
