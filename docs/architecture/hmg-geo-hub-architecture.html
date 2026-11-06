@@ -180,7 +180,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 서비스 DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
-  <p class="asof">마지막 갱신 2026-11-06(사전 집계가 늦으면 최후의 수단으로 직접 집계) · 2026-11-06(DB 이름에서 <code>geohub_</code>를 뺌: <code>input_db</code> · <code>operations_db</code> · <code>gold_db</code> · <code>cache_db</code>) · 2026-11-06(어댑터 ② <code>bff/metrics/silver_obt.py</code> · <code>hub_stores/silver_db.py</code>, 스위치 <code>HGH_METRIC_SOURCE=silver</code>, 맥에서 켬, 사전 집계 · 캐시 신호는 매니페스트) · 2026-11-06(<code>hmg_analytics</code>를 없앰: GA4 속성 · 서비스 기준 주는 입력 DB로, GA4 · SEO 데이터는 Gold DB로. <code>input-003.sql</code> · <code>metrics-004.sql</code>) · 2026-11-06(<code>hmg_metrics</code>를 Gold DB <code>gold_db</code>와 캐시 DB <code>cache_db</code>로 분리: <code>metrics-001~003.sql</code> · <code>cache-001.sql</code>) · 2026-11-06(입력 DB <code>input_db</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · 데이터 서버 <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: 데이터 서버 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · 데이터 서버 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: 데이터 서버 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
+  <p class="asof">마지막 갱신 2026-11-06(키워드 · 소셜 빈 테이블 18개를 <code>analytics</code>에 추가) · 2026-11-06(사전 집계가 늦으면 최후의 수단으로 직접 집계) · 2026-11-06(DB 이름에서 <code>geohub_</code>를 뺌: <code>input_db</code> · <code>operations_db</code> · <code>gold_db</code> · <code>cache_db</code>) · 2026-11-06(어댑터 ② <code>bff/metrics/silver_obt.py</code> · <code>hub_stores/silver_db.py</code>, 스위치 <code>HGH_METRIC_SOURCE=silver</code>, 맥에서 켬, 사전 집계 · 캐시 신호는 매니페스트) · 2026-11-06(<code>hmg_analytics</code>를 없앰: GA4 속성 · 서비스 기준 주는 입력 DB로, GA4 · SEO 데이터는 Gold DB로. <code>input-003.sql</code> · <code>metrics-004.sql</code>) · 2026-11-06(<code>hmg_metrics</code>를 Gold DB <code>gold_db</code>와 캐시 DB <code>cache_db</code>로 분리: <code>metrics-001~003.sql</code> · <code>cache-001.sql</code>) · 2026-11-06(입력 DB <code>input_db</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · 데이터 서버 <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: 데이터 서버 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · 데이터 서버 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: 데이터 서버 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/input-001~003.sql</code>, <code>metrics-001~004.sql</code>, <code>operations-001~005.sql</code></p>
   <dl class="facts">
     <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
@@ -190,7 +190,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   </dl>
   <nav class="toc" aria-label="목차">
     <a href="#path">요청 경로</a><a href="#conn">DB 연결</a><a href="#writes">쓰기 경로</a><a href="#login">로그인</a>
-    <a href="#ext">외부 API</a><a href="#erd-ops">운영 DB ERD</a><a href="#erd-input">입력 DB ERD</a><a href="#erd-ga4">GA4 · SEO ERD</a><a href="#erd-metrics">Gold · 캐시 DB ERD</a><a href="#sources">지표 원천</a>
+    <a href="#ext">외부 API</a><a href="#erd-ops">운영 DB ERD</a><a href="#erd-input">입력 DB ERD</a><a href="#erd-ga4">GA4 · SEO ERD</a><a href="#erd-metrics">Gold · 캐시 DB ERD</a><a href="#erd-keyword-social">키워드 · 소셜 ERD</a><a href="#sources">지표 원천</a>
     <a href="#run">띄우는 방법</a><a href="#other">로컬 서비스 밖의 코드</a><a href="#maintain">이 문서 고치는 법</a>
   </nav>
 </header>
@@ -2666,6 +2666,510 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     </div>
     <figcaption>
       <p><strong>그림 11. 캐시와 Gold.</strong> <code>cache.query_result</code>는 UNLOGGED다. 장애로 비워져도 다음 조회가 운영 스냅샷에서 다시 채운다. 키는 조건을 한 표기로 맞춘 뒤의 해시이고(<code>bff/hub_stores/cache_db.py</code>), 새 운영 스냅샷이 나오면 <code>purge_other_snapshots</code>가 이전 행을 지운다. 사전 집계 테이블은 대상 지표(D-13)가 정해지면 <code>gold</code>에 더한다.</p>
+    </figcaption>
+  </figure>
+</section>
+
+<section id="erd-keyword-social" aria-labelledby="h-erd-keyword-social">
+  <h2 id="h-erd-keyword-social">키워드 · 소셜 ERD <span class="mono muted" style="font-size:15px;font-weight:400">gold_db :55439</span></h2>
+  <p class="sub prose"><code>analytics</code> 스키마의 빈 테이블 18개다(그림 12~14). Silver OBT에 없는 데이터여서 GA4 · SEO와 같은 플랫폼 데이터로 둔다. 컬럼 · 타입은 <code>gold.*</code>의 같은 이름 테이블과 같고, 레거시 <code>back/db/DB-v2.32.sql</code>의 NOT NULL · CHECK · FK · 인덱스를 얹었다. 이 테이블에 쓰거나 읽는 코드는 아직 없다. 지금 키워드 · 소셜 화면은 <code>gold.*</code>를 읽는다(D-24).
+    근거: <code>back/hub_storage/metrics-005.sql</code>. 범례는 그림 4와 같다.</p>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:keyword -->
+<svg viewBox="0 0 1200 530" role="img" aria-label="gold_db analytics 스키마의 키워드 빈 테이블 ERD. 검색량, 검색 결과, 연관 검색어가 검색어 사전을 가리킨다.">
+<defs><marker id="keyword-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="keyword-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="16" y="40" width="290" height="266" rx="6"/>
+<path class="th" d="M16,70V46q0,-6 6,-6H300q6,0 6,6V70z"/>
+<line class="rule" x1="16" y1="70" x2="306" y2="70"/>
+<line class="hair" x1="28" y1="112" x2="294" y2="112"/>
+<text class="m b" x="28" y="60"><tspan class="tsch">analytics.</tspan>kw_volume_monthly</text>
+<text class="desc" x="28" y="87">검색어 · 지역 · 언어 · 월마다 검색량과</text>
+<text class="desc" x="28" y="103">경쟁도를 담는다.</text>
+<text class="kb pk" x="26" y="131">PK FK</text>
+<text class="m" x="64" y="131">kw_key</text>
+<text class="m sm ty" x="296" y="131" text-anchor="end">integer</text>
+<text class="kb pk" x="26" y="149">PK</text>
+<text class="m" x="64" y="149">location_code</text>
+<text class="m sm ty" x="296" y="149" text-anchor="end">integer</text>
+<text class="kb pk" x="26" y="167">PK</text>
+<text class="m" x="64" y="167">language_code</text>
+<text class="m sm ty" x="296" y="167" text-anchor="end">text</text>
+<text class="kb pk" x="26" y="185">PK</text>
+<text class="m" x="64" y="185">month</text>
+<text class="m sm ty" x="296" y="185" text-anchor="end">date</text>
+<text class="m" x="64" y="203">search_volume</text>
+<text class="m sm ty" x="296" y="203" text-anchor="end">integer</text>
+<text class="m" x="64" y="221">competition</text>
+<text class="m sm val" x="296" y="221" text-anchor="end">LOW|MEDIUM|HIGH</text>
+<text class="m" x="64" y="239">competition_index</text>
+<text class="m sm ty" x="296" y="239" text-anchor="end">integer</text>
+<text class="m" x="64" y="257">cpc</text>
+<text class="m sm ty" x="296" y="257" text-anchor="end">numeric</text>
+<text class="m" x="64" y="275">call_id</text>
+<text class="m sm ty" x="296" y="275" text-anchor="end">text</text>
+<text class="m" x="64" y="293">observed_at</text>
+<text class="m sm ty" x="296" y="293" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="455" y="40" width="290" height="140" rx="6"/>
+<path class="th" d="M455,70V46q0,-6 6,-6H739q6,0 6,6V70z"/>
+<line class="rule" x1="455" y1="70" x2="745" y2="70"/>
+<line class="hair" x1="467" y1="112" x2="733" y2="112"/>
+<text class="m b" x="467" y="60"><tspan class="tsch">analytics.</tspan>dim_keyword</text>
+<text class="desc" x="467" y="87">검색어 사전이다. 정규화한 검색어마다 키를</text>
+<text class="desc" x="467" y="103">발급한다.</text>
+<text class="kb pk" x="465" y="131">PK</text>
+<text class="m" x="503" y="131">kw_key</text>
+<text class="m sm ty" x="735" y="131" text-anchor="end">integer</text>
+<text class="m" x="503" y="149">term</text>
+<text class="m sm ty" x="735" y="149" text-anchor="end">text</text>
+<text class="kb " x="465" y="167">UK</text>
+<text class="m" x="503" y="167">term_norm</text>
+<text class="m sm ty" x="735" y="167" text-anchor="end">text</text>
+<rect class="tbox" x="894" y="40" width="290" height="266" rx="6"/>
+<path class="th" d="M894,70V46q0,-6 6,-6H1178q6,0 6,6V70z"/>
+<line class="rule" x1="894" y1="70" x2="1184" y2="70"/>
+<line class="hair" x1="906" y1="112" x2="1172" y2="112"/>
+<text class="m b" x="906" y="60"><tspan class="tsch">analytics.</tspan>kw_serp</text>
+<text class="desc" x="906" y="87">수집 호출마다 순위별 검색 결과를 담는다.</text>
+<text class="kb pk" x="904" y="131">PK</text>
+<text class="m" x="942" y="131">call_id</text>
+<text class="m sm ty" x="1174" y="131" text-anchor="end">text</text>
+<text class="kb pk" x="904" y="149">PK</text>
+<text class="m" x="942" y="149">rank</text>
+<text class="m sm ty" x="1174" y="149" text-anchor="end">integer</text>
+<text class="kb fk" x="904" y="167">FK</text>
+<text class="m" x="942" y="167">kw_key</text>
+<text class="m sm ty" x="1174" y="167" text-anchor="end">integer</text>
+<text class="m" x="942" y="185">location_code</text>
+<text class="m sm ty" x="1174" y="185" text-anchor="end">integer</text>
+<text class="m" x="942" y="203">language_code</text>
+<text class="m sm ty" x="1174" y="203" text-anchor="end">text</text>
+<text class="m" x="942" y="221">url</text>
+<text class="m sm ty" x="1174" y="221" text-anchor="end">text</text>
+<text class="m" x="942" y="239">domain</text>
+<text class="m sm ty" x="1174" y="239" text-anchor="end">text</text>
+<text class="m" x="942" y="257">title</text>
+<text class="m sm ty" x="1174" y="257" text-anchor="end">text</text>
+<text class="m" x="942" y="275">snippet</text>
+<text class="m sm ty" x="1174" y="275" text-anchor="end">text</text>
+<text class="m" x="942" y="293">observed_at</text>
+<text class="m sm ty" x="1174" y="293" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="455" y="225" width="290" height="284" rx="6"/>
+<path class="th" d="M455,255V231q0,-6 6,-6H739q6,0 6,6V255z"/>
+<line class="rule" x1="455" y1="255" x2="745" y2="255"/>
+<line class="hair" x1="467" y1="297" x2="733" y2="297"/>
+<text class="m b" x="467" y="245"><tspan class="tsch">analytics.</tspan>kw_suggestion</text>
+<text class="desc" x="467" y="272">수집 호출마다 위치별 연관 검색어를 담는다.</text>
+<text class="kb pk" x="465" y="316">PK</text>
+<text class="m" x="503" y="316">call_id</text>
+<text class="m sm ty" x="735" y="316" text-anchor="end">text</text>
+<text class="kb pk" x="465" y="334">PK</text>
+<text class="m" x="503" y="334">pos</text>
+<text class="m sm ty" x="735" y="334" text-anchor="end">integer</text>
+<text class="kb fk" x="465" y="352">FK</text>
+<text class="m" x="503" y="352">seed_kw_key</text>
+<text class="m sm ty" x="735" y="352" text-anchor="end">integer</text>
+<text class="kb fk" x="465" y="370">FK</text>
+<text class="m" x="503" y="370">kw_key</text>
+<text class="m sm ty" x="735" y="370" text-anchor="end">integer</text>
+<text class="m" x="503" y="388">location_code</text>
+<text class="m sm ty" x="735" y="388" text-anchor="end">integer</text>
+<text class="m" x="503" y="406">language_code</text>
+<text class="m sm ty" x="735" y="406" text-anchor="end">text</text>
+<text class="m" x="503" y="424">search_volume</text>
+<text class="m sm ty" x="735" y="424" text-anchor="end">integer</text>
+<text class="m" x="503" y="442">intent</text>
+<text class="m sm ty" x="735" y="442" text-anchor="end">text</text>
+<text class="m" x="503" y="460">total_count</text>
+<text class="m sm ty" x="735" y="460" text-anchor="end">integer</text>
+<text class="m" x="503" y="478">is_seed</text>
+<text class="m sm ty" x="735" y="478" text-anchor="end">boolean</text>
+<text class="m" x="503" y="496">observed_at</text>
+<text class="m sm ty" x="735" y="496" text-anchor="end">timestamptz</text>
+<path class="e" d="M306,127.0H455" marker-end="url(#keyword-a)"/>
+<path class="e" d="M894,163.0H745" marker-end="url(#keyword-a)"/>
+<path class="e" d="M570,225V180" marker-end="url(#keyword-a)"/>
+<path class="e" d="M630,225V180" marker-end="url(#keyword-a)"/>
+</svg>
+      <!-- /erd:keyword -->
+    </div>
+    <figcaption>
+      <p><strong>그림 12. 키워드.</strong> <code>call_id</code>는 레거시 정의의 bigint가 아니라 text다. 실제 값이 <code>kc:…</code> 형태다.</p>
+    </figcaption>
+  </figure>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:social -->
+<svg viewBox="0 0 1200 945" role="img" aria-label="gold_db analytics 스키마의 소셜 빈 테이블 ERD. 맥락과 조건 엔티티가 스냅샷을 가리키고, 그룹, 연결, 조합, 근거, 도메인, 심층 근거가 엔티티를 중심으로 이어진다.">
+<defs><marker id="social-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="social-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="16" y="40" width="270" height="266" rx="6"/>
+<path class="th" d="M16,70V46q0,-6 6,-6H280q6,0 6,6V70z"/>
+<line class="rule" x1="16" y1="70" x2="286" y2="70"/>
+<line class="hair" x1="28" y1="112" x2="274" y2="112"/>
+<text class="m b" x="28" y="60"><tspan class="tsch">analytics.</tspan>ctx_snapshot</text>
+<text class="desc" x="28" y="87">구매 맥락 분석 스냅샷 1개를 담는다.</text>
+<text class="kb pk" x="26" y="131">PK</text>
+<text class="m" x="64" y="131">snapshot_id</text>
+<text class="m sm ty" x="276" y="131" text-anchor="end">smallint</text>
+<text class="m" x="64" y="149">industry_entity_id</text>
+<text class="m sm ty" x="276" y="149" text-anchor="end">uuid</text>
+<text class="m" x="64" y="167">source</text>
+<text class="m sm ty" x="276" y="167" text-anchor="end">text</text>
+<text class="m" x="64" y="185">utterance_total</text>
+<text class="m sm ty" x="276" y="185" text-anchor="end">integer</text>
+<text class="m" x="64" y="203">taken_at</text>
+<text class="m sm ty" x="276" y="203" text-anchor="end">date</text>
+<text class="m" x="64" y="221">is_active</text>
+<text class="m sm ty" x="276" y="221" text-anchor="end">boolean</text>
+<text class="m" x="64" y="239">keyword</text>
+<text class="m sm ty" x="276" y="239" text-anchor="end">text</text>
+<text class="m" x="64" y="257">worker_total</text>
+<text class="m sm ty" x="276" y="257" text-anchor="end">integer</text>
+<text class="m" x="64" y="275">source_total</text>
+<text class="m sm ty" x="276" y="275" text-anchor="end">integer</text>
+<text class="mu sm" x="28" y="293">is_active는 업종마다 하나</text>
+<rect class="tbox" x="16" y="340" width="270" height="284" rx="6"/>
+<path class="th" d="M16,370V346q0,-6 6,-6H280q6,0 6,6V370z"/>
+<line class="rule" x1="16" y1="370" x2="286" y2="370"/>
+<line class="hair" x1="28" y1="412" x2="274" y2="412"/>
+<text class="m b" x="28" y="360"><tspan class="tsch">analytics.</tspan>ctx_evidence</text>
+<text class="desc" x="28" y="387">맥락 · 조건을 뒷받침하는 근거 발화 1개를</text>
+<text class="desc" x="28" y="403">담는다.</text>
+<text class="kb pk" x="26" y="431">PK</text>
+<text class="m" x="64" y="431">snapshot_id</text>
+<text class="m sm lref" x="276" y="431" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="26" y="449">PK</text>
+<text class="m" x="64" y="449">id</text>
+<text class="m sm ty" x="276" y="449" text-anchor="end">uuid</text>
+<text class="m" x="64" y="467">entity_id</text>
+<text class="m sm lref" x="276" y="467" text-anchor="end">⇢ ctx_entity</text>
+<text class="m" x="64" y="485">utterance_id</text>
+<text class="m sm ty" x="276" y="485" text-anchor="end">text</text>
+<text class="m" x="64" y="503">quote</text>
+<text class="m sm ty" x="276" y="503" text-anchor="end">text</text>
+<text class="m" x="64" y="521">source_host</text>
+<text class="m sm ty" x="276" y="521" text-anchor="end">text</text>
+<text class="m" x="64" y="539">source_url</text>
+<text class="m sm ty" x="276" y="539" text-anchor="end">text</text>
+<text class="m" x="64" y="557">sentiment</text>
+<text class="m sm ty" x="276" y="557" text-anchor="end">text</text>
+<text class="m" x="64" y="575">source_title</text>
+<text class="m sm ty" x="276" y="575" text-anchor="end">text</text>
+<text class="m" x="64" y="593">rank</text>
+<text class="m sm ty" x="276" y="593" text-anchor="end">integer</text>
+<text class="m" x="64" y="611">perspective</text>
+<text class="m sm ty" x="276" y="611" text-anchor="end">text</text>
+<rect class="tbox" x="16" y="660" width="270" height="158" rx="6"/>
+<path class="th" d="M16,690V666q0,-6 6,-6H280q6,0 6,6V690z"/>
+<line class="rule" x1="16" y1="690" x2="286" y2="690"/>
+<line class="hair" x1="28" y1="732" x2="274" y2="732"/>
+<text class="m b" x="28" y="680"><tspan class="tsch">analytics.</tspan>ctx_domain</text>
+<text class="desc" x="28" y="707">엔티티별 출처 host와 건수를 담는다.</text>
+<text class="kb pk" x="26" y="751">PK</text>
+<text class="m" x="64" y="751">snapshot_id</text>
+<text class="m sm lref" x="276" y="751" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="26" y="769">PK</text>
+<text class="m" x="64" y="769">entity_id</text>
+<text class="m sm lref" x="276" y="769" text-anchor="end">⇢ ctx_entity</text>
+<text class="kb pk" x="26" y="787">PK</text>
+<text class="m" x="64" y="787">host</text>
+<text class="m sm ty" x="276" y="787" text-anchor="end">text</text>
+<text class="m" x="64" y="805">n</text>
+<text class="m sm ty" x="276" y="805" text-anchor="end">integer</text>
+<rect class="tbox" x="322" y="40" width="270" height="392" rx="6"/>
+<path class="th" d="M322,70V46q0,-6 6,-6H586q6,0 6,6V70z"/>
+<line class="rule" x1="322" y1="70" x2="592" y2="70"/>
+<line class="hair" x1="334" y1="112" x2="580" y2="112"/>
+<text class="m b" x="334" y="60"><tspan class="tsch">analytics.</tspan>ctx_entity</text>
+<text class="desc" x="334" y="87">스냅샷마다 구매 맥락 또는 구매 조건 1개를</text>
+<text class="desc" x="334" y="103">담는다.</text>
+<text class="kb pk" x="332" y="131">PK FK</text>
+<text class="m" x="370" y="131">snapshot_id</text>
+<text class="m sm ty" x="582" y="131" text-anchor="end">smallint</text>
+<text class="kb pk" x="332" y="149">PK</text>
+<text class="m" x="370" y="149">id</text>
+<text class="m sm ty" x="582" y="149" text-anchor="end">uuid</text>
+<text class="m" x="370" y="167">type</text>
+<text class="m sm val" x="582" y="185" text-anchor="end">ConsumerContext|ConsumerRequirement</text>
+<text class="m" x="370" y="203">canonical_name</text>
+<text class="m sm ty" x="582" y="203" text-anchor="end">text</text>
+<text class="m" x="370" y="221">dimension</text>
+<text class="m sm ty" x="582" y="221" text-anchor="end">text</text>
+<text class="m" x="370" y="239">mention_count</text>
+<text class="m sm ty" x="582" y="239" text-anchor="end">integer</text>
+<text class="m" x="370" y="257">utterance_count</text>
+<text class="m sm ty" x="582" y="257" text-anchor="end">integer</text>
+<text class="m" x="370" y="275">sentiment_positive</text>
+<text class="m sm ty" x="582" y="275" text-anchor="end">integer</text>
+<text class="m" x="370" y="293">sentiment_negative</text>
+<text class="m sm ty" x="582" y="293" text-anchor="end">integer</text>
+<text class="m" x="370" y="311">sentiment_neutral</text>
+<text class="m sm ty" x="582" y="311" text-anchor="end">integer</text>
+<text class="m" x="370" y="329">group_id</text>
+<text class="m sm lref" x="582" y="329" text-anchor="end">⇢ ctx_group</text>
+<text class="m" x="370" y="347">unique_source_count</text>
+<text class="m sm ty" x="582" y="347" text-anchor="end">integer</text>
+<text class="m" x="370" y="365">perspective_buyer</text>
+<text class="m sm ty" x="582" y="365" text-anchor="end">integer</text>
+<text class="m" x="370" y="383">perspective_seller</text>
+<text class="m sm ty" x="582" y="383" text-anchor="end">integer</text>
+<text class="m" x="370" y="401">perspective_neutral</text>
+<text class="m sm ty" x="582" y="401" text-anchor="end">integer</text>
+<text class="m" x="370" y="419">related_ids</text>
+<text class="m sm ty" x="582" y="419" text-anchor="end">uuid[]</text>
+<rect class="tbox" x="322" y="470" width="270" height="230" rx="6"/>
+<path class="th" d="M322,500V476q0,-6 6,-6H586q6,0 6,6V500z"/>
+<line class="rule" x1="322" y1="500" x2="592" y2="500"/>
+<line class="hair" x1="334" y1="542" x2="580" y2="542"/>
+<text class="m b" x="334" y="490"><tspan class="tsch">analytics.</tspan>ctx_claim</text>
+<text class="desc" x="334" y="517">심층 근거가 있는 조건 1개의 검증 결과를</text>
+<text class="desc" x="334" y="533">담는다.</text>
+<text class="kb pk" x="332" y="561">PK</text>
+<text class="m" x="370" y="561">snapshot_id</text>
+<text class="m sm lref" x="582" y="561" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="332" y="579">PK</text>
+<text class="m" x="370" y="579">entity_id</text>
+<text class="m sm lref" x="582" y="579" text-anchor="end">⇢ ctx_entity</text>
+<text class="m" x="370" y="597">claim</text>
+<text class="m sm ty" x="582" y="597" text-anchor="end">text</text>
+<text class="m" x="370" y="615">supporting</text>
+<text class="m sm ty" x="582" y="615" text-anchor="end">integer</text>
+<text class="m" x="370" y="633">contradicting</text>
+<text class="m sm ty" x="582" y="633" text-anchor="end">integer</text>
+<text class="m" x="370" y="651">neutral</text>
+<text class="m sm ty" x="582" y="651" text-anchor="end">integer</text>
+<text class="m" x="370" y="669">total_scanned</text>
+<text class="m sm ty" x="582" y="669" text-anchor="end">integer</text>
+<text class="m" x="370" y="687">confidence</text>
+<text class="m sm ty" x="582" y="687" text-anchor="end">text</text>
+<rect class="tbox" x="322" y="736" width="270" height="194" rx="6"/>
+<path class="th" d="M322,766V742q0,-6 6,-6H586q6,0 6,6V766z"/>
+<line class="rule" x1="322" y1="766" x2="592" y2="766"/>
+<line class="hair" x1="334" y1="808" x2="580" y2="808"/>
+<text class="m b" x="334" y="756"><tspan class="tsch">analytics.</tspan>ctx_claim_quote</text>
+<text class="desc" x="334" y="783">심층 근거의 인용 표본을 담는다.</text>
+<text class="kb pk" x="332" y="827">PK</text>
+<text class="m" x="370" y="827">snapshot_id</text>
+<text class="m sm lref" x="582" y="827" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="332" y="845">PK</text>
+<text class="m" x="370" y="845">entity_id</text>
+<text class="m sm lref" x="582" y="845" text-anchor="end">⇢ ctx_claim</text>
+<text class="kb pk" x="332" y="863">PK</text>
+<text class="m" x="370" y="863">seq</text>
+<text class="m sm ty" x="582" y="863" text-anchor="end">integer</text>
+<text class="m" x="370" y="881">quote</text>
+<text class="m sm ty" x="582" y="881" text-anchor="end">text</text>
+<text class="m" x="370" y="899">source</text>
+<text class="m sm ty" x="582" y="899" text-anchor="end">text</text>
+<text class="m" x="370" y="917">stance</text>
+<text class="m sm ty" x="582" y="917" text-anchor="end">text</text>
+<rect class="tbox" x="628" y="40" width="250" height="194" rx="6"/>
+<path class="th" d="M628,70V46q0,-6 6,-6H872q6,0 6,6V70z"/>
+<line class="rule" x1="628" y1="70" x2="878" y2="70"/>
+<line class="hair" x1="640" y1="112" x2="866" y2="112"/>
+<text class="m b" x="640" y="60"><tspan class="tsch">analytics.</tspan>ctx_group</text>
+<text class="desc" x="640" y="87">스냅샷마다 테마 또는 카테고리 1개를</text>
+<text class="desc" x="640" y="103">담는다.</text>
+<text class="kb pk" x="638" y="131">PK</text>
+<text class="m" x="676" y="131">snapshot_id</text>
+<text class="m sm lref" x="868" y="131" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="638" y="149">PK</text>
+<text class="m" x="676" y="149">group_id</text>
+<text class="m sm ty" x="868" y="149" text-anchor="end">text</text>
+<text class="m" x="676" y="167">side</text>
+<text class="m sm ty" x="868" y="167" text-anchor="end">text</text>
+<text class="m" x="676" y="185">name</text>
+<text class="m sm ty" x="868" y="185" text-anchor="end">text</text>
+<text class="m" x="676" y="203">description</text>
+<text class="m sm ty" x="868" y="203" text-anchor="end">text</text>
+<text class="m" x="676" y="221">sort_order</text>
+<text class="m sm ty" x="868" y="221" text-anchor="end">integer</text>
+<rect class="tbox" x="628" y="270" width="250" height="176" rx="6"/>
+<path class="th" d="M628,300V276q0,-6 6,-6H872q6,0 6,6V300z"/>
+<line class="rule" x1="628" y1="300" x2="878" y2="300"/>
+<line class="hair" x1="640" y1="342" x2="866" y2="342"/>
+<text class="m b" x="640" y="290"><tspan class="tsch">analytics.</tspan>ctx_drive</text>
+<text class="desc" x="640" y="317">맥락이 조건으로 이어지는 연결과 그</text>
+<text class="desc" x="640" y="333">강도를 담는다.</text>
+<text class="kb pk" x="638" y="361">PK</text>
+<text class="m" x="676" y="361">snapshot_id</text>
+<text class="m sm lref" x="868" y="361" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="638" y="379">PK</text>
+<text class="m" x="676" y="379">context_id</text>
+<text class="m sm lref" x="868" y="379" text-anchor="end">⇢ ctx_entity</text>
+<text class="kb pk" x="638" y="397">PK</text>
+<text class="m" x="676" y="397">requirement_id</text>
+<text class="m sm lref" x="868" y="397" text-anchor="end">⇢ ctx_entity</text>
+<text class="m" x="676" y="415">co_count</text>
+<text class="m sm ty" x="868" y="415" text-anchor="end">integer</text>
+<text class="m" x="676" y="433">strength_score</text>
+<text class="m sm ty" x="868" y="433" text-anchor="end">numeric</text>
+<rect class="tbox" x="628" y="482" width="250" height="248" rx="6"/>
+<path class="th" d="M628,512V488q0,-6 6,-6H872q6,0 6,6V512z"/>
+<line class="rule" x1="628" y1="512" x2="878" y2="512"/>
+<line class="hair" x1="640" y1="554" x2="866" y2="554"/>
+<text class="m b" x="640" y="502"><tspan class="tsch">analytics.</tspan>ctx_combination</text>
+<text class="desc" x="640" y="529">함께 나온 조건 조합(2개 이상)을 담는다.</text>
+<text class="kb pk" x="638" y="573">PK</text>
+<text class="m" x="676" y="573">snapshot_id</text>
+<text class="m sm lref" x="868" y="573" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="638" y="591">PK</text>
+<text class="m" x="676" y="591">combo_id</text>
+<text class="m sm ty" x="868" y="591" text-anchor="end">text</text>
+<text class="m" x="676" y="609">cond_a</text>
+<text class="m sm lref" x="868" y="609" text-anchor="end">⇢ ctx_entity</text>
+<text class="m" x="676" y="627">cond_b</text>
+<text class="m sm lref" x="868" y="627" text-anchor="end">⇢ ctx_entity</text>
+<text class="m" x="676" y="645">cond_more</text>
+<text class="m sm ty" x="868" y="645" text-anchor="end">uuid[]</text>
+<text class="m" x="676" y="663">co_count</text>
+<text class="m sm ty" x="868" y="663" text-anchor="end">integer</text>
+<text class="m" x="676" y="681">description</text>
+<text class="m sm ty" x="868" y="681" text-anchor="end">text</text>
+<text class="m" x="676" y="699">total_speakers</text>
+<text class="m sm ty" x="868" y="699" text-anchor="end">integer</text>
+<text class="m" x="676" y="717">unique_source_count</text>
+<text class="m sm ty" x="868" y="717" text-anchor="end">integer</text>
+<rect class="tbox" x="914" y="482" width="280" height="212" rx="6"/>
+<path class="th" d="M914,512V488q0,-6 6,-6H1188q6,0 6,6V512z"/>
+<line class="rule" x1="914" y1="512" x2="1194" y2="512"/>
+<line class="hair" x1="926" y1="554" x2="1182" y2="554"/>
+<text class="m b" x="926" y="502"><tspan class="tsch">analytics.</tspan>ctx_combination_evidence</text>
+<text class="desc" x="926" y="529">조건 조합을 뒷받침하는 근거 발화를 담는다.</text>
+<text class="kb pk" x="924" y="573">PK</text>
+<text class="m" x="962" y="573">snapshot_id</text>
+<text class="m sm lref" x="1184" y="573" text-anchor="end">⇢ ctx_snapshot</text>
+<text class="kb pk" x="924" y="591">PK</text>
+<text class="m" x="962" y="591">combo_id</text>
+<text class="m sm lref" x="1184" y="591" text-anchor="end">⇢ ctx_combination</text>
+<text class="kb pk" x="924" y="609">PK</text>
+<text class="m" x="962" y="609">seq</text>
+<text class="m sm ty" x="1184" y="609" text-anchor="end">integer</text>
+<text class="m" x="962" y="627">quote</text>
+<text class="m sm ty" x="1184" y="627" text-anchor="end">text</text>
+<text class="m" x="962" y="645">source_title</text>
+<text class="m sm ty" x="1184" y="645" text-anchor="end">text</text>
+<text class="m" x="962" y="663">source_url</text>
+<text class="m sm ty" x="1184" y="663" text-anchor="end">text</text>
+<text class="m" x="962" y="681">perspective</text>
+<text class="m sm ty" x="1184" y="681" text-anchor="end">text</text>
+<path class="e" d="M322,127.0H286" marker-end="url(#social-a)"/>
+<path class="ed" d="M592,325.0H610V145H628" marker-end="url(#social-d)"/>
+<path class="e" d="M628,375h-8V393h8"/>
+<path class="ed" d="M620,384.0H592" marker-end="url(#social-d)"/>
+<path class="e" d="M628,605h-8V623h8"/>
+<path class="ed" d="M620,614.0H610V410H592" marker-end="url(#social-d)"/>
+<path class="ed" d="M286,463.0H304V400H322" marker-end="url(#social-d)"/>
+<path class="ed" d="M286,765.0H304V400H322" marker-end="url(#social-d)"/>
+<path class="ed" d="M457,470V432" marker-end="url(#social-d)"/>
+<path class="ed" d="M457,736V700" marker-end="url(#social-d)"/>
+<path class="ed" d="M914,587.0H878" marker-end="url(#social-d)"/>
+</svg>
+      <!-- /erd:social -->
+    </div>
+    <figcaption>
+      <p><strong>그림 13. 소셜.</strong> 실제 FK는 <code>ctx_entity.snapshot_id</code> 하나다. 나머지 참조는 <span class="mono">⇢</span>로 표시한 FK 없는 참조다.</p>
+    </figcaption>
+  </figure>
+
+  <figure>
+    <div class="scroll">
+      <!-- erd:research -->
+<svg viewBox="0 0 1200 630" role="img" aria-label="gold_db analytics 스키마의 리서치 실행 빈 테이블 ERD. 웨이브, 워커, 활동 로그가 실행 1회를 가리킨다.">
+<defs><marker id="research-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="research-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
+<rect class="tbox" x="16" y="40" width="280" height="284" rx="6"/>
+<path class="th" d="M16,70V46q0,-6 6,-6H290q6,0 6,6V70z"/>
+<line class="rule" x1="16" y1="70" x2="296" y2="70"/>
+<line class="hair" x1="28" y1="112" x2="284" y2="112"/>
+<text class="m b" x="28" y="60"><tspan class="tsch">analytics.</tspan>ctx_research_run</text>
+<text class="desc" x="28" y="87">리서치 실행 1회를 담는다.</text>
+<text class="kb pk" x="26" y="131">PK</text>
+<text class="m" x="64" y="131">run_id</text>
+<text class="m sm ty" x="286" y="131" text-anchor="end">uuid</text>
+<text class="m" x="64" y="149">keyword</text>
+<text class="m sm ty" x="286" y="149" text-anchor="end">text</text>
+<text class="m" x="64" y="167">geo_key</text>
+<text class="m sm ty" x="286" y="167" text-anchor="end">smallint</text>
+<text class="m" x="64" y="185">lang_key</text>
+<text class="m sm ty" x="286" y="185" text-anchor="end">smallint</text>
+<text class="m" x="64" y="203">purpose_preset</text>
+<text class="m sm ty" x="286" y="203" text-anchor="end">text</text>
+<text class="m" x="64" y="221">purpose_text</text>
+<text class="m sm ty" x="286" y="221" text-anchor="end">text</text>
+<text class="m" x="64" y="239">status</text>
+<text class="m sm ty" x="286" y="239" text-anchor="end">text</text>
+<text class="m" x="64" y="257">search_count</text>
+<text class="m sm ty" x="286" y="257" text-anchor="end">integer</text>
+<text class="m" x="64" y="275">source_count</text>
+<text class="m sm ty" x="286" y="275" text-anchor="end">integer</text>
+<text class="m" x="64" y="293">worker_count</text>
+<text class="m sm ty" x="286" y="293" text-anchor="end">integer</text>
+<text class="m" x="64" y="311">snapshot_id</text>
+<text class="m sm lref" x="286" y="311" text-anchor="end">⇢ ctx_snapshot</text>
+<rect class="tbox" x="380" y="40" width="280" height="140" rx="6"/>
+<path class="th" d="M380,70V46q0,-6 6,-6H654q6,0 6,6V70z"/>
+<line class="rule" x1="380" y1="70" x2="660" y2="70"/>
+<line class="hair" x1="392" y1="112" x2="648" y2="112"/>
+<text class="m b" x="392" y="60"><tspan class="tsch">analytics.</tspan>ctx_research_wave</text>
+<text class="desc" x="392" y="87">실행의 탐색 웨이브를 담는다.</text>
+<text class="kb pk" x="390" y="131">PK</text>
+<text class="m" x="428" y="131">run_id</text>
+<text class="m sm lref" x="650" y="131" text-anchor="end">⇢ ctx_research_run</text>
+<text class="kb pk" x="390" y="149">PK</text>
+<text class="m" x="428" y="149">wave_no</text>
+<text class="m sm ty" x="650" y="149" text-anchor="end">integer</text>
+<text class="m" x="428" y="167">strategy</text>
+<text class="m sm ty" x="650" y="167" text-anchor="end">text</text>
+<rect class="tbox" x="380" y="204" width="280" height="212" rx="6"/>
+<path class="th" d="M380,234V210q0,-6 6,-6H654q6,0 6,6V234z"/>
+<line class="rule" x1="380" y1="234" x2="660" y2="234"/>
+<line class="hair" x1="392" y1="276" x2="648" y2="276"/>
+<text class="m b" x="392" y="224"><tspan class="tsch">analytics.</tspan>ctx_research_worker</text>
+<text class="desc" x="392" y="251">실행의 워커와 상태를 담는다.</text>
+<text class="kb pk" x="390" y="295">PK</text>
+<text class="m" x="428" y="295">run_id</text>
+<text class="m sm lref" x="650" y="295" text-anchor="end">⇢ ctx_research_run</text>
+<text class="kb pk" x="390" y="313">PK</text>
+<text class="m" x="428" y="313">worker_id</text>
+<text class="m sm ty" x="650" y="313" text-anchor="end">text</text>
+<text class="m" x="428" y="331">wave_no</text>
+<text class="m sm lref" x="650" y="331" text-anchor="end">⇢ ctx_research_wave</text>
+<text class="m" x="428" y="349">label</text>
+<text class="m sm ty" x="650" y="349" text-anchor="end">text</text>
+<text class="m" x="428" y="367">query</text>
+<text class="m sm ty" x="650" y="367" text-anchor="end">text</text>
+<text class="m" x="428" y="385">status</text>
+<text class="m sm ty" x="650" y="385" text-anchor="end">text</text>
+<text class="m" x="428" y="403">source_count</text>
+<text class="m sm ty" x="650" y="403" text-anchor="end">integer</text>
+<rect class="tbox" x="380" y="440" width="280" height="176" rx="6"/>
+<path class="th" d="M380,470V446q0,-6 6,-6H654q6,0 6,6V470z"/>
+<line class="rule" x1="380" y1="470" x2="660" y2="470"/>
+<line class="hair" x1="392" y1="512" x2="648" y2="512"/>
+<text class="m b" x="392" y="460"><tspan class="tsch">analytics.</tspan>ctx_research_log</text>
+<text class="desc" x="392" y="487">실행의 활동 로그 한 줄을 담는다.</text>
+<text class="kb pk" x="390" y="531">PK</text>
+<text class="m" x="428" y="531">run_id</text>
+<text class="m sm lref" x="650" y="531" text-anchor="end">⇢ ctx_research_run</text>
+<text class="kb pk" x="390" y="549">PK</text>
+<text class="m" x="428" y="549">seq</text>
+<text class="m sm ty" x="650" y="549" text-anchor="end">integer</text>
+<text class="m" x="428" y="567">kind</text>
+<text class="m sm ty" x="650" y="567" text-anchor="end">text</text>
+<text class="m" x="428" y="585">title</text>
+<text class="m sm ty" x="650" y="585" text-anchor="end">text</text>
+<text class="m" x="428" y="603">detail</text>
+<text class="m sm ty" x="650" y="603" text-anchor="end">text</text>
+<path class="ed" d="M380,127.0H296" marker-end="url(#research-d)"/>
+<path class="ed" d="M380,291.0H338V127H296" marker-end="url(#research-d)"/>
+<path class="ed" d="M380,527.0H338V127H296" marker-end="url(#research-d)"/>
+</svg>
+      <!-- /erd:research -->
+    </div>
+    <figcaption>
+      <p><strong>그림 14. 리서치 실행.</strong> 레거시 <code>DB-v2.32.sql</code>에 없고 <code>gold.*</code> 정의에만 있는 테이블이다. <code>ctx_group</code> · <code>ctx_combination_evidence</code> · <code>ctx_claim</code> · <code>ctx_claim_quote</code>도 같다.</p>
     </figcaption>
   </figure>
 </section>

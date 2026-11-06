@@ -552,6 +552,7 @@ def install_metrics():
     migrate('metrics-002.sql', '002_first_screen', store='metrics')
     migrate('metrics-003.sql', '003_metric_rows', store='metrics')
     migrate('metrics-004.sql', '004_ga4_seo', store='metrics')
+    migrate('metrics-005.sql', '005_keyword_social', store='metrics')
     migrate('cache-001.sql', '001_cache', store='cache')
 
 

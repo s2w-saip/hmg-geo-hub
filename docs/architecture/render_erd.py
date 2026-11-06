@@ -550,7 +550,102 @@ def ref() -> Figure:
     return f
 
 
-FIGURES = (operations, catalog, external, ga4_registry_week, ga4, seo, ref, metrics)
+def keyword() -> Figure:
+    """gold_db keyword tables, empty: back/hub_storage/metrics-005.sql."""
+    f = Figure("keyword", 530, "gold_db analytics 스키마의 키워드 빈 테이블 ERD. 검색량, 검색 결과, 연관 검색어가 검색어 사전을 가리킨다.")
+    f.table("analytics.kw_volume_monthly", 16, 40, 290, "검색어 · 지역 · 언어 · 월마다 검색량과 경쟁도를 담는다.", [
+        ("PK FK", "kw_key", "integer"), ("PK", "location_code", "integer"), ("PK", "language_code", "text"),
+        ("PK", "month", "date"), ("", "search_volume", "integer"), ("", "competition", "=LOW|MEDIUM|HIGH"),
+        ("", "competition_index", "integer"), ("", "cpc", "numeric"), ("", "call_id", "text"), ("", "observed_at", "timestamptz")])
+    f.table("analytics.dim_keyword", 455, 40, 290, "검색어 사전이다. 정규화한 검색어마다 키를 발급한다.", [
+        ("PK", "kw_key", "integer"), ("", "term", "text"), ("UK", "term_norm", "text")])
+    f.table("analytics.kw_serp", 894, 40, 290, "수집 호출마다 순위별 검색 결과를 담는다.", [
+        ("PK", "call_id", "text"), ("PK", "rank", "integer"), ("FK", "kw_key", "integer"), ("", "location_code", "integer"),
+        ("", "language_code", "text"), ("", "url", "text"), ("", "domain", "text"), ("", "title", "text"), ("", "snippet", "text"),
+        ("", "observed_at", "timestamptz")])
+    f.table("analytics.kw_suggestion", 455, 225, 290, "수집 호출마다 위치별 연관 검색어를 담는다.", [
+        ("PK", "call_id", "text"), ("PK", "pos", "integer"), ("FK", "seed_kw_key", "integer"), ("FK", "kw_key", "integer"),
+        ("", "location_code", "integer"), ("", "language_code", "text"), ("", "search_volume", "integer"), ("", "intent", "text"),
+        ("", "total_count", "integer"), ("", "is_seed", "boolean"), ("", "observed_at", "timestamptz")])
+    f.fk("kw_volume_monthly", "kw_key", "dim_keyword")
+    f.fk("kw_serp", "kw_key", "dim_keyword")
+    f.fk("kw_suggestion", "seed_kw_key", "dim_keyword", x=570)
+    f.fk("kw_suggestion", "kw_key", "dim_keyword", x=630)
+    return f
+
+
+def social() -> Figure:
+    """gold_db social tables, empty: back/hub_storage/metrics-005.sql."""
+    snap = ("PK", "snapshot_id", "⇢ ctx_snapshot")
+    f = Figure("social", 945, "gold_db analytics 스키마의 소셜 빈 테이블 ERD. 맥락과 조건 엔티티가 스냅샷을 가리키고, 그룹, 연결, 조합, 근거, 도메인, 심층 근거가 엔티티를 중심으로 이어진다.")
+    f.table("analytics.ctx_snapshot", 16, 40, 270, "구매 맥락 분석 스냅샷 1개를 담는다.", [
+        ("PK", "snapshot_id", "smallint"), ("", "industry_entity_id", "uuid"), ("", "source", "text"),
+        ("", "utterance_total", "integer"), ("", "taken_at", "date"), ("", "is_active", "boolean"), ("", "keyword", "text"),
+        ("", "worker_total", "integer"), ("", "source_total", "integer")], notes=["is_active는 업종마다 하나"])
+    f.table("analytics.ctx_evidence", 16, 340, 270, "맥락 · 조건을 뒷받침하는 근거 발화 1개를 담는다.", [
+        snap, ("PK", "id", "uuid"), ("", "entity_id", "⇢ ctx_entity"), ("", "utterance_id", "text"), ("", "quote", "text"),
+        ("", "source_host", "text"), ("", "source_url", "text"), ("", "sentiment", "text"), ("", "source_title", "text"),
+        ("", "rank", "integer"), ("", "perspective", "text")])
+    f.table("analytics.ctx_domain", 16, 660, 270, "엔티티별 출처 host와 건수를 담는다.", [
+        snap, ("PK", "entity_id", "⇢ ctx_entity"), ("PK", "host", "text"), ("", "n", "integer")])
+    f.table("analytics.ctx_entity", 322, 40, 270, "스냅샷마다 구매 맥락 또는 구매 조건 1개를 담는다.", [
+        ("PK FK", "snapshot_id", "smallint"), ("PK", "id", "uuid"), ("", "type", "=ConsumerContext|ConsumerRequirement"),
+        ("", "canonical_name", "text"), ("", "dimension", "text"), ("", "mention_count", "integer"), ("", "utterance_count", "integer"),
+        ("", "sentiment_positive", "integer"), ("", "sentiment_negative", "integer"), ("", "sentiment_neutral", "integer"),
+        ("", "group_id", "⇢ ctx_group"), ("", "unique_source_count", "integer"), ("", "perspective_buyer", "integer"),
+        ("", "perspective_seller", "integer"), ("", "perspective_neutral", "integer"), ("", "related_ids", "uuid[]")])
+    f.table("analytics.ctx_claim", 322, 470, 270, "심층 근거가 있는 조건 1개의 검증 결과를 담는다.", [
+        snap, ("PK", "entity_id", "⇢ ctx_entity"), ("", "claim", "text"), ("", "supporting", "integer"),
+        ("", "contradicting", "integer"), ("", "neutral", "integer"), ("", "total_scanned", "integer"), ("", "confidence", "text")])
+    f.table("analytics.ctx_claim_quote", 322, 736, 270, "심층 근거의 인용 표본을 담는다.", [
+        snap, ("PK", "entity_id", "⇢ ctx_claim"), ("PK", "seq", "integer"), ("", "quote", "text"), ("", "source", "text"),
+        ("", "stance", "text")])
+    f.table("analytics.ctx_group", 628, 40, 250, "스냅샷마다 테마 또는 카테고리 1개를 담는다.", [
+        snap, ("PK", "group_id", "text"), ("", "side", "text"), ("", "name", "text"), ("", "description", "text"),
+        ("", "sort_order", "integer")])
+    f.table("analytics.ctx_drive", 628, 270, 250, "맥락이 조건으로 이어지는 연결과 그 강도를 담는다.", [
+        snap, ("PK", "context_id", "⇢ ctx_entity"), ("PK", "requirement_id", "⇢ ctx_entity"), ("", "co_count", "integer"),
+        ("", "strength_score", "numeric")])
+    f.table("analytics.ctx_combination", 628, 482, 250, "함께 나온 조건 조합(2개 이상)을 담는다.", [
+        snap, ("PK", "combo_id", "text"), ("", "cond_a", "⇢ ctx_entity"), ("", "cond_b", "⇢ ctx_entity"), ("", "cond_more", "uuid[]"),
+        ("", "co_count", "integer"), ("", "description", "text"), ("", "total_speakers", "integer"),
+        ("", "unique_source_count", "integer")])
+    f.table("analytics.ctx_combination_evidence", 914, 482, 280, "조건 조합을 뒷받침하는 근거 발화를 담는다.", [
+        snap, ("PK", "combo_id", "⇢ ctx_combination"), ("PK", "seq", "integer"), ("", "quote", "text"), ("", "source_title", "text"),
+        ("", "source_url", "text"), ("", "perspective", "text")])
+    f.fk("ctx_entity", "snapshot_id", "ctx_snapshot")
+    f.fk("ctx_entity", "group_id", "ctx_group", via=610, to="group_id", logical=True)
+    f.fk("ctx_drive", ("context_id", "requirement_id"), "ctx_entity", logical=True)
+    f.fk("ctx_combination", ("cond_a", "cond_b"), "ctx_entity", via=610, to=410, logical=True)
+    f.fk("ctx_evidence", "entity_id", "ctx_entity", via=304, to=400, logical=True)
+    f.fk("ctx_domain", "entity_id", "ctx_entity", via=304, to=400, logical=True)
+    f.fk("ctx_claim", "entity_id", "ctx_entity", x=457, logical=True)
+    f.fk("ctx_claim_quote", "entity_id", "ctx_claim", x=457, logical=True)
+    f.fk("ctx_combination_evidence", "combo_id", "ctx_combination", logical=True)
+    return f
+
+
+def research() -> Figure:
+    """gold_db social research run tables, empty: back/hub_storage/metrics-005.sql."""
+    f = Figure("research", 630, "gold_db analytics 스키마의 리서치 실행 빈 테이블 ERD. 웨이브, 워커, 활동 로그가 실행 1회를 가리킨다.")
+    f.table("analytics.ctx_research_run", 16, 40, 280, "리서치 실행 1회를 담는다.", [
+        ("PK", "run_id", "uuid"), ("", "keyword", "text"), ("", "geo_key", "smallint"), ("", "lang_key", "smallint"),
+        ("", "purpose_preset", "text"), ("", "purpose_text", "text"), ("", "status", "text"), ("", "search_count", "integer"),
+        ("", "source_count", "integer"), ("", "worker_count", "integer"), ("", "snapshot_id", "⇢ ctx_snapshot")])
+    f.table("analytics.ctx_research_wave", 380, 40, 280, "실행의 탐색 웨이브를 담는다.", [
+        ("PK", "run_id", "⇢ ctx_research_run"), ("PK", "wave_no", "integer"), ("", "strategy", "text")])
+    f.table("analytics.ctx_research_worker", 380, 204, 280, "실행의 워커와 상태를 담는다.", [
+        ("PK", "run_id", "⇢ ctx_research_run"), ("PK", "worker_id", "text"), ("", "wave_no", "⇢ ctx_research_wave"),
+        ("", "label", "text"), ("", "query", "text"), ("", "status", "text"), ("", "source_count", "integer")])
+    f.table("analytics.ctx_research_log", 380, 440, 280, "실행의 활동 로그 한 줄을 담는다.", [
+        ("PK", "run_id", "⇢ ctx_research_run"), ("PK", "seq", "integer"), ("", "kind", "text"), ("", "title", "text"),
+        ("", "detail", "text")])
+    for child in ("ctx_research_wave", "ctx_research_worker", "ctx_research_log"):
+        f.fk(child, "run_id", "ctx_research_run", via=338, to="run_id", logical=True)
+    return f
+
+
+FIGURES = (operations, catalog, external, ga4_registry_week, ga4, seo, ref, metrics, keyword, social, research)
 
 
 def render() -> dict[str, str]:

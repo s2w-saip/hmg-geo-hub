@@ -25,12 +25,16 @@ RESET ROLE;
 SET LOCAL ROLE hmg_analytics_reader;
 DO $$ BEGIN
  PERFORM 1 FROM analytics.ga4_row LIMIT 1;
+ PERFORM 1 FROM analytics.kw_serp LIMIT 1;
+ PERFORM 1 FROM analytics.ctx_entity LIMIT 1;
+ BEGIN DELETE FROM analytics.ctx_entity; RAISE EXCEPTION 'The analytics reader changes the social rows'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN PERFORM 1 FROM gold.first_screen_read; RAISE EXCEPTION 'The GA4 reader reaches the gold schema'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN DELETE FROM analytics.ga4_row; RAISE EXCEPTION 'The GA4 reader changes rows'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
 SET LOCAL ROLE hmg_analytics_writer;
 DO $$ BEGIN
+ INSERT INTO analytics.dim_keyword(term,term_norm) VALUES('verify','verify');
  BEGIN PERFORM 1 FROM gold.first_screen_read; RAISE EXCEPTION 'The GA4 writer reaches the gold schema'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END $$;
 RESET ROLE;
