@@ -1,5 +1,5 @@
-"""Gold's metric rows as a data source (bff.metrics.gold_rows): current rounds from the rows, a late round not shown, what was never
-computed counted from the snapshot; the rollup's recording counts only what is not current."""
+"""Gold's metric rows as a data source (bff.metrics.gold_rows): current rounds from the rows, a late round counted as the last resort, what
+was never computed counted from the snapshot; the rollup's recording counts only what is not current."""
 import asyncio
 import json
 import unittest
@@ -43,6 +43,17 @@ class Live:
         return 7
 
 
+class Failing(Live):
+    """A snapshot that cannot be read."""
+
+    def for_rounds(self, rounds):
+        return Failing(self.ctx, self.calls)
+
+    async def answer_counts(self, population, group=(), *, prompts=False):
+        self.calls.append(("answer_counts", list(self.ctx.selected_dates)))
+        raise OSError("down")
+
+
 def ctx_q(ctx):
     return ctx.q
 
@@ -62,8 +73,8 @@ def stored(day, answers):
     return {"round_date": day, "dims": {"engine_key": 1}, "counts": {"answers": answers}}
 
 
-def read(ctx, states, rows=(), call=None):
-    live = Live(ctx)
+def read(ctx, states, rows=(), call=None, live_rows=None, live=None):
+    live = live or Live(ctx, rows=live_rows)
     source = gold_rows.GoldRowsSource(live, gold_rows.scope_of(ctx))
 
     async def main():
@@ -116,30 +127,89 @@ class Rows(unittest.TestCase):
         _, live, _ = read(ctx, {}, call=lambda s: s.answer_counts(MONITORING))
         self.assertEqual(live.calls, [("answer_counts", [D2, D3])])
 
-    def test_a_late_round_of_one_round_read_is_not_shown_and_not_counted(self):
+    def test_a_late_round_of_one_round_read_is_counted_as_the_last_resort(self):
         for late in ({"snapshot": "older"}, {"version": "older"}, {"error": "boom"}):
             with self.subTest(late=late):
                 ctx = context()
-                with self.assertRaises(HTTPException) as caught:
-                    read(ctx, {D3: state(ctx, D3, **late)})
-                self.assertEqual(caught.exception.status_code, 503)
+                usage = {"live": False}
+                token = gold_rows.track_usage(usage)
+                try:
+                    answer, live, got = read(ctx, {D3: state(ctx, D3, **late)}, live_rows=[{"round_date": D3, "engine_key": 1, "answers": 9}])
+                finally:
+                    gold_rows.stop_tracking(token)
+                self.assertEqual(answer, [{"round_date": D3, "engine_key": 1, "answers": 9}])
+                self.assertEqual(live.calls, [("answer_counts", [D3])])
+                self.assertTrue(usage["live"])   # so serving keeps it in the cache DB
+                got.assert_not_called()
 
     def test_a_round_missing_from_a_computed_call_is_late(self):
         ctx = context()
-        with self.assertRaises(HTTPException):
-            read(ctx, {D2: state(ctx, D2)})
+        _, live, _ = read(ctx, {D2: state(ctx, D2)}, live_rows=[])
+        self.assertEqual(live.calls, [("answer_counts", [D3])])
 
-    def test_a_late_round_of_a_trend_is_a_gap_and_the_others_stay(self):
+    def test_a_late_round_of_a_trend_is_counted_and_the_others_stay(self):
         ctx = context(rounds=(D1, D2, D3))
-        answer, live, _ = read(ctx, {D1: state(ctx, D1, snapshot="older"), D2: state(ctx, D2), D3: state(ctx, D3)}, [stored(D2, 5), stored(D3, 6)])
+        usage = {"live": False}
+        token = gold_rows.track_usage(usage)
+        try:
+            answer, live, got = read(ctx, {D1: state(ctx, D1, snapshot="older"), D2: state(ctx, D2), D3: state(ctx, D3)}, [stored(D2, 5), stored(D3, 6)],
+                                     live_rows=[{"round_date": D1, "engine_key": 1, "answers": 4}])
+        finally:
+            gold_rows.stop_tracking(token)
+        self.assertEqual([(r["round_date"], r["answers"]) for r in answer], [(D1, 4), (D2, 5), (D3, 6)])
+        self.assertEqual(live.calls, [("answer_counts", [D1])])    # only the late round
+        self.assertEqual(got.call_args.args[4], [D2, D3])
+        self.assertEqual(ctx.late_rounds, set())
+        self.assertTrue(usage["live"])
+
+    def test_a_trend_with_every_round_late_is_counted(self):
+        ctx = context(rounds=(D2, D3))
+        _, live, got = read(ctx, {D2: state(ctx, D2, version="older"), D3: state(ctx, D3, version="older")}, live_rows=[])
+        self.assertEqual(live.calls, [("answer_counts", [D2, D3])])
+        got.assert_not_called()
+
+    def test_when_the_last_resort_fails_too_a_round_read_is_not_shown(self):
+        ctx = context()
+        with self.assertRaises(HTTPException) as caught:
+            read(ctx, {D3: state(ctx, D3, snapshot="older")}, live=Failing(ctx))
+        self.assertEqual(caught.exception.status_code, 503)
+
+    def test_when_the_last_resort_fails_too_a_trend_keeps_the_gap(self):
+        ctx = context(rounds=(D1, D2, D3))
+        usage = {"live": False}
+        token = gold_rows.track_usage(usage)
+        try:
+            answer, _, _ = read(ctx, {D1: state(ctx, D1, snapshot="older"), D2: state(ctx, D2), D3: state(ctx, D3)}, [stored(D2, 5), stored(D3, 6)], live=Failing(ctx))
+        finally:
+            gold_rows.stop_tracking(token)
         self.assertEqual([r["round_date"] for r in answer], [D2, D3])
         self.assertEqual(ctx.late_rounds, {D1})
-        self.assertEqual(live.calls, [])
+        self.assertFalse(usage["live"])    # a read with a gap is not cached
 
-    def test_a_trend_with_every_round_late_is_not_shown(self):
-        ctx = context(rounds=(D2, D3))
-        with self.assertRaises(HTTPException):
-            read(ctx, {D2: state(ctx, D2, version="older"), D3: state(ctx, D3, version="older")})
+    def test_the_last_resort_runs_a_few_at_a_time(self):
+        async def main():
+            running, peak = 0, 0
+
+            async def one():
+                nonlocal running, peak
+                async with gold_rows.last_resort():
+                    running += 1
+                    peak = max(peak, running)
+                    await asyncio.sleep(0)
+                    running -= 1
+
+            with mock.patch.object(gold_rows, "_LAST_RESORT", asyncio.Semaphore(2)):
+                await asyncio.gather(*(one() for _ in range(6)))
+            return peak
+        self.assertEqual(asyncio.run(main()), 2)
+
+    def test_a_last_resort_inside_another_takes_no_second_place(self):
+        async def main():
+            with mock.patch.object(gold_rows, "_LAST_RESORT", asyncio.Semaphore(1)):
+                async with gold_rows.last_resort():
+                    async with gold_rows.last_resort():
+                        return True
+        self.assertTrue(asyncio.run(asyncio.wait_for(main(), 2)))
 
     def test_a_single_value_comes_back_as_it_was(self):
         ctx = context()

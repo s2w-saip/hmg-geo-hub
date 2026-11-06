@@ -2,7 +2,7 @@
 run the first screens' builders (first_screens). What they count goes to Gold's metric rows, round by round (metrics.gold_rows; a round
 already current is not counted again), and the lists they read whole to gold.first_screen_read. Then the cache DB rows of other snapshots
 go. Run by manage.py rollup, with the rollup role's connection; the API only reads what it wrote. A read that fails is kept as failed:
-that screen part shows nothing until a later run succeeds."""
+until a later run succeeds, that value is counted at query time as the last resort (serving)."""
 from __future__ import annotations
 
 import asyncio

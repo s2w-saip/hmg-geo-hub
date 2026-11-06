@@ -53,7 +53,7 @@ if ! listening 3333; then
         nohup npm run dev >"$logs/front.log" 2>&1 &)
 fi
 # The unfiltered first screens' values: computed when the live snapshot or the definition version moved, else nothing happens. Until it
-# finishes, those screen parts show nothing (SSOT). In the background, so the API does not wait; see the log.
+# finishes, those values are counted at query time as the last resort. In the background, so the API does not wait; see the log.
 if [ ${#hub_env[@]} -gt 0 ]; then
     (cd "$repo" && HGH_HUB_NATIVE=1 nohup "$python" -X utf8 back/hub_storage/manage.py rollup >"$logs/rollup.log" 2>&1 &)
 fi

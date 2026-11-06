@@ -5,8 +5,9 @@ calls from the rows the rollup job wrote, so a first screen and a filtered read 
 A read with a filter (LIVE_PARAMS) is counted from the snapshot and cached (serving). Otherwise each call:
 - was never computed for this scope: counted from the snapshot, as a filtered read;
 - is current for the rounds asked: answered from the rows;
-- is late for a round (another snapshot or definition version, or failed): that value is not shown, never counted at query time. A
-  read of one round answers 503; a trend leaves the round out as a gap (ctx.late_rounds), so a republished old round blanks only itself.
+- is late for a round (another snapshot or definition version, or failed): counted from the snapshot as the last resort, a few at a time
+  (last_resort), and cached like a filtered read. A trend counts only its late rounds. If that fails too, a read of one round answers 503 and
+  a trend leaves the round out as a gap (ctx.late_rounds), so a republished old round blanks only itself.
 
 The rollup job records through RecordingSource: what a builder asks is counted, split by round and written; a round that is already
 current is not counted again."""
@@ -15,7 +16,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-from collections.abc import Callable, Mapping, Sequence
+import logging
+import os
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+from contextlib import asynccontextmanager
 from contextvars import ContextVar, Token
 from datetime import date
 from typing import Any
@@ -36,7 +40,13 @@ SCOPE_PARAMS = ("engine", "brand_presence")
 ROUND_COLUMN = frozenset({"source_round_counts"})
 ROUND_GROUP = "round_date"
 SCALAR = "_value"
+NOT_READY = "The pre-computed values of this screen are not ready"
+#: how many late values are counted at once: the other reads and the rollup keep the rest of the connections
+LAST_RESORT_AT_ONCE = int(os.environ.get("HGH_LAST_RESORT_AT_ONCE", "2"))
 
+log = logging.getLogger("hgh.gold")
+_LAST_RESORT = asyncio.Semaphore(LAST_RESORT_AT_ONCE)
+_in_last_resort: ContextVar[bool] = ContextVar("hgh_in_last_resort", default=False)
 _recorder: ContextVar[RowRecorder | None] = ContextVar("hgh_row_recorder", default=None)
 _usage: ContextVar[dict | None] = ContextVar("hgh_live_usage", default=None)
 
@@ -91,6 +101,20 @@ def call_key(name: str, args: Sequence, kwargs: Mapping[str, Any]) -> str:
     return "|".join(parts)
 
 
+@asynccontextmanager
+async def last_resort() -> AsyncIterator[None]:
+    """One count of what the rollup should have kept. A read already inside one (a list that makes metric calls) takes no second place."""
+    if _in_last_resort.get():
+        yield
+        return
+    async with _LAST_RESORT:
+        token = _in_last_resort.set(True)
+        try:
+            yield
+        finally:
+            _in_last_resort.reset(token)
+
+
 def _by_round(name: str, args: Sequence, kwargs: Mapping[str, Any]) -> bool:
     group = kwargs.get("group") or next((a for a in args if isinstance(a, (list, tuple))), ())
     return name in ROUND_COLUMN or ROUND_GROUP in group
@@ -107,8 +131,10 @@ def _row(stored: Mapping[str, Any], *, with_round: bool) -> dict:
     return row
 
 
-def _assemble(stored: list[dict], kwargs: Mapping[str, Any], with_round: bool, several_rounds: bool) -> Any:
+def _assemble(stored: list[dict], kwargs: Mapping[str, Any], with_round: bool, several_rounds: bool, counted: Sequence[dict] = ()) -> Any:
     rows = [_row(r, with_round=with_round) for r in stored]
+    if counted:
+        rows = sorted([*rows, *counted], key=lambda r: r[ROUND_GROUP])
     if len(rows) == 1 and SCALAR in rows[0]:
         return rows[0][SCALAR]
     picked = kwargs.get("brand_keys")
@@ -162,11 +188,39 @@ class GoldRowsSource:
             await self.ctx.load_catalog()
             return await method(*args, **kwargs)
         ready = [d for d in rounds if self._current(d, states.get(d))]
-        if len(ready) < len(rounds) and (not by_round or not ready):
-            raise HTTPException(503, "The pre-computed values of this screen are not ready")
-        self.ctx.late_rounds = {*self.ctx.late_rounds, *(d for d in rounds if d not in ready)}
+        late = [d for d in rounds if d not in ready]
+        if late and (not by_round or not ready):
+            return await self._count_late(method, args, kwargs)
+        counted = await self._count_late_rounds(name, args, kwargs, late) if late else []
         stored = await metrics_db.metric_rows(self.surface, _project(self.ctx), call, self.scope, ready)
-        return _assemble(stored, kwargs, by_round, len(ready) > 1)
+        return _assemble(stored, kwargs, by_round, len(ready) > 1 or bool(counted), counted)
+
+    async def _count_late(self, method: Callable, args: tuple, kwargs: dict) -> Any:
+        """The last resort for a read no row can answer. If it fails too, the value is not shown."""
+        log.warning("Late pre-computed value, counting it: %s %s", self.surface, self.scope)
+        try:
+            async with last_resort():
+                await self.ctx.load_catalog()
+                answer = await method(*args, **kwargs)
+        except Exception as error:  # noqa: BLE001 - whatever stopped the count, the screen part says the value is not ready
+            log.warning("The last resort failed: %s %s", self.surface, self.scope, exc_info=True)
+            raise HTTPException(503, NOT_READY) from error
+        _mark_live()
+        return answer
+
+    async def _count_late_rounds(self, name: str, args: tuple, kwargs: dict, late: list[date]) -> list[dict]:
+        """The last resort for a trend's late rounds; the others stay on the rows. If it fails too, those rounds stay gaps."""
+        log.warning("Late pre-computed rounds, counting them: %s %s %s", self.surface, self.scope, late)
+        try:
+            async with last_resort():
+                await self.ctx.load_catalog()
+                rows = await getattr(self.live.for_rounds(late), name)(*args, **kwargs)
+        except Exception:  # noqa: BLE001 - the other rounds still answer
+            log.warning("The last resort failed: %s %s %s", self.surface, self.scope, late, exc_info=True)
+            self.ctx.late_rounds = {*self.ctx.late_rounds, *late}
+            return []
+        _mark_live()
+        return rows
 
 
 class RowRecorder:

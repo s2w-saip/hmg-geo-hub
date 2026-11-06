@@ -37,3 +37,13 @@ SSOT `shared/glossary.md`에 넣을 내용이다. SSOT 문서의 BFF(`.md` 24곳
 | `shared/project-architecture.md` | 78 | '필터를 건 조회는 BFF가 Gold의 조회용 테이블에서 전체를 센다' |
 | `shared/glossary.md` | 25 | 조회 시점 집계의 '운영 스냅샷에서'를 'Gold의 조회용 테이블에서'로 |
 | `service/cache-db.md` | 3, 37 | 다시 만들고 세는 곳을 Gold의 조회용 테이블로 |
+
+# 수정 초안: 사전 집계가 늦거나 실패할 때 (2026-11-06)
+
+보여 주지 않는 대신, 최후의 수단으로 조회 시점에 직접 집계해 캐시 DB에 둔다. 그것도 실패하면 보여 주지 않는다. 줄 번호는 지금 SSOT 기준이다.
+
+| 파일 | 줄 | 고칠 내용 |
+|---|---|---|
+| `shared/project-architecture.md` | 65 | '사전 집계가 늦거나 실패하면 최후의 수단으로 직접 집계한다. 그것도 실패하면 그 지표는 보여 주지 않는다' |
+| `shared/glossary.md` | 24 | 사전 집계의 뒷문장을 같게 |
+| `service/cache-db.md` | 42 | '하지 않는다'에서 빼고, 동작에 최후의 수단을 더한다 |

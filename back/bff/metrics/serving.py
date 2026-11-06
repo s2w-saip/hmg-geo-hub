@@ -2,7 +2,8 @@
 - a read of metrics (ROW_READS) goes through its data source (metrics.gold_rows): a first screen's come from Gold's rows, a filtered
   one is counted from the live snapshot and stored in the cache DB.
 - a list of an unfiltered first screen (a prompt list, filter options), which the rollup job keeps whole in Gold: the kept value, only
-  while it is of the live snapshot and this definition version. A late or failed rollup shows nothing (503), never counted at query time.
+  while it is of the live snapshot and this definition version. A late or failed rollup: counted now as the last resort and cached like a
+  filtered read; if that fails too, nothing is shown (503).
 - any other read (a filter, a period, a scoped account's, a drill-down): the cache DB's, else counted from the live snapshot and stored.
 - a read that holds no metric value (an answer's text, keyword and social research): read as it is.
 While a rollup runs, the reads in its context are handed to it instead (recording)."""
@@ -127,6 +128,16 @@ def stop_recording(token: Token) -> None:
     _recording.reset(token)
 
 
+async def _last_resort(path: str, run: Callable[[], Awaitable[str]]) -> str:
+    log.warning("Late pre-computed read, counting it: %s", path)
+    try:
+        async with gold_rows.last_resort():
+            return await run()
+    except Exception as error:  # noqa: BLE001 - whatever stopped the count, the screen part says the value is not ready
+        log.warning("The last resort failed: %s", path, exc_info=True)
+        raise HTTPException(503, gold_rows.NOT_READY) from error
+
+
 async def read(path: str, q: QueryParams, run: Callable[[], Awaitable[str]]) -> str:
     """The read's answer as JSON text."""
     active = _recording.get()
@@ -141,12 +152,13 @@ async def read(path: str, q: QueryParams, run: Callable[[], Awaitable[str]]) -> 
     except Exception:  # noqa: BLE001 - no snapshot to key on: the read itself says what is wrong
         log.warning("Live snapshot not read; reading %s as it is", path, exc_info=True)
         return await run()
+    late = False
     if path not in ROW_READS:
         kept = await metrics_db.first_screen(read_key(f"{path}?{q}"))
         if kept is not None:
             if kept["error"] is None and kept["snapshot_id"] == snapshot and kept["definition_version"] == DEFINITION_VERSION:
                 return kept["result"]
-            raise HTTPException(503, "The pre-computed values of this screen are not ready")
+            late = True
     query = {"path": path, **{k: q.getlist(k) for k in dict.fromkeys(q.keys())}}
     cached = await cache_db.get(query, snapshot, DEFINITION_VERSION)
     if cached is not None:
@@ -154,7 +166,7 @@ async def read(path: str, q: QueryParams, run: Callable[[], Awaitable[str]]) -> 
     usage = {"live": False}
     token = gold_rows.track_usage(usage)
     try:
-        text = await run()
+        text = await (_last_resort(path, run) if late else run())
     finally:
         gold_rows.stop_tracking(token)
     # a read Gold's rows answered is kept there already

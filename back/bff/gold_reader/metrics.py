@@ -287,7 +287,7 @@ async def brands(ctx: Context) -> dict:
 
 
 def gap_reason_of(ctx: Context, key: str, buckets_of: dict) -> str:
-    """Why a bucket has no value: its pre-computed values are late (shown as a gap, never counted at query time), or nothing was answered."""
+    """Why a bucket has no value: its pre-computed values are late and the last resort failed too (shown as a gap), or nothing was answered."""
     return "not_ready" if any(d in ctx.late_rounds for d in buckets_of.get(key, ())) else "no_answer"
 
 

@@ -12,7 +12,7 @@
 #               newest row's checked_at; a refused read records nothing and the screens keep the last week
 #   rollup      cron, hourly at minute 20 (manage.py rollup, in the BFF container): the unfiltered first screens' values into Gold for the
 #               surfaces whose live snapshot or definition version moved; nothing moved, it only says so. Until a run succeeds, those
-#               screen parts show nothing (SSOT). Run it by hand after deploying a new definition version.
+#               values are counted at query time as the last resort. Run it by hand after deploying a new definition version.
 #   ga4         the GA4 collector (back/analytics/ga4_collect.py) once, by hand: its arguments pass through
 #               (--dry-run, --backfill 180, --from/--to, --property). It runs in a throwaway container of the BFF
 #               image on the host network (the HUB data DB on 127.0.0.1, GA4 on the internet); the secrets travel in

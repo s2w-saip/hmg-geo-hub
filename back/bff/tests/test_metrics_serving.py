@@ -1,4 +1,4 @@
-"""Where a /v1 read's answer comes from (bff.metrics.serving): Gold for a first screen's read, never counted at query time when late or
+"""Where a /v1 read's answer comes from (bff.metrics.serving): Gold for a first screen's read, counted as the last resort when late or
 failed; the cache DB, else a fresh count, for any other read; a read that holds no metric value as it is; a rollup's reads counted once."""
 import asyncio
 import unittest
@@ -59,14 +59,22 @@ class FirstScreen(unittest.TestCase):
         self.assertEqual(run.calls, 0)
         get.assert_not_called()
 
-    def test_late_or_failed_shows_nothing_and_never_counts_at_query_time(self):
+    def test_late_or_failed_is_counted_as_the_last_resort_and_cached(self):
         for kept in (row(snapshot="s0"), row(version="older"), row(result=None, error="ValueError: x")):
             with self.subTest(kept=kept):
-                run = Runs()
-                with self.assertRaises(HTTPException) as caught:
-                    serve(kept=kept, run=run)
-                self.assertEqual(caught.exception.status_code, 503)
-                self.assertEqual(run.calls, 0)
+                answer, run, _, _, put = serve(kept=kept)
+                self.assertEqual((answer, run.calls), ('{"n":1}', 1))
+                self.assertEqual(put.call_args.args[1:], ("s1", DEFINITION_VERSION, '{"n":1}'))
+
+    def test_a_last_resort_already_cached_is_not_counted_again(self):
+        answer, run, _, _, put = serve(kept=row(snapshot="s0"), cached='{"cached":1}')
+        self.assertEqual((answer, run.calls), ('{"cached":1}', 0))
+        put.assert_not_called()
+
+    def test_a_last_resort_that_fails_too_shows_nothing(self):
+        with self.assertRaises(HTTPException) as caught:
+            serve(kept=row(snapshot="s0"), run=Runs(error=OSError("down")))
+        self.assertEqual(caught.exception.status_code, 503)
 
 
 class Filtered(unittest.TestCase):

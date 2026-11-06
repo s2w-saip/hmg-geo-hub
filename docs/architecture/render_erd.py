@@ -407,7 +407,7 @@ def metrics() -> Figure:
     f.table("gold.first_screen_read", 16, 320, 320, "지표가 아닌 첫 화면 목록(프롬프트 · 필터 옵션 등)의 /v1 응답 한 건. 스냅샷 ID와 정의 버전이 지금과 같을 때만 화면에 나간다.", [
         ("PK", "read_key", "text sha256"), ("", "surface", "text"), ("", "path", "text"), ("", "query", "text"), ("", "snapshot_id", "text"),
         ("", "definition_version", "text"), ("", "result", "jsonb null"), ("", "error", "text null"), ("", "computed_at", "timestamptz")],
-        notes=["result · error 중 하나만 있다", "실패로 남으면 그 구역은 보이지 않는다"])
+        notes=["result · error 중 하나만 있다", "실패로 남으면 조회 시점에 직접 집계한다"])
     f.table("gold.rollup_run", 376, 320, 300, "사전 집계 작업의 기록이다. 표면마다 어느 스냅샷 · 정의 버전으로 돌았는지 남긴다.", [
         ("PK", "run_id", "bigint"), ("", "surface", "text"), ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "started_at", "timestamptz"),
         ("", "finished_at", "timestamptz null"), ("", "status", "text"), ("", "reads", "int null"), ("", "failed", "int null"), ("", "note", "text null")])
