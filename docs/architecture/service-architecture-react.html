@@ -7,20 +7,20 @@
 <style>
 :root {
   --bg: #F3F5F7; --panel: #FFFFFF; --soft: #E7ECF1; --fg: #17202B; --muted: #586474; --line: #B9C3CF; --edge: #3E4A59;
-  --hub: #0B706B; --hub-bg: #E2F2EF; --gold: #94620A; --gold-bg: #FAF1DF; --write: #BF3A22; --new: #3F4FC4; --new-bg: #E9EBFB;
+  --hub: #0B706B; --hub-bg: #E2F2EF; --gold: #94620A; --gold-bg: #FAF1DF; --write: #BF3A22; --new: #3F4FC4; --new-bg: #E9EBFB; --data: #8135A8; --data-bg: #F4EAF9;
   --sans: "Pretendard", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
-    --hub: #4FBFB6; --hub-bg: #122A29; --gold: #E0A64B; --gold-bg: #2A2418; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245;
+    --hub: #4FBFB6; --hub-bg: #122A29; --gold: #E0A64B; --gold-bg: #2A2418; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245; --data: #D29BEF; --data-bg: #2A1B35;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
-  --hub: #4FBFB6; --hub-bg: #122A29; --gold: #E0A64B; --gold-bg: #2A2418; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245;
+  --hub: #4FBFB6; --hub-bg: #122A29; --gold: #E0A64B; --gold-bg: #2A2418; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245; --data: #D29BEF; --data-bg: #2A1B35;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -44,6 +44,8 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 .lbw { fill: var(--write); font-weight: 600; }
 .lbn { fill: var(--new); font-weight: 600; }
 .d { font-size: 12px; }
+.rw { font-weight: 700; fill: var(--fg); }
+.rwn { font-weight: 700; fill: var(--write); }
 .sep { fill: none; stroke: var(--line); stroke-width: 1; }
 
 .boundary { fill: none; stroke: var(--muted); stroke-width: 1.5; }
@@ -53,6 +55,7 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
 .hub { fill: var(--hub-bg); stroke: var(--hub); stroke-width: 1.4; }
 .key { fill: var(--panel); stroke: var(--fg); stroke-width: 1.8; }
 .new { fill: var(--new-bg); stroke: var(--new); stroke-width: 2; }
+.data { fill: var(--data-bg); stroke: var(--data); stroke-width: 2; }
 .ext { fill: none; stroke: var(--muted); }
 
 .e, .w, .n { fill: none; stroke-linecap: butt; }
@@ -105,7 +108,7 @@ li + li { margin-top: 6px; }
 <figure id="diagram">
   <svg viewBox="0 0 1840 1000" role="img" aria-labelledby="diagram-title diagram-desc">
     <title id="diagram-title">React SPA와 Hub·데이터 서버 분리 후의 서비스 아키텍처</title>
-    <desc id="diagram-desc">React는 브라우저에서 실행한다. 정적 호스팅과 동일 origin API 프록시를 통해 Hub만 호출한다. Hub는 인증과 입력 편집을 맡고 데이터 서버에 읽기와 저장 전 확인을 요청한다. Hub만 operations_db에 접근하며 gold_db에는 접근하지 않는다. 데이터 서버는 Gold 조회 테이블과 사전 집계를 읽고 필터 결과를 cache_db에 저장한다. 데이터 서버 cron job이 Silver 운영 스냅샷을 가공해 Gold에 저장한다. 서버 분리와 브라우저 계약은 아직 연결 전 목표다.</desc>
+    <desc id="diagram-desc">React는 브라우저에서 실행한다. 정적 호스팅과 동일 origin API 프록시를 통해 Hub만 호출한다. Hub는 인증과 입력 편집을 맡고 데이터 서버에 읽기와 저장 전 확인을 요청한다. Hub만 operations_db에 접근하며 gold_db에는 접근하지 않는다. 데이터 서버는 Gold 조회 테이블과 사전 집계를 읽고 필터 결과를 cache_db에 저장한다. 데이터 서버 cron job이 Silver 운영 스냅샷을 가공해 Gold에 저장하며, 사전 집계 지연·실패 시 최후 수단으로 Silver를 직접 집계한다. 서버 분리와 브라우저 계약은 아직 연결 전 목표다.</desc>
 <defs>
       <marker id="ae" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah-e" d="M0,0L10,5L0,10z"/></marker>
       <marker id="aw" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ah-w" d="M0,0L10,5L0,10z"/></marker>
@@ -185,8 +188,8 @@ li + li { margin-top: 6px; }
     <text class="c" x="371" y="437" style="font-weight:700">GA4 속성 등록</text>
 
     <!-- 앱 층: 데이터 서버 -->
-    <rect class="cont" x="632" y="178" width="1168" height="280" rx="10"/>
-    <text x="648" y="203"><tspan class="h">데이터 서버</tspan></text>
+    <rect class="data" x="632" y="178" width="1168" height="280" rx="10"/>
+    <text x="648" y="203"><tspan class="h" style="fill:var(--data)">데이터 서버</tspan></text>
     <text class="m" x="748" y="203">back/data_server (계획) · 내부 전용 · 지표 계산 · 요청 처리 중 DB 쓰기는 캐시 DB만</text>
 
     <rect class="proc" x="644" y="212" width="202" height="50" rx="6"/>
@@ -212,34 +215,38 @@ li + li { margin-top: 6px; }
     <text class="c" x="1076" y="364" style="font-weight:700">사전 집계 지연·실패 → 최후 수단으로 직접 집계</text>
     <text class="sm c" x="1076" y="386">결과는 캐시 DB · 집계도 실패하면 503 / 해당 회차 빈칸</text>
 
-    <rect class="key" x="1306" y="212" width="482" height="74" rx="6"/>
-    <text class="b c" x="1547" y="241">지표 정의 · 계산</text>
-    <text class="m c" x="1547" y="263">gold_reader/ → metrics/ catalog · formulas · compute</text>
+    <rect class="key" x="1306" y="212" width="482" height="46" rx="6"/>
+    <text class="b c" x="1547" y="231">지표 정의 · 계산</text>
+    <text class="m c" x="1547" y="249">metrics/ catalog · formulas · compute</text>
 
-    <rect class="proc" x="1306" y="322" width="110" height="124" rx="6"/>
-    <text class="b c" x="1361" y="362">어댑터 ③</text>
-    <text class="m c" x="1361" y="384">gold_rows</text>
-    <text class="sm c" x="1361" y="406">Gold 지표 읽기</text>
+    <rect class="proc" x="1306" y="272" width="482" height="62" rx="6"/>
+    <text class="c" x="1547" y="290"><tspan class="b">사전 집계 층</tspan><tspan class="ms" dx="8">gold_rows</tspan></text>
+    <text class="sm c" x="1547" y="307"><tspan class="rw">읽기</tspan> metric_row · metric_call. 필터 조회는 조회용 테이블에서 셈</text>
+    <text class="sm c" x="1547" y="324"><tspan class="rwn">쓰기</tspan> rollup 실행 때만 metric_row · metric_call</text>
 
-    <rect class="proc" x="1426" y="322" width="164" height="124" rx="6"/>
-    <text class="b c" x="1508" y="356">어댑터 ①</text>
-    <text class="m c" x="1508" y="378">gold_current</text>
-    <text class="m c" x="1508" y="396">gold_reader SQL</text>
-    <text class="sm c" x="1508" y="418">Gold 조회 테이블에서 세기</text>
+    <rect class="proc" x="1306" y="348" width="226" height="98" rx="6"/>
+    <text class="b c" x="1419" y="366"><tspan class="mb">gold_db</tspan> 읽기</text>
+    <text class="ms c" x="1419" y="381">gold_current · gold_reader</text>
+    <text class="sm c" x="1419" y="400"><tspan class="rw">읽기</tspan> 조회용 테이블 · 드릴다운 · 원문</text>
+    <text class="sm c" x="1419" y="416">입력 데이터의 소유 URL · 제외 역할</text>
+    <text class="sm c" x="1419" y="435"><tspan class="rw">쓰기</tspan> 없음</text>
 
-    <rect class="proc" x="1600" y="322" width="188" height="124" rx="6"/>
-    <text class="b c" x="1694" y="362">목록 · 원문 조회</text>
-    <text class="m c" x="1694" y="384">gold_reader</text>
-    <text class="sm c" x="1694" y="406">Gold 조회 테이블 읽기</text>
+    <rect class="proc" x="1548" y="348" width="240" height="98" rx="6"/>
+    <text class="b c" x="1668" y="366">Silver 어댑터</text>
+    <text class="ms c" x="1668" y="381">silver_obt</text>
+    <text class="sm c" x="1668" y="400"><tspan class="rw">읽기</tspan> Silver OBT · 매니페스트 · 입력 데이터</text>
+    <text class="sm c" x="1668" y="416">사전 집계가 늦거나 실패할 때만 셈</text>
+    <text class="sm c" x="1668" y="435"><tspan class="rw">쓰기</tspan> 없음</text>
 
     <!-- 앱 층 안 흐름 -->
     <path class="e" d="M700,262V278" marker-end="url(#ae)"/>
     <path class="e" d="M700,328V352" marker-end="url(#ae)"/>
     <path class="e" d="M846,303H862" marker-end="url(#ae)"/>
-    <path class="e" d="M1290,249H1306" marker-end="url(#ae)"/>
-    <path class="e" d="M1370,286V322" marker-end="url(#ae)"/>
-    <path class="e" d="M1560,286V322" marker-end="url(#ae)"/>
-    <path class="e" d="M1698,286V322" marker-end="url(#ae)"/>
+    <path class="e" d="M1290,235H1306" marker-end="url(#ae)"/>
+    <path class="e" d="M1547,258V272" marker-end="url(#ae)"/>
+    <path class="e" d="M1668,334V348" marker-end="url(#ae)"/>
+    <path class="e" d="M1419,334V348" marker-end="url(#ae)"/>
+    <path class="e" d="M1290,400H1306" marker-end="url(#ae)"/>
 
     <!-- 허브 서버 → 데이터 서버 -->
     <path class="n" d="M524,281H590V237H644" marker-end="url(#an)"/>
@@ -273,7 +280,7 @@ li + li { margin-top: 6px; }
     <text class="c" x="641" y="552"><tspan class="mb">operations_db</tspan><tspan class="port" dx="8">:55437</tspan></text>
     <text class="b c" x="641" y="580">사용자 데이터</text>
     <text class="c" x="641" y="604">계정 · 접근 권한 · 저장 필터</text>
-    <text class="sm c" x="641" y="626" style="font-weight:600;fill:var(--new)">서버 중에는 허브 서버만 접속</text>
+    <text class="sm c" x="641" y="626" style="font-weight:600;fill:var(--new)">허브 서버만 접속</text>
     <text class="m c" x="641" y="646">system.*</text>
 
     <!-- 데이터 층: 캐시 · Gold -->
@@ -295,14 +302,14 @@ li + li { margin-top: 6px; }
     <text class="ms" x="1094" y="632">ops.*</text>
 
     <rect class="proc" x="1186" y="556" width="490" height="98" rx="5"/>
-    <text class="b" x="1194" y="573">Gold 사전 집계 · 조회용 테이블<tspan class="sm" dx="10" style="font-weight:400">Silver 운영 스냅샷 가공</tspan></text>
+    <text class="b" x="1194" y="573">사전 집계 (SSOT의 Gold)<tspan class="sm" dx="10" style="font-weight:400">Silver OBT를 가공한 결과값</tspan></text>
     <text class="sm" x="1194" y="588">첫 화면</text>
     <text class="ms" x="1194" y="604">metric_row</text><text class="d" x="1314" y="604">첫 화면 지표</text>
     <text class="ms" x="1194" y="618">first_screen_read</text><text class="d" x="1314" y="618">첫 화면 목록</text>
     <text class="ms" x="1194" y="632">metric_call</text><text class="d" x="1314" y="632">계산 기록</text>
     <text class="ms" x="1194" y="646">rollup_run</text><text class="d" x="1314" y="646">실행 기록</text>
     <path class="sep" d="M1386,580V650"/>
-    <text class="sm" x="1394" y="588">조회용 · 답변 단위</text>
+    <text class="sm" x="1394" y="588">필터 조회용</text>
     <text class="ms" x="1394" y="604">answer_*fact</text><text class="d" x="1487" y="604">답변 · 언급</text>
     <text class="ms" x="1394" y="618">citation_fact</text><text class="d" x="1487" y="618">인용</text>
     <text class="ms" x="1394" y="632">acr_*</text><text class="d" x="1487" y="632">ACR</text>
@@ -337,38 +344,38 @@ li + li { margin-top: 6px; }
     <text class="lb" x="1142" y="478">GA4 결과 입력은 대기</text>
     <path class="e" d="M1250,446V503" marker-end="url(#ae)"/>
     <text class="lb" x="1256" y="478">첫 화면 목록 읽기</text>
-    <path class="e" d="M1370,446V502" marker-end="url(#ae)"/>
-    <text class="lb" x="1376" y="478">첫 화면 지표 읽기</text>
-    <path class="e" d="M1560,446V504" marker-end="url(#ae)"/>
-    <text class="lb" x="1566" y="470">지표 세기</text>
-    <text class="lb" x="1566" y="485">드릴다운 목록</text>
-    <text class="lb" x="1566" y="500">답변 원문</text>
+    <path class="e" d="M1540,334V504" marker-end="url(#ae)"/>
+    <text class="lb" x="1546" y="478">지표 행 읽기</text>
+    <path class="e" d="M1420,446V502" marker-end="url(#ae)"/>
+    <text class="lb" x="1426" y="470">필터 집계</text>
+    <text class="lb" x="1426" y="485">드릴다운 · 원문</text>
 
-    <path class="e" d="M1644,446V502" marker-end="url(#ae)"/>
-    <text class="lb" x="1706" y="560">Silver는 cron이 가공</text>
+    <path class="e" d="M1698,446V812" marker-end="url(#ae)"/>
+    <text class="lb" x="1706" y="560">사전 집계가 늦을 때만</text>
     <text class="lb" x="1706" y="578">운영 스냅샷만</text>
 
     <!-- 배치 층 -->
-    <rect class="cont" x="130" y="708" width="1310" height="76" rx="10"/>
-    <text class="b" x="142" y="742" style="font-size:12.5px">데이터 서버</text>
-    <text class="m" x="142" y="762">cron job</text>
+    <rect class="data" x="24" y="708" width="1416" height="76" rx="10"/>
+    <text class="h" x="38" y="742" style="fill:var(--data)">데이터 서버 cron job</text>
+    <text class="sm" x="38" y="762">작업마다 별도 프로세스</text>
 
     <rect class="proc" x="212" y="718" width="188" height="56" rx="6"/>
-    <text class="mb c" x="306" y="741">sync-service-week</text>
-    <text class="sm c" x="306" y="760">서비스 기준 주 판정</text>
+    <text class="mb c" x="306" y="735">sync-service-week</text>
+    <text class="sm c" x="306" y="752"><tspan class="ms">gold_db</tspan> 읽고</text>
+    <text class="sm c" x="306" y="767">서비스 기준 주 판정</text>
 
     <rect class="proc" x="412" y="718" width="434" height="56" rx="6"/>
     <text class="mb c" x="629" y="741">sync-gold-catalog</text>
-    <text class="sm c" x="629" y="760">프롬프트 · 프로젝트의 Gold 키 가져오기</text>
+    <text class="sm c" x="629" y="760"><tspan class="ms">gold_db</tspan> 읽고 프롬프트 · 프로젝트의 Gold 키 가져오기</text>
 
     <rect class="proc" x="1066" y="718" width="140" height="56" rx="6"/>
     <text class="b c" x="1136" y="741" style="font-size:12px">GA4 결과 입력</text>
     <text class="sm c" x="1136" y="760">데이터 대기 · 연결 보류</text>
 
     <rect class="proc" x="1214" y="718" width="216" height="56" rx="6"/>
-    <text class="b c" x="1322" y="735">조회 테이블 가공 · rollup</text>
+    <text class="mb c" x="1322" y="735">manage.py rollup</text>
     <text class="sm c" x="1322" y="752">Silver → 조회 테이블 → 사전 집계</text>
-    <text class="sm c" x="1322" y="767">manage.py rollup · 이전 캐시 정리</text>
+    <text class="sm c" x="1322" y="767">이전 캐시 행 삭제</text>
 
     <!-- 배치 층 → 데이터 층 -->
     <path class="w" d="M306,718V670" marker-end="url(#aw)"/>
@@ -383,9 +390,8 @@ li + li { margin-top: 6px; }
     <path class="w" d="M1222,718V694H1000V670" marker-end="url(#aw)"/>
     <text class="lb lbw" x="1006" y="688">이전 캐시 행 삭제</text>
 
-    <path class="e" d="M1440,746H1480V670" marker-end="url(#ae)"/>
-    <text class="lb" x="1488" y="716">rollup · sync-service-week</text>
-    <text class="lb" x="1488" y="733">sync-gold-catalog가 읽음</text>
+    <path class="e" d="M1430,746H1480V670" marker-end="url(#ae)"/>
+    <text class="lb" x="1488" y="725">조회용 테이블 읽기</text>
 
     <!-- 아래 · 서비스 밖 -->
     <rect class="ext" x="1066" y="816" width="140" height="50" rx="6"/>
@@ -401,11 +407,12 @@ li + li { margin-top: 6px; }
       <path class="e" d="M26,822H62" marker-end="url(#ae)"/><text class="sm" x="70" y="826">요청 · 읽기</text>
       <path class="n" d="M146,822H182" marker-end="url(#an)"/><text class="sm" x="190" y="826">허브 서버를 거치는 경로</text>
       <path class="w" d="M350,822H386" marker-end="url(#aw)"/><text class="sm" x="394" y="826">쓰기</text>
-      
+
       <path class="hub" d="M26,842V854A11,4 0 0 0 48,854V842"/><ellipse class="hub" cx="37" cy="842" rx="11" ry="4"/><text class="sm" x="56" y="853">서비스 DB</text>
       <rect class="new" x="126" y="840" width="26" height="18" rx="3"/><text class="sm" x="158" y="853">허브 서버</text>
-      <rect class="ext" x="222" y="840" width="26" height="18" rx="3"/><text class="sm" x="254" y="853">서비스 밖</text>
-      <rect class="key" x="322" y="840" width="26" height="18" rx="3"/><text class="sm" x="354" y="853">지표를 정의 · 계산하는 유일한 곳</text>
+      <rect class="data" x="222" y="840" width="26" height="18" rx="3"/><text class="sm" x="254" y="853">데이터 서버 · cron job</text>
+      <rect class="ext" x="396" y="840" width="26" height="18" rx="3"/><text class="sm" x="428" y="853">서비스 밖</text>
+      <rect class="key" x="496" y="840" width="26" height="18" rx="3"/><text class="sm" x="528" y="853">지표를 정의 · 계산하는 유일한 곳</text>
     </g>
 
     </g>
@@ -423,7 +430,7 @@ li + li { margin-top: 6px; }
         <tr><td>이식 범위</td><td>리뉴얼 원본 37개 경로 대응과 UI 사본·화면 로더를 준비했다. 미연결 화면과 가로챈 테스트 응답으로 확인한 범위다.</td><td>같은 응답과 운영 스냅샷으로 원본의 화면·필터·폼·드릴다운·다운로드를 대조한다. 기존 Next 레거시의 유지·종료 범위는 T14.6에서 정한다.</td></tr>
         <tr><td>인증·브라우저 API</td><td>React에 HttpOnly 쿠키 계약을 소비하는 클라이언트가 있다. 현재 <code>back/bff</code>는 Bearer 인증이며, 새 쿠키 세션 계약은 서버에 맞춰야 한다.</td><td>Hub가 세션 쿠키 발급·갱신·삭제, 쓰기 Origin 확인, 매 요청 계정 재확인을 맡는다. 브라우저에는 로그인 토큰을 전달하거나 저장하지 않는다.</td></tr>
         <tr><td>서버 분리</td><td><code>back/bff</code>가 로그인·계정·입력 편집·데이터 읽기를 함께 담당한다. <code>back/hub_server</code>와 <code>back/data_server</code>는 아직 없다.</td><td>T13에서 Hub와 내부 데이터 서버로 분리한다. Hub만 <code>operations_db</code>에 접속하고, Hub에는 <code>gold_db</code> 계정을 주지 않는다.</td></tr>
-        <tr><td>Gold·필터 조회</td><td>Gold 사전 집계·캐시와, 사전 집계 지연·실패 시 최후 수단으로 직접 집계하는 처리를 구현했다. 현재 맥의 필터 조회에는 Silver 어댑터 경로가 남아 있어 Gold 조회 테이블 경로로 맞출 서버 작업이 있다.</td><td>cron job이 Silver 운영 스냅샷을 Gold 조회 테이블과 사전 집계로 가공한다. 필터 조회는 캐시를 먼저 보고, 없으면 <code>gold_db</code> 조회 테이블에서 계산한다. 사전 집계 지연·실패 시 최후 수단으로 직접 집계해 캐시하고, 그것도 실패하면 503 또는 해당 회차 빈칸으로 표시한다.</td></tr>
+        <tr><td>Gold·필터 조회</td><td>Gold 사전 집계·캐시와, 사전 집계 지연·실패 시 최후 수단으로 직접 집계하는 처리를 구현했다. 현재 맥의 일반 필터 조회에도 Silver 어댑터 경로가 남아 있어 Gold 조회 테이블 경로로 맞출 서버 작업이 있다.</td><td>cron job이 Silver 운영 스냅샷을 Gold 조회 테이블과 사전 집계로 가공한다. 필터 조회는 캐시를 먼저 보고, 없으면 <code>gold_db</code> 조회 테이블에서 계산한다. 사전 집계 지연·실패 시 최후 수단으로 Silver 운영 스냅샷을 직접 집계해 캐시하고, 그것도 실패하면 503 또는 해당 회차 빈칸으로 표시한다.</td></tr>
         <tr><td>GA4</td><td>속성 등록부와 관련 기존 코드가 있다. React의 GA4 분석 화면은 데이터 대기 상태다.</td><td>결과 입력이 있다는 것만 표기한다. 실제 연결 인터페이스 개발·구현은 보류한다.</td></tr>
       </tbody>
     </table></div>
@@ -444,7 +451,7 @@ li + li { margin-top: 6px; }
     </table></div>
     <div class="columns" style="margin-top:24px">
       <div class="card"><h3>데이터 책임</h3><p>지표 계산·모수·자사 판정·대표 답변·기간·Δ는 데이터 서버의 <code>metrics/</code> 한 곳에서 처리한다. React는 서버 응답을 표시한다. 첫 화면 Gold와 필터 결과를 저장하는 서버의 <code>cache_db</code>는 브라우저의 TanStack Query 캐시와 별개다.</p></div>
-      <div class="card"><h3>DB 접근</h3><p>Hub는 <code>input_db</code>·<code>operations_db</code>를 읽고 쓴다. 데이터 서버는 입력 기준정보와 Gold를 읽고 조회 결과를 <code>cache_db</code>에 쓴다. Gold 조회 테이블·사전 집계의 쓰기는 배치 계정으로 분리한다. cron job은 운영 DB에 쓰지 않으며, 프로젝트 참조 행은 Hub가 멤버를 저장할 때 등록한다(T13.7). Silver에는 쓰지 않는다.</p></div>
+      <div class="card"><h3>DB 접근</h3><p>Hub는 <code>input_db</code>·<code>operations_db</code>를 읽고 쓴다. 데이터 서버는 입력 기준정보와 Gold를 읽고 조회 결과를 <code>cache_db</code>에 쓴다. 사전 집계 지연·실패 시 최후 집계에만 Silver 어댑터를 사용한다. Gold 조회 테이블·사전 집계의 쓰기는 배치 계정으로 분리한다. cron job은 운영 DB에 쓰지 않으며, 프로젝트 참조 행은 Hub가 멤버를 저장할 때 등록한다(T13.7). Silver에는 쓰지 않는다.</p></div>
     </div>
   </section>
 
@@ -490,7 +497,7 @@ li + li { margin-top: 6px; }
 
   <section id="basis">
     <h2>기준과 문서 관계</h2>
-    <p>사용자가 제공한 <code>service-architecture-gold-node.html</code>의 허브 서버 분리안을 React 전환용으로 옮겼다. 프런트 구조를 React SPA와 정적 호스팅으로 바꾸고, 최신 결정에 맞춰 필터 조회의 Gold 조회 테이블·cron 가공 경로, 사전 집계 지연·실패 시 최후 집계, cron의 운영 DB 쓰기 제외, 별도 지표 API 제외, GA4 연결 보류를 반영했다. 이 문서는 React 전환 구조의 기준이며, <a href="hmg-geo-hub-architecture.html">현재 구현 아키텍처</a>와 함께 본다.</p>
+    <p>사용자가 제공한 <code>service-architecture-gold-node.html</code>과 저장소에 정리된 최신 <a href="service-architecture-hub-split.html">허브 서버 분리안</a>을 React 전환용으로 옮겼다. 프런트 구조를 React SPA와 정적 호스팅으로 바꾸고, 최신 결정에 맞춰 필터 조회의 Gold 조회 테이블·cron 가공 경로, 사전 집계 지연·실패 시 최후 집계, cron의 운영 DB 쓰기 제외, 별도 지표 API 제외, GA4 연결 보류를 반영했다. 이 문서는 React 전환 구조의 기준이며, <a href="hmg-geo-hub-architecture.html">현재 구현 아키텍처</a>와 함께 본다.</p>
     <p style="margin-top:10px">실행·연결 설정은 <a href="../handoff/react-standby.md">React 전환 준비</a>, 서버 작업 순서는 <a href="../handoff/architecture-rebuild.md">아키텍처 대공사 T13·T14</a>를 따른다. SSOT <code>shared/project-architecture.md</code>와 <code>service/cache-db.md</code>를 대조했고, <code>CLAUDE.md</code> 및 대공사 결정 기록의 최신 사용자 확정 사항을 적용했다. 최후 집계는 기존 SSOT의 ‘미준비 값은 보여 주지 않음’에 대한 2026-11-06 사용자 변경 결정과 구현(<code>445e8f3</code>)을 따른다.</p>
   </section>
 
