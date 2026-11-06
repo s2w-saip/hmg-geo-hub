@@ -2,7 +2,7 @@
 
 서비스 전체를 SSOT 지표 가공 구조(`../hmg-geo-hub-ssot/shared/project-architecture.md`)에 맞춰 다시 짓는 일의 할 일 · 결정 · 진행 기록이다. 이 파일이 할 일의 기준 문서다. 2026-11-05 사용자 결정으로 이전 할 일 파일 `docs/handoff/admin-todo.md`와 그 안의 수정 항목을 모두 폐기했다(git 기록의 마지막 판: `3533736`).
 
-**지금 할 일:** 5단계 T10.2 · T12(세션 A, 아래 '개발 순서'), 그 뒤 두 세션 교차검증. 세션 44의 3b~4는 끝났고(T9.8 `a457847`), T2 통보문은 초안까지다(보내는 것은 사용자). T13 · 2a · 2b는 끝났다. 사용자 지시로 끝까지 추천안으로 묻지 않고 진행한다(2026-11-07). 이 세션은 A, T7.6 · T9.7+9.6 · T9.8 · T2 초안은 세션 44(B)다. 1a 범위표는 `docs/handoff/hub-server-scope.md`. P2 데이터 연결 · ① 결함 3건 · ② 지표 계산 통합 · ③ Gold 지표 행(D-18) · ④ 판정 이전은 끝났다(`ca553cb`, 정의 버전은 `catalog.py`). 서비스 DB는 `input_db` · `operations_db` · `gold_db` · `cache_db`다(`e3fbe53`). 맥의 데이터 서버는 가상 OBT에서 센다(`.env.silver.local`). 남은 판정과 이유는 진행 기록에 있다.
+**지금 할 일:** 두 세션 교차검증(5단계까지 끝, 사용자 지시 2026-11-07). A는 B의 T7.6 · T9.7+9.6 · T9.8 · T2 초안을, B는 A의 T13 · T10 · 2a · 2b · T12를 본다. 높음 · 중간은 만든 쪽이 고치고 낮음은 목록만 남기며, 재검증해 높음 · 중간이 0이면 끝낸다(최대 5회차). 사용자 확인 대기: T12.1 삭제 실행('결정 대기'), T2 통보 발송, T14.5.3 시작. 사용자 지시로 끝까지 추천안으로 묻지 않고 진행한다(2026-11-07). 이 세션은 A, T7.6 · T9.7+9.6 · T9.8 · T2 초안은 세션 44(B)다. 1a 범위표는 `docs/handoff/hub-server-scope.md`. P2 데이터 연결 · ① 결함 3건 · ② 지표 계산 통합 · ③ Gold 지표 행(D-18) · ④ 판정 이전은 끝났다(`ca553cb`, 정의 버전은 `catalog.py`). 서비스 DB는 `input_db` · `operations_db` · `gold_db` · `cache_db`다(`e3fbe53`). 맥의 데이터 서버는 가상 OBT에서 센다(`.env.silver.local`). 남은 판정과 이유는 진행 기록에 있다.
 
 **병행 구현:** `front-react/`의 사전 준비(T14.1~14.4, `4ee27e3`)와 1차 보완 7건(T14.4.1, `73cadf4`), 2차 섹션별 읽기·설정 충돌 보호(T14.4.2, `af8bbae`), 기존 UI 반영(T14.4.3, `6bd1ebe`) 뒤 기존 Next API를 통한 개발용 데이터 연결을 구현했다(T14.4.4, `122a5a7`). 저장소 기본값은 미연결이고 맥은 React :3334 → Next :3333 → 데이터 서버 :5555로 연결했다. 실제 계정 로그인과 Overview·Kia/KR 필터의 200 응답·측정값 전달을 확인했고 필터 갱신 시 화면 프레임을 유지하도록 고쳤다(T14.4.5, `122a5a7`). 모든 화면·원본 대조는 남아 있다. 독립 Hub 연결과 운영 프런트 교체는 서버 안정화 뒤다. 서버 작업 순서는 위 '지금 할 일'을 유지한다. 실행·연결 설정: `docs/handoff/react-standby.md`. 목표 구조와 확인 범위: `docs/architecture/service-architecture-react.html`(문서 추가 `b7ed975`). 목표는 React(브라우저) → Hub → 데이터 서버이며, 호스팅·프록시 배치는 인프라 단계에서 정한다. 품질 개편 검토 그림(T14.4.6, `e87c425`)은 같은 React 문서의 `#quality-proposal`에 있다. 2026-11-07 추가 검증에서 인용 분석 첫 기간 선택의 프레임 초기화와 Overview `degraded` 응답 뒤 재시도 미실행 2건을 재현했으며, 개편 구현은 아직 지시하지 않았다.
 
@@ -194,10 +194,10 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 **T12 철거** (P3 뒤)
 
-- [ ] 12.1 이전 Gold DB에서 옮겨 온 테이블 중 조회용 테이블로 대체된 것과 쓰지 않는 코드. `gold_db` 연결은 남긴다(결정 기록 2026-11-06)
+- [ ] 12.1 이전 Gold DB에서 옮겨 온 테이블 중 조회용 테이블로 대체된 것과 쓰지 않는 코드. `gold_db` 연결은 남긴다(결정 기록 2026-11-06). 쓰지 않는 코드와 스크립트 `teardown-t12.sql`까지 끝(__HASH__). **테이블 삭제 실행은 사용자 확인 대기**('결정 대기')
 - [x] 12.2 Gold 가져오기 · Gold로 판정하는 서비스 기준 주(`71febc4`). 기준 주는 T7.6에서 매니페스트로 옮겼다
 - [x] 12.3 쓰지 않는 이전 재설계 코드(`back/app · ingest · db · migration`)(`3676d6a`). 레거시 규칙은 커밋 `d77f278`에서 본다
-- [ ] 12.4 아키텍처 문서 · ERD를 최종 구조로
+- [x] 12.4 아키텍처 문서 · ERD를 지금 구조로(`71febc4` · `3676d6a` · __HASH__). 철거 대기 테이블은 문서에 '아직 있음'으로 적었다
 
 ## 공통 완료 기준 (태스크마다)
 
@@ -213,6 +213,7 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 | ID | 정할 것 | 영향 받는 태스크 |
 |---|---|---|
+| T12.1 실행 | `gold_db`의 안 읽는 테이블 17개와 `gold_before_t97`(약 40 GB) 삭제. **추천: 교차검증이 끝난 뒤 `back/hub_storage/teardown-t12.sql`을 실행하고 `gold_before_t97`를 지운다.** 근거: 뷰 · FK 의존 0, 화면 캡처 171개와 필터 조회 9개 동안 스캔 0, 스크립트는 되돌리는 트랜잭션에서 끝까지 돈다. 확인 못한 것: 레거시 화면을 브라우저로 전부 돌지는 않았다(같은 `/v1` 읽기). 지우면 되돌릴 수 없고 가상 OBT를 다시 만들 수 없다. 답이 없으면: 그대로 둔다(디스크만 쓴다) | T12.1 |
 
 ## 보류
 
@@ -245,6 +246,7 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 | 날짜 | 결정 | 다른 안 | 근거 |
 |---|---|---|---|
+| 2026-11-07 | T12.1: 테이블 삭제는 스크립트(`teardown-t12.sql`)만 만들고 실행하지 않는다. `manage.py`에 넣지 않는다(시작 때 돌면 안 된다). `test_metrics_live`에서 없어진 집계 셀과 비교하던 시험 4개를 지웠다(새 DB의 셀 테이블은 비어 있고, 값 대조는 T9.8 재계산이 맡는다). 쓰지 않는 `gold_reader/source-schema.json`을 지웠다. `build_query_next.py`(교체 도구) · `build_virtual_obt.py`(가상 OBT)는 `gold_before_t97`가 있는 동안 남긴다 | 삭제까지 실행(되돌릴 수 없어 사용자 확인 대상), 시험을 `gold_before_t97`에 붙여 유지(곧 없어질 DB) | `CLAUDE.md` 지침, 세션 44 요청 '교차검증 끝까지 `gold_before_t97` 유지' |
 | 2026-11-07 | T12.3: `back/app` · `ingest` · `db` · `migration`과 함께, 그 코드 없이는 돌지 않거나 그 코드만 쓰던 것을 지운다: `back/tests` · `conftest.py` · `logging.json` · `taxonomy.json` · `FEATURES.md` · `CORE-REQUESTS` · `requirements*.lock` · `ci/github-workflows/back-ci.yml`. `pyproject.toml`은 린트 · 시험 설정만 남긴다. 코드 주석의 옛 경로는 출처로 두고, 커밋 `d77f278` 기준이라고 README와 아키텍처 문서에 적는다. `README.md`는 지금 구조로 새로 썼다. `infra/` · `front-ci.yml` · `docs/reports/`는 건드리지 않았다(실행되지 않거나 지난 기록) | 네 폴더만 지우기(시험과 설정이 깨진 채 남는다), 주석의 옛 경로까지 고치기(출처를 잃는다) | 사용자 계획 T12.3, 사용자 '5단계까지 진행' |
 | 2026-11-07 | T10.2: 프롬프트 · 프로젝트 매핑은 입력 DB의 ID가 기준이다. 입력 `project_id` · `prompt_id`, OBT가 부르는 프로젝트는 `definition.scope_project_id`(새 프로젝트는 자기 ID), `gold_db` 숫자 키는 적재 잡의 `sync_projects` · `sync_prompts`가 준다. `origin` · `source_id`는 지우지 않고 기록으로 둔다(`source_id`는 Gold 행 29,008개 전부에서 자기 ID와 같고 읽는 코드가 없다, 컬럼 삭제는 뷰 · 제약을 다시 만드는 값어치가 없다) | `source_id` · `origin` 컬럼 삭제, 매핑 전용 테이블 신설 | 실측, 사용자 '항상 추천안으로' |
 | 2026-11-07 | T12.2: `sync_catalog.py`와 일회성 가져오기 4개(`import-source-overrides` · `import-source-lists` · `import-interest-keywords` · `import-entity-roles`)를 지운다. `hmg_catalog_writer`는 로그인 · 권한을 없애고(`input-006.sql`) 역할만 둔다(이전 마이그레이션이 이름을 쓴다). `catalog.sync_run`은 지난 실행 기록으로 둔다. `vm.sh sync` · `check-sync`를 지웠으므로 VM 반영 때 cron 줄도 지워야 한다 | 일회성 가져오기는 남기기(이전 Gold DB는 없는 것으로 본다), 역할까지 삭제(새 설치의 마이그레이션이 깨진다) | `CLAUDE.md` 1절, 사용자 '항상 추천안으로' |
@@ -480,3 +482,4 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 - 2026-11-07 — T2 통보문 초안(세션 B). `docs/handoff/upstream-notice-2026-11-07.md`: 파이프라인, 분석, 앤써, API 공통 4개. 수치는 정의 버전 `2026-11-07.3`의 맥 가상 OBT 값으로 새로 뽑았다. 보내지 않았다. 지난 초안의 '집계 자격은 받은 값 그대로'는 서비스 판정으로 바뀌어 고쳤다. 키 발급(T8.3)과 실제 접속 정보(T9.1)는 그대로 남았다.
 - 2026-11-07 — 5단계 T10.2 · T12.2(`71febc4`). 새 프로젝트 · 프롬프트의 키 매핑을 실제 DB로 확인: 허브로 만들고 `sync_projects` · `sync_prompts`를 돌리면 `dim_project` 1행(키 259, `scope_project_id` = 자기 ID) · `dim_prompt` 행이 생기고, 두 번째 실행은 0건. 그 상태로 브라우저에서 Project 목록(이름 표시) · Setting · Prompt · Dashboard · Mention · Citation을 열어 '측정 데이터가 아직 없습니다'까지 확인했다. 테스트 행은 지움(`dim_project` 258 · `dim_prompt` 28,751, 입력 DB 프로젝트 258 · 버전 647 · 측정 설정 258). 입력 DB `input-006.sql` 적용: `hmg_catalog_writer` 로그인 불가 · 권한 0. 테스트: 두 서버 1,083개 실패 0(건너뜀 33, `test_hub_sync` 삭제로 줄음). 실행 안 함: `manage.py init`으로 새 설치(`verify-input.sql`이 이 역할로 쓰는 부분은 이제 실패하며, `manage.py verify`는 대공사 동안 고치지 않는다는 결정대로 둠), VM
 - 2026-11-07 — T12.3 이전 재설계 코드 삭제(`3676d6a`), 파일 1,141개. 지운 코드를 부르는 곳은 코드 주석뿐(`rg`). 전후: 두 서버 1,083개 실패 0(건너뜀 33), `start-local.sh` 정상, 재계산 'unchanged', 허브 경유 171개 요청이 `t98-after`와 `_extra_admin-*` · `_extra_read-me` 밖에서 차이 0(이 둘은 세션 44가 :5555로 직접 받아 비교 대상이 아니다). 프런트 전체 8,701개: 실패 121 · 오류 1, 1g 기준선과 같다. 이 전체 실행에서 T6.3 때 놓친 실패 1건(`support-contact.test.ts`, 측정 설정 목록의 실패 문구에 담당자 연락처 없음)을 찾아 고쳤다(4cb32a6). 실행 안 함: `front-react` 빌드 · 시험(코드 변경 없음), Docker 이미지 빌드, VM
+- 2026-11-07 — T12.1 · T12.4(__HASH__). 5단계가 끝났다. 남은 것은 사용자 확인 뒤 `teardown-t12.sql` 실행뿐이고, 다음은 교차검증이다. 확인: 17개 테이블 뷰 · FK 의존 0, 화면 캡처 171개 + 필터 조회 9개 동안 스캔 0, 스크립트를 되돌리는 트랜잭션에서 실행(0개까지 지워지고 롤백 뒤 17개). `test_metrics_live` 3개 통과, 두 서버 1,079개 실패 0(건너뜀 29). 실행 안 함: 스크립트 실제 실행, `DROP DATABASE`, 레거시 화면 브라우저 순회
