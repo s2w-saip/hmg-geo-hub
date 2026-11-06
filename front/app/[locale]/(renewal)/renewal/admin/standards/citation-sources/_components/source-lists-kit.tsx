@@ -61,9 +61,6 @@ export function useListError() {
 }
 
 const STATE_DOT: Record<string, string> = {
-  applied: "bg-rn-navy",
-  pending: "border-[1.5px] border-rn-navy",
-  shadowed: "border-[1.5px] border-rn-muted bg-rn-inset",
   upstream: "border border-dashed border-rn-muted",
   observed: "bg-rn-navy",
   unseen: "border-[1.5px] border-rn-muted bg-rn-inset",
@@ -79,7 +76,7 @@ export function StateMark({ state, label, tip, attr }: { state: string | null; l
     );
   }
   return (
-    <span className={cx("inline-flex max-w-full items-center gap-1.5 text-rn-12", state === "applied" || state === "observed" ? "text-rn-ink" : "text-rn-ink-2")} data-rn-tip={tip} {...{ [attr]: state }}>
+    <span className={cx("inline-flex max-w-full items-center gap-1.5 text-rn-12", state === "observed" ? "text-rn-ink" : "text-rn-ink-2")} data-rn-tip={tip} {...{ [attr]: state }}>
       <i aria-hidden className={cx("inline-block size-2 shrink-0 rounded-full", STATE_DOT[state])} />
       <span className="truncate">{label}</span>
     </span>

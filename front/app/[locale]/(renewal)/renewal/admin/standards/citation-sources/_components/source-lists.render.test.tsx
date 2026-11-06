@@ -21,7 +21,7 @@ import {
 } from "./source-lists-model";
 
 // Admin › 인용 출처 분류 › 시드 · 공식 소셜 · 코드표 (2026-10-30): each tab as first rendered (the HUB's list next to
-// Gold's values, the reflection states, no '즉시 반영' wording, the tab bar) and the pure filter / input models.
+// Gold's values, no reflection state, the tab bar) and the pure filter / input models.
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("tab=seeds"),
@@ -89,11 +89,10 @@ describe("tab bar", () => {
 });
 
 describe("seeds tab", () => {
-  it("renders the HUB's seeds next to Gold's values with their states, the add form and the published list", () => {
+  it("renders the HUB's seeds next to Gold's values, the add form and the published list", () => {
     const out = html(<SourceSeedsManager initial={SEEDS} tabs={<SourceTabs value="seeds" />} savedFilters={{ page: "source-seeds", userId: "u", initial: [] }} />);
     expect(out).toContain(">인용 출처 분류<");
-    expect(out).toContain(ko.hubSourceLists.seeds.flowNote.replaceAll("'", "&#x27;"));
-    expect(out).not.toContain("즉시 반영");
+    for (const gone of ["반영 대기", "반영됨", "data-hub-seed-state"]) expect(out).not.toContain(gone);
     expect(out).toContain("Gold 2026-10-05 회차 · 글로벌");
     expect(out).toContain("업스트림 목록 v2 · 701건");
     expect(out).toContain("data-hub-seed-add=");
@@ -101,30 +100,23 @@ describe("seeds tab", () => {
     expect(out).not.toMatch(/w-full[^"]*w-\[260px\]/);
     // most cited first
     expect(keysOf(out, "data-hub-seed-row")).toEqual(["hyundai.news", "carandbike.com", "changed.example", "up.example", "old.example", "newsite.example"]);
-    expect(rowOf(out, "data-hub-seed-row", "carandbike.com")).toContain('data-hub-seed-state="applied"');
     const shadowed = rowOf(out, "data-hub-seed-row", "hyundai.news");
-    expect(shadowed).toContain('data-hub-seed-state="shadowed"');
-    expect(shadowed).toContain(`>${ko.hubSourceLists.seeds.state.shadowed}<`);
     expect(shadowed).toContain(`${ko.citationCategories.officialHmg} · ${ko.hubSourceOverrides.source.owned}`);
-    // a removal Gold still applies: pending, labelled 제외 대기; restore instead of remove; the select is locked
+    // a removal: restore instead of remove; the select is locked
     const removed = rowOf(out, "data-hub-seed-row", "old.example");
-    expect(removed).toContain('data-hub-seed-state="pending"');
-    expect(removed).toContain(`>${ko.hubSourceLists.seeds.state.pendingRemove}<`);
     expect(removed).toContain('data-hub-seed-restore="old.example"');
     expect(removed).not.toContain("data-hub-seed-remove");
     expect(removed).toMatch(/<select[^>]*disabled=""[^>]*data-hub-seed-category="old.example"/);
     // Gold seed the HUB lacks: no select, 'add as seed'
     const upstream = rowOf(out, "data-hub-seed-row", "up.example");
-    expect(upstream).toContain('data-hub-seed-state="upstream"');
     expect(upstream).toContain('data-hub-seed-adopt="up.example"');
     expect(upstream).not.toContain("data-hub-seed-category");
     expect(upstream).not.toContain("data-hub-seed-history");
-    // never cited: no Gold value, no state
+    // never cited: no Gold value
     const uncited = rowOf(out, "data-hub-seed-row", "newsite.example");
-    expect(uncited).toContain('data-hub-seed-state=""');
     expect(uncited).toContain(ko.hubSourceLists.seeds.goldNone);
     expect(rowOf(out, "data-hub-seed-row", "carandbike.com")).toContain('data-hub-seed-remove="carandbike.com"');
-    expect(out).toContain("6 / 6개 · 적용 중 4 · 제외 1 · 반영 대기 2 · 업스트림 1");
+    expect(out).toContain("6 / 6개 · 적용 중 4 · 제외 1 · 업스트림 1");
     expect(out).toContain("1–6 / 6");
   });
 
@@ -139,18 +131,16 @@ describe("seeds tab", () => {
 
   it("filters, sorts, counts and mirrors the picks in the URL (keeping the tab)", () => {
     const all = SEEDS.items;
-    expect(all.filter((r) => seedMatches(r, { ...DEFAULT_SEED_FILTER, state: "pending" }, "")).map((r) => r.skey)).toEqual(["old.example", "changed.example"]);
     expect(all.filter((r) => seedMatches(r, { ...DEFAULT_SEED_FILTER, status: "removed" }, "")).map((r) => r.skey)).toEqual(["old.example"]);
     // an upstream row filters by Gold's category
     expect(all.filter((r) => seedMatches(r, { ...DEFAULT_SEED_FILTER, category: "newsMedia" }, "")).map((r) => r.skey)).toEqual(["newsite.example", "old.example", "up.example"]);
     expect(all.filter((r) => seedMatches(r, DEFAULT_SEED_FILTER, " CAR")).map((r) => r.skey)).toEqual(["carandbike.com"]);
     const order = new Map(SEEDS.categories.map((c, i) => [c.slug, i] as const));
     expect(sortSeeds(all, "domain", true, order).map((r) => r.skey)[0]).toBe("carandbike.com");
-    expect(sortSeeds(all, "state", true, order).map((r) => r.state)).toEqual(["pending", "pending", "shadowed", "upstream", "applied", null]);
-    expect(seedCounts(all)).toEqual({ total: 6, active: 4, removed: 1, pending: 2, upstream: 1 });
-    const q = seedFilterToQuery({ category: "newsMedia", state: "upstream", status: "all" }, " up ");
-    expect(q).toBe("tab=seeds&category=newsMedia&state=upstream&q=up");
-    expect(queryToSeedFilter(q)).toEqual({ filters: { category: "newsMedia", state: "upstream", status: "all" }, search: "up" });
+    expect(seedCounts(all)).toEqual({ total: 6, active: 4, removed: 1, upstream: 1 });
+    const q = seedFilterToQuery({ category: "newsMedia", status: "all" }, " up ");
+    expect(q).toBe("tab=seeds&category=newsMedia&q=up");
+    expect(queryToSeedFilter(q)).toEqual({ filters: { category: "newsMedia", status: "all" }, search: "up" });
     expect(queryToSeedFilter("state=done&status=deleted&category=News%20%26%20Media").filters).toEqual(DEFAULT_SEED_FILTER);
   });
 
@@ -188,25 +178,21 @@ const SOCIALS: SocialListing = {
 };
 
 describe("official social tab", () => {
-  it("renders the accounts with their matchers, the fixed category, states and actions", () => {
+  it("renders the accounts with their matchers, the fixed category and actions", () => {
     const out = html(<SourceSocialsManager initial={SOCIALS} />);
-    expect(out).toContain(ko.hubSourceLists.social.flowNote.replaceAll("'", "&#x27;"));
-    expect(out).not.toContain("즉시 반영");
+    for (const gone of ["반영 대기", "반영됨", "data-hub-social-state"]) expect(out).not.toContain(gone);
     expect(keysOf(out, "data-hub-social-row")).toEqual(["linkedin.com/hyundai-motor-group", "facebook.com/hyundai.europe", "instagram.com/newone", "threads.com/@genesis_usa"]);
     const li = rowOf(out, "data-hub-social-row", "linkedin.com/hyundai-motor-group");
     expect(li).toContain("linkedin.com/company/hyundai-motor-group 외 1개");
     expect(li).toContain(">Official (HMG)<");
-    expect(li).toContain('data-hub-social-state="applied"');
     expect(li).toContain(`>${ko.hubSourceLists.social.stop}<`);
     const stopped = rowOf(out, "data-hub-social-row", "facebook.com/hyundai.europe");
     expect(stopped).toContain(">facebook.com/Hyundai.Europe<");
-    expect(stopped).toContain(`>${ko.hubSourceLists.social.state.pendingStop}<`);
     expect(stopped).toContain(`>${ko.hubSourceLists.social.resume}<`);
     const upstream = rowOf(out, "data-hub-social-row", "instagram.com/newone");
     expect(upstream).toContain('data-hub-social-adopt="instagram.com/newone"');
     expect(upstream).not.toContain("data-hub-social-toggle");
-    expect(rowOf(out, "data-hub-social-row", "threads.com/@genesis_usa")).toContain('data-hub-social-state=""');
-    expect(out).toContain("4개 · 적용 중 2 · 중지 1 · 반영 대기 1");
+    expect(out).toContain("4개 · 적용 중 2 · 중지 1");
     expect(out).toContain("업스트림 목록 v2 · 9건");
   });
 
@@ -255,9 +241,7 @@ describe("code table tab", () => {
     expect(out).toContain(ko.hubSourceLists.codes.note);
     expect(out).toContain(ko.hubSourceLists.codes.layersHint);
     expect(keysOf(out, "data-hub-code-row")).toEqual(["category:officialHmg", "category:newsMedia", "category:other", "layer:override", "layer:seed"]);
-    expect(rowOf(out, "data-hub-code-row", "category:officialHmg")).toContain('data-hub-code-state="applied"');
     const news = rowOf(out, "data-hub-code-row", "category:newsMedia");
-    expect(news).toContain('data-hub-code-state="pending"');
     expect(news).toContain("News &amp; Media · 5번째");
     // the first cannot move up, the last cannot move down
     expect(out).toMatch(/disabled=""[^>]*data-hub-code-up="officialHmg"/);

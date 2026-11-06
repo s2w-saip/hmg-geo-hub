@@ -2,7 +2,7 @@
 
 // Admin › 엔티티 카탈로그 (2026-11-02): one entity's sheet. The role form on top of what Gold has to judge it by (display brand,
 // numbers, observed surfaces, mention samples with their context) and the row's history. A change of who is own asks for a
-// confirmation first: it moves every KPI's 당사 side once Gold is rebuilt (the original draft's L2 confirmation). There is no
+// confirmation first: it moves every KPI's 당사 side (the original draft's L2 confirmation). There is no
 // preview: the HUB does not recompute KPIs.
 
 import { useEffect, useState, type FormEvent } from "react";
@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react";
 import { RnButton, RnCheckRow, RnTag, cx } from "@/components/renewal-ui";
 import { formatAsOfDate } from "@/lib/as-of-date";
 import { RnDetailField } from "../../../../_components/prompt-list";
-import { HistorySection, StateMark } from "../../citation-sources/_components/source-lists-kit";
+import { HistorySection } from "../../citation-sources/_components/source-lists-kit";
 import { SourceRequestError } from "../../citation-sources/_components/source-overrides-api";
 import { INPUT, Row } from "../../prompts/_components/hub-prompt-form";
 import { ENTITY_ROLES, OWN_BRANDS, entityRoleApi, type EntityMentions, type EntityRole, type EntityRow, type OwnBrand } from "./entity-roles-api";
@@ -31,12 +31,6 @@ export function useEntityError() {
 export function useRoleLabel() {
   const t = useTranslations("hubEntities");
   return (role: EntityRole | "own" | "excluded", brand?: string | null) => (role === "own" && brand ? `${t("role.own")} · ${brand}` : t(`role.${role}`));
-}
-
-/** 반영됨 / 반영 대기 / 업스트림 역할 / — (no role on either side). */
-export function EntityState({ row }: { row: EntityRow }) {
-  const t = useTranslations("hubEntities");
-  return <StateMark state={row.state} attr="data-hub-entity-state" label={row.state ? t(`state.${row.state}`) : "—"} tip={t(`stateTip.${row.state ?? "none"}`)} />;
 }
 
 export function EntityRoleForm({ row, onSaved }: { row: EntityRow; onSaved: () => void | Promise<void> }) {
@@ -229,9 +223,6 @@ export function EntitySheet({ row, onSaved }: { row: EntityRow; onSaved: () => v
           {/* Gold's timestamp on the KST calendar (its first 10 characters are the UTC day) */}
           <RnDetailField label={t("field.firstSeen")}>{row.firstSeen ? formatAsOfDate(row.firstSeen) : null}</RnDetailField>
           <RnDetailField label={t("field.goldRole")}>{row.gold ? roleLabel(row.gold.role ?? "competitor", row.gold.brand) : null}</RnDetailField>
-          <RnDetailField label={t("field.state")}>
-            <EntityState row={row} />
-          </RnDetailField>
           <RnDetailField label={t("field.origin")}>{row.hub ? t(`origin.${row.hub.origin}`) : null}</RnDetailField>
         </dl>
       </section>

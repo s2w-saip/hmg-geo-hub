@@ -1,39 +1,35 @@
 // Admin › 엔티티 카탈로그 (2026-11-02): filters, sort, URL mirror and the role form's rules, kept pure for the tests. The
 // input rules mirror the BFF's (back/bff/hub_stores/entity_roles.py); the BFF decides.
-import { ENTITY_ROLES, ENTITY_STATES, GOLD_KINDS, OWN_BRANDS, type EntityRole, type EntityRow, type OwnBrand } from "./entity-roles-api";
+import { ENTITY_ROLES, GOLD_KINDS, OWN_BRANDS, type EntityRole, type EntityRow, type OwnBrand } from "./entity-roles-api";
 
 export const ALL = "all";
 
-export const ENTITY_AXES = ["role", "brand", "kind", "state"] as const;
+export const ENTITY_AXES = ["role", "brand", "kind"] as const;
 export type EntityAxis = (typeof ENTITY_AXES)[number];
 export type EntityFilter = Record<EntityAxis, string>;
-export const DEFAULT_ENTITY_FILTER: EntityFilter = { role: ALL, brand: ALL, kind: ALL, state: ALL };
+export const DEFAULT_ENTITY_FILTER: EntityFilter = { role: ALL, brand: ALL, kind: ALL };
 
-export const ENTITY_SORTS = ["answers", "mentions", "name", "firstSeen", "state"] as const;
+export const ENTITY_SORTS = ["answers", "mentions", "name", "firstSeen"] as const;
 export type EntitySort = (typeof ENTITY_SORTS)[number];
 export const DEFAULT_ENTITY_SORT: { key: EntitySort; asc: boolean } = { key: "answers", asc: false };
 
 export function entityFirstAsc(key: EntitySort): boolean {
-  return key === "name" || key === "state";
+  return key === "name";
 }
 
 export function entityAxisOptions(axis: EntityAxis): string[] {
   if (axis === "role") return [...ENTITY_ROLES];
   if (axis === "brand") return [...OWN_BRANDS];
-  if (axis === "kind") return [...GOLD_KINDS];
-  return [...ENTITY_STATES];
+  return [...GOLD_KINDS];
 }
 
 export function entityMatches(r: EntityRow, f: EntityFilter, search: string): boolean {
   if (f.role !== ALL && r.role !== f.role) return false;
   if (f.brand !== ALL && r.brand !== f.brand) return false;
   if (f.kind !== ALL && r.kind !== f.kind) return false;
-  if (f.state !== ALL && r.state !== f.state) return false;
   const q = search.trim().toLowerCase();
   return !q || r.name.toLowerCase().includes(q) || (r.displayBrand ?? "").toLowerCase().includes(q);
 }
-
-const STATE_ORDER: Record<string, number> = { pending: 0, upstream: 1, applied: 2 };
 
 export function sortEntities(rows: readonly EntityRow[], key: EntitySort, asc: boolean, locale: string): EntityRow[] {
   const dir = asc ? 1 : -1;
@@ -41,7 +37,6 @@ export function sortEntities(rows: readonly EntityRow[], key: EntitySort, asc: b
     if (key === "answers") return a.answers - b.answers;
     if (key === "mentions") return a.mentions - b.mentions;
     if (key === "firstSeen") return (a.firstSeen ?? "").localeCompare(b.firstSeen ?? "");
-    if (key === "state") return (a.state ? STATE_ORDER[a.state] : 9) - (b.state ? STATE_ORDER[b.state] : 9);
     return a.name.localeCompare(b.name, locale);
   };
   return [...rows].sort((a, b) => compare(a, b) * dir || b.answers - a.answers || a.entityId.localeCompare(b.entityId));
@@ -52,8 +47,6 @@ export function entityCounts(rows: readonly EntityRow[]) {
     total: rows.length,
     own: rows.filter((r) => r.role === "own").length,
     excluded: rows.filter((r) => r.role === "excluded").length,
-    pending: rows.filter((r) => r.state === "pending").length,
-    upstream: rows.filter((r) => r.state === "upstream").length,
   };
 }
 
@@ -70,7 +63,7 @@ export function queryToEntityFilter(q: string | URLSearchParams): { filters: Ent
     const v = p.get(a);
     return v && entityAxisOptions(a).includes(v) ? v : ALL;
   };
-  return { filters: { role: pick("role"), brand: pick("brand"), kind: pick("kind"), state: pick("state") }, search: p.get("q") ?? "" };
+  return { filters: { role: pick("role"), brand: pick("brand"), kind: pick("kind") }, search: p.get("q") ?? "" };
 }
 
 export function pickedEntityAxes(f: EntityFilter): EntityAxis[] {

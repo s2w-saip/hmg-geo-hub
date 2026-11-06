@@ -2,7 +2,7 @@
 
 // Project › Prompt (2026-11-03): the editing parts of the page — a tag value in place, the add sheet (one draft per line),
 // the tag columns sheet and a prompt's history. Every write goes to the HUB (project-prompts-api.ts) and the page reads its
-// data again; Gold is never written and nothing here says a change is in the numbers: the row's state does ('반영 대기').
+// data again; Gold is never written.
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -17,7 +17,7 @@ export interface ProjectPromptField {
   id: string;
   label: string;
   archived: boolean;
-  /** applied · pending (Gold does not have the HUB's column yet) · upstream (only Gold has it) */
+  /** The BFF's comparison with Gold; only `upstream` (only Gold has it, so it cannot be changed) is used: no screen says whether an input reached the numbers (user 2026-11-06). */
   state: "applied" | "pending" | "upstream";
 }
 
@@ -244,7 +244,7 @@ export function TagFieldsSheet({
               <li key={f.id} className="flex items-center gap-3 border-t border-rn-line py-2.5 text-rn-13" data-rn-tag-field={f.id}>
                 <span className={cx("min-w-0 flex-1 truncate font-semibold", f.archived ? "text-rn-muted line-through" : "text-rn-ink")}>{f.label}</span>
                 {f.archived ? <span className="text-rn-12 text-rn-muted">{t("tagArchived")}</span> : null}
-                <StateMark state={f.state} label={t(`state.${f.state}`)} tip={t(`fieldStateTip.${f.state}`)} attr="data-rn-tag-field-state" />
+                {f.state === "upstream" ? <StateMark state="upstream" label={t("state.upstream")} tip={t("fieldStateTip.upstream")} attr="data-rn-tag-field-state" /> : null}
                 {editable && f.state !== "upstream" ? (
                   <RnButton
                     size="sm"

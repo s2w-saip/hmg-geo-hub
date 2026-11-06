@@ -1,6 +1,6 @@
 // Admin › 인용 출처 분류 › 시드 · 공식 소셜 · 코드표 (2026-10-30): filters, sort, URL mirror and input checks, kept pure
 // for the tests. The input checks mirror the BFF's (back/bff/hub_stores/source_lists.py); the BFF decides.
-import { SEED_STATES, SEED_STATUSES, type SeedRow, type SocialMatcher } from "./source-lists-api";
+import { SEED_STATUSES, type SeedRow, type SocialMatcher } from "./source-lists-api";
 
 export const ALL = "all";
 
@@ -16,12 +16,12 @@ export function tabOf(v: string | string[] | null | undefined): SourceTab {
 
 // ─── seeds ───────────────────────────────────────────────────────────────────
 
-export const SEED_AXES = ["category", "state", "status"] as const;
+export const SEED_AXES = ["category", "status"] as const;
 export type SeedAxis = (typeof SEED_AXES)[number];
 export type SeedFilter = Record<SeedAxis, string>;
-export const DEFAULT_SEED_FILTER: SeedFilter = { category: ALL, state: ALL, status: ALL };
+export const DEFAULT_SEED_FILTER: SeedFilter = { category: ALL, status: ALL };
 
-export const SEED_SORTS = ["citations", "domain", "category", "state"] as const;
+export const SEED_SORTS = ["citations", "domain", "category"] as const;
 export type SeedSort = (typeof SEED_SORTS)[number];
 export const DEFAULT_SEED_SORT: { key: SeedSort; asc: boolean } = { key: "citations", asc: false };
 
@@ -41,26 +41,21 @@ export function seedCitations(r: SeedRow): number {
 /** The values an axis can pick; RnRadioAxis adds its own 전체 (ALL) row in front. */
 export function seedAxisOptions(axis: SeedAxis, categories: readonly string[]): string[] {
   if (axis === "category") return [...categories];
-  if (axis === "state") return [...SEED_STATES];
   return [...SEED_STATUSES];
 }
 
 export function seedMatches(r: SeedRow, f: SeedFilter, search: string): boolean {
   if (f.category !== ALL && seedCategory(r) !== f.category) return false;
-  if (f.state !== ALL && r.state !== f.state) return false;
   if (f.status !== ALL && r.status !== f.status) return false;
   const q = search.trim().toLowerCase();
   return !q || r.skey.includes(q);
 }
 
-const SEED_STATE_ORDER: Record<string, number> = { pending: 0, shadowed: 1, upstream: 2, applied: 3 };
-
 export function sortSeeds(rows: readonly SeedRow[], key: SeedSort, asc: boolean, categoryOrder: ReadonlyMap<string, number>): SeedRow[] {
   const value = (r: SeedRow): number | string => {
     if (key === "citations") return seedCitations(r);
     if (key === "domain") return r.skey;
-    if (key === "category") return categoryOrder.get(seedCategory(r) ?? "") ?? 999;
-    return r.state ? SEED_STATE_ORDER[r.state] : 9;
+    return categoryOrder.get(seedCategory(r) ?? "") ?? 999;
   };
   const dir = asc ? 1 : -1;
   return [...rows].sort((a, b) => {
@@ -76,7 +71,6 @@ export function seedCounts(rows: readonly SeedRow[]) {
     total: rows.length,
     active: rows.filter((r) => r.status === "active").length,
     removed: rows.filter((r) => r.status === "removed").length,
-    pending: rows.filter((r) => r.state === "pending").length,
     upstream: rows.filter((r) => r.state === "upstream").length,
   };
 }
@@ -95,7 +89,7 @@ export function queryToSeedFilter(q: string | URLSearchParams): { filters: SeedF
     return v && (allowed ? allowed.includes(v) : /^[a-z][A-Za-z0-9]{0,63}$/.test(v)) ? v : ALL;
   };
   return {
-    filters: { category: pick("category", null), state: pick("state", SEED_STATES), status: pick("status", SEED_STATUSES) },
+    filters: { category: pick("category", null), status: pick("status", SEED_STATUSES) },
     search: p.get("q") ?? "",
   };
 }

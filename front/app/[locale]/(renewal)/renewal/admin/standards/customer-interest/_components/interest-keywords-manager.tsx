@@ -2,7 +2,7 @@
 
 // Admin › 고객 관심 데이터 관리 › 키워드 (2026-11-02): the HUB owns the seed keywords (admin-todo decisions A · E, '기준값 편집
 // 공통 구조'): a term, the conditions to collect it under, what it seeds and its brands. Add, edit, stop and resume save at
-// once and keep the history; each row shows Gold's seed rows for the term and whether they hold every condition yet
+// once and keep the history; each row shows Gold's seed rows for the term
 // (back/bff/hub_stores/interest.py). Gold's seeds the HUB lacks are listed as upstream rows to take over. The original
 // screen's delete is the stop here (a row is never deleted, as Admin › GA4 연동).
 
@@ -20,7 +20,6 @@ import {
   RnDrawer,
   RnEmpty,
   RnIconButton,
-  RnNote,
   RnPageHeader,
   RnSearchField,
   RnSelect,
@@ -33,7 +32,7 @@ import {
 } from "@/components/renewal-ui";
 import { RnFilterSplit } from "../../../../_components/filter-split";
 import { LIST_TD as TD, RnDetailField, RnFilterPanel, RnFilterRail, RnRadioAxis, RnSortHead } from "../../../../_components/prompt-list";
-import { HistorySection, LIST_TH_PLAIN, ListPills, StateMark, formatTime } from "../../citation-sources/_components/source-lists-kit";
+import { HistorySection, LIST_TH_PLAIN, ListPills, formatTime } from "../../citation-sources/_components/source-lists-kit";
 import { INPUT, Row } from "../../prompts/_components/hub-prompt-form";
 import { KEYWORD_SOURCES, keywordApi, type InterestBrand, type KeywordCondition, type KeywordListing, type KeywordRow, type KeywordSource } from "./interest-api";
 import { BrandPicks, ConditionPicker, FormFoot, Problem, useBrandsLabel, useInterestError } from "./interest-kit";
@@ -95,7 +94,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
   const [sort, setSort] = useState(DEFAULT_KEYWORD_SORT);
   const [saving, setSaving] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [open, setOpen] = useState<Partial<Record<KeywordAxis, boolean>>>({ state: true, status: true });
+  const [open, setOpen] = useState<Partial<Record<KeywordAxis, boolean>>>({ status: true });
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
   const reload = () => keywordApi.list().then(setListing, (e) => toast(errorText(e)));
@@ -113,7 +112,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
     if (a === "market") return conditionLabel(conditionOfKey(v), locale);
     if (a === "source") return t(`source.${v as "google_keyword"}`);
     if (a === "brand") return v === COMMON ? t("brandCommon") : v;
-    if (a === "state") return tk(`state.${v as "applied"}`);
     return t(`status.${v as "active"}`);
   };
   const picked = pickedKeywordAxes(filters);
@@ -205,10 +203,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
         panel={panel}
         rail={<RnFilterRail count={picked.length} />}
       >
-        <RnNote>
-          <b className="text-rn-ink">{t("flowNoteTitle")}</b>
-          <span>{tk("flowNote")}</span>
-        </RnNote>
         {savedList.note}
         {picked.length || search ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
@@ -238,7 +232,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
               {sort.asc ? <ArrowUpNarrowWide className="size-4" aria-hidden /> : <ArrowDownWideNarrow className="size-4" aria-hidden />}
             </RnIconButton>
             <span className="ml-auto text-rn-12 text-rn-muted tabular-nums" data-hub-keyword-count="">
-              {tk("count", { shown: nf.format(shown.length), total: nf.format(total.total), active: nf.format(total.active), stopped: nf.format(total.stopped), pending: nf.format(total.pending), upstream: nf.format(total.upstream) })}
+              {tk("count", { shown: nf.format(shown.length), total: nf.format(total.total), active: nf.format(total.active), stopped: nf.format(total.stopped), upstream: nf.format(total.upstream) })}
             </span>
           </div>
           {shown.length === 0 ? (
@@ -252,7 +246,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
                   <col className="w-[148px]" />
                   <col className="w-[116px]" />
                   <col className="w-[148px]" />
-                  <col className="w-[104px]" />
                   <col className="w-[72px]" />
                   <col className="w-[176px]" />
                 </colgroup>
@@ -263,7 +256,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
                     <th className={LIST_TH_PLAIN}>{tk("column.source")}</th>
                     <th className={LIST_TH_PLAIN}>{tk("column.brand")}</th>
                     {head("observed")}
-                    {head("state")}
                     <th className={LIST_TH_PLAIN}>{tk("column.status")}</th>
                     <th className={cx(LIST_TH_PLAIN, "pr-5 text-right")}>{tk("column.actions")}</th>
                   </tr>
@@ -301,9 +293,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
                           <span data-rn-tip={row.gold ? tk("goldTip", { collected: row.collected, total: row.conditions.length }) : tk("goldNone")} className="block truncate" data-hub-keyword-gold={row.collected}>
                             {row.gold ? `${row.collected}/${row.conditions.length} · ${row.gold.observedAt.slice(0, 10)}` : "—"}
                           </span>
-                        </td>
-                        <td className={TD}>
-                          <KeywordState row={row} />
                         </td>
                         <td className={cx(TD, "text-rn-12")}>{row.status ? t(`status.${row.status}`) : <span className="text-rn-faint">—</span>}</td>
                         <td className={cx(TD, "pr-5")}>
@@ -352,12 +341,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: KeywordListing; tab
       </RnDrawer>
     </div>
   );
-}
-
-/** 반영됨 / 반영 대기 / 업스트림 키워드 / — (a stopped keyword: nothing to compare). */
-export function KeywordState({ row }: { row: KeywordRow }) {
-  const tk = useTranslations("hubInterest.keywords");
-  return <StateMark state={row.state} attr="data-hub-keyword-state" label={row.state ? tk(`state.${row.state}`) : "—"} tip={tk(`stateTip.${row.state ?? "none"}`)} />;
 }
 
 export function KeywordForm({
@@ -490,9 +473,6 @@ function KeywordDetail({ row }: { row: KeywordRow }) {
           <RnDetailField label={t("field.brands")}>{row.status ? brandsLabel(row.brands) : null}</RnDetailField>
           <RnDetailField label={t("field.status")}>{row.status ? t(`status.${row.status}`) : null}</RnDetailField>
           <RnDetailField label={t("field.origin")}>{row.origin ? tk(`origin.${row.origin}`) : null}</RnDetailField>
-          <RnDetailField label={tk("field.state")}>
-            <KeywordState row={row} />
-          </RnDetailField>
           <RnDetailField label={t("field.note")}>{row.note}</RnDetailField>
         </dl>
       </section>

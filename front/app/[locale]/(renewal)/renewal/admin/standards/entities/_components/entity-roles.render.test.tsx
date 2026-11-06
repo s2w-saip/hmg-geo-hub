@@ -21,8 +21,8 @@ import {
   sortEntities,
 } from "./entity-roles-model";
 
-// Admin › 엔티티 카탈로그 (2026-11-02): the list as first rendered (Gold's values next to the HUB's role, no 'saved = applied'
-// wording, no draft or preview), the role form's rules and the pure filter model.
+// Admin › 엔티티 카탈로그 (2026-11-02): the list as first rendered (Gold's values next to the HUB's role, no reflection
+// state, no draft or preview), the role form's rules and the pure filter model.
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(""),
@@ -80,7 +80,7 @@ describe("EntityRolesManager", () => {
     expect(keysOf(out)).toEqual(["hyundai", "bmw", "apple", "alias"]);
     expect(out).toContain("업스트림 목록 v1 · 19건");
     expect(out).toContain("entity_role");
-    expect(out).toContain("4 / 4개 · 자사 2 · 제외 1 · 반영 대기 1 · 업스트림 1");
+    expect(out).toContain("4 / 4개 · 자사 2 · 제외 1");
   });
 
   it("keeps saved filters in the filter panel, as the other admin lists (last review 2026-11-02, F7)", () => {
@@ -89,19 +89,15 @@ describe("EntityRolesManager", () => {
 
   it("shows each kind of row", () => {
     expect(rowOf(out, "hyundai")).toContain("자사 · Hyundai");
-    expect(rowOf(out, "hyundai")).toContain('data-hub-entity-state="applied"');
     expect(rowOf(out, "hyundai")).toContain("273,895");
     expect(rowOf(out, "bmw")).toContain('data-hub-entity-role="competitor"');
     expect(rowOf(out, "bmw")).toContain("2026-07-03");
     expect(rowOf(out, "apple")).toContain("비경쟁"); // Gold's kind, as it is
     expect(rowOf(out, "apple")).toContain("제외");
-    expect(rowOf(out, "apple")).toContain('data-hub-entity-state="pending"');
-    expect(rowOf(out, "alias")).toContain('data-hub-entity-state="upstream"');
   });
 
-  it("says when a role takes effect, with no immediate wording and no draft or preview", () => {
-    expect(out).toContain("Gold를 다시 만든 뒤 반영");
-    expect(out).not.toContain("즉시 반영");
+  it("never says whether a role reached the numbers, and has no draft or preview", () => {
+    for (const gone of ["반영 대기", "반영됨", "data-hub-entity-state"]) expect(out).not.toContain(gone);
     for (const word of ["초안", "미리보기", "승인"]) expect(out).not.toContain(word);
   });
 
@@ -209,7 +205,6 @@ describe("filters", () => {
     expect(keys({ ...f, role: "own" })).toEqual(["hyundai", "alias"]);
     expect(keys({ ...f, brand: "Hyundai" })).toEqual(["hyundai", "alias"]);
     expect(keys({ ...f, kind: "nonCompetitor" })).toEqual(["apple"]);
-    expect(keys({ ...f, state: "pending" })).toEqual(["apple"]);
     expect(keys(f, " hyundai ")).toEqual(["hyundai", "alias"]); // the alias through its display brand
     expect(keys(f, "현대")).toEqual(["alias"]);
   });
@@ -217,9 +212,8 @@ describe("filters", () => {
   it("sorts and counts", () => {
     expect(sortEntities(rows, "answers", false, "ko").map((r) => r.entityId)).toEqual(["hyundai", "bmw", "apple", "alias"]);
     expect(sortEntities(rows, "mentions", true, "ko")[0].entityId).toBe("alias");
-    expect(sortEntities(rows, "state", true, "ko").map((r) => r.state)).toEqual(["pending", "upstream", "applied", null]);
     expect(sortEntities(rows, "name", true, "ko")[0].name).toBe("현대자동차"); // the Korean collation
-    expect(entityCounts(rows)).toEqual({ total: 4, own: 2, excluded: 1, pending: 1, upstream: 1 });
+    expect(entityCounts(rows)).toEqual({ total: 4, own: 2, excluded: 1 });
   });
 
   it("mirrors the filter in the URL", () => {

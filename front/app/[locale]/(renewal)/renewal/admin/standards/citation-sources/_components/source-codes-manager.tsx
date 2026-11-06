@@ -3,8 +3,8 @@
 // Admin › 인용 출처 분류 › 코드표 (2026-10-30): the HUB owns the source code table (admin-todo decision 코드표): the 13
 // source categories (Gold's dim_category projects it; a category's number is its answer_fact.cit_c<k> column) and the
 // 6 classification layers (dim_source.category_src, the number is the priority). Names, descriptions and the category
-// order change here; adding or removing a category does not (Gold's columns). Each category shows whether Gold's
-// dim_category has the HUB's name and order yet (back/bff/hub_stores/source_lists.py). The names go to the external
+// order change here; adding or removing a category does not (Gold's columns). Each category shows Gold's
+// dim_category name and order next to the HUB's (back/bff/hub_stores/source_lists.py). The names go to the external
 // API list; HUB screen labels do not use them yet.
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -15,7 +15,7 @@ import { RnPageFrame } from "../../../../_components/filter-split";
 import { LIST_TD as TD, RnDetailField } from "../../../../_components/prompt-list";
 import { INPUT, Row } from "../../prompts/_components/hub-prompt-form";
 import { codeApi, type CategoryCodeRow, type CodeKind, type CodeListing, type CodeRow } from "./source-lists-api";
-import { HistorySection, LIST_TH_PLAIN, ListPills, StateMark, useListError } from "./source-lists-kit";
+import { HistorySection, LIST_TH_PLAIN, ListPills, useListError } from "./source-lists-kit";
 import { DESCRIPTION_MAX, NAME_MAX, codeProblems, moveCode, type CodeProblem } from "./source-lists-model";
 
 export function SourceCodesManager({ initial, tabs }: { initial: CodeListing; tabs?: ReactNode }) {
@@ -118,7 +118,6 @@ function Manager({ initial, tabs }: { initial: CodeListing; tabs?: ReactNode }) 
                 <col className="w-[200px]" />
                 <col />
                 <col className="w-[220px]" />
-                <col className="w-[112px]" />
                 <col className="w-[72px]" />
               </colgroup>
               <thead>
@@ -130,7 +129,6 @@ function Manager({ initial, tabs }: { initial: CodeListing; tabs?: ReactNode }) 
                   <th className={LIST_TH_PLAIN}>{tc("column.nameEn")}</th>
                   <th className={LIST_TH_PLAIN}>{tc("column.description")}</th>
                   <th className={LIST_TH_PLAIN}>{tc("column.gold")}</th>
-                  <th className={LIST_TH_PLAIN}>{tc("column.state")}</th>
                   <th className={cx(LIST_TH_PLAIN, "pr-5 text-right")}>{tc("column.actions")}</th>
                 </tr>
               </thead>
@@ -159,9 +157,6 @@ function Manager({ initial, tabs }: { initial: CodeListing; tabs?: ReactNode }) 
                       <span data-rn-tip="" className="block truncate">
                         {r.gold ? tc("goldValue", { name: r.gold.name, ord: r.gold.ord }) : tc("goldNone")}
                       </span>
-                    </td>
-                    <td className={TD}>
-                      <CodeState row={r} />
                     </td>
                     <td className={cx(TD, "pr-5")}>
                       <span className="flex justify-end">{editButton("category", r)}</span>
@@ -236,12 +231,6 @@ function Manager({ initial, tabs }: { initial: CodeListing; tabs?: ReactNode }) 
   );
 }
 
-/** 반영됨 / 반영 대기: Gold's dim_category against the HUB's name and order. */
-export function CodeState({ row }: { row: CategoryCodeRow }) {
-  const tc = useTranslations("hubSourceLists.codes");
-  return <StateMark state={row.state} attr="data-hub-code-state" label={row.state ? tc(`state.${row.state}`) : "—"} tip={row.state ? tc(`stateTip.${row.state}`) : tc("goldNone")} />;
-}
-
 export function CodeForm({
   kind,
   row,
@@ -292,12 +281,7 @@ export function CodeForm({
           <span className="tabular-nums">{row.number}</span>
         </RnDetailField>
         {"gold" in row ? (
-          <>
-            <RnDetailField label={tc("field.gold")}>{(row as CategoryCodeRow).gold ? tc("goldValue", { name: (row as CategoryCodeRow).gold!.name, ord: (row as CategoryCodeRow).gold!.ord }) : tc("goldNone")}</RnDetailField>
-            <RnDetailField label={tc("field.state")}>
-              <CodeState row={row as CategoryCodeRow} />
-            </RnDetailField>
-          </>
+          <RnDetailField label={tc("field.gold")}>{(row as CategoryCodeRow).gold ? tc("goldValue", { name: (row as CategoryCodeRow).gold!.name, ord: (row as CategoryCodeRow).gold!.ord }) : tc("goldNone")}</RnDetailField>
         ) : null}
       </dl>
       <Row label={tc("form.nameKo")} htmlFor="hub-code-name-ko" invalid={shown("nameKo")}>

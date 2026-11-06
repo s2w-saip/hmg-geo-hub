@@ -26,9 +26,8 @@ export interface ListEvent {
 
 // ─── seeds (family source_seed) ───────────────────────────────────────────────
 
-/** applied: Gold's seed layer has the HUB's category; shadowed: a higher layer (correction, social, owned) decides. */
-export const SEED_STATES = ["applied", "pending", "shadowed", "upstream"] as const;
-export type SeedState = (typeof SEED_STATES)[number];
+/** The BFF's comparison with Gold; only `upstream` (a Gold seed the HUB does not have) is used: no screen says whether an input reached the numbers (user 2026-11-06). */
+export type SeedState = "applied" | "pending" | "shadowed" | "upstream";
 export const SEED_STATUSES = ["active", "removed"] as const;
 export type SeedStatus = (typeof SEED_STATUSES)[number];
 
@@ -67,8 +66,7 @@ export interface SeedHistory {
 
 // ─── official social accounts (family source_social) ─────────────────────────
 
-export const SOCIAL_STATES = ["applied", "pending", "upstream"] as const;
-export type SocialState = (typeof SOCIAL_STATES)[number];
+export type SocialState = "applied" | "pending" | "upstream";
 
 export interface SocialMatcher {
   /** lower case `<domain>/<path>` prefix */

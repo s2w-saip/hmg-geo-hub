@@ -2,9 +2,8 @@
 
 // Admin › 인용 출처 분류 › 공식 소셜 (2026-10-30): the HUB owns the official (HMG) social accounts (admin-todo decision G).
 // An account is a display key (`<domain>/<path>`, Gold's casing) and the URL prefixes that fold a citation into it;
-// its category is always Official (HMG). Add, edit the matchers, stop and resume save at once and keep the history;
-// each row shows whether Gold applies the account yet (back/bff/hub_stores/source_lists.py). Gold accounts the HUB
-// lacks are listed as upstream rows to take over.
+// its category is always Official (HMG). Add, edit the matchers, stop and resume save at once and keep the history
+// (back/bff/hub_stores/source_lists.py). Gold accounts the HUB lacks are listed as upstream rows to take over.
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -16,7 +15,6 @@ import {
   RnDrawer,
   RnEmpty,
   RnIconButton,
-  RnNote,
   RnPageHeader,
   RnTag,
   RnToastProvider,
@@ -28,7 +26,7 @@ import { RnPageFrame } from "../../../../_components/filter-split";
 import { LIST_TD as TD, RnDetailField } from "../../../../_components/prompt-list";
 import { INPUT, Row } from "../../prompts/_components/hub-prompt-form";
 import { socialApi, type SocialListing, type SocialMatcher, type SocialRow } from "./source-lists-api";
-import { HistorySection, LIST_TH_PLAIN, ListPills, StateMark, useListError } from "./source-lists-kit";
+import { HistorySection, LIST_TH_PLAIN, ListPills, useListError } from "./source-lists-kit";
 import { defaultMatcher, socialProblems, type SocialProblem } from "./source-lists-model";
 
 type Sheet = { mode: "add"; key: string; matchers: SocialMatcher[] } | { mode: "edit"; key: string } | { mode: "detail"; key: string };
@@ -62,7 +60,6 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
     total: items.length,
     active: items.filter((r) => r.status === "active").length,
     stopped: items.filter((r) => r.status === "stopped").length,
-    pending: items.filter((r) => r.state === "pending").length,
   };
 
   const toggle = async (row: SocialRow) => {
@@ -97,10 +94,6 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
           />
         }
       >
-        <RnNote>
-          <b className="text-rn-ink">{t("flowNoteTitle")}</b>
-          <span>{ts("flowNote")}</span>
-        </RnNote>
         <RnCard aria-label={ts("listLabel")}>
           <div className="flex flex-wrap items-center gap-2 border-b border-rn-line px-5 py-3">
             <RnButton size="sm" variant="primary" disabled={saving != null} onClick={() => setSheet({ mode: "add", key: "", matchers: [] })} data-hub-social-add="">
@@ -108,7 +101,7 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
               {ts("add")}
             </RnButton>
             <span className="ml-auto text-rn-12 text-rn-muted tabular-nums" data-hub-social-count="">
-              {ts("count", { total: nf.format(counts.total), active: nf.format(counts.active), stopped: nf.format(counts.stopped), pending: nf.format(counts.pending) })}
+              {ts("count", { total: nf.format(counts.total), active: nf.format(counts.active), stopped: nf.format(counts.stopped) })}
             </span>
           </div>
           {items.length === 0 ? (
@@ -122,7 +115,6 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
                   <col />
                   <col className="w-[132px]" />
                   <col className="w-[88px]" />
-                  <col className="w-[120px]" />
                   <col className="w-[84px]" />
                   <col className="w-[176px]" />
                 </colgroup>
@@ -133,7 +125,6 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
                     <th className={LIST_TH_PLAIN}>{ts("column.matchers")}</th>
                     <th className={LIST_TH_PLAIN}>{ts("column.category")}</th>
                     <th className={cx(LIST_TH_PLAIN, "text-right")}>{ts("column.citations")}</th>
-                    <th className={LIST_TH_PLAIN}>{ts("column.state")}</th>
                     <th className={LIST_TH_PLAIN}>{ts("column.status")}</th>
                     <th className={cx(LIST_TH_PLAIN, "pr-5 text-right")}>{ts("column.actions")}</th>
                   </tr>
@@ -161,9 +152,6 @@ function Manager({ initial, tabs }: { initial: SocialListing; tabs?: ReactNode }
                           </span>
                         </td>
                         <td className={cx(TD, "text-right text-rn-12 text-rn-ink-2 tabular-nums")}>{nf.format(row.gold?.citations ?? 0)}</td>
-                        <td className={TD}>
-                          <SocialState row={row} />
-                        </td>
                         <td className={cx(TD, "text-rn-12")}>{row.status ? ts(`status.${row.status}`) : <span className="text-rn-faint">—</span>}</td>
                         <td className={cx(TD, "pr-5")}>
                           <span className="flex items-center justify-end gap-1">
@@ -237,14 +225,6 @@ function matchersSummary(matchers: readonly SocialMatcher[], ts: ReturnType<type
   if (!matchers.length) return "—";
   const first = `${matchers[0].prefix}${matchers[0].boundary ? "" : "…"}`;
   return matchers.length === 1 ? first : ts("matchersMore", { first, more: matchers.length - 1 });
-}
-
-/** 반영됨 / 반영 대기 (중지 대기) / 업스트림 계정 / — (Gold has no such account). */
-export function SocialState({ row }: { row: SocialRow }) {
-  const ts = useTranslations("hubSourceLists.social");
-  const stopping = row.state === "pending" && row.status === "stopped";
-  const key = stopping ? "pendingStop" : row.state;
-  return <StateMark state={row.state} attr="data-hub-social-state" label={key ? ts(`state.${key}`) : "—"} tip={ts(`stateTip.${key ?? "none"}`)} />;
 }
 
 export function SocialForm({
@@ -410,9 +390,6 @@ function SocialDetail({ row }: { row: SocialRow }) {
           <RnDetailField label={ts("field.status")}>{row.status ? ts(`status.${row.status}`) : null}</RnDetailField>
           <RnDetailField label={ts("field.origin")}>{row.origin ? t(`origin.${row.origin}`) : null}</RnDetailField>
           <RnDetailField label={ts("field.gold")}>{row.gold ? (row.gold.source ? to(`source.${row.gold.source}`) : "—") : ts("goldNone")}</RnDetailField>
-          <RnDetailField label={ts("field.state")}>
-            <SocialState row={row} />
-          </RnDetailField>
           <RnDetailField label={ts("field.note")}>{row.note}</RnDetailField>
         </dl>
       </section>

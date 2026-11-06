@@ -21,9 +21,8 @@ export interface KeywordCondition {
 export const KEYWORD_SOURCES = ["google_keyword", "community_voc"] as const;
 export type KeywordSource = (typeof KEYWORD_SOURCES)[number];
 
-/** applied: Gold's seed rows hold every HUB condition; pending: not yet; upstream: Gold's seed the HUB does not have. */
-export const KEYWORD_STATES = ["applied", "pending", "upstream"] as const;
-export type KeywordState = (typeof KEYWORD_STATES)[number];
+/** The BFF's comparison with Gold; only `upstream` (Gold's seed the HUB does not have) is used: no screen says whether an input reached the numbers (user 2026-11-06). */
+export type KeywordState = "applied" | "pending" | "upstream";
 export const INTEREST_STATUSES = ["active", "stopped"] as const;
 export type InterestStatus = (typeof INTEREST_STATUSES)[number];
 

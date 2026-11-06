@@ -3,8 +3,8 @@
 // Renewal Project › Prompt (2026-11-03): the project's prompts as the HUB holds them (decision '프로젝트 프롬프트 적재': the
 // HUB is the 정본, the rows Gold imported first), in the one-line list of the renewal prompt pages, with a column per custom
 // tag. The original page's writes are here: add drafts (one per line), a tag value in place or on the selected rows, the tag
-// columns, a prompt's text and language while it is a draft, its measurement kind, pause · resume · delete · restore. Each row
-// is compared with Gold (반영 대기 until the pipeline has read the change and Gold was rebuilt). Sending drafts to Scope (the
+// columns, a prompt's text and language while it is a draft, its measurement kind, pause · resume · delete · restore. Sending
+// drafts to Scope (the
 // original 실행) waits for the Scope path. Answers, engines, rounds and dates are Gold's in the lens (측정 국가 · AI 엔진 ·
 // 기간: the answers a row counts, never the rows); the tags in the panel narrow the rows. A project holds ≤ 237 prompts, so the
 // page filters, searches, sorts, pages and exports them here. A row opens its sheet.
@@ -439,7 +439,7 @@ function TagValue({ value }: { value: string | undefined }) {
   );
 }
 
-/** The HUB status, and under it how it stands against Gold when it is not applied. */
+/** The HUB status, and under it why a row Gold alone has cannot be edited. */
 function StatusCell({ row }: { row: ProjectPromptRow }) {
   const t = useTranslations("renewal.projects.prompts");
   const tone = row.status === "draft" ? "text-rn-navy" : row.status === "active" ? "text-rn-ink" : "text-rn-muted";
@@ -448,9 +448,7 @@ function StatusCell({ row }: { row: ProjectPromptRow }) {
       <span className={cx("text-rn-12 font-semibold", tone)} data-rn-status-label="">
         {t(`status.${row.status}`)}
       </span>
-      {row.state === "pending" || row.state === "upstream" ? (
-        <StateMark state={row.state} label={t(`state.${row.state}`)} tip={t(`stateTip.${row.state}`)} attr="data-rn-prompt-state" />
-      ) : null}
+      {row.state === "upstream" ? <StateMark state="upstream" label={t("state.upstream")} tip={t("stateTip.upstream")} attr="data-rn-prompt-state" /> : null}
     </span>
   );
 }
@@ -674,7 +672,7 @@ export function RnProjectPromptDetail({
   );
 }
 
-/** The status, the state against Gold and the actions the status offers (delete asks once). */
+/** The status, why a row Gold alone has cannot be edited, and the actions the status offers (delete asks once). */
 function StatusBar({ pid, row, editable, onChanged }: { pid: string; row: ProjectPromptRow; editable: boolean; onChanged: () => void }) {
   const t = useTranslations("renewal.projects.prompts");
   const writeError = useWriteError();
@@ -695,12 +693,11 @@ function StatusBar({ pid, row, editable, onChanged }: { pid: string; row: Projec
       setSaving(null);
     }
   }
-  const state = row.state === "pending" || row.state === "upstream" || row.state === "applied" ? row.state : null;
   return (
     <div className="flex flex-col gap-2 rounded-[10px] bg-rn-page p-3" data-rn-project-prompt-status="">
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-rn-13 font-bold text-rn-ink">{t(`status.${row.status}`)}</span>
-        {state ? <StateMark state={state} label={t(`state.${state}`)} tip={t(`stateTip.${state}`)} attr="data-rn-prompt-state" /> : null}
+        {row.state === "upstream" ? <StateMark state="upstream" label={t("state.upstream")} tip={t("stateTip.upstream")} attr="data-rn-prompt-state" /> : null}
         {editable ? (
           <span className="ml-auto flex gap-2">
             {ACTIONS[row.status].map((a) => (

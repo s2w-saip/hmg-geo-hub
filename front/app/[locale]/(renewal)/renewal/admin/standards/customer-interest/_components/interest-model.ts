@@ -6,7 +6,6 @@ import {
   INTEREST_SOURCE_STATES,
   INTEREST_STATUSES,
   KEYWORD_SOURCES,
-  KEYWORD_STATES,
   SOURCE_CHANNELS,
   type InterestSourceRow,
   type KeywordCondition,
@@ -57,17 +56,17 @@ export const REGION_KEYS: Record<string, string> = {
 
 // ─── keywords ────────────────────────────────────────────────────────────────
 
-export const KEYWORD_AXES = ["market", "source", "brand", "state", "status"] as const;
+export const KEYWORD_AXES = ["market", "source", "brand", "status"] as const;
 export type KeywordAxis = (typeof KEYWORD_AXES)[number];
 export type KeywordFilter = Record<KeywordAxis, string>;
-export const DEFAULT_KEYWORD_FILTER: KeywordFilter = { market: ALL, source: ALL, brand: ALL, state: ALL, status: ALL };
+export const DEFAULT_KEYWORD_FILTER: KeywordFilter = { market: ALL, source: ALL, brand: ALL, status: ALL };
 
-export const KEYWORD_SORTS = ["term", "conditions", "observed", "state"] as const;
+export const KEYWORD_SORTS = ["term", "conditions", "observed"] as const;
 export type KeywordSort = (typeof KEYWORD_SORTS)[number];
 export const DEFAULT_KEYWORD_SORT: { key: KeywordSort; asc: boolean } = { key: "term", asc: true };
 
 export function keywordFirstAsc(key: KeywordSort): boolean {
-  return key === "term" || key === "state";
+  return key === "term";
 }
 
 /** The markets the list holds, in the presets' order; a condition outside the presets comes last. */
@@ -84,7 +83,6 @@ export function keywordAxisOptions(axis: KeywordAxis, markets: readonly string[]
   if (axis === "market") return [...markets];
   if (axis === "source") return [...KEYWORD_SOURCES];
   if (axis === "brand") return [COMMON, ...INTEREST_BRANDS];
-  if (axis === "state") return [...KEYWORD_STATES];
   return [...INTEREST_STATUSES];
 }
 
@@ -98,20 +96,16 @@ export function keywordMatches(r: KeywordRow, f: KeywordFilter, search: string):
   if (f.market !== ALL && !r.conditions.some((c) => conditionKey(c) === f.market)) return false;
   if (f.source !== ALL && !r.sourceTypes.includes(f.source as (typeof KEYWORD_SOURCES)[number])) return false;
   if (!brandMatches(r, f.brand)) return false;
-  if (f.state !== ALL && r.state !== f.state) return false;
   if (f.status !== ALL && r.status !== f.status) return false;
   const q = search.trim().toLowerCase();
   return !q || r.termNorm.includes(q);
 }
-
-const KEYWORD_STATE_ORDER: Record<string, number> = { pending: 0, upstream: 1, applied: 2 };
 
 export function sortKeywords(rows: readonly KeywordRow[], key: KeywordSort, asc: boolean, locale: string): KeywordRow[] {
   const dir = asc ? 1 : -1;
   const compare = (a: KeywordRow, b: KeywordRow): number => {
     if (key === "conditions") return a.conditions.length - b.conditions.length;
     if (key === "observed") return (a.gold?.observedAt ?? "").localeCompare(b.gold?.observedAt ?? "");
-    if (key === "state") return (a.state ? KEYWORD_STATE_ORDER[a.state] : 9) - (b.state ? KEYWORD_STATE_ORDER[b.state] : 9);
     return 0;
   };
   return [...rows].sort((a, b) => compare(a, b) * dir || (key === "term" ? dir : 1) * a.term.localeCompare(b.term, locale));
@@ -122,7 +116,6 @@ export function keywordCounts(rows: readonly KeywordRow[]) {
     total: rows.length,
     active: rows.filter((r) => r.status === "active").length,
     stopped: rows.filter((r) => r.status === "stopped").length,
-    pending: rows.filter((r) => r.state === "pending").length,
     upstream: rows.filter((r) => r.state === "upstream").length,
   };
 }
@@ -146,7 +139,6 @@ export function queryToKeywordFilter(q: string | URLSearchParams): { filters: Ke
       market: market && /^\d+:[A-Za-z-]+$/.test(market) ? market : ALL,
       source: pick("source", KEYWORD_SOURCES),
       brand: pick("brand", [COMMON, ...INTEREST_BRANDS]),
-      state: pick("state", KEYWORD_STATES),
       status: pick("status", INTEREST_STATUSES),
     },
     search: p.get("q") ?? "",

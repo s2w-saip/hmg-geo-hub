@@ -2,8 +2,8 @@
 
 // Admin › 인용 출처 분류 › 시드 (2026-10-30): the HUB owns the seed list (admin-todo decision G): a domain's base
 // category that people set, below a correction, an official social account and an owned domain. Add, change, remove
-// and restore save at once; each row shows Gold's own value for the source and whether Gold applies the HUB's seed
-// yet (back/bff/hub_stores/source_lists.py). Gold seeds the HUB lacks are listed as upstream rows to take over. A
+// and restore save at once; each row shows Gold's own value for the source
+// (back/bff/hub_stores/source_lists.py). Gold seeds the HUB lacks are listed as upstream rows to take over. A
 // removal keeps the row and its history. Same layout as the 교정 tab.
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -20,7 +20,6 @@ import {
   RnDrawer,
   RnEmpty,
   RnIconButton,
-  RnNote,
   RnPageHeader,
   RnSearchField,
   RnSelect,
@@ -34,7 +33,7 @@ import { RnFilterSplit } from "../../../../_components/filter-split";
 import { LIST_TD as TD, RnDetailField, RnFilterPanel, RnFilterRail, RnRadioAxis, RnSortHead } from "../../../../_components/prompt-list";
 import { INPUT } from "../../prompts/_components/hub-prompt-form";
 import { seedApi, type SeedListing, type SeedRow } from "./source-lists-api";
-import { HistorySection, LIST_TH_PLAIN, ListPills, StateMark, useCategoryLabel, useListError } from "./source-lists-kit";
+import { HistorySection, LIST_TH_PLAIN, ListPills, useCategoryLabel, useListError } from "./source-lists-kit";
 import {
   ALL,
   DEFAULT_SEED_FILTER,
@@ -85,7 +84,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
   const [sort, setSort] = useState(DEFAULT_SEED_SORT);
   const [saving, setSaving] = useState<string | null>(null);
   const [sheet, setSheet] = useState<string | null>(null);
-  const [open, setOpen] = useState<Partial<Record<SeedAxis, boolean>>>({ state: true, status: true });
+  const [open, setOpen] = useState<Partial<Record<SeedAxis, boolean>>>({ status: true });
   const label = useCategoryLabel(listing.categories);
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
   const categoryOrder = useMemo(() => new Map(listing.categories.map((c, i) => [c.slug, i] as const)), [listing.categories]);
@@ -100,7 +99,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
 
   const axisLabel = (a: SeedAxis) => ts(`axis.${a}`);
   const valueLabel = (a: SeedAxis, v: string) =>
-    v === ALL ? tv("filterAll") : a === "category" ? label(v) : a === "state" ? ts(`state.${v as "applied"}`) : ts(`status.${v as "active"}`);
+    v === ALL ? tv("filterAll") : a === "category" ? label(v) : ts(`status.${v as "active"}`);
   const picked = pickedSeedAxes(filters);
   const savedList = useAdminSavedFilters({
     source: savedFilters,
@@ -191,10 +190,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
         panel={panel}
         rail={<RnFilterRail count={picked.length} />}
       >
-        <RnNote>
-          <b className="text-rn-ink">{t("flowNoteTitle")}</b>
-          <span>{ts("flowNote")}</span>
-        </RnNote>
         <AddSeed
           categories={categories}
           exists={(k) => listing.items.some((r) => r.skey === k && r.status != null)}
@@ -231,7 +226,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
                 total: nf.format(total.total),
                 active: nf.format(total.active),
                 removed: nf.format(total.removed),
-                pending: nf.format(total.pending),
                 upstream: nf.format(total.upstream),
               })}
             </span>
@@ -246,7 +240,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
                   <col className="w-[96px]" />
                   <col className="w-[196px]" />
                   <col className="w-[200px]" />
-                  <col className="w-[132px]" />
                   <col className="w-[88px]" />
                   <col className="w-[132px]" />
                 </colgroup>
@@ -256,7 +249,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
                     {head("citations", "text-right")}
                     {head("category")}
                     <th className={LIST_TH_PLAIN}>{ts("column.gold")}</th>
-                    {head("state")}
                     <th className={LIST_TH_PLAIN}>{ts("column.status")}</th>
                     <th className={cx(LIST_TH_PLAIN, "pr-5 text-right")}>{ts("column.actions")}</th>
                   </tr>
@@ -296,9 +288,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
                           <span data-rn-tip="" className="block truncate" data-hub-seed-gold={row.gold?.source ?? ""}>
                             {row.gold ? `${label(goldCategory)} · ${row.gold.source ? to(`source.${row.gold.source}`) : "—"}` : ts("goldNone")}
                           </span>
-                        </td>
-                        <td className={TD}>
-                          <SeedState row={row} />
                         </td>
                         <td className={cx(TD, "text-rn-12")}>{row.status ? ts(`status.${row.status}`) : <span className="text-rn-faint">—</span>}</td>
                         <td className={cx(TD, "pr-5")}>
@@ -345,14 +334,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SeedListing; tabs?:
       </RnDrawer>
     </div>
   );
-}
-
-/** 반영됨 / 반영 대기 (제외 대기) / 상위 분류 우선 / 업스트림 시드 / — (Gold has no such source). */
-export function SeedState({ row }: { row: SeedRow }) {
-  const ts = useTranslations("hubSourceLists.seeds");
-  const removing = row.state === "pending" && row.status === "removed";
-  const key = removing ? "pendingRemove" : row.state;
-  return <StateMark state={row.state} attr="data-hub-seed-state" label={key ? ts(`state.${key}`) : "—"} tip={ts(`stateTip.${key ?? "none"}`)} />;
 }
 
 function AddSeed({
@@ -441,9 +422,6 @@ function SeedDetail({ row, label }: { row: SeedRow; label: (slug: string | null 
           <RnDetailField label={ts("field.origin")}>{row.origin ? t(`origin.${row.origin}`) : null}</RnDetailField>
           <RnDetailField label={ts("field.gold")}>
             {row.gold ? `${label(row.gold.category)} · ${row.gold.source ? to(`source.${row.gold.source}`) : "—"}` : ts("goldNone")}
-          </RnDetailField>
-          <RnDetailField label={ts("field.state")}>
-            <SeedState row={row} />
           </RnDetailField>
           <RnDetailField label={ts("field.note")}>{row.note}</RnDetailField>
         </dl>

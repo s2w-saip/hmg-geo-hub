@@ -5,9 +5,8 @@
 export const SOURCE_LAYERS = ["override", "social", "owned", "seed", "rule", "fallback"] as const;
 export type SourceLayer = (typeof SOURCE_LAYERS)[number];
 
-/** applied / pending: whether Gold applies the HUB's decision yet; upstream: Gold applies a correction the HUB does not have. */
-export const SYNC_STATES = ["applied", "pending", "upstream"] as const;
-export type SyncState = (typeof SYNC_STATES)[number];
+/** The BFF's comparison with Gold, not shown: no screen says whether an input reached the numbers (user 2026-11-06). */
+export type SyncState = "applied" | "pending" | "upstream";
 
 export interface SourceOverride {
   /** gold.dim_category slug */

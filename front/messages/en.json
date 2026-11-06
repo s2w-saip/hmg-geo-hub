@@ -6379,7 +6379,7 @@
         }
       },
       "prompts": {
-        "description": "The prompts and custom tags this project measures. The HUB holds them; a change reaches the numbers after Gold is rebuilt.",
+        "description": "The prompts and custom tags this project measures. The HUB holds them.",
         "noRound": "No round in this range",
         "countryHelp": "Keeps the list and counts only the measurements in the picked countries.",
         "noPickHint": "With no pick, every prompt of this project and the measurements of every round. A tag pick keeps the prompts with that value.",
@@ -6393,7 +6393,7 @@
         "exportFailed": "Could not export. Please try again in a moment.",
         "empty": "This project has no prompts.",
         "emptyFiltered": "No prompt matches.",
-        "note": "Prompts and tags are saved in the HUB and go to the pipeline through the external API. The numbers change after the pipeline takes them and Gold is rebuilt; until then a row shows 'Pending'. 'Run measurement', which sends drafts to Scope, opens once the Scope path is settled. The original's candidate pool and Excel import are not moved yet.",
+        "note": "Prompts and tags are saved in the HUB and go to the pipeline through the external API. 'Run measurement', which sends drafts to Scope, opens once the Scope path is settled. The original's candidate pool and Excel import are not moved yet.",
         "kind": "Kind",
         "funnel": "Funnel",
         "regions": "Scope market tags",
@@ -6419,24 +6419,18 @@
           "deleted": "Deleted {count}"
         },
         "state": {
-          "applied": "Applied",
-          "pending": "Pending",
           "upstream": "Gold only"
         },
         "stateTip": {
-          "applied": "Gold holds the HUB's values (text, kind, language, tag values). A deleted prompt has left Gold's list.",
-          "pending": "Gold does not hold the HUB's values yet. They apply after the pipeline takes them from the external API and Gold is rebuilt.",
           "upstream": "Gold has this prompt but the HUB catalog does not yet. It becomes editable after the next Gold import."
         },
         "fieldStateTip": {
-          "applied": "Gold's tag column matches the HUB's (an archived one has left Gold's filters).",
-          "pending": "Gold does not have the HUB's change to this tag column yet.",
           "upstream": "Only Gold has this tag column; the HUB catalog cannot change it."
         },
         "statusHint": {
           "active": "Measured. The text and language can change only while a prompt is a draft.",
           "draft": "A draft only the HUB holds. It can be sent for measurement once Run measurement (Scope) opens.",
-          "paused": "Measurement stop asked. Gold has no paused state, so it is not compared.",
+          "paused": "Measurement stop asked.",
           "archived": "Deleted. Its measured answers stay in Gold, and it can be restored.",
           "removed": "This prompt left Gold (read only)."
         },
@@ -6511,7 +6505,7 @@
         "tagRestored": "Restored the tag “{label}”.",
         "tagArchivedToast": "Archived the tag “{label}”. Its values stay.",
         "tagsNone": "No tag columns.",
-        "tagsNote": "An archived tag leaves the list's columns and (once Gold has it) the analysis filters; its values stay and it can be restored. The original's hard delete is not moved (the HUB keeps every change).",
+        "tagsNote": "An archived tag leaves the list's columns and the analysis filters; its values stay and it can be restored. The original's hard delete is not moved (the HUB keeps every change).",
         "history": {
           "title": "History",
           "loading": "Loading the history",
@@ -6967,26 +6961,22 @@
     "searchLabel": "Search",
     "searchPlaceholder": "Search domains",
     "otherOnly": "Uncategorized only",
-    "count": "{shown} / {total} · corrected {overrides} · uncategorized {other} · pending {pending}",
+    "count": "{shown} / {total} · corrected {overrides} · uncategorized {other}",
     "empty": "No sources to show.",
     "emptyFiltered": "No source matches the filters.",
     "hint": "Shows the top {limit} sources by citations in Gold round {date} (Global), every source the HUB corrected and every source Gold applies a correction to.",
     "loading": "Loading…",
     "login": "Sign in",
     "loginRequired": "Managing citation sources needs a HUB sign-in.",
-    "flowNoteTitle": "When it applies",
-    "flowNote": "A correction is saved in the HUB and goes to the pipeline as the external API list (source_override). The citation numbers change after the pipeline reads the list and Gold is rebuilt; until then the row shows 'Pending'.",
     "axis": {
       "category": "Category",
-      "source": "Classified by",
-      "state": "Applied"
+      "source": "Classified by"
     },
     "column": {
       "domain": "Domain",
       "citations": "Citations",
       "category": "Category",
       "source": "Classified by",
-      "state": "Applied",
       "note": "Note",
       "actions": "Actions"
     },
@@ -6998,18 +6988,6 @@
       "rule": "Rule",
       "fallback": "Uncategorized"
     },
-    "state": {
-      "applied": "Applied",
-      "pending": "Pending",
-      "pendingClear": "Revert pending",
-      "upstream": "Upstream correction"
-    },
-    "stateTip": {
-      "applied": "Gold applies this correction.",
-      "pending": "The pipeline has not read this correction yet. It applies after Gold is rebuilt.",
-      "pendingClear": "The pipeline has not read the revert yet. The default classification returns after Gold is rebuilt.",
-      "upstream": "Gold applies this correction but the HUB list does not have it. Pick a category to make it a HUB correction."
-    },
     "social": "Social account",
     "shadowsOwned": "Overrides an owned domain",
     "goldValue": "Gold: {category} · {source}",
@@ -7019,8 +6997,8 @@
     "historyOpen": "History of {domain}",
     "system": "Management command",
     "toast": {
-      "saved": "Saved the category of {domain}. It reaches the citation numbers after the pipeline reads it.",
-      "reverted": "Reverted the correction of {domain}. The default classification returns after the pipeline reads it."
+      "saved": "Saved the category of {domain}.",
+      "reverted": "Reverted the correction of {domain}."
     },
     "detailTitle": "Source classification",
     "field": {
@@ -7030,7 +7008,6 @@
       "hub": "HUB correction",
       "origin": "First value",
       "gold": "Gold",
-      "state": "Applied",
       "note": "Note"
     },
     "status": {
@@ -7070,7 +7047,6 @@
     "publishedTip": "External API {family} list · change_seq {seq} · recorded {at}",
     "roundPill": "Gold round {date} · global",
     "storePill": "HUB data DB",
-    "flowNoteTitle": "When it applies",
     "system": "Admin command",
     "loading": "Loading…",
     "history": "History",
@@ -7094,16 +7070,14 @@
     },
     "seeds": {
       "description": "Manage the per-domain base classification people set (seeds). Priority: correction › official social › owned domain › seed › rule.",
-      "flowNote": "Seed changes are saved in the HUB and go to the pipeline as the external API list (source_seed). Citation numbers change after the pipeline reads it and rebuilds Gold; until then rows show 'Pending'.",
       "listLabel": "Seed list",
       "searchPlaceholder": "Search domains",
-      "count": "{shown} / {total} · active {active} · removed {removed} · pending {pending} · upstream {upstream}",
+      "count": "{shown} / {total} · active {active} · removed {removed} · upstream {upstream}",
       "empty": "No seeds.",
       "emptyFiltered": "No seeds match.",
       "hint": "Every HUB seed, plus sources Gold applies as seeds that the HUB list lacks. Citations are Gold round {date} (global).",
       "axis": {
         "category": "Category",
-        "state": "Sync",
         "status": "Status"
       },
       "column": {
@@ -7111,24 +7085,8 @@
         "citations": "Citations",
         "category": "HUB category",
         "gold": "Gold value",
-        "state": "Sync",
         "status": "Status",
         "actions": "Actions"
-      },
-      "state": {
-        "applied": "Applied",
-        "pending": "Pending",
-        "pendingRemove": "Removal pending",
-        "shadowed": "Higher layer wins",
-        "upstream": "Upstream seed"
-      },
-      "stateTip": {
-        "applied": "Gold applies this seed.",
-        "pending": "The pipeline has not taken this seed yet. It applies after Gold is rebuilt.",
-        "pendingRemove": "The pipeline has not taken the removal yet. After the rebuild the rules classify it.",
-        "shadowed": "A correction, official social account or owned domain decides this source first. The seed applies when that goes.",
-        "upstream": "Gold applies it as a seed but the HUB list lacks it. 'Add as seed' makes it a HUB seed.",
-        "none": "Gold has no such source (never cited)."
       },
       "status": {
         "active": "Active",
@@ -7150,8 +7108,8 @@
         "exists": "This seed exists. Change its category in the list."
       },
       "toast": {
-        "saved": "Saved the seed {domain}. It applies after the pipeline takes the list.",
-        "removed": "Removed the seed {domain}. After the pipeline takes the list the rules classify it."
+        "saved": "Saved the seed {domain}.",
+        "removed": "Removed the seed {domain}."
       },
       "detailTitle": "Seed",
       "field": {
@@ -7161,7 +7119,6 @@
         "hub": "HUB seed",
         "origin": "First value",
         "gold": "Gold value",
-        "state": "Sync",
         "note": "Note"
       },
       "noSeed": "No HUB seed. 'Add as seed' creates one.",
@@ -7174,9 +7131,8 @@
     },
     "social": {
       "description": "Manage the official (HMG) social accounts. Citations grouped under an account count as Official (HMG), apart from the rest of the domain.",
-      "flowNote": "Account changes are saved in the HUB and go to the pipeline as the external API list (source_social). Citation numbers change after the pipeline reads it and rebuilds Gold; until then rows show 'Pending'.",
       "listLabel": "Official social accounts",
-      "count": "{total} · active {active} · stopped {stopped} · pending {pending}",
+      "count": "{total} · active {active} · stopped {stopped}",
       "empty": "No official social accounts.",
       "column": {
         "key": "Account",
@@ -7184,7 +7140,6 @@
         "matchers": "Matchers",
         "category": "Category",
         "citations": "Citations",
-        "state": "Sync",
         "status": "Status",
         "actions": "Actions"
       },
@@ -7193,19 +7148,6 @@
       "matchersMore": "{first} and {more} more",
       "boundaryOn": "segment boundary",
       "boundaryOff": "plain prefix",
-      "state": {
-        "applied": "Applied",
-        "pending": "Pending",
-        "pendingStop": "Stop pending",
-        "upstream": "Upstream account"
-      },
-      "stateTip": {
-        "applied": "Gold applies this account as official social.",
-        "pending": "The pipeline has not taken this account yet. It applies after Gold is rebuilt.",
-        "pendingStop": "The pipeline has not taken the stop yet. After the rebuild its citations count with the domain.",
-        "upstream": "Gold applies it as official social but the HUB list lacks it. 'Add as account' makes it a HUB account.",
-        "none": "Gold has no such account: never cited, or not applied yet (Gold cannot tell)."
-      },
       "status": {
         "active": "Active",
         "stopped": "Stopped"
@@ -7237,9 +7179,9 @@
         }
       },
       "toast": {
-        "saved": "Saved the account {key}. It applies after the pipeline takes the list.",
-        "stopped": "Stopped the account {key}. It applies after the pipeline takes the list.",
-        "resumed": "Resumed the account {key}. It applies after the pipeline takes the list."
+        "saved": "Saved the account {key}.",
+        "stopped": "Stopped the account {key}.",
+        "resumed": "Resumed the account {key}."
       },
       "detailTitle": "Official social account",
       "field": {
@@ -7250,7 +7192,6 @@
         "status": "Status",
         "origin": "First value",
         "gold": "Gold value",
-        "state": "Sync",
         "note": "Note"
       },
       "event": {
@@ -7277,19 +7218,10 @@
         "nameEn": "English name",
         "description": "Description",
         "gold": "Gold value",
-        "state": "Sync",
         "actions": "Actions"
       },
       "goldValue": "{name} · #{ord}",
       "goldNone": "Not in Gold",
-      "state": {
-        "applied": "Applied",
-        "pending": "Pending"
-      },
-      "stateTip": {
-        "applied": "Gold dim_category has the HUB's name and order.",
-        "pending": "Gold dim_category's name or order differs from the HUB's. It follows after the pipeline takes the list."
-      },
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down",
       "edit": "Edit {name}",
@@ -7318,8 +7250,7 @@
         "nameKo": "Korean name",
         "nameEn": "English name",
         "description": "Description",
-        "gold": "Gold value",
-        "state": "Sync"
+        "gold": "Gold value"
       },
       "kind": {
         "category": "Source category",
@@ -7411,10 +7342,9 @@
     },
     "keywords": {
       "description": "Manage the search keywords to collect and their collection conditions (country and language).",
-      "flowNote": "Keywords changed here are saved in the HUB and go to the pipeline through the external API list (interest_keyword). Keyword data changes after the pipeline takes the list and collects; until then they show as 'Pending'.",
       "listLabel": "Keyword list",
       "searchPlaceholder": "Search keywords",
-      "count": "{shown} / {total} · active {active} · stopped {stopped} · pending {pending} · upstream {upstream}",
+      "count": "{shown} / {total} · active {active} · stopped {stopped} · upstream {upstream}",
       "empty": "No keywords.",
       "emptyFiltered": "No keywords match these conditions.",
       "hint": "Every HUB keyword, plus keywords Gold collected that the HUB does not have. Gold collection is the number of conditions in Gold's seed rows (kw_suggestion) and the last collection date.",
@@ -7431,7 +7361,6 @@
         "market": "Collection condition",
         "source": "Source",
         "brand": "Brand",
-        "state": "Reflection",
         "status": "Status"
       },
       "column": {
@@ -7440,27 +7369,14 @@
         "source": "Sources",
         "brand": "Brands",
         "observed": "Gold collection",
-        "state": "Reflection",
         "status": "Status",
         "actions": "Actions"
-      },
-      "state": {
-        "applied": "Applied",
-        "pending": "Pending",
-        "upstream": "Upstream keyword"
-      },
-      "stateTip": {
-        "applied": "Gold collected this keyword under all of the HUB's conditions.",
-        "pending": "Some conditions are not collected yet. It takes effect after the pipeline takes the list and collects.",
-        "upstream": "Gold collected it but the HUB list does not have it. 'Add as keyword' makes it a HUB keyword.",
-        "none": "A stopped keyword. It leaves the external API list; what Gold still holds is past collection."
       },
       "origin": {
         "gold_import": "Imported from Gold's seeds",
         "hub": "Set on this screen"
       },
       "field": {
-        "state": "Reflection",
         "goldExtra": "Conditions only in Gold"
       },
       "form": {
@@ -7476,7 +7392,7 @@
         }
       },
       "toast": {
-        "saved": "Saved {term}. It takes effect after the pipeline takes it and collects.",
+        "saved": "Saved {term}.",
         "stopped": "Stopped {term}. It leaves the external API list.",
         "resumed": "Resumed {term}. It returns to the external API list."
       }
@@ -7552,12 +7468,10 @@
     "description": "Manage the role (own, competitor, excluded) of the entities found in answers. The role decides every KPI's own side.",
     "login": "Sign in",
     "loginRequired": "Sign in to the HUB first.",
-    "flowNoteTitle": "When it takes effect",
-    "flowNote": "Roles changed here are saved in the HUB and go to the pipeline through the external API list (entity_role). The numbers and the own side change after the pipeline takes the list and rebuilds Gold; until then they show as 'Pending'.",
     "listLabel": "Entity list",
     "searchLabel": "Search",
     "searchPlaceholder": "Search entities and display brands",
-    "count": "{shown} / {total} · own {own} · excluded {excluded} · pending {pending} · upstream {upstream}",
+    "count": "{shown} / {total} · own {own} · excluded {excluded}",
     "empty": "No entities.",
     "emptyFiltered": "No entities match these conditions.",
     "hint": "Entities, display brands, kinds, answers and mentions are Gold's values as they are; answers and mentions are all-time totals. An entity with no role counts as a competitor.",
@@ -7565,10 +7479,10 @@
     "recent": "Recent changes",
     "detailTitle": "Entity",
     "save": "Save",
-    "saved": "Saved the role of {name}. It takes effect after the pipeline takes it and rebuilds Gold.",
+    "saved": "Saved the role of {name}.",
     "notePlaceholder": "Optional: why",
     "roleDefault": "Default",
-    "confirmOwn": "This changes the own side. After Gold is rebuilt, this entity's {answers} answers and {mentions} mentions affect the own totals of every KPI. I checked the samples.",
+    "confirmOwn": "This changes the own side. This entity's {answers} answers and {mentions} mentions affect the own totals of every KPI. I checked the samples.",
     "numbers": "{answers} answers · {mentions} mentions",
     "loading": "Loading…",
     "surfaces": "Observed surfaces",
@@ -7585,8 +7499,7 @@
     "axis": {
       "role": "Role",
       "brand": "Own brand",
-      "kind": "Gold kind",
-      "state": "Reflection"
+      "kind": "Gold kind"
     },
     "column": {
       "name": "Entity",
@@ -7596,7 +7509,6 @@
       "mentions": "Mentions",
       "firstSeen": "First seen",
       "role": "Role",
-      "state": "Reflection",
       "actions": "Actions"
     },
     "role": {
@@ -7612,17 +7524,6 @@
     "status": {
       "active": "Active",
       "cleared": "Cleared"
-    },
-    "state": {
-      "applied": "Applied",
-      "pending": "Pending",
-      "upstream": "Upstream role"
-    },
-    "stateTip": {
-      "applied": "Gold applies this role.",
-      "pending": "The pipeline has not taken it yet. It takes effect after Gold is rebuilt.",
-      "upstream": "Gold has a role the HUB list does not have. Saving a role makes it the HUB's.",
-      "none": "No role on either side: it counts as a competitor."
     },
     "origin": {
       "gold_import": "Imported from Gold's registry",
@@ -7644,7 +7545,6 @@
       "numbers": "All time",
       "firstSeen": "First seen",
       "goldRole": "Gold role",
-      "state": "Reflection",
       "origin": "First value"
     },
     "error": {

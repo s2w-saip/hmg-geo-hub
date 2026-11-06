@@ -1,9 +1,8 @@
 "use client";
 
 // Admin › 엔티티 카탈로그 (2026-11-02): the HUB owns who is own and who is excluded (admin-todo decisions A · F); competitor is
-// the default. The list is Gold's entities with their display brand and all-time numbers, each with its role and whether
-// Gold applies it yet (back/bff/hub_stores/entity_roles.py). A row opens its sheet: role, Gold's evidence, history. A role
-// saves at once and reaches the numbers after the pipeline reads the list and rebuilds Gold; the original's draft, preview
+// the default. The list is Gold's entities with their display brand and all-time numbers, each with its role
+// (back/bff/hub_stores/entity_roles.py). A row opens its sheet: role, Gold's evidence, history. A role saves at once; the original's draft, preview
 // and approval are not here, because applying and previewing would be the HUB rewriting or recomputing Gold.
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -19,7 +18,6 @@ import {
   RnDrawer,
   RnEmpty,
   RnIconButton,
-  RnNote,
   RnPageHeader,
   RnSearchField,
   RnSelect,
@@ -35,7 +33,7 @@ import { RnFilterSplit } from "../../../../_components/filter-split";
 import { LIST_TD as TD, RnFilterPanel, RnFilterRail, RnRadioAxis, RnSortHead } from "../../../../_components/prompt-list";
 import { HistorySection, LIST_TH_PLAIN, ListPills } from "../../citation-sources/_components/source-lists-kit";
 import { entityRoleApi, type EntityListing, type EntityRow } from "./entity-roles-api";
-import { EntitySheet, EntityState, useEntityError, useRoleLabel } from "./entity-role-sheet";
+import { EntitySheet, useEntityError, useRoleLabel } from "./entity-role-sheet";
 import {
   ALL,
   DEFAULT_ENTITY_FILTER,
@@ -83,7 +81,7 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
   const [search, setSearch] = useState(fromUrl.search);
   const [sort, setSort] = useState(DEFAULT_ENTITY_SORT);
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [open, setOpen] = useState<Partial<Record<EntityAxis, boolean>>>({ role: true, state: true });
+  const [open, setOpen] = useState<Partial<Record<EntityAxis, boolean>>>({ role: true });
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
   const reload = () => entityRoleApi.list().then(setListing, (e) => toast(errorText(e)));
@@ -99,7 +97,6 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
     if (v === ALL) return tv("filterAll");
     if (a === "role") return t(`role.${v as "own"}`);
     if (a === "kind") return t(`kind.${v as "own"}`);
-    if (a === "state") return t(`state.${v as "applied"}`);
     return v;
   };
   const picked = pickedEntityAxes(filters);
@@ -177,10 +174,6 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
         panel={panel}
         rail={<RnFilterRail count={picked.length} />}
       >
-        <RnNote>
-          <b className="text-rn-ink">{t("flowNoteTitle")}</b>
-          <span>{t("flowNote")}</span>
-        </RnNote>
         {savedList.note}
         {picked.length || search ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
@@ -210,7 +203,7 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
               {t("recent")}
             </RnButton>
             <span className="ml-auto text-rn-12 text-rn-muted tabular-nums" data-hub-entity-count="">
-              {t("count", { shown: nf.format(matched.length), total: nf.format(total.total), own: nf.format(total.own), excluded: nf.format(total.excluded), pending: nf.format(total.pending), upstream: nf.format(total.upstream) })}
+              {t("count", { shown: nf.format(matched.length), total: nf.format(total.total), own: nf.format(total.own), excluded: nf.format(total.excluded) })}
             </span>
           </div>
           {matched.length === 0 ? (
@@ -226,7 +219,6 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
                   <col className="w-[92px]" />
                   <col className="w-[108px]" />
                   <col className="w-[136px]" />
-                  <col className="w-[108px]" />
                   <col className="w-[88px]" />
                 </colgroup>
                 <thead>
@@ -238,7 +230,6 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
                     {head("mentions", "text-right")}
                     {head("firstSeen")}
                     <th className={LIST_TH_PLAIN}>{t("column.role")}</th>
-                    {head("state")}
                     <th className={cx(LIST_TH_PLAIN, "pr-5 text-right")}>{t("column.actions")}</th>
                   </tr>
                 </thead>
@@ -261,9 +252,6 @@ function Manager({ initial, savedFilters }: { initial: EntityListing; savedFilte
                       <td className={cx(TD, "text-rn-12 text-rn-ink-2 tabular-nums")}>{row.firstSeen ? formatAsOfDate(row.firstSeen) : "—"}</td>
                       <td className={TD} data-hub-entity-role={row.role}>
                         {row.role === "competitor" ? <span className="text-rn-12 text-rn-muted">{t("role.competitor")}</span> : <RnTag>{roleLabel(row.role, row.brand)}</RnTag>}
-                      </td>
-                      <td className={TD}>
-                        <EntityState row={row} />
                       </td>
                       <td className={cx(TD, "pr-5 text-right")}>
                         <RnButton size="sm" onClick={() => setSheet({ mode: "entity", key: row.entityId })} data-hub-entity-open={row.entityId}>

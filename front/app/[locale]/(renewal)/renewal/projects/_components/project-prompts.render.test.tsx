@@ -64,11 +64,10 @@ describe("project prompt list: the editable table", () => {
     expect(out).toMatch(new RegExp(`data-rn-project-prompt-row="b".*?data-rn-tag="${MODEL}"[^>]*><button[^>]*><span[^>]*>—`));
   });
 
-  it("shows the HUB status, the rows not yet in Gold, and leaves deleted rows to their tab", () => {
+  it("shows the HUB status, no reflection state, and leaves deleted rows to their tab", () => {
     expect(out).toMatch(/data-rn-project-prompt-row="c"[^>]*data-rn-status="draft".*?초안/);
-    expect(out).toMatch(/data-rn-project-prompt-row="b".*?data-rn-prompt-state="pending"[^>]*>.*?반영 대기/);
-    const rowA = out.slice(out.indexOf('data-rn-project-prompt-row="a"'), out.indexOf("</tr>", out.indexOf('data-rn-project-prompt-row="a"')));
-    expect(rowA).not.toContain("data-rn-prompt-state");   // applied: nothing to say
+    expect(out).not.toContain("data-rn-prompt-state"); // applied, pending: nothing to say
+    expect(text(out)).not.toContain("반영 대기");
     expect(out).not.toContain('data-rn-project-prompt-row="d"');
     expect(text(out)).toContain("전체 3");
     expect(text(out)).toContain("삭제됨 1");

@@ -2,9 +2,8 @@
 
 // Renewal Admin › 인용 출처 분류 (2026-10-30): the top-level administrator corrects the category of the sources AI answers
 // cite. The HUB keeps the corrections only; Gold's automatic classification and its social / seed lists are shown as
-// Gold has them (back/bff/hub_stores/source_overrides.py). A category change saves at once (as the original screen);
-// the correction reaches the citation numbers after the pipeline reads the HUB's list and Gold is rebuilt, so each
-// row shows whether Gold applies it yet (반영 대기 / 반영됨). 원복 keeps the correction's row and history. The layout
+// Gold has them (back/bff/hub_stores/source_overrides.py). A category change saves at once (as the original screen).
+// 원복 keeps the correction's row and history. The layout
 // is Admin › GA4 연동's: the left filter panel, one line per source with sortable heads, and a sheet for the history.
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -21,7 +20,6 @@ import {
   RnDrawer,
   RnEmpty,
   RnIconButton,
-  RnNote,
   RnPageHeader,
   RnPill,
   RnSearchField,
@@ -95,7 +93,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [saving, setSaving] = useState<string | null>(null);
   const [sheet, setSheet] = useState<SourceRow | null>(null);
-  const [open, setOpen] = useState<Partial<Record<SourceAxis, boolean>>>({ source: true, state: true });
+  const [open, setOpen] = useState<Partial<Record<SourceAxis, boolean>>>({ source: true });
   const label = useCategoryLabel(listing);
   const nf = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
@@ -112,7 +110,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
 
   const axisLabel = (a: SourceAxis) => t(`axis.${a}`);
   const valueLabel = (a: SourceAxis, v: string) =>
-    v === ALL ? tv("filterAll") : a === "category" ? label(v) : a === "source" ? t(`source.${v as "override"}`) : t(`state.${v as "applied"}`);
+    v === ALL ? tv("filterAll") : a === "category" ? label(v) : t(`source.${v as "override"}`);
 
   const picked = pickedAxes(filters);
   const savedList = useAdminSavedFilters({
@@ -225,10 +223,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
         panel={panel}
         rail={<RnFilterRail count={picked.length} />}
       >
-        <RnNote>
-          <b className="text-rn-ink">{t("flowNoteTitle")}</b>
-          <span>{t("flowNote")}</span>
-        </RnNote>
         {savedList.note}
         {picked.length || search || otherOnly ? (
           <div aria-live="polite" className="flex min-h-7 flex-wrap items-center gap-2">
@@ -266,7 +260,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
               {sort.asc ? <ArrowUpNarrowWide className="size-4" aria-hidden /> : <ArrowDownWideNarrow className="size-4" aria-hidden />}
             </RnIconButton>
             <span className="ml-auto text-rn-12 text-rn-muted tabular-nums" data-hub-source-count="">
-              {t("count", { shown: nf.format(shown.length), total: nf.format(total.total), overrides: nf.format(total.overrides), other: nf.format(total.other), pending: nf.format(total.pending) })}
+              {t("count", { shown: nf.format(shown.length), total: nf.format(total.total), overrides: nf.format(total.overrides), other: nf.format(total.other) })}
             </span>
           </div>
           {shown.length === 0 ? (
@@ -279,7 +273,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
                   <col className="w-[96px]" />
                   <col className="w-[196px]" />
                   <col className="w-[176px]" />
-                  <col className="w-[112px]" />
                   <col className="w-[160px]" />
                   <col className="w-[112px]" />
                 </colgroup>
@@ -289,7 +282,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
                     {head("citations", "text-right")}
                     {head("category")}
                     {head("source")}
-                    {head("state")}
                     <th className={LIST_TH_PLAIN}>{t("column.note")}</th>
                     <th className={cx(LIST_TH_PLAIN, "pr-5 text-right")}>{t("column.actions")}</th>
                   </tr>
@@ -325,9 +317,6 @@ function Manager({ initial, tabs, savedFilters }: { initial: SourceListing; tabs
                         </td>
                         <td className={TD}>
                           <SourceMark row={row} label={label} />
-                        </td>
-                        <td className={TD}>
-                          <StateMark row={row} />
                         </td>
                         <td className={cx(TD, "text-rn-12 text-rn-muted")}>
                           <span data-rn-tip="" className="block truncate">
@@ -394,25 +383,6 @@ function SourceMark({ row, label }: { row: SourceRow; label: (slug: string | nul
   );
 }
 
-/** 반영됨 / 반영 대기 / 업스트림 교정: the HUB's decision against what Gold applies now. */
-function StateMark({ row }: { row: SourceRow }) {
-  const t = useTranslations("hubSourceOverrides");
-  if (!row.state) return <span className="text-rn-12 text-rn-faint">—</span>;
-  const clearing = row.state === "pending" && row.override?.status === "cleared";
-  return (
-    <span className={cx("inline-flex max-w-full items-center gap-1.5 text-rn-12", row.state === "applied" ? "text-rn-ink" : "text-rn-ink-2")} data-hub-source-state={row.state} data-rn-tip={t(`stateTip.${clearing ? "pendingClear" : row.state}`)}>
-      <i aria-hidden className={cx("inline-block size-2 shrink-0 rounded-full", STATE_DOT[row.state])} />
-      <span className="truncate">{t(clearing ? "state.pendingClear" : `state.${row.state}`)}</span>
-    </span>
-  );
-}
-
-const STATE_DOT: Record<string, string> = {
-  applied: "bg-rn-navy",
-  pending: "border-[1.5px] border-rn-navy",
-  upstream: "border border-dashed border-rn-muted",
-};
-
 function formatTime(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 }
@@ -465,9 +435,6 @@ function Detail({ row, label }: { row: SourceRow; label: (slug: string | null) =
           <RnDetailField label={t("field.hub")}>{o ? `${label(o.category)} · ${t(`status.${o.status}`)}` : t("noOverride")}</RnDetailField>
           <RnDetailField label={t("field.origin")}>{o ? t(`origin.${o.origin}`) : null}</RnDetailField>
           <RnDetailField label={t("field.gold")}>{row.gold ? `${label(row.gold.category)} · ${row.gold.source ? t(`source.${row.gold.source}`) : "—"}` : t("goldNone")}</RnDetailField>
-          <RnDetailField label={t("field.state")}>
-            <StateMark row={row} />
-          </RnDetailField>
           <RnDetailField label={t("field.note")}>{o?.note ?? null}</RnDetailField>
         </dl>
       </section>

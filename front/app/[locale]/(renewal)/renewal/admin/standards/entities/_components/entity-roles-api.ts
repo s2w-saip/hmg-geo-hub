@@ -14,9 +14,8 @@ export type EntityRole = (typeof ENTITY_ROLES)[number];
 export const GOLD_KINDS = ["own", "competitor", "nonCompetitor"] as const;
 export type GoldKind = (typeof GOLD_KINDS)[number];
 
-/** applied: Gold has the HUB's role and own brand; pending: not yet; upstream: Gold has a role the HUB does not have. */
-export const ENTITY_STATES = ["applied", "pending", "upstream"] as const;
-export type EntityState = (typeof ENTITY_STATES)[number];
+/** The BFF's comparison with Gold, not shown: no screen says whether an input reached the numbers (user 2026-11-06). */
+export type EntityState = "applied" | "pending" | "upstream";
 
 export interface EntityHubRole {
   role: "own" | "excluded";

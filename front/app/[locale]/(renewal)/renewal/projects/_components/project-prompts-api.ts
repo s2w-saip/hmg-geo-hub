@@ -8,7 +8,7 @@ export const PROMPT_STATUSES = ["active", "draft", "paused", "archived", "remove
 export type PromptStatus = (typeof PROMPT_STATUSES)[number];
 /** the statuses whose values can change */
 export const LIVE_STATUSES: readonly PromptStatus[] = ["draft", "active", "paused"];
-/** draft: not sent · applied: Gold holds the HUB's values · pending: not yet · upstream: only Gold has it (null: nothing to compare) */
+/** The BFF's comparison with Gold; only `upstream` (only Gold has it) is used: no screen says whether an input reached the numbers (user 2026-11-06). */
 export type PromptState = "draft" | "applied" | "pending" | "upstream";
 export type PromptAction = "pause" | "resume" | "archive" | "restore";
 

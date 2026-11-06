@@ -108,25 +108,22 @@ const SOURCES: InterestSourceListing = {
 describe("InterestKeywordsManager", () => {
   const out = html(<InterestKeywordsManager initial={KEYWORDS} savedFilters={{ page: "interest-keywords", userId: "u", initial: [] }} />);
 
-  it("lists the HUB's keywords next to Gold's collection, with no 'saved = applied' wording", () => {
+  it("lists the HUB's keywords next to Gold's collection, with no reflection state", () => {
     expect(keysOf(out, "data-hub-keyword-row")).toEqual(["중고차", "패밀리 suv", "ev9", "suv"]); // the Korean collation
     expect(out).toContain("업스트림 목록 v3 · 84건");
     expect(out).toContain("HUB 데이터 DB");
     expect(out).toContain("interest_keyword");
-    expect(out).not.toContain("즉시 반영");
-    expect(out).toContain("4 / 4개 · 활성 2 · 중지 1 · 반영 대기 1 · 업스트림 1");
+    for (const gone of ["반영 대기", "반영됨", "data-hub-keyword-state"]) expect(out).not.toContain(gone);
+    expect(out).toContain("4 / 4개 · 활성 2 · 중지 1 · 업스트림 1");
     expect(out).toContain("1–4 / 4"); // the pager under the list
   });
 
-  it("shows how many conditions Gold holds, and the state of each kind of row", () => {
+  it("shows how many conditions Gold holds for each kind of row", () => {
     const partial = rowOf(out, "data-hub-keyword-row", "패밀리 suv");
-    expect(partial).toContain('data-hub-keyword-state="pending"');
     expect(partial).toContain("1/2 · 2026-10-07");
     expect(partial).toContain("한국 · ko 외 1개");
     expect(partial).toContain("Kia");
     expect(rowOf(out, "data-hub-keyword-row", "suv")).toContain("공통");
-    expect(rowOf(out, "data-hub-keyword-row", "suv")).toContain('data-hub-keyword-state="applied"');
-    expect(rowOf(out, "data-hub-keyword-row", "중고차")).toContain('data-hub-keyword-state=""');
     expect(rowOf(out, "data-hub-keyword-row", "중고차")).toContain("재개");
   });
 
@@ -233,7 +230,6 @@ describe("models", () => {
     expect(terms({ ...f, source: "community_voc" })).toEqual(["패밀리 suv"]);
     expect(terms({ ...f, brand: "Kia" })).toEqual(["패밀리 suv"]);
     expect(terms({ ...f, brand: COMMON })).toEqual(["suv", "중고차"]); // an upstream row has no brand decision
-    expect(terms({ ...f, state: "upstream" })).toEqual(["ev9"]);
     expect(terms({ ...f, status: "stopped" })).toEqual(["중고차"]);
     expect(terms(f, " SUV ")).toEqual(["suv", "패밀리 suv"]);
     expect(keywordMarkets(rows)).toEqual(["2840:en", "2410:ko"]);
@@ -244,8 +240,7 @@ describe("models", () => {
     expect(by("term", true)).toEqual(["중고차", "패밀리 suv", "ev9", "suv"]);
     expect(by("term", false)).toEqual(["suv", "ev9", "패밀리 suv", "중고차"]);
     expect(by("conditions", false)[0]).toBe("패밀리 suv");
-    expect(by("state", true)[0]).toBe("패밀리 suv");
-    expect(keywordCounts(rows)).toEqual({ total: 4, active: 2, stopped: 1, pending: 1, upstream: 1 });
+    expect(keywordCounts(rows)).toEqual({ total: 4, active: 2, stopped: 1, upstream: 1 });
   });
 
   it("mirrors the keyword filter in the URL", () => {

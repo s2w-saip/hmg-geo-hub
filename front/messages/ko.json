@@ -6379,7 +6379,7 @@
         }
       },
       "prompts": {
-        "description": "이 프로젝트가 측정하는 프롬프트와 커스텀 태그입니다. HUB가 정본이고, 고친 값은 Gold가 다시 만든 뒤 숫자에 반영됩니다.",
+        "description": "이 프로젝트가 측정하는 프롬프트와 커스텀 태그입니다. HUB가 정본입니다.",
         "noRound": "이 범위에 측정 회차 없음",
         "countryHelp": "목록은 그대로 두고, 고른 국가의 측정만 셉니다.",
         "noPickHint": "필터를 고르지 않으면 이 프로젝트의 모든 프롬프트와 모든 회차의 측정을 보입니다. 태그를 고르면 그 값의 프롬프트만 남습니다.",
@@ -6393,7 +6393,7 @@
         "exportFailed": "내보내지 못했습니다. 잠시 후 다시 시도해 주세요.",
         "empty": "이 프로젝트에 프롬프트가 없습니다.",
         "emptyFiltered": "조건에 맞는 프롬프트가 없습니다.",
-        "note": "프롬프트와 태그는 HUB에 저장되고 외부 API로 파이프라인에 넘어갑니다. 화면 숫자에는 파이프라인이 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다. 초안을 Scope 측정에 보내는 '측정 실행'은 Scope 연결 경로가 정해진 뒤 열립니다. 원본의 후보 풀 · 엑셀 가져오기는 아직 옮기지 않았습니다.",
+        "note": "프롬프트와 태그는 HUB에 저장되고 외부 API로 파이프라인에 넘어갑니다. 초안을 Scope 측정에 보내는 '측정 실행'은 Scope 연결 경로가 정해진 뒤 열립니다. 원본의 후보 풀 · 엑셀 가져오기는 아직 옮기지 않았습니다.",
         "kind": "유형",
         "funnel": "퍼널",
         "regions": "Scope 시장 태그",
@@ -6419,24 +6419,18 @@
           "deleted": "삭제됨 {count}"
         },
         "state": {
-          "applied": "반영됨",
-          "pending": "반영 대기",
           "upstream": "Gold에만"
         },
         "stateTip": {
-          "applied": "Gold가 HUB 값(원문 · 유형 · 언어 · 태그 값)과 같은 값을 갖고 있습니다. 삭제한 프롬프트는 Gold 목록에서 빠졌습니다.",
-          "pending": "HUB 값이 아직 Gold에 없습니다. 파이프라인이 외부 API에서 가져가 Gold를 다시 만들면 반영됩니다.",
           "upstream": "Gold에는 있지만 HUB 카탈로그에는 아직 없는 프롬프트입니다. 다음 Gold 가져오기 뒤에 편집할 수 있습니다."
         },
         "fieldStateTip": {
-          "applied": "Gold 태그 열이 HUB와 같습니다(보관한 열은 Gold 필터에서 빠졌습니다).",
-          "pending": "HUB에서 바꾼 태그 열이 아직 Gold에 없습니다.",
           "upstream": "Gold에만 있는 태그 열입니다. HUB 카탈로그에 없어 고칠 수 없습니다."
         },
         "statusHint": {
           "active": "측정 대상입니다. 원문 · 언어는 초안일 때만 고칠 수 있습니다.",
           "draft": "HUB에만 있는 초안입니다. 측정 실행(Scope)이 열리면 측정에 보낼 수 있습니다.",
-          "paused": "측정 중지를 요청했습니다. Gold에는 중지 상태가 없어 반영 여부를 비교하지 않습니다.",
+          "paused": "측정 중지를 요청했습니다.",
           "archived": "삭제한 프롬프트입니다. 측정된 답변은 Gold에 남고, 복원할 수 있습니다.",
           "removed": "Gold에서 빠진 프롬프트입니다(열람 전용)."
         },
@@ -6511,7 +6505,7 @@
         "tagRestored": "태그 “{label}”을(를) 복원했습니다.",
         "tagArchivedToast": "태그 “{label}”을(를) 보관했습니다. 값은 남아 있습니다.",
         "tagsNone": "태그 열이 없습니다.",
-        "tagsNote": "보관한 태그는 목록 열과(Gold 반영 뒤) 분석 화면 필터에서 빠지고, 값은 그대로 남아 복원할 수 있습니다. 원본의 '완전 삭제'는 옮기지 않았습니다(HUB는 지우지 않고 이력을 남깁니다).",
+        "tagsNote": "보관한 태그는 목록 열과 분석 화면 필터에서 빠지고, 값은 그대로 남아 복원할 수 있습니다. 원본의 '완전 삭제'는 옮기지 않았습니다(HUB는 지우지 않고 이력을 남깁니다).",
         "history": {
           "title": "변경 이력",
           "loading": "이력을 읽는 중",
@@ -6967,26 +6961,22 @@
     "searchLabel": "검색",
     "searchPlaceholder": "도메인 검색",
     "otherOnly": "미분류만",
-    "count": "{shown} / {total}개 · 교정 {overrides} · 미분류 {other} · 반영 대기 {pending}",
+    "count": "{shown} / {total}개 · 교정 {overrides} · 미분류 {other}",
     "empty": "표시할 출처가 없습니다.",
     "emptyFiltered": "조건에 맞는 출처가 없습니다.",
     "hint": "Gold {date} 회차(글로벌)의 인용 수 상위 {limit}개 출처와, HUB가 교정한 출처, Gold가 교정을 적용한 출처를 모두 보여 줍니다.",
     "loading": "불러오는 중…",
     "login": "로그인",
     "loginRequired": "인용 출처 분류 관리는 HUB 로그인이 필요합니다.",
-    "flowNoteTitle": "반영 시점",
-    "flowNote": "여기서 고친 분류는 HUB에 저장되고 외부 API 목록(source_override)으로 파이프라인에 넘어갑니다. 인용 화면 숫자에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
     "axis": {
       "category": "카테고리",
-      "source": "분류 출처",
-      "state": "반영 상태"
+      "source": "분류 출처"
     },
     "column": {
       "domain": "도메인",
       "citations": "인용 수",
       "category": "카테고리",
       "source": "분류 출처",
-      "state": "반영",
       "note": "메모",
       "actions": "작업"
     },
@@ -6998,18 +6988,6 @@
       "rule": "규칙",
       "fallback": "미분류"
     },
-    "state": {
-      "applied": "반영됨",
-      "pending": "반영 대기",
-      "pendingClear": "원복 대기",
-      "upstream": "업스트림 교정"
-    },
-    "stateTip": {
-      "applied": "Gold가 이 교정을 적용했습니다.",
-      "pending": "파이프라인이 아직 이 교정을 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
-      "pendingClear": "파이프라인이 아직 원복을 가져가지 않았습니다. Gold 재가공 뒤 기본 분류로 돌아갑니다.",
-      "upstream": "Gold가 적용한 교정이지만 HUB 목록에는 없습니다. 카테고리를 고르면 HUB 교정이 됩니다."
-    },
     "social": "소셜 계정",
     "shadowsOwned": "당사 보유 도메인을 덮어쓰는 중",
     "goldValue": "Gold 값: {category} · {source}",
@@ -7019,8 +6997,8 @@
     "historyOpen": "{domain} 변경 이력",
     "system": "관리 명령",
     "toast": {
-      "saved": "{domain} 분류를 저장했습니다. 파이프라인이 가져간 뒤 인용 집계에 반영됩니다.",
-      "reverted": "{domain} 교정을 원복했습니다. 파이프라인이 가져간 뒤 기본 분류로 돌아갑니다."
+      "saved": "{domain} 분류를 저장했습니다.",
+      "reverted": "{domain} 교정을 원복했습니다."
     },
     "detailTitle": "출처 분류",
     "field": {
@@ -7030,7 +7008,6 @@
       "hub": "HUB 교정",
       "origin": "처음 값",
       "gold": "Gold 값",
-      "state": "반영",
       "note": "메모"
     },
     "status": {
@@ -7070,7 +7047,6 @@
     "publishedTip": "외부 API {family} 목록 · 순번(change_seq) {seq} · {at} 기록",
     "roundPill": "Gold {date} 회차 · 글로벌",
     "storePill": "HUB 데이터 DB",
-    "flowNoteTitle": "반영 시점",
     "system": "관리 명령",
     "loading": "불러오는 중…",
     "history": "변경 이력",
@@ -7094,16 +7070,14 @@
     },
     "seeds": {
       "description": "사람이 정한 도메인별 기본 분류(시드)를 관리합니다. 우선순위는 교정 › 공식 소셜 › 당사 도메인 › 시드 › 규칙 순입니다.",
-      "flowNote": "여기서 고친 시드는 HUB에 저장되고 외부 API 목록(source_seed)으로 파이프라인에 넘어갑니다. 인용 화면 숫자에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
       "listLabel": "시드 목록",
       "searchPlaceholder": "도메인 검색",
-      "count": "{shown} / {total}개 · 적용 중 {active} · 제외 {removed} · 반영 대기 {pending} · 업스트림 {upstream}",
+      "count": "{shown} / {total}개 · 적용 중 {active} · 제외 {removed} · 업스트림 {upstream}",
       "empty": "시드가 없습니다.",
       "emptyFiltered": "조건에 맞는 시드가 없습니다.",
       "hint": "HUB의 시드 전체와, Gold가 시드로 적용했지만 HUB 목록에는 없는 출처를 보여 줍니다. 인용 수는 Gold {date} 회차(글로벌) 기준입니다.",
       "axis": {
         "category": "카테고리",
-        "state": "반영 상태",
         "status": "상태"
       },
       "column": {
@@ -7111,24 +7085,8 @@
         "citations": "인용 수",
         "category": "HUB 카테고리",
         "gold": "Gold 값",
-        "state": "반영",
         "status": "상태",
         "actions": "작업"
-      },
-      "state": {
-        "applied": "반영됨",
-        "pending": "반영 대기",
-        "pendingRemove": "제외 대기",
-        "shadowed": "상위 분류 우선",
-        "upstream": "업스트림 시드"
-      },
-      "stateTip": {
-        "applied": "Gold가 이 시드를 적용했습니다.",
-        "pending": "파이프라인이 아직 이 시드를 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
-        "pendingRemove": "파이프라인이 아직 제외를 가져가지 않았습니다. Gold 재가공 뒤 규칙 분류로 돌아갑니다.",
-        "shadowed": "이 출처는 교정 · 공식 소셜 · 당사 도메인 중 하나가 먼저 정합니다. 시드는 그 분류가 없어질 때 쓰입니다.",
-        "upstream": "Gold가 시드로 적용했지만 HUB 목록에는 없습니다. '시드로 추가'를 누르면 HUB 시드가 됩니다.",
-        "none": "Gold에 없는 출처입니다(인용된 적 없음)."
       },
       "status": {
         "active": "적용 중",
@@ -7150,8 +7108,8 @@
         "exists": "이미 있는 시드입니다. 목록에서 카테고리를 바꾸세요."
       },
       "toast": {
-        "saved": "{domain} 시드를 저장했습니다. 파이프라인이 가져간 뒤 인용 집계에 반영됩니다.",
-        "removed": "{domain} 시드를 제외했습니다. 파이프라인이 가져간 뒤 규칙 분류로 돌아갑니다."
+        "saved": "{domain} 시드를 저장했습니다.",
+        "removed": "{domain} 시드를 제외했습니다."
       },
       "detailTitle": "시드",
       "field": {
@@ -7161,7 +7119,6 @@
         "hub": "HUB 시드",
         "origin": "처음 값",
         "gold": "Gold 값",
-        "state": "반영",
         "note": "메모"
       },
       "noSeed": "HUB 시드가 없습니다. '시드로 추가'를 누르면 시드가 생깁니다.",
@@ -7174,9 +7131,8 @@
     },
     "social": {
       "description": "공식(HMG) 소셜 계정 목록을 관리합니다. 계정으로 묶인 인용은 Official (HMG)로 분류되고, 같은 도메인의 나머지 인용과 따로 셉니다.",
-      "flowNote": "여기서 고친 계정은 HUB에 저장되고 외부 API 목록(source_social)으로 파이프라인에 넘어갑니다. 인용 화면 숫자에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
       "listLabel": "공식 소셜 계정 목록",
-      "count": "{total}개 · 적용 중 {active} · 중지 {stopped} · 반영 대기 {pending}",
+      "count": "{total}개 · 적용 중 {active} · 중지 {stopped}",
       "empty": "공식 소셜 계정이 없습니다.",
       "column": {
         "key": "계정",
@@ -7184,7 +7140,6 @@
         "matchers": "매칭 규칙",
         "category": "카테고리",
         "citations": "인용 수",
-        "state": "반영",
         "status": "상태",
         "actions": "작업"
       },
@@ -7193,19 +7148,6 @@
       "matchersMore": "{first} 외 {more}개",
       "boundaryOn": "경로 경계",
       "boundaryOff": "접두어 그대로",
-      "state": {
-        "applied": "반영됨",
-        "pending": "반영 대기",
-        "pendingStop": "중지 대기",
-        "upstream": "업스트림 계정"
-      },
-      "stateTip": {
-        "applied": "Gold가 이 계정을 공식 소셜로 적용했습니다.",
-        "pending": "파이프라인이 아직 이 계정을 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
-        "pendingStop": "파이프라인이 아직 중지를 가져가지 않았습니다. Gold 재가공 뒤 도메인 인용으로 돌아갑니다.",
-        "upstream": "Gold가 공식 소셜로 적용했지만 HUB 목록에는 없습니다. '계정으로 추가'를 누르면 HUB 계정이 됩니다.",
-        "none": "Gold에 없는 계정입니다. 인용된 적이 없거나 아직 반영 전입니다(Gold로는 구별할 수 없습니다)."
-      },
       "status": {
         "active": "적용 중",
         "stopped": "중지됨"
@@ -7237,9 +7179,9 @@
         }
       },
       "toast": {
-        "saved": "{key} 계정을 저장했습니다. 파이프라인이 가져간 뒤 반영됩니다.",
-        "stopped": "{key} 계정을 중지했습니다. 파이프라인이 가져간 뒤 반영됩니다.",
-        "resumed": "{key} 계정을 다시 적용했습니다. 파이프라인이 가져간 뒤 반영됩니다."
+        "saved": "{key} 계정을 저장했습니다.",
+        "stopped": "{key} 계정을 중지했습니다.",
+        "resumed": "{key} 계정을 다시 적용했습니다."
       },
       "detailTitle": "공식 소셜 계정",
       "field": {
@@ -7250,7 +7192,6 @@
         "status": "상태",
         "origin": "처음 값",
         "gold": "Gold 값",
-        "state": "반영",
         "note": "메모"
       },
       "event": {
@@ -7277,19 +7218,10 @@
         "nameEn": "영어 이름",
         "description": "설명",
         "gold": "Gold 값",
-        "state": "반영",
         "actions": "작업"
       },
       "goldValue": "{name} · {ord}번째",
       "goldNone": "Gold에 없음",
-      "state": {
-        "applied": "반영됨",
-        "pending": "반영 대기"
-      },
-      "stateTip": {
-        "applied": "Gold dim_category의 이름과 순서가 HUB 값과 같습니다.",
-        "pending": "Gold dim_category의 이름이나 순서가 HUB 값과 다릅니다. 파이프라인이 가져간 뒤 맞춰집니다."
-      },
       "moveUp": "{name} 위로",
       "moveDown": "{name} 아래로",
       "edit": "{name} 편집",
@@ -7318,8 +7250,7 @@
         "nameKo": "한국어 이름",
         "nameEn": "영어 이름",
         "description": "설명",
-        "gold": "Gold 값",
-        "state": "반영"
+        "gold": "Gold 값"
       },
       "kind": {
         "category": "출처 카테고리",
@@ -7411,10 +7342,9 @@
     },
     "keywords": {
       "description": "수집할 검색 키워드와 수집 조건(국가 · 언어)을 관리합니다.",
-      "flowNote": "여기서 고친 키워드는 HUB에 저장되고 외부 API 목록(interest_keyword)으로 파이프라인에 넘어갑니다. 키워드 데이터에는 파이프라인이 이 목록을 가져가 수집한 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
       "listLabel": "키워드 목록",
       "searchPlaceholder": "키워드 검색",
-      "count": "{shown} / {total}개 · 활성 {active} · 중지 {stopped} · 반영 대기 {pending} · 업스트림 {upstream}",
+      "count": "{shown} / {total}개 · 활성 {active} · 중지 {stopped} · 업스트림 {upstream}",
       "empty": "키워드가 없습니다.",
       "emptyFiltered": "조건에 맞는 키워드가 없습니다.",
       "hint": "HUB의 키워드 전체와, Gold가 수집했지만 HUB 목록에는 없는 키워드를 보여 줍니다. Gold 수집은 Gold 시드 행(kw_suggestion)의 조건 수와 마지막 수집일입니다.",
@@ -7431,7 +7361,6 @@
         "market": "수집 조건",
         "source": "소스",
         "brand": "브랜드",
-        "state": "반영 상태",
         "status": "상태"
       },
       "column": {
@@ -7440,27 +7369,14 @@
         "source": "소스",
         "brand": "브랜드",
         "observed": "Gold 수집",
-        "state": "반영",
         "status": "상태",
         "actions": "작업"
-      },
-      "state": {
-        "applied": "반영됨",
-        "pending": "반영 대기",
-        "upstream": "업스트림 키워드"
-      },
-      "stateTip": {
-        "applied": "Gold가 이 키워드를 HUB의 조건 모두로 수집했습니다.",
-        "pending": "아직 수집하지 않은 조건이 있습니다. 파이프라인이 목록을 가져가 수집한 뒤 반영됩니다.",
-        "upstream": "Gold가 수집했지만 HUB 목록에는 없습니다. '키워드로 추가'를 누르면 HUB 키워드가 됩니다.",
-        "none": "중지한 키워드입니다. 외부 API 목록에서 빠지며, Gold에 남은 값은 지난 수집 기록입니다."
       },
       "origin": {
         "gold_import": "Gold 시드에서 가져옴",
         "hub": "이 화면에서 지정"
       },
       "field": {
-        "state": "반영",
         "goldExtra": "Gold에만 있는 조건"
       },
       "form": {
@@ -7476,7 +7392,7 @@
         }
       },
       "toast": {
-        "saved": "{term} 키워드를 저장했습니다. 파이프라인이 가져가 수집한 뒤 반영됩니다.",
+        "saved": "{term} 키워드를 저장했습니다.",
         "stopped": "{term} 키워드를 중지했습니다. 외부 API 목록에서 빠집니다.",
         "resumed": "{term} 키워드를 다시 활성화했습니다. 외부 API 목록에 다시 들어갑니다."
       }
@@ -7552,12 +7468,10 @@
     "description": "답변에서 발견된 엔티티의 역할(자사 · 경쟁사 · 제외)을 관리합니다. 역할은 모든 KPI의 당사 판정을 정합니다.",
     "login": "로그인",
     "loginRequired": "HUB 로그인이 필요합니다.",
-    "flowNoteTitle": "반영 시점",
-    "flowNote": "여기서 고친 역할은 HUB에 저장되고 외부 API 목록(entity_role)으로 파이프라인에 넘어갑니다. 화면 숫자와 당사 판정에는 파이프라인이 이 목록을 가져가 Gold를 다시 만든 뒤 반영되고, 그 전까지 '반영 대기'로 보입니다.",
     "listLabel": "엔티티 목록",
     "searchLabel": "검색",
     "searchPlaceholder": "엔티티 · 표시 브랜드 검색",
-    "count": "{shown} / {total}개 · 자사 {own} · 제외 {excluded} · 반영 대기 {pending} · 업스트림 {upstream}",
+    "count": "{shown} / {total}개 · 자사 {own} · 제외 {excluded}",
     "empty": "엔티티가 없습니다.",
     "emptyFiltered": "조건에 맞는 엔티티가 없습니다.",
     "hint": "엔티티 · 표시 브랜드 · 분류 · 답변 · 언급 수는 Gold 값 그대로이고, 답변 · 언급은 전 기간 합계입니다. 역할을 정하지 않은 엔티티는 경쟁사로 칩니다.",
@@ -7565,10 +7479,10 @@
     "recent": "최근 변경",
     "detailTitle": "엔티티",
     "save": "저장",
-    "saved": "{name} 역할을 저장했습니다. 파이프라인이 가져가 Gold를 다시 만든 뒤 반영됩니다.",
+    "saved": "{name} 역할을 저장했습니다.",
     "notePlaceholder": "선택 — 지정 사유",
     "roleDefault": "기본값",
-    "confirmOwn": "당사 판정이 바뀌는 변경입니다. 이 엔티티의 답변 {answers}건 · 언급 {mentions}건이 Gold 재가공 뒤 모든 KPI의 당사 집계에 영향을 줍니다. 표본을 확인했습니다.",
+    "confirmOwn": "당사 판정이 바뀌는 변경입니다. 이 엔티티의 답변 {answers}건 · 언급 {mentions}건이 모든 KPI의 당사 집계에 영향을 줍니다. 표본을 확인했습니다.",
     "numbers": "답변 {answers} · 언급 {mentions}",
     "loading": "불러오는 중…",
     "surfaces": "관측 표면",
@@ -7585,8 +7499,7 @@
     "axis": {
       "role": "역할",
       "brand": "자사 브랜드",
-      "kind": "Gold 분류",
-      "state": "반영 상태"
+      "kind": "Gold 분류"
     },
     "column": {
       "name": "엔티티",
@@ -7596,7 +7509,6 @@
       "mentions": "언급",
       "firstSeen": "첫 발견",
       "role": "역할",
-      "state": "반영",
       "actions": "작업"
     },
     "role": {
@@ -7612,17 +7524,6 @@
     "status": {
       "active": "적용",
       "cleared": "해제"
-    },
-    "state": {
-      "applied": "반영됨",
-      "pending": "반영 대기",
-      "upstream": "업스트림 역할"
-    },
-    "stateTip": {
-      "applied": "Gold가 이 역할을 적용했습니다.",
-      "pending": "파이프라인이 아직 가져가지 않았습니다. Gold 재가공 뒤 반영됩니다.",
-      "upstream": "Gold에 역할이 있지만 HUB 목록에는 없습니다. 역할을 저장하면 HUB 값이 됩니다.",
-      "none": "양쪽 모두 역할이 없어 경쟁사로 칩니다."
     },
     "origin": {
       "gold_import": "Gold 명부에서 가져옴",
@@ -7644,7 +7545,6 @@
       "numbers": "전 기간",
       "firstSeen": "첫 발견",
       "goldRole": "Gold 역할",
-      "state": "반영",
       "origin": "처음 값"
     },
     "error": {
