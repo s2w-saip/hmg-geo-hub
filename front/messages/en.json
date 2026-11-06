@@ -4093,7 +4093,7 @@
         "title": "Website AI answer performance",
         "copy": {
           "definition": {
-            "citationShare": "Share of all citation occurrences that point to the measured site's own URLs (its registered address and the pages under it; multiple citations within one answer counted)"
+            "citationShare": "Share of all citation occurrences that point to the measured site's own URLs (every page of its registered origins; multiple citations within one answer counted)"
           },
           "formula": {
             "citationShare": "citations to own URLs ÷ total source citations × 100 (unit: %)"
@@ -4198,14 +4198,14 @@
         "title": "Website citation",
         "promptsPage": {
           "title": "Prompts citing own URLs",
-          "description": "Prompts that cited the measured site's own URLs (its registered address and the pages under it, target URLs included) at least once, and those that did not."
+          "description": "Prompts that cited the measured site's own URLs (every page of its registered origins, target URLs included) at least once, and those that did not."
         },
         "lens": {
           "hmgDef": "The share of all citations classified as HMG group official sites. The same value as Official (HMG) in the source mix below; the change compares with the previous round as the source mix does, or with the period of the same length before when a period is picked. It is a different basis from the Official (ours) share.",
           "own": {
             "name": "Official (ours) citation share",
             "question": "How much AI rests on our brand's official sites",
-            "def": "The share of all citations judged as the measured site's own URLs (its registered address and the pages under it, target URLs included; Gold's website ownership, the same judgement as the Overview's AI citation share). Official (HMG) follows the source category Official (HMG), so the values differ. The change uses the Overview card's basis (previous round), or the period of the same length before when a period is picked. With a source filter on, the round change and the line are not drawn.",
+            "def": "The share of all citations judged as the measured site's own URLs (every page of its registered origins, target URLs included; Gold's website ownership, the same judgement as the Overview's AI citation share). Official (HMG) follows the source category Official (HMG), so the values differ. The change uses the Overview card's basis (previous round), or the period of the same length before when a period is picked. With a source filter on, the round change and the line are not drawn.",
             "formula": "Citations of own URLs ÷ all citations × 100 (citations, not domains)",
             "none": "No citations to count"
           },
@@ -4231,7 +4231,7 @@
         "reach": {
           "title": "Owned URL · target page reach",
           "infoLabel": "How to read",
-          "info": "Counts the measured prompts whose AI answers cited an owned URL (a registered main address or a page under it) at least once, and of those the prompts that cited the target page set for the prompt. The three counts share one denominator (measured prompts) and the target is part of the owned URLs, so the number between two steps is their difference. 전체 in the engine table counts a prompt once whichever engine cited it, so it is not the engines' average. The change compares with the previous round like the other changes on this page, or with the period of the same length before when a period is picked.",
+          "info": "Counts the measured prompts whose AI answers cited an owned URL (any page of a registered origin) at least once, and of those the prompts that cited the target page set for the prompt. The three counts share one denominator (measured prompts) and the target is part of the owned URLs, so the number between two steps is their difference. 전체 in the engine table counts a prompt once whichever engine cited it, so it is not the engines' average. The change compares with the previous round like the other changes on this page, or with the period of the same length before when a period is picked.",
           "defOwned": "Owned URL citation rate",
           "defTarget": "Target URL citation rate",
           "sub": "Measured → owned URL cited → target page cited. The same values as the original page's owned and target URL rate cards.",
