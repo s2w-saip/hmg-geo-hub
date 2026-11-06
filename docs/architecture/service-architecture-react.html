@@ -93,17 +93,29 @@ li + li { margin-top: 6px; }
 .columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
 .meta { color: var(--muted); font-size: 13px; }
+.quality-figure > svg { aspect-ratio: 1600 / 980; }
+.quality-figure text { font-size: 16px; }
+.quality-figure .q-title { font-size: 29px; font-weight: 750; }
+.quality-figure .q-head { font-size: 21px; font-weight: 700; }
+.quality-figure .q-bold { font-size: 18px; font-weight: 700; }
+.quality-figure .q-small { font-size: 14px; fill: var(--muted); }
+.quality-figure .q-muted { fill: var(--muted); }
+.quality-figure .q-blue { fill: var(--new); }
+.quality-figure .q-green { fill: var(--hub); }
+.quality-figure .q-purple { fill: var(--data); }
+.quality-figure .q-arrow { fill: none; stroke: var(--edge); stroke-width: 2; }
+.quality-figure .q-input { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
 :focus-visible { outline: 2px solid var(--new); outline-offset: 3px; }
 @media print { @page { size: A3 landscape; margin: 12mm; } nav { display: none; } .doc-header, .doc-content { padding: 18px 0; } figure { break-inside: avoid; } tr, .card { break-inside: avoid; } }
 </style>
 </head>
 <body>
 <header class="doc-header">
-  <span class="status">React 전환 목표 · 현재 서버 미연결</span>
+  <span class="status">React 전환 목표 · 개발용 API 연결</span>
   <h1>서비스 아키텍처 · React 전환안</h1>
   <p>브라우저의 React SPA가 같은 origin의 API를 호출하고, Hub가 인증·계정·입력 편집과 내부 데이터 서버 중계를 맡는다. 기존 Next 리뉴얼의 UI와 동작을 기준으로 전환한다.</p>
   <p class="meta">확인일 2026-11-06 · 현재 구현과 전환 목표를 구분한 준비 문서 · T13 서버 분리 이후 연결</p>
-  <nav aria-label="문서 목차"><a href="#diagram">전체 구조</a><a href="#status">현재와 목표</a><a href="#responsibility">책임 이전</a><a href="#contract">Hub 계약</a><a href="#gate">전환 조건</a><a href="#basis">기준 문서</a></nav>
+  <nav aria-label="문서 목차"><a href="#diagram">전체 구조</a><a href="#quality-proposal">품질 개편 검토안</a><a href="#status">현재와 목표</a><a href="#responsibility">책임 이전</a><a href="#contract">Hub 계약</a><a href="#gate">전환 조건</a><a href="#basis">기준 문서</a></nav>
 </header>
 <figure id="diagram">
   <svg viewBox="0 0 1840 908" role="img" aria-labelledby="diagram-title diagram-desc">
@@ -405,6 +417,129 @@ li + li { margin-top: 6px; }
   <figcaption>목표 호출 경로: React(브라우저) → Hub → 내부 데이터 서버. 초기 화면 지표는 Gold 사전 집계, 필터 조회는 캐시 또는 Gold 조회 테이블을 쓴다. DB·데이터 책임은 최신 서버 설계를 따른다. 호스팅과 배포 경로는 인프라 단계에서 정한다.</figcaption>
 </figure>
 <main class="doc-content">
+
+  <section id="quality-proposal">
+    <h2>조회·상태·데이터 일관성 개편 검토안</h2>
+    <p class="meta">2026-11-07 · 사용자 요청으로 그린 제안이며 구현 완료나 실행 순서 확정을 뜻하지 않는다. 서버 이관 중의 프로세스 배치와 별개로, 기존 React → Hub → 데이터 서버의 책임을 구체화한다.</p>
+    <figure class="quality-figure" style="margin-top:16px">
+      <svg id="quality-diagram" viewBox="0 0 1600 980" role="img" aria-labelledby="quality-title quality-desc">
+        <title id="quality-title">화면은 유지하고 데이터만 갱신하는 서비스 개편안</title>
+        <desc id="quality-desc">현재 React는 페이지 로더와 일부 컴포넌트의 직접 조회가 함께 있다. 개편안은 URL 조건, 화면 상태, 편집 초안을 분리하고 TanStack Query로 조회와 저장을 관리한다. Hub는 인증·권한·API 계약과 입력 저장을 맡고, 데이터 서버는 운영 스냅샷 묶음·지표 정의·기준 주·관련 입력 버전으로 조회 기준을 확정한 뒤 지표와 화면 응답을 조립한다. 응답 스키마·요청 추적·회귀 시험을 공통 기준으로 둔다. 필터를 바꾸면 기존 프레임과 결과에 갱신 표시를 유지하고, 새 조건의 응답이 준비되면 내용을 바꾼다. 오류와 권한 변경은 명시적으로 처리한다. 모두 검토안이다.</desc>
+        <defs>
+          <marker id="qa-end" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="ah-e" d="M0,0L10,5L0,10Z"/></marker>
+        </defs>
+        <rect width="1600" height="980" rx="16" fill="var(--bg)"/>
+        <text class="q-title" x="40" y="48">화면은 유지하고, 데이터는 정확하게 갱신한다</text>
+        <text class="q-muted" x="40" y="76">React의 상태 분리 · Hub의 명확한 계약 · 데이터 서버의 일관된 조회 기준</text>
+        <rect class="new" x="1340" y="25" width="220" height="32" rx="16"/>
+        <text class="c q-small q-blue" x="1450" y="47">검토안 · 2026.11.07</text>
+
+        <rect class="cont" x="40" y="102" width="740" height="102" rx="12"/>
+        <text class="q-bold" x="64" y="133">현재 React 구현</text>
+        <text x="64" y="161">페이지 로더의 조회 + 일부 이식 컴포넌트의 직접 조회</text>
+        <text class="q-small" x="64" y="186">기간 필터의 프레임 초기화 · degraded 응답 뒤 재시도 예외를 검증에서 확인</text>
+        <rect class="new" x="820" y="102" width="740" height="102" rx="12"/>
+        <text class="q-bold q-blue" x="844" y="133">개편 후의 원칙</text>
+        <text x="844" y="161">화면 상태는 유지 · 조회 상태는 한곳에서 관리 · 서버 응답 계약으로 연결</text>
+        <text class="q-small" x="844" y="186">계정·프로젝트·메뉴 전환과 필터 변경을 구분하고, 오류 복구까지 같은 규칙 적용</text>
+
+        <rect class="new" x="40" y="228" width="650" height="444" rx="14"/>
+        <text class="q-small q-blue" x="64" y="259">01 / REACT</text>
+        <text class="q-head" x="64" y="289">화면과 데이터의 수명 분리</text>
+        <rect class="q-input" x="64" y="316" width="180" height="74" rx="9"/>
+        <text class="q-bold" x="80" y="346">URL 조회 조건</text>
+        <text class="q-small" x="80" y="372">국가 · 브랜드 · 기간</text>
+        <rect class="q-input" x="64" y="410" width="180" height="74" rx="9"/>
+        <text class="q-bold" x="80" y="440">화면 상태</text>
+        <text class="q-small" x="80" y="466">패널 · 스크롤 · 상세</text>
+        <rect class="q-input" x="64" y="506" width="180" height="74" rx="9"/>
+        <text class="q-bold" x="80" y="536">편집 초안</text>
+        <text class="q-small" x="80" y="562">미저장 값 · 원본 버전</text>
+        <rect class="proc" x="280" y="316" width="386" height="126" rx="10"/>
+        <text class="q-bold q-blue" x="300" y="347">단일 조회·저장 계층</text>
+        <text x="300" y="376">TanStack Query</text>
+        <text class="q-small" x="300" y="401">조회 키 · 캐시 · 취소 · 실제 재요청</text>
+        <text class="q-small" x="300" y="423">UI 컴포넌트의 직접 요청을 점진적으로 이전</text>
+        <rect class="proc" x="280" y="494" width="386" height="128" rx="10"/>
+        <text class="q-bold" x="300" y="525">화면 컴포넌트</text>
+        <text x="300" y="554">KPI · 차트 · 비교 표 · 편집 폼</text>
+        <text class="q-small" x="300" y="580">최초 로딩 / 갱신 / 빈 결과 / 실패를 구분</text>
+        <text class="q-small" x="300" y="604">새 데이터가 올 때 프레임과 사용자 조작 유지</text>
+        <path class="q-arrow" d="M244,353H280" marker-end="url(#qa-end)"/>
+        <path class="q-arrow" d="M244,447H260V534H280" marker-end="url(#qa-end)"/>
+        <path class="q-arrow" d="M244,543H252V584H280" marker-end="url(#qa-end)"/>
+        <path class="q-arrow" d="M410,442V494" marker-end="url(#qa-end)"/>
+        <text class="q-small r" x="399" y="473">데이터</text>
+        <path class="q-arrow" d="M566,494V442" marker-end="url(#qa-end)"/>
+        <text class="q-small" x="577" y="473">조회·저장</text>
+        <text class="q-small" x="64" y="650">지표 계산 없이 서버 응답을 표시 · 계정과 권한 범위가 바뀌면 이전 데이터 제거</text>
+
+        <rect class="hub" x="750" y="228" width="330" height="444" rx="14"/>
+        <text class="q-small q-green" x="774" y="259">02 / HUB</text>
+        <text class="q-head" x="774" y="289">서비스의 입구</text>
+        <rect class="proc" x="774" y="316" width="282" height="126" rx="10"/>
+        <text class="q-bold q-green" x="794" y="347">인증된 API 계약</text>
+        <text x="794" y="376">쿠키 · Origin · 계정 재확인</text>
+        <text class="q-small" x="794" y="401">메뉴 권한 · 파라미터 검증</text>
+        <text class="q-small" x="794" y="423">조회는 내부 데이터 서버로 전달</text>
+        <rect class="proc" x="774" y="494" width="282" height="128" rx="10"/>
+        <text class="q-bold q-green" x="794" y="525">입력 저장</text>
+        <text x="794" y="554">초안의 원본 버전 확인</text>
+        <text class="q-small" x="794" y="580">동시 수정은 충돌 응답으로 반환</text>
+        <text class="q-small" x="794" y="604">작성자 · 변경 이력 기록</text>
+        <path class="q-arrow" d="M915,442V494" marker-end="url(#qa-end)"/>
+        <text class="q-small" x="927" y="473">편집 요청</text>
+        <text class="q-small" x="774" y="650">운영 DB · 입력 DB 읽기 / 쓰기</text>
+
+        <rect class="data" x="1140" y="228" width="420" height="444" rx="14"/>
+        <text class="q-small q-purple" x="1164" y="259">03 / DATA SERVER</text>
+        <text class="q-head" x="1164" y="289">숫자의 기준을 한곳에서 확정</text>
+        <rect class="proc" x="1164" y="316" width="372" height="126" rx="10"/>
+        <text class="q-bold q-purple" x="1184" y="347">조회 기준 확정</text>
+        <text x="1184" y="376">운영 스냅샷 묶음 · 지표 정의 버전</text>
+        <text class="q-small" x="1184" y="401">서비스 기준 주 · 관련 입력 버전</text>
+        <text class="q-small" x="1184" y="423">서버가 허용한 범위와 조건으로 고정</text>
+        <rect class="proc" x="1164" y="494" width="372" height="128" rx="10"/>
+        <text class="q-bold q-purple" x="1184" y="525">지표 계산 · 화면 응답 조립</text>
+        <text x="1184" y="554">카드 · 추이 · 비교 표의 기준 일치</text>
+        <text class="q-small" x="1184" y="580">섹션별 응답 · 부분 실패 · 독립 재시도</text>
+        <text class="q-small" x="1184" y="604">지표 정의와 계산은 이 계층에서만 수행</text>
+        <path class="q-arrow" d="M1350,442V494" marker-end="url(#qa-end)"/>
+        <text class="q-small" x="1362" y="473">동일 조회 기준</text>
+        <text class="q-small" x="1164" y="650">Gold 읽기 · 캐시 DB 읽기/쓰기 · 입력 기준정보 읽기</text>
+
+        <path class="q-arrow" d="M666,379H774" marker-start="url(#qa-end)" marker-end="url(#qa-end)"/>
+        <text class="c q-small" x="720" y="367">/api/*</text>
+        <path class="q-arrow" d="M1056,379H1164" marker-start="url(#qa-end)" marker-end="url(#qa-end)"/>
+        <text class="c q-small" x="1110" y="367">내부 호출</text>
+
+        <rect class="cont" x="40" y="696" width="1520" height="66" rx="10"/>
+        <text class="q-bold" x="64" y="724">공통 품질 기준</text>
+        <text x="270" y="724">응답 스키마 · 공통 요청 ID · 구간별 시간과 캐시 기록 · 상태 전환 회귀 시험</text>
+        <text class="q-small" x="270" y="748">숫자의 원본 정합성과 Next ↔ React의 화면 동등성을 각각 검증</text>
+
+        <text class="q-head" x="40" y="803">필터를 바꿀 때의 동작</text>
+        <rect class="proc" x="40" y="824" width="350" height="78" rx="10"/>
+        <text class="q-bold q-blue" x="60" y="854">1. 선택 즉시 반영</text>
+        <text class="q-small" x="60" y="882">URL 조건과 필터 체크 상태 변경</text>
+        <rect class="proc" x="430" y="824" width="350" height="78" rx="10"/>
+        <text class="q-bold q-blue" x="450" y="854">2. 화면 유지</text>
+        <text class="q-small" x="450" y="882">패널·스크롤·기존 결과 + 갱신 중 표시</text>
+        <rect class="proc" x="820" y="824" width="350" height="78" rx="10"/>
+        <text class="q-bold q-blue" x="840" y="854">3. 관련 데이터 조회</text>
+        <text class="q-small" x="840" y="882">최신 조건 우선 · 취소 · 실제 재요청</text>
+        <rect class="new" x="1210" y="824" width="350" height="78" rx="10"/>
+        <text class="q-bold q-blue" x="1230" y="854">4. 데이터 교체</text>
+        <text class="q-small" x="1230" y="882">동일 조회 기준의 새 응답으로 갱신</text>
+        <path class="q-arrow" d="M390,863H430" marker-end="url(#qa-end)"/>
+        <path class="q-arrow" d="M780,863H820" marker-end="url(#qa-end)"/>
+        <path class="q-arrow" d="M1170,863H1210" marker-end="url(#qa-end)"/>
+        <text class="q-small" x="40" y="936">실패는 해당 영역에 표시하고 실제 조회로 재시도 · 인증/권한 오류는 접근 차단 · 계정/권한 변경 시 이전 결과 유지 금지</text>
+        <text class="q-small" x="40" y="961">우선 적용 제안: Overview에서 동작 확정 → Mention·Citation으로 확대 · 서버 계약/추적은 Hub 이관, 조회 기준 고정은 Gold 조회 테이블 작업에 맞춰 진행</text>
+      </svg>
+      <figcaption>검토 범위는 상태 관리·조회 경계·API 계약·조회 버전·추적·검증이다. 전체 DB 연결, Gold 가공 cron과 최후 집계 경로는 위 전체 구조를 따른다. 호스팅은 포함하지 않는다. 이 그림은 구현 지시나 서버 작업 순서 변경이 아니다.</figcaption>
+    </figure>
+  </section>
 
   <section id="status">
     <h2>현재 구현과 전환 목표</h2>
