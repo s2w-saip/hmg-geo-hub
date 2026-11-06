@@ -2,7 +2,7 @@
 
 2026-11-06 사용자 요청에 따라 Next 대체용 `front-react/`를 별도 프로젝트로 준비했다. 서버 안정화와 병행하는 사전 준비이며, 운영 프런트 교체는 아니다. 현재 Next `front/`와 백엔드 구현·DB·VM은 변경하지 않았다.
 
-React 전환 구조의 기준은 [React 버전 아키텍처](../architecture/service-architecture-react.html)다. 사용자가 제공한 `service-architecture-gold-node.html`과 저장소의 최신 [허브 서버 분리안](../architecture/service-architecture-hub-split.html)을 바탕으로 React(브라우저) → Hub → 내부 데이터 서버의 논리 구조를 그렸다. 호스팅·프록시 배치는 인프라 단계에서 정한다. 검증에서 확인한 7건은 1차 구현으로 보완했고, 문서의 검증 표에 확인 범위와 남은 실서버 검증을 적었다. 이 문서는 실행·연결 설정의 기준으로 유지한다.
+React 전환 구조의 기준은 [React 버전 아키텍처](../architecture/service-architecture-react.html)다. 사용자가 제공한 `service-architecture-gold-node.html`과 저장소의 최신 [허브 서버 분리안](../architecture/hmg-geo-hub-architecture.html)을 바탕으로 React(브라우저) → Hub → 내부 데이터 서버의 논리 구조를 그렸다. 호스팅·프록시 배치는 인프라 단계에서 정한다. 검증에서 확인한 7건은 1차 구현으로 보완했고, 문서의 검증 표에 확인 범위와 남은 실서버 검증을 적었다. 이 문서는 실행·연결 설정의 기준으로 유지한다.
 
 ## 준비한 범위
 

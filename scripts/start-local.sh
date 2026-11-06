@@ -24,7 +24,7 @@ if [ -f "$repo/.local/pg/operations/PG_VERSION" ]; then
         echo "  Retry after manage.py init has applied 011: HGH_HUB_NATIVE=1 $python -X utf8 back/hub_storage/manage.py sync-service-week" >&2
     fi
     (cd "$repo" && HGH_HUB_NATIVE=1 "$python" -X utf8 back/hub_storage/manage.py internal-token)
-    for f in .env.analytics.local .env.input.local .env.metrics.local .env.hub-edit.local .env.silver.local .env.internal-token.local; do
+    for f in .env.analytics.local .env.input.local .env.metrics.local .env.silver.local .env.internal-token.local; do
         [ -f "$repo/$f" ] && hub_env+=("$repo/$f")
     done
 fi
@@ -39,7 +39,6 @@ if listening 5555; then echo 'Port 5555 is in use by another process.' >&2; exit
 (
     cd "$repo/back"
     set -a; . "$secret"; for f in ${hub_env[@]+"${hub_env[@]}"}; do . "$f"; done; set +a
-    unset HGH_AUTH_SECRET HGH_ACCOUNT_EDITOR_DB_URL HGH_SAVED_FILTER_EDITOR_DB_URL   # the hub server's: login, accounts, saved filters
     nohup "$python" -m uvicorn data_server.app:app --host 127.0.0.1 --port 5555 >"$logs/api.log" 2>&1 &
     echo $! >"$logs/api.pid"
 )
