@@ -381,6 +381,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
       ② 지표가 아닌 첫 화면 목록(프롬프트 목록 · 필터 옵션 · ACR 시트 · 인용 프롬프트 · 톤 URL 등): <code>gold.first_screen_read</code>의 응답. 표면 스냅샷 ID가 다르면 ①과 같이 최후의 수단으로 세고, 그것도 실패하면 503이다.
       ③ 필터 조회(<code>gold_rows.LIVE_PARAMS</code>: 국가 · 언어 · 기간 · 카탈로그 · 출처 · 브랜드 서랍): 캐시 DB <code>cache.query_result</code>, 없으면 운영 데이터에서 전부 세어 답하고 저장한다. 키는 조건 + 표면 스냅샷 ID + 지표 정의 버전, TTL 없음. 첫 화면에 없던 조건 조합도 같다.
       ④ 지표 값이 아닌 읽기(<code>answers</code> · <code>gold/keywords</code> · <code>gold/social</code> · <code>source</code>): 그대로 읽는다. 사전 집계 테이블을 못 읽으면 ③처럼 동작한다.</li>
+    <li><b>조회용 테이블 적재 잡</b>(<code>manage.py load-query-tables</code>, <code>data_server/metrics/query_load.py</code>, T9.7). 매니페스트의 운영 스냅샷을 회차 트랜잭션 하나씩 조회용 테이블에 넣고 <code>gold.silver_load</code>에 남긴다. 계약 컬럼만 읽고, 언급 접기 · 판정은 Silver 어댑터와 같은 SQL을 쓴다. 계정은 <code>hmg_query_loader</code>이고 API는 받지 않는다. 첫 적재는 별도 DB <code>gold_next</code>에서 하고, 교체 전까지 화면은 지금 경로를 읽는다. 범위는 <code>docs/handoff/query-tables-scope.md</code>.</li>
     <li><b>사전 집계 작업</b>(<code>manage.py rollup</code>, <code>data_server/metrics/rollup.py</code>). 표면의 스냅샷 ID나 지표 정의 버전이 바뀌었으면 첫 화면 빌더(<code>data_server/metrics/first_screens.py</code>)를 돌린다. 빌더가 묻는 집계는 회차별로 나눠 <code>gold.metric_row</code>에 쓰고(이미 맞는 회차는 다시 세지 않음), 호출마다 <code>gold.metric_call</code>에 스냅샷 · 버전 · 실패를 남긴다. 목록 응답은 <code>gold.first_screen_read</code>에, 실행 기록은 <code>gold.rollup_run</code>에 쓴다. 끝나면 다른 스냅샷의 캐시 행을 지운다.
       행에는 기본 집계값(<code>counts</code>)과 지표 값(<code>metrics</code>)이 함께 있어 SQL로 지표 값을 바로 읽을 수 있다. ACR 지표는 행으로도 쓰지만 화면은 시트 때문에 응답 단위로 읽는다. 계정은 <code>hmg_rollup_writer</code>이고 API는 받지 않는다. 로컬은 <code>scripts/start-local.sh</code>가, VM은 <code>vm.sh rollup</code> cron이 돌린다.</li>
     <li><b>읽기 원천은 경로로 갈린다.</b> <code>analytics/conversion</code>·<code>analytics/visibility</code>·<code>analytics/properties</code>(AI Conversion 국가 선택지 = 계정이 읽을 수 있는 GA4 속성, 2026-10-30) 세 경로만 <code>gold_db</code>의 <code>analytics</code> · <code>ref</code> 스키마로 가고,
@@ -2657,6 +2658,30 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm ty" x="666" y="855" text-anchor="end">text null</text>
 <text class="m" x="424" y="873">computed_at</text>
 <text class="m sm ty" x="666" y="873" text-anchor="end">timestamptz</text>
+<rect class="tbox" x="696" y="620" width="280" height="230" rx="6"/>
+<path class="th" d="M696,650V626q0,-6 6,-6H970q6,0 6,6V650z"/>
+<line class="rule" x1="696" y1="650" x2="976" y2="650"/>
+<line class="hair" x1="708" y1="692" x2="964" y2="692"/>
+<text class="m b" x="708" y="640"><tspan class="tsch">gold.</tspan>silver_load</text>
+<text class="desc" x="708" y="667">조회용 테이블 적재 잡의 기록이다. 회차마다</text>
+<text class="desc" x="708" y="683">어느 운영 스냅샷을 어떤 입력으로 적재했는지</text>
+<text class="kb pk" x="706" y="711">PK</text>
+<text class="m" x="744" y="711">cycle_id</text>
+<text class="m sm ty" x="966" y="711" text-anchor="end">uuid</text>
+<text class="m" x="744" y="729">snapshot_id</text>
+<text class="m sm ty" x="966" y="729" text-anchor="end">uuid</text>
+<text class="m" x="744" y="747">surface</text>
+<text class="m sm ty" x="966" y="747" text-anchor="end">text</text>
+<text class="m" x="744" y="765">round_date</text>
+<text class="m sm ty" x="966" y="765" text-anchor="end">date null</text>
+<text class="m" x="744" y="783">answers</text>
+<text class="m sm ty" x="966" y="783" text-anchor="end">int</text>
+<text class="m" x="744" y="801">cells</text>
+<text class="m sm ty" x="966" y="801" text-anchor="end">int</text>
+<text class="m" x="744" y="819">inputs_digest</text>
+<text class="m sm ty" x="966" y="819" text-anchor="end">text</text>
+<text class="m" x="744" y="837">loaded_at</text>
+<text class="m sm ty" x="966" y="837" text-anchor="end">timestamptz</text>
 <rect class="vgrp" x="696" y="40" width="488" height="170" rx="8"/>
 <text class="m b" x="712" y="66">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>
 <text class="m" x="712" y="98">hmg_metrics_reader</text><text class="mu sm" x="882" y="98">데이터 서버 읽기 · gold_db SELECT</text>

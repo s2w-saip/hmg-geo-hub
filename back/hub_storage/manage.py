@@ -37,6 +37,7 @@ ENTITY_ROLE_SECRET = ROOT / '.env.entity-role-db.local'  # entity role editor ro
 PROJECT_EDITOR_SECRET = ROOT / '.env.project-editor-db.local'  # project prompt editor role password (data DB)
 SERVICE_WEEK_SECRET = ROOT / '.env.service-week-db.local'  # service week job role password (data DB; manage.py only, never the API)
 INPUT_SECRET = ROOT / '.env.input-db.local'        # input store (2026-11-06): admin, API reader and measurement editor passwords
+QUERY_LOADER_SECRET = ROOT / '.env.query-loader-db.local'  # the query tables' load job (T9.7): manage.py only, never the API
 METRICS_SECRET = ROOT / '.env.metrics-db.local'    # metrics store (2026-11-06): admin, API reader, cache and rollup passwords
 OPS_CONTAINER = 'hgh-operations-db'
 OPS_DB = 'operations_db'
@@ -538,6 +539,7 @@ def install_metrics():
         + login_role('hmg_rollup_writer', values['ROLLUP_WRITER_PASSWORD'], "SET statement_timeout='10min'", 'CONNECTION LIMIT 2')
         + login_role('hmg_analytics_reader', ga4_roles()['ANALYTICS_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'")
         + login_role('hmg_analytics_writer', ga4_roles()['ANALYTICS_WRITER_PASSWORD'], "SET statement_timeout='5min'")
+        + login_role('hmg_query_loader', create_secret(QUERY_LOADER_SECRET, {'QUERY_LOADER_PASSWORD': None})['QUERY_LOADER_PASSWORD'], "SET statement_timeout='30min'", 'CONNECTION LIMIT 4')
         + f"DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='{owner}') THEN CREATE ROLE {owner} NOLOGIN; END IF; END $$;\nCOMMIT;")
     # Gold's sort order is the readers': set when the database is made, and it cannot change after.
     gold_locale = f"LOCALE_PROVIDER icu ICU_LOCALE '{GOLD_ICU_LOCALE}' LOCALE 'C'" if analytics.NATIVE else ''
@@ -547,13 +549,14 @@ def install_metrics():
             metrics_server_sql(analytics.rename_sql(database))
         if metrics_server_sql(f"SELECT 1 FROM pg_database WHERE datname={analytics.literal(database)};").stdout.strip() != '1':
             metrics_server_sql(f"CREATE DATABASE {database} OWNER {owner} TEMPLATE template0 ENCODING 'UTF8' {locale};")
-    sql('BEGIN;\n' + store_database('metrics', ['hmg_metrics_reader', 'hmg_rollup_writer', 'hmg_analytics_reader', 'hmg_analytics_writer']) + 'COMMIT;', store='metrics')
+    sql('BEGIN;\n' + store_database('metrics', ['hmg_metrics_reader', 'hmg_rollup_writer', 'hmg_analytics_reader', 'hmg_analytics_writer', 'hmg_query_loader']) + 'COMMIT;', store='metrics')
     sql('BEGIN;\n' + store_database('cache', ['hmg_cache_writer']) + 'COMMIT;', store='cache')
     migrate('metrics-001.sql', '001_gold', store='metrics')
     migrate('metrics-002.sql', '002_first_screen', store='metrics')
     migrate('metrics-003.sql', '003_metric_rows', store='metrics')
     migrate('metrics-004.sql', '004_ga4_seo', store='metrics')
     migrate('metrics-005.sql', '005_keyword_social', store='metrics')
+    migrate('metrics-006.sql', '006_query_load', store='metrics')
     migrate('cache-001.sql', '001_cache', store='cache')
 
 
@@ -794,6 +797,15 @@ def rollup(args):
               'surfaces': args.params or None, 'force': args.force}
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.
     print(api_python('from data_server.metrics.rollup import run\nrun(' + repr(config) + ')\n', api_env=True).strip())
+
+
+def load_query_tables(args):
+    """load-query-tables: put the Silver OBT's operating snapshots not yet here into gold_db's query tables (data_server/metrics/query_load.py); params name surfaces, default all."""
+    secret = analytics.env_file(QUERY_LOADER_SECRET)
+    database = os.environ.get('HGH_QUERY_LOAD_DATABASE') or STORES['metrics'].database
+    config = {'dsn': f"postgresql://hmg_query_loader:{secret['QUERY_LOADER_PASSWORD']}@{service_host('metrics')}/{database}", 'surfaces': args.params or None}
+    # Secrets travel over stdin, never argv, image layers, logs or the frontend.
+    print(api_python('from data_server.metrics.query_load import run\nrun(' + repr(config) + ')\n', api_env=True).strip())
 
 
 def verify():
@@ -1295,6 +1307,7 @@ COMMANDS = {
     'import-entity-roles': import_entity_roles,
     'sync-service-week': service_week,
     'internal-token': lambda a: internal_token(),
+    'load-query-tables': load_query_tables,
     'rollup': rollup,
 }
 

@@ -14,8 +14,16 @@ DO $$ BEGIN
  END IF;
 END $$;
 RESET ROLE;
+SET LOCAL ROLE hmg_query_loader;
+INSERT INTO gold.silver_load(cycle_id,snapshot_id,surface,answers,cells,inputs_digest) VALUES('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','global',0,0,'rollback-only');
+DO $$ BEGIN
+ BEGIN DELETE FROM gold.metric_row; RAISE EXCEPTION 'The load role changes the metric rows'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN CREATE TABLE gold.forbidden(id int); RAISE EXCEPTION 'The load role creates tables'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+RESET ROLE;
 SET LOCAL ROLE hmg_metrics_reader;
 DO $$ BEGIN
+ BEGIN DELETE FROM gold.silver_load; RAISE EXCEPTION 'The reader changes the load record'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  IF NOT EXISTS(SELECT 1 FROM gold.first_screen_read WHERE read_key=repeat('b',64)) THEN RAISE EXCEPTION 'The reader cannot read Gold'; END IF;
  IF NOT EXISTS(SELECT 1 FROM gold.metric_row WHERE call='c') THEN RAISE EXCEPTION 'The reader cannot read the metric rows'; END IF;
  BEGIN DELETE FROM gold.metric_row; RAISE EXCEPTION 'The reader changes the metric rows'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;

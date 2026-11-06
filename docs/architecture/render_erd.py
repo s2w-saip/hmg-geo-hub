@@ -417,6 +417,9 @@ def metrics() -> Figure:
     f.table("gold.metric_call", 376, 620, 300, "회차의 집계 호출이 어느 스냅샷 · 정의 버전으로 계산됐는지. 다르거나 실패면 그 회차 값은 보이지 않는다.", [
         ("PK", "surface", "text"), ("PK", "project_key", "int"), ("PK", "round_date", "date"), ("PK", "call", "text"), ("PK", "scope", "text"),
         ("", "snapshot_id", "text"), ("", "definition_version", "text"), ("", "row_count", "int"), ("", "error", "text null"), ("", "computed_at", "timestamptz")])
+    f.table("gold.silver_load", 696, 620, 280, "조회용 테이블 적재 잡의 기록이다. 회차마다 어느 운영 스냅샷을 어떤 입력으로 적재했는지 남긴다.", [
+        ("PK", "cycle_id", "uuid"), ("", "snapshot_id", "uuid"), ("", "surface", "text"), ("", "round_date", "date null"), ("", "answers", "int"), ("", "cells", "int"),
+        ("", "inputs_digest", "text"), ("", "loaded_at", "timestamptz")])
     gy = 40
     g = [f'<rect class="vgrp" x="696" y="{gy}" width="488" height="170" rx="8"/>',
          f'<text class="m b" x="712" y="{gy + 26}">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>',

@@ -69,6 +69,8 @@ class Scope(NamedTuple):
     prompts: tuple[str, ...] | None = None
     #: 관점 is by brand on website (the site's brand), by catalog on global
     brand_picked: bool = False
+    #: one operating snapshot (the load job reads them one by one). None = every public one of the rounds
+    snapshot: str | None = None
 
 
 class Inputs(NamedTuple):
@@ -173,13 +175,16 @@ class SilverObtSource:
         self.snapshot_id = "silver:" + ",".join(r["k"] for r in rows)
         return self.snapshot_id
 
-    def _answers(self, b: Binder, json_columns: Sequence[str] = ()) -> str:
-        """CTEs p, x, a: a = the scope's finished answers, judged. Older ACR runs are out of every read (SSOT: one per cell)."""
+    def _answers(self, b: Binder, json_columns: Sequence[str] = (), *, every_answer: bool = False) -> str:
+        """CTEs p, x, a: a = the scope's finished answers, judged. Older ACR runs are out of every read (SSOT: one per cell).
+        every_answer (the load job): nothing is left out here, as the reads leave out their own."""
         i, s = self.inputs, self.scope
         is_global = s.surface == "global"
         hidden = b(i.hidden_markets, "text[]") if is_global else "'{}'::text[]"  # only global's rule reads it, and a parameter no one reads has no type
         columns = replace(OBT_COLUMNS, market_hidden=OBT_COLUMNS.market_hidden.format(hidden=hidden))
         filters = [f"y.surface={b(s.surface)}", f"y.s1_normalize_round_date=ANY({b(list(s.rounds), 'date[]')})", "y.s1_normalize_answer_status='completed'"]
+        if s.snapshot:
+            filters.append(f"y.run_key={b(s.snapshot, 'uuid')}")
         if s.projects:
             filters.append(f"y.project_id::text=ANY({b(list(s.projects), 'text[]')})")
         if s.engines:
@@ -199,7 +204,8 @@ class SilverObtSource:
             if s.brand_picked:
                 outer.append(f"(site.bit & {b(s.bits)})<>0")
         elif is_global:
-            outer.append(f"(p.brand_group & {b(s.bits | 8)})<>0")
+            if not every_answer:
+                outer.append(f"(p.brand_group & {b(s.bits | 8)})<>0")
             if s.countries:
                 filters.append(f"lower(y.country)=ANY({b([v.lower() for v in s.countries], 'text[]')})")
         if s.countries and not is_global:
@@ -211,7 +217,7 @@ class SilverObtSource:
         monitoring = j.monitoring(columns, is_global=is_global)
         citation = j.citation_monitoring(columns, is_global=is_global)
         older = j.older_acr_run(columns, is_global=is_global)
-        where = " AND ".join([f"NOT {older}", *outer])
+        where = "TRUE" if every_answer else " AND ".join([f"NOT {older}", *outer])
         return f"""p AS MATERIALIZED (SELECT id AS prompt_id,funnel,in_root,is_korean,CASE WHEN regions='' THEN NULL ELSE string_to_array(regions,',') END AS regions,is_acr,web_reg,brand_group FROM {prompts}),
             x AS MATERIALIZED (SELECT y.answer_key,y.prompt_id::text AS prompt_id,y.project_id,y.engine,y.country,y.lang,y.measured_at,y.analysis_state,y.s1_normalize_round_date AS round_date{extra},
                 row_number() OVER (PARTITION BY y.run_id,y.prompt_id,y.engine,y.country,y.lang ORDER BY y.measured_at,y.answer_key) AS acr_iter,
@@ -225,9 +231,10 @@ class SilverObtSource:
     def _gate(population: str) -> str:
         return {MONITORING: "a.monitoring", REPRESENTATIVE: "a.representative", CITATION_MONITORING: "a.citation_monitoring"}[population]
 
-    def _rows_of_brands(self, b: Binder) -> str:
+    def _rows_of_brands(self, b: Binder, rollups: Mapping[str, str] | None = None) -> str:
         """CTEs m, br after `a`: one row per answer and brand, as legacy folds them (ingest/frz/fold.py): a mention's brand is the extraction's, the sums over the brand's
-        rollup rows, rk = the competing brands' rank by the lowest average position, first_pos = their rank by the first mention in the text."""
+        rollup rows, rk = the competing brands' rank by the lowest average position, first_pos = their rank by the first mention in the text.
+        rollups (the load job): the rollup entities' names, found over more answers than this read's."""
         i = self.inputs
         names = sorted(n for n in j.NON_COMPETITOR_BRANDS if n not in j.BARE_ONLY_NON_COMPETITORS)
         bare = sorted(j.BARE_ONLY_NON_COMPETITORS)
@@ -238,7 +245,8 @@ class SilverObtSource:
                 FROM a CROSS JOIN LATERAL jsonb_to_recordset(a.s2_mention_rollups) o(entity_id text,brand text,brand_rollup_entity_id text,mention_count int,avg_position float8,surfaces jsonb)
                 LEFT JOIN LATERAL jsonb_to_recordset(a.s3_semantics_rollups) s(entity_id text,{sems}) ON s.entity_id=o.entity_id
                 WHERE jsonb_typeof(a.s2_mention_rollups)='array'),
-            rollup AS MATERIALIZED (SELECT DISTINCT ON (entity_id) entity_id,brand FROM m0 WHERE entity_id=rollup AND coalesce(btrim(brand),'')<>'' ORDER BY entity_id,brand),
+            rollup AS MATERIALIZED ({f"SELECT * FROM unnest({b(list(rollups), 'text[]')},{b(list(rollups.values()), 'text[]')}) AS t(entity_id,brand)" if rollups is not None
+                else "SELECT DISTINCT ON (entity_id) entity_id,brand FROM m0 WHERE entity_id=rollup AND coalesce(btrim(brand),'')<>'' ORDER BY entity_id,brand"}),
             m AS MATERIALIZED (SELECT m0.answer_key,coalesce(r.brand,m0.brand) AS name,lower(btrim(coalesce(r.brand,m0.brand))) AS bare,m0.entity_id,m0.mention_count,m0.avg_position,m0.surfaces,{','.join(f'm0.{c}' for c in SEMANTICS.values())}
                 FROM m0 LEFT JOIN rollup r ON r.entity_id=m0.rollup WHERE coalesce(btrim(coalesce(r.brand,m0.brand)),'')<>'' AND coalesce(r.brand,m0.brand)<>'(이름 없음)'),
             oc AS MATERIALIZED (SELECT a.answer_key,q.entity_id,min(ARRAY[coalesce(q.turn_index,0),coalesce(q.source_start,2147483647),coalesce(q.analysis_index,0)]) AS first_at
@@ -527,9 +535,10 @@ class SilverObtSource:
 
     ACR_LEVEL = "brand"
 
-    def _cells(self, b: Binder) -> str:
+    def _cells(self, b: Binder, *, judged: bool = False) -> str:
         """CTEs: one row per ACR cell (SSOT 셀 = 프롬프트 × 엔진 × 국가) of the scope's rounds: the bundle measured last in the cycle, of a finished run, of a prompt the rule keeps.
-        run_status settles what the old store's flag held (the stand-in has no value, read as finished); the round comes from the manifest."""
+        run_status settles what the old store's flag held (the stand-in has no value, read as finished); the round comes from the manifest.
+        judged (the load job): every bundle stays in `cell`, with the rule's answer as acr_in."""
         s, i = self.scope, self.inputs
         is_global = s.surface == "global"
         hidden = b(i.hidden_markets, "text[]") if is_global else "'{}'::text[]"
@@ -545,14 +554,17 @@ class SilverObtSource:
             filters.append(f"y.prompt_id::text=ANY({b(list(s.prompts), 'text[]')})")
         prompts = (f"unnest({b(i.prompt_ids, 'text[]')},{b(i.in_root, 'boolean[]')},{b(i.is_korean, 'boolean[]')},{b(i.regions, 'text[]')},{b(i.brand_group, 'int[]')}) "
                    "AS t(id,in_root,is_korean,regions,brand_group)")
-        keep = f"AND (p.brand_group & {b(s.bits | 8)})<>0" if is_global else ""
+        keep = f"AND (p.brand_group & {b(s.bits | 8)})<>0" if is_global and not judged else ""
+        one = f"AND m.snapshot_id={b(s.snapshot, 'uuid')}" if s.snapshot else ""
+        cell = (f"SELECT x.*,{j.eligible(columns, is_global=is_global)} AS acr_in FROM x JOIN p ON p.prompt_id=x.prompt_id" if judged
+                else f"SELECT x.* FROM x JOIN p ON p.prompt_id=x.prompt_id WHERE x.last_measured AND {j.eligible(columns, is_global=is_global)} {keep}")
         return f"""run AS MATERIALIZED (SELECT m.snapshot_id AS run_key,m.round_date FROM ops.snapshot_manifest m JOIN ops.cycle k USING(cycle_id)
-                WHERE m.status='public' AND k.surface={b(s.surface)} AND m.round_date=ANY({b(list(s.rounds), 'date[]')})),
+                WHERE m.status='public' AND k.surface={b(s.surface)} AND m.round_date=ANY({b(list(s.rounds), 'date[]')}) {one}),
             p AS MATERIALIZED (SELECT id AS prompt_id,in_root,is_korean,CASE WHEN regions='' THEN NULL ELSE string_to_array(regions,',') END AS regions,brand_group FROM {prompts}),
             x AS MATERIALIZED (SELECT y.prompt_run_id,y.prompt_id::text AS prompt_id,y.engine,y.country,y.lang,y.measured_at,y.run_status,y.s3_acr_valid_acr_iterations AS valid_acr,y.s3_acr_entities,run.round_date,
                 row_number() OVER (PARTITION BY y.cycle_id,y.prompt_id,y.engine,y.country,y.lang ORDER BY y.measured_at DESC,y.prompt_run_id)=1 AS last_measured
                 FROM silver_contract.acr_rollup y JOIN run USING(run_key) WHERE {' AND '.join(filters)}),
-            cell AS MATERIALIZED (SELECT x.* FROM x JOIN p ON p.prompt_id=x.prompt_id WHERE x.last_measured AND {j.eligible(columns, is_global=is_global)} {keep})"""
+            cell AS MATERIALIZED ({cell})"""
 
     @staticmethod
     def _cell_select(group: Sequence[str]) -> str:
