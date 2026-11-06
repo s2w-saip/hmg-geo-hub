@@ -247,30 +247,28 @@ describe("renewal Mention heroes", () => {
     expect(html).toContain(ko.answerAnalysis.mentions.breakdown.drilldownHint);
   });
 
-  // renewal audit 15 (⛔L, HUB rule 5): no HUB-made baseline. Without a compare brand the hero draws 당사 alone (a payload
-  // that still carried the old competitor average is not drawn), and the type card compares with the picked brands only
-  it("with no compare brand the hero trend draws 당사 alone, no competitor average", () => {
-    const old = { ...rateHero, exposure: { ...rateHero.exposure, trend: { ...rateHero.exposure.trend, average: AXIS.map(() => 30) } } };
-    const over = { input: { rateHero: settled(old) }, pick: { auto: false, brands: [] } };
-    expect(render(<RateHero metric="exposure" />, over)).not.toContain("경쟁사 평균");
+  // D-11 (2026-11-06, back from ⛔L): 경쟁사 평균 is the hero's dashed line and the type card's reference without a compare brand
+  it("the hero trend draws the competitor average with and without a compare brand", () => {
+    const withAvg = { ...rateHero, exposure: { ...rateHero.exposure, trend: { ...rateHero.exposure.trend, average: AXIS.map(() => 30) } } };
+    const over = { input: { rateHero: settled(withAvg) }, pick: { auto: false, brands: [] } };
+    expect(render(<RateHero metric="exposure" />, over)).toContain("경쟁사 평균(상위 10개사)");
     const rows = cells(render(<RateHero metric="exposure" />, { ...over, tables: ["hero-exposure"] }));
-    expect(rows.map((r) => r[0])).toEqual(["", "HMG", "브랜드 언급 답변 수", "대표 답변 수"]);
+    expect(rows.map((r) => r[0])).toEqual(["", "경쟁사 평균(상위 10개사)", "HMG", "브랜드 언급 답변 수", "대표 답변 수"]);
+    expect(render(<RateHero metric="exposure" />, { input: { rateHero: settled(withAvg) } })).toContain("경쟁사 평균(상위 10개사)");
   });
 
-  it("the type card compares with the picked brands only: no competitor average, no gap without a pick", () => {
+  it("the type card's reference is the leading picked brand, else the competitor average", () => {
     const cell = (value: number, own: number) => ({ value, gap: own - value, lo: Math.min(own, value), hi: Math.max(own, value) });
-    // the old payload's average fields (rows[].avg, avgRef) are not drawn
     const cmp = { covered: ["BMW"], rows: [{ type: "final_choice", own: 30, avg: 11.7 }], avgRef: [cell(11.7, 30)], dots: [[cell(20, 30)]], options: { "0": { refs: [[]], top: 40 }, "1": { refs: [["BMW"]], top: 40 } } };
     const types = { ...rateTypes, cmp } as unknown as RnRateTypesVM;
     const none = render(<Types metric="exposure" />, { input: { rateTypes: settled(types) }, pick: { auto: false, brands: [] } });
-    expect(none).not.toContain("경쟁사 평균");
-    expect(none).not.toContain("vs ");
-    expect(none).toContain("비교 브랜드를 고르면 차이가 보입니다");
-    expect(none).toContain("최종 선택: 당사 30.0%");
+    expect(none).toContain("vs 경쟁사 평균(상위 5개사)");
+    expect(none).toContain("+18.3pp");
+    expect(none).toContain("최종 선택: 당사 30.0%, 경쟁사 평균(상위 5개사) 11.7%");
     const bmw = render(<Types metric="exposure" />, { input: { rateTypes: settled(types) } });
     expect(bmw).toContain("vs BMW");
     expect(bmw).toContain("+10.0pp");
-    expect(bmw).not.toContain("경쟁사 평균");
+    expect(bmw).toContain("경쟁사 평균(상위 5개사)");
   });
 
   // renewal audit 15 (W6): a gap change or a type gap shown as 0.0 has no direction

@@ -44,7 +44,11 @@
      "own": true,
      "sibling": false,
      "canCompare": false,
-     "top1Bar": 100.0
+     "top1Bar": 100.0,
+     "mapX": 37.5,
+     "mapY": 35.0,
+     "dev": 5.0,
+     "devCsv": 5.0
     },
     {
      "brand": "Toyota",
@@ -63,7 +67,11 @@
      "own": false,
      "sibling": false,
      "canCompare": true,
-     "top1Bar": 14.285714285714285
+     "top1Bar": 14.285714285714285,
+     "mapX": 12.5,
+     "mapY": 5.0,
+     "dev": -5.0,
+     "devCsv": -5.0
     }
    ],
    "dates": [
@@ -121,6 +129,7 @@
     }
    ],
    "sweeps": [],
+   "k": 0.8,
    "defaultCompare": [
     "Toyota"
    ],
@@ -527,11 +536,15 @@
       6.3,
       33.3
      ],
-     "d": null,
+     "d": 0.0,
      "own": true,
      "sibling": false,
      "canCompare": false,
-     "top1Bar": 100.0
+     "top1Bar": 100.0,
+     "mapX": 37.5,
+     "mapY": 35.0,
+     "dev": 5.0,
+     "devCsv": 5.0
     },
     {
      "brand": "Toyota",
@@ -546,11 +559,15 @@
       null,
       66.7
      ],
-     "d": null,
+     "d": 0.0,
      "own": false,
      "sibling": false,
      "canCompare": true,
-     "top1Bar": 14.285714285714285
+     "top1Bar": 14.285714285714285,
+     "mapX": 12.5,
+     "mapY": 5.0,
+     "dev": -5.0,
+     "devCsv": -5.0
     }
    ],
    "dates": [
@@ -561,11 +578,11 @@
     6.3,
     33.3
    ],
-   "ownDelta": null,
+   "ownDelta": 0.0,
    "rivals": [
     "Toyota"
    ],
-   "showDelta": false,
+   "showDelta": true,
    "rank": 1,
    "standingN": 2,
    "leader": {
@@ -608,6 +625,7 @@
     }
    ],
    "sweeps": [],
+   "k": 0.8,
    "defaultCompare": [
     "Toyota"
    ],

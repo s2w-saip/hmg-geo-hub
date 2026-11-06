@@ -5196,7 +5196,7 @@
       "hero": {
         "label": "Top1 ACR (최종 선택률)",
         "basisRound": "직전 회차 대비",
-        "basisPeriod": "기간 누적 — 증감은 추이로 봅니다",
+        "basisPeriod": "기간 누적 · 직전 같은 길이 기간 대비",
         "basisDay": "측정일 단위 추이라 증감을 표시하지 않습니다",
         "standing": "브랜드 {n}개 중 <b>{rank}위</b>",
         "leadFirst": "2위 {brand} 대비 +{gap}pp",
@@ -5212,6 +5212,20 @@
         "tooltipRound": "{x} 회차",
         "trendAria": "Top1 ACR 추이",
         "noTrend": "추이 데이터가 없습니다"
+      },
+      "map": {
+        "title": "후보 → 최종 선택",
+        "infoLabel": "읽는 법",
+        "info": "가로 = 후보군 포함율, 세로 = Top1 ACR. 점선 = 브랜드 평균선(표시된 브랜드의 Top1 ACR 합 ÷ 후보군 포함율 합). 선보다 위 = 비슷하게 후보에 오르는 다른 브랜드보다 최종 선택을 더 받는 브랜드, 아래 = 덜 받는 브랜드. 두 지표는 단위가 달라(반복 · 셀) 선은 비교 기준일 뿐 전환율이 아닙니다.",
+        "chip": "브랜드 {n}개 · 평균선 대비",
+        "x": "후보군 포함율 →",
+        "y": "↑ Top1 ACR",
+        "line": "브랜드 평균선",
+        "above": "선 위: 평균보다 선택을 더 받음",
+        "below": "선 아래: 평균보다 선택을 덜 받음",
+        "aria": "후보군 포함율 대비 Top1 ACR, 브랜드 평균선",
+        "tip": "{brand} — 후보군 포함율 {x} · Top1 ACR {y} · 평균선 대비 {dev}",
+        "colDev": "평균선 대비"
       },
       "board": {
         "title": "브랜드별 ACR",
@@ -5699,13 +5713,14 @@
         "standingNarrowedPeriod": "격차가 직전 기간보다 {move}pp 좁혀졌습니다",
         "standingSamePeriod": "직전 기간 대비 격차 변화 없음",
         "standingDetail": "당사 {own}",
+        "competitorAvg": "경쟁사 평균(상위 5개사)",
         "typeTrail": {
           "tag": "멘션 유형",
           "title": "{type}에서 {ref}에 {gap}pp 뒤짐"
         },
         "typeLead": {
           "tag": "멘션 유형",
-          "title": "모든 유형에서 비교 브랜드보다 앞섬 — 차이가 가장 작은 곳: {type} · {ref} ({gap})",
+          "title": "모든 유형에서 기준보다 앞섬 — 차이가 가장 작은 곳: {type} · {ref} ({gap})",
           "titleSame": "같은 값: {type} · {ref} — 뒤지는 유형 없음"
         },
         "typeDetail": "유형 안 점유율 · 당사 {own}",
@@ -5733,13 +5748,14 @@
         "negativeDetail": "당사 언급에 붙은 감정 신호 기준"
       },
       "hero": {
+        "average": "경쟁사 평균(상위 10개사)",
         "trendTitleExposure": "브랜드별 노출률 추이",
         "trendTitleSov": "브랜드별 점유율 추이",
         "trendNoteLabel": "지표 차이",
         "basisLabel": "집계 기준",
         "basisAll": "AI 노출률은 같은 프롬프트를 한 회차에 같은 엔진·국가에서 여러 번 측정했으면 대표 답변만 셉니다. 나머지 지표는 모든 답변을 셉니다. Overview 카드와 같은 값입니다.",
         "exposureDenominator": "대표 답변 수",
-        "trendNote": "브랜드별 {metric}(%) 추이입니다 — 아래 ‘브랜드 상세’의 주별 순위는 언급 수 기준이라 지표가 다릅니다. 비교 브랜드가 없으면 당사 선만 그립니다.",
+        "trendNote": "브랜드별 {metric}(%) 추이입니다 — 아래 ‘브랜드 상세’의 주별 순위는 언급 수 기준이라 지표가 다릅니다. 점선 = 경쟁사 평균(회차마다 언급 상위 10개사 중 값이 있는 곳의 평균).",
         "standing": "비교 {n}개 브랜드 중 <b>{rank}위</b>",
         "leadFirst": "2위 {brand} 대비 +{gap}pp",
         "leadBehind": "1위 {brand} 대비 {gap}pp",
@@ -5806,6 +5822,7 @@
         "unitLabel": "단위",
         "unitPct": "비율",
         "unitCount": "건수",
+        "avg": "경쟁사 평균(상위 {n}개사)",
         "vs": "vs {brand}",
         "colType": "유형",
         "colOwnExposure": "당사 노출률",
@@ -5823,10 +5840,8 @@
         "colRoundAnswers": "회차 답변 수",
         "footSov": "분모 = 당사 유형 신호 합 (유형 간 구성비)",
         "footCompare": "유형 안 점유율 = 그 유형의 전 브랜드 신호 중 각 브랜드의 몫",
-        "noCompare": "비교 브랜드를 고르면 차이가 보입니다",
         "dotTip": "{type} · {who}\n유형 안 점유율 {value}",
         "rowAria": "{type}: 당사 {own}, {ref} {refValue}",
-        "rowAriaOwn": "{type}: 당사 {own}",
         "aria": "멘션 유형별 유형 안 점유율"
       },
       "favor": {
@@ -5974,7 +5989,7 @@
         "presenceTip": "질문 유형 = 카탈로그의 브랜드 포함 여부 라벨(필터 '브랜드 포함 여부')\n브랜드 미포함 질문 {unbranded}답변 · 포함 질문 {branded}답변(이번 회차)\n라벨 정의는 업스트림에서 확인 중입니다.",
         "cmpTitle": "지표별 추이 비교",
         "cmpNote": "당사 vs 비교 브랜드",
-        "cmpInfo": "지표마다 당사와 비교 브랜드의 회차별 값입니다. 세 차트는 같은 회차를 함께 가리킵니다. 값 = 회차별 값(옅은 칠 = 당사와 첫 비교 브랜드 사이). 격차 = 당사가 앞선 만큼(+) · 뒤진 만큼(−), 당사 − 비교 브랜드(우선 노출도는 작을수록 먼저 언급이라 비교 브랜드 − 당사). 우호도는 경쟁사의 회차 값이 없어 빠집니다(브랜드 비교 표의 우호도 열 = 이번 회차).",
+        "cmpInfo": "지표마다 당사와 비교 브랜드의 회차별 값입니다. 세 차트는 같은 회차를 함께 가리킵니다. 값 = 회차별 값(옅은 칠 = 당사와 첫 비교 브랜드 사이). 격차 = 당사가 앞선 만큼(+) · 뒤진 만큼(−), 당사 − 비교 브랜드(우선 노출도는 작을수록 먼저 언급이라 비교 브랜드 − 당사). 점선 = 경쟁사 평균(언급 상위 10개사, 노출률 · 점유율). 우호도는 경쟁사의 회차 값이 없어 빠집니다(브랜드 비교 표의 우호도 열 = 이번 회차).",
         "cmpMode": "차트 값",
         "modeValue": "값",
         "modeGap": "격차",

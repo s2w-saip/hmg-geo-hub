@@ -76,7 +76,7 @@ def type_rows_of(cmp: dict, compare: list[str]) -> list[dict]:
     out = []
     for t, r in enumerate(cmp["rows"]):
         ref = first_picked(compare, opt["refs"][t])
-        at = (cell(ref, t) if ref is not None else None) or {"value": None, "gap": None}
+        at = (cell(ref, t) if ref is not None else None) or cmp["avgRef"][t]
         out.append({"type": r["type"], "own": r["own"],
                     "dots": [{"brand": b, "value": (cell(b, t) or {}).get("value")} for b in compare],
                     "ref": {"brand": ref, "value": at["value"]}, "gap": at["gap"]})
@@ -285,37 +285,54 @@ def _type_input() -> tuple[dict, list[dict]]:
     return tb, brands
 
 
-class NoHubBaseline(unittest.TestCase):
-    """2026-10-31 ⛔L (renewal audit 15, HUB rule 5): the page drew two baselines the HUB made — the hero's competitor
-    average line (the top-10 rivals' mean per round, over whichever had a value that round) and the type card's top-5
-    rival average, which the type finding fell back to without a compare brand. Neither is Gold's: the compare brands'
-    own values are shown instead, and a type finding needs a compare brand. The engine cards' 당사 vs 경쟁사 평균 is
-    the original page's (a legacy KPI) and stays."""
+class RivalAverage(unittest.TestCase):
+    """D-11 (2026-11-06, '추천대로 진행해'; ⛔L had removed them under the old rule that the HUB makes no baseline): the
+    hero's 경쟁사 평균 line (the KPI brand trend's top-10 rivals' mean per round, over whichever had a value) and the type
+    card's top-5 rivals' average, the reference without a compare brand. Definition: bff.metrics.catalog rival_average."""
 
     HERO = {"points": [{"key": "2026-10-02", "pct": 90.0}, {"key": "2026-10-09", "pct": 90.0}]}
 
-    def test_the_hero_trend_draws_no_competitor_average(self):
+    def test_the_hero_averages_the_top_rivals_not_the_pinned_one(self):
         s = rn.hero_trend_series(self.HERO, _pinned_trend(), "exposure", [])
-        self.assertNotIn("average", s)
+        self.assertEqual(s["average"], [30.0, 40.0])  # Toyota alone: Tata is only pinned to compare
         self.assertEqual((s["own"], s["brands"]), ([90.0, 90.0], []))
 
-    def test_the_type_rows_compare_with_the_picked_brands_only(self):
+    def test_a_round_averages_the_rivals_with_a_value_and_keeps_the_exact_mean(self):
+        trend = _pinned_trend()
+        trend["brands"][2].pop("pinned")
+        trend["buckets"][1]["brands"][1]["exposurePct"] = None
+        trend["buckets"][0]["brands"][1]["exposurePct"] = 33.34
+        trend["buckets"][0]["brands"][2]["exposurePct"] = 33.35
+        average = rn.hero_trend_series(self.HERO, trend, "exposure", [])["average"]
+        self.assertEqual(average[0], 33.3)
+        self.assertAlmostEqual(average[0].exact, 33.345)
+        self.assertEqual(average[1], 20.0)
+
+    def test_the_type_rows_fall_back_on_the_average(self):
         tb, brands = _type_input()
         rows = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": []})
         self.assertEqual(len(rows), len(TYPES))
         for r in rows:
-            self.assertNotIn("avg", r)
-            self.assertEqual((r["own"], r["ref"], r["gap"]), (30.0, {"brand": None, "value": None}, None))
-        self.assertIsNone(rn._type_finding(rows))
+            self.assertEqual((r["own"], r["avg"], r["ref"], r["gap"]), (30.0, 11.7, {"brand": None, "value": 11.7}, 18.3))
+        f = rn._type_finding(rows)
+        self.assertEqual((f["kind"], f["params"]["ref"], f["params"]["gap"]), ("typeLead", "", 18.3))
+        self.assertNotIn("brand", f)
         picked = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": ["BMW", "Toyota"]})
-        self.assertEqual({(r["ref"]["brand"], r["gap"]) for r in picked}, {("Toyota", 10.0)})
+        self.assertEqual({(r["avg"], r["ref"]["brand"], r["gap"]) for r in picked}, {(11.7, "Toyota", 10.0)})
 
-    def test_the_type_card_sends_no_average(self):
+    def test_the_type_average_takes_the_five_rivals_with_the_most_mentions(self):
+        names = [("HMG", True, 30, 30)] + [(f"R{i}", False, 100 - i, 10 + i) for i in range(6)]
+        tb = {"totals": {t: 100 for t in TYPES}, "brands": [{"brand": b, "isTracked": o, "types": {t: n for t in TYPES}} for b, o, _, n in names]}
+        brands = [{"brand": b, "isTracked": o, "mentions": m, "share": 1.0, "prompts": 1, "mentionRate": 1.0, "avgPosition": None} for b, o, m, _ in names]
+        rows = rn.type_compare_rows({"typesByBrand": tb, "brands": brands, "compare": []})
+        self.assertEqual(rows[0]["avg"], 12.0)  # R0..R4 = 10..14, R5 with fewer mentions is out
+
+    def test_the_type_card_sends_the_average(self):
         tb, brands = _type_input()
         trend = {"unit": "week", "brands": [{"brand": b["brand"], "isTracked": b["isTracked"], "mentions": 1} for b in brands], "buckets": []}
         cmp = rn.rate_types_payload(tb, brands, None, None, trend, False)["cmp"]
-        self.assertNotIn("avgRef", cmp)
-        self.assertEqual(cmp["rows"][0], {"type": "final_choice", "own": 30.0})
+        self.assertEqual(cmp["rows"][0], {"type": "final_choice", "own": 30.0, "avg": 11.7})
+        self.assertEqual(cmp["avgRef"][0], {"value": 11.7, "gap": 18.3, "lo": 11.7, "hi": 30.0})
         self.assertEqual(cmp["options"]["0"]["refs"], [[]] * len(TYPES))
 
     def test_a_type_finding_names_its_compare_brand(self):
@@ -328,7 +345,7 @@ class NoHubBaseline(unittest.TestCase):
     def test_a_type_gap_shown_as_zero_is_level(self):
         # the smallest gap 0.0: no type trails, the one closest is level — not 'ahead' (W6: a direction only, info)
         def row(type_, gap):
-            return {"type": type_, "own": 30.0, "dots": [], "ref": {"brand": "Toyota", "value": 30.0 - gap}, "gap": gap}
+            return {"type": type_, "own": 30.0, "avg": None, "dots": [], "ref": {"brand": "Toyota", "value": 30.0 - gap}, "gap": gap}
         f = rn._type_finding([row("final_choice", 0.0), row("mention", 2.0)])
         self.assertEqual((f["kind"], f["tone"], f["params"]["type"], f["params"]["dir"]), ("typeLead", "info", "final_choice", "same"))
 

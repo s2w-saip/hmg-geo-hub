@@ -115,6 +115,30 @@ def gap(own: Any, rival: Any, *, higher_is_better: bool = True) -> float | None:
     return None if d is None else d if higher_is_better else -d
 
 
+def top_rivals(brands: Iterable[Mapping[str, Any]], n: int, *, key: str = "mentions") -> list[Mapping[str, Any]]:
+    """경쟁사 평균의 대상: 언급이 많은 경쟁사 n개, 같은 수면 받은 순서."""
+    return sorted(brands, key=lambda b: -b[key])[:n]
+
+
+def rival_average(values: Iterable[Any]) -> float | None:
+    """경쟁사 평균: 값이 있는 경쟁사 값의 평균. 값이 하나도 없으면 없다."""
+    numbers = [n for n in map(number, values) if n is not None]
+    return sum(numbers) / len(numbers) if numbers else None
+
+
+def average_line(points: Iterable[tuple[Any, Any]]) -> float | None:
+    """브랜드 평균선의 기울기: (후보군 포함율, Top1 ACR) 중 후보군 포함율이 있는 브랜드의 Top1 ACR 합 ÷ 후보군 포함율 합.
+    두 지표는 단위가 달라(셀 · 반복) 비교 기준이지 전환율이 아니다."""
+    shown = [(number(x), number(y)) for x, y in points]
+    shown = [(x, y or 0) for x, y in shown if x]
+    return sum(y for _, y in shown) / sum(x for x, _ in shown) if shown else None
+
+
+def line_distance(x: Any, y: Any, k: float | None) -> float | None:
+    """평균선 대비: Top1 ACR − k × 후보군 포함율 (pp). 평균선이 없으면 없다."""
+    return None if k is None else (number(y) or 0) - k * (number(x) or 0)
+
+
 def category_share(rows: Iterable[Mapping[str, Any]], total: Any, *, key: str = "citations") -> list[dict]:
     """A list of rows with their share of `total`, largest first (인용 비중 · 도메인 점유율 · 유형 안 점유율)."""
     return [{**r, "share": rate(r[key], total)} for r in sorted(rows, key=lambda r: -r[key])]

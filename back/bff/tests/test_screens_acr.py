@@ -488,7 +488,7 @@ class CrossRoundCompared(unittest.TestCase):
     def test_a_period_of_several_rounds_is_summed(self):
         b = self.body("time=2026-09-01..2026-09-30")
         self.assertEqual(b["view"]["dates"], ["2026-09-03", "2026-09-10"])
-        self.assertFalse(b["view"]["showDelta"])
+        self.assertTrue(b["view"]["showDelta"])
 
     def test_the_standard_and_website_project_pages_show_the_trend(self):
         for builder in (acr.standard, acr.gold):
@@ -528,18 +528,83 @@ def view_of(**over) -> dict:
 
 class NoRoundSummary(unittest.TestCase):
     """2026-11-05 Global 지표 정리 (the user's '진행', choice C): the round summary restated the page (its headline's 7
-    values and its findings sit in the hero, the engine bars, the tables and the chips), so it is gone with its findings,
-    and the 후보 → 최종 선택 map with its dots (each one the board's Top1 ACR and 후보군 포함율 of a brand; its brand
-    average line had gone on 2026-10-31, ⛔L)."""
+    values and its findings sit in the hero, the engine bars, the tables and the chips), so it is gone with its findings."""
 
-    def test_the_view_has_no_findings_and_no_map(self):
+    def test_the_view_has_no_findings(self):
         get, _ = fake_api()
         with mock.patch("bff.api.get", get):
             v = run(acr.renewal(QueryParams("")))["body"]["view"]
-        self.assertFalse({"findings", "k"} & v.keys())
+        self.assertNotIn("findings", v)
         self.assertTrue(v["brands"])
-        for b in v["brands"]:
-            self.assertFalse({"mapX", "mapY", "dev", "devCsv"} & b.keys(), b["brand"])
+
+
+class BrandAverageLine(unittest.TestCase):
+    """D-11 (2026-11-06, '추천대로 진행해'): 후보 → 최종 선택 is back with its brand average line and each brand's distance to
+    it, which it restates nothing without (2026-11-05 removed the map when its dots were only the board's two values).
+    k = ΣTop1 ACR ÷ Σ후보군 포함율 of the brands shown; a reference, not a conversion rate. catalog: acr_average_line."""
+
+    def view(self, brands):
+        get, _ = fake_api(acr_body(brands=brands))
+        with mock.patch("bff.api.get", get):
+            return run(acr.renewal(QueryParams("")))["body"]["view"]
+
+    def test_the_line_and_the_distance_from_the_exact_values(self):
+        v = self.view([rival("Toyota", 30, 5), rival("BMW", 10, 5)])  # Top1 30 · 10 %, 후보군 50 · 50 %
+        self.assertEqual(v["k"], 0.4)
+        self.assertEqual([(b["mapX"], b["mapY"]) for b in v["brands"]], [(50.0, 30.0), (50.0, 10.0)])
+        self.assertEqual([b["dev"] for b in v["brands"]], [10.0, -10.0])
+        self.assertEqual([b["devCsv"] for b in v["brands"]], [10.0, -10.0])
+
+    def test_a_brand_never_shortlisted_stays_out_of_the_line(self):
+        v = self.view([rival("Toyota", 30, 5), rival("Ghost", 0, 0)])
+        self.assertEqual(v["k"], 0.6)
+        self.assertEqual(v["brands"][1]["dev"], 0.0)
+
+    def test_no_shortlisted_brand_has_no_line(self):
+        v = self.view([rival("Ghost", 0, 0)])
+        self.assertIsNone(v["k"])
+        self.assertEqual((v["brands"][0]["dev"], v["brands"][0]["devCsv"]), (None, None))
+
+
+class PeriodDelta(unittest.TestCase):
+    """SSOT Δ: 기간을 고르면 바로 앞 같은 길이 기간 대비 (D-3, D-11, 2026-11-06 '추천대로 진행해'): the page showed no Δ in
+    period mode, though the stores hold the period before."""
+
+    QUERY = "time=2026-09-01..2026-09-30"
+
+    def build(self, previous, query=QUERY):
+        calls = []
+
+        async def get(path, params=None):
+            from bff.api import query as q
+            pairs = list(q(params).multi_items())
+            if path != "funnel/acr":
+                return OPTIONS if path == "filters/options" else DATES
+            calls.append(pairs)
+            return previous if ("top_brands", "100") in pairs else acr_body(brands=[ours("Hyundai", 30, 5), rival("Toyota", 20, 4), rival("New", 10, 2)],
+                                                                            own=own_total(30, 5, ["Hyundai"]))
+        with mock.patch("bff.api.get", get):
+            return run(acr.renewal(QueryParams(query)))["body"]["view"], calls
+
+    def test_each_brand_and_own_compare_with_the_period_before(self):
+        before = acr_body(brands=[ours("Hyundai", 25, 5), rival("Toyota", 25, 4)], own=own_total(25, 5, ["Hyundai"]))
+        v, calls = self.build(before)
+        self.assertTrue(v["showDelta"])
+        self.assertEqual(v["ownDelta"], 5.0)
+        self.assertEqual({b["brand"]: b["d"] for b in v["brands"]}, {"Hyundai": 5.0, "Toyota": -5.0, "New": None})
+        prev = dict(next(c for c in calls if ("top_brands", "100") in c))
+        self.assertEqual((prev["from"], prev["to"]), ("2026-08-01", "2026-08-31"))
+
+    def test_nothing_measured_before_leaves_no_delta(self):
+        v, _ = self.build(acr_body(totals={"prompt_runs": 0, "prompts": 0, "iterations": 0, "engines": [], "catalog_acr_prompts": None}))
+        self.assertTrue(v["showDelta"])
+        self.assertIsNone(v["ownDelta"])
+        self.assertEqual({b["d"] for b in v["brands"]}, {None})
+
+    def test_a_snapshot_asks_for_no_period_before(self):
+        v, calls = self.build(acr_body(), query="")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(v["showDelta"])
 
 
 class Sweeps(unittest.TestCase):

@@ -28,6 +28,11 @@ export interface AcrBrandRow extends AcrBrand {
   canCompare: boolean;
   /** Top1 bar width (% of the largest Top1 on the board) */
   top1Bar: number;
+  /** 후보 → 최종 선택: 후보군 포함율, Top1 ACR, the distance to the brand average line (pp; exact, and to 0.1 for the CSV) */
+  mapX: number;
+  mapY: number;
+  dev: number | null;
+  devCsv: number | null;
 }
 
 export type AcrBattleView = "all" | "notown" | "split";
@@ -135,6 +140,8 @@ export interface RnAcrView {
   /** the compare brands before any pick (the best rival) */
   defaultCompare: string[];
   showDelta: boolean;
+  /** the brand average line's slope (ΣTop1 ACR ÷ Σ후보군 포함율 of the brands shown); null with no brand shortlisted */
+  k: number | null;
   /** 당사 rank among the chosen rivals (the reader's, beyond the table; null without 당사), the leader,
    * 당사 − leader (pp) and the field size (chosen rivals + 당사) */
   rank: number | null;

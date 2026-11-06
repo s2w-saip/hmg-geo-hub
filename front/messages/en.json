@@ -5196,7 +5196,7 @@
       "hero": {
         "label": "Top1 ACR (final pick rate)",
         "basisRound": "vs the previous round",
-        "basisPeriod": "Period total — see the trend for change",
+        "basisPeriod": "Period total · vs the equal period just before",
         "basisDay": "The trend is by measurement day, so no change is shown",
         "standing": "<b>#{rank}</b> of {n} brands",
         "leadFirst": "+{gap}pp over #2 {brand}",
@@ -5212,6 +5212,20 @@
         "tooltipRound": "Round {x}",
         "trendAria": "Top1 ACR trend",
         "noTrend": "No trend data"
+      },
+      "map": {
+        "title": "Shortlist → final pick",
+        "infoLabel": "How to read",
+        "info": "x = shortlist rate, y = Top1 ACR. Dashed = the brand average line (Σ Top1 ACR ÷ Σ shortlist rate of the brands shown). Above it = picked more than brands shortlisted as often; below = picked less. The units differ (repetition · cell), so the line is a reference, not a conversion rate.",
+        "chip": "{n} brands · vs the average line",
+        "x": "Shortlist rate →",
+        "y": "↑ Top1 ACR",
+        "line": "Brand average",
+        "above": "Above: picked more than average",
+        "below": "Below: picked less than average",
+        "aria": "Top1 ACR against the shortlist rate, with the brand average line",
+        "tip": "{brand} — shortlist rate {x} · Top1 ACR {y} · vs average {dev}",
+        "colDev": "vs average"
       },
       "board": {
         "title": "ACR by brand",
@@ -5699,13 +5713,14 @@
         "standingNarrowedPeriod": "The gap narrowed by {move}pp since the previous period",
         "standingSamePeriod": "No change in the gap since the previous period",
         "standingDetail": "Us {own}",
+        "competitorAvg": "competitor average (top 5)",
         "typeTrail": {
           "tag": "Mention type",
           "title": "{gap}pp behind {ref} in {type}"
         },
         "typeLead": {
           "tag": "Mention type",
-          "title": "Ahead of the compare brands in every type — closest to {ref} in {type} ({gap})",
+          "title": "Ahead of the reference in every type — closest to {ref} in {type} ({gap})",
           "titleSame": "Level with {ref} in {type} — behind in no type"
         },
         "typeDetail": "Share within the type · us {own}",
@@ -5733,13 +5748,14 @@
         "negativeDetail": "Sentiment signals on our mentions"
       },
       "hero": {
+        "average": "Competitor average (top 10)",
         "trendTitleExposure": "Exposure by brand",
         "trendTitleSov": "Share of voice by brand",
         "trendNoteLabel": "Metric note",
         "basisLabel": "Basis",
         "basisAll": "AI Visibility counts only the representative answer when a prompt was measured more than once in a round on the same engine and market. The other KPIs count every answer. The values match the Overview cards.",
         "exposureDenominator": "Representative answers",
-        "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. With no compare brand only our line is drawn.",
+        "trendNote": "{metric} (%) by brand — the weekly ranking under ‘Brand detail’ counts mentions, a different metric. Dashed = the competitor average (each round, the top 10 rivals by mentions with a value).",
         "standing": "<b>#{rank}</b> of {n} brands compared",
         "leadFirst": "+{gap}pp over #2 {brand}",
         "leadBehind": "{gap}pp vs #1 {brand}",
@@ -5806,6 +5822,7 @@
         "unitLabel": "Unit",
         "unitPct": "Rate",
         "unitCount": "Count",
+        "avg": "Competitor average (top {n})",
         "vs": "vs {brand}",
         "colType": "Type",
         "colOwnExposure": "Our exposure",
@@ -5823,10 +5840,8 @@
         "colRoundAnswers": "Answers in the round",
         "footSov": "Denominator = our type signals (mix across types)",
         "footCompare": "Share within the type = each brand's part of the type's signals",
-        "noCompare": "Pick a compare brand to see the gap",
         "dotTip": "{type} · {who}\nShare within the type {value}",
         "rowAria": "{type}: us {own}, {ref} {refValue}",
-        "rowAriaOwn": "{type}: us {own}",
         "aria": "Share within each mention type"
       },
       "favor": {
@@ -5974,7 +5989,7 @@
         "presenceTip": "Question type = the catalog's brand-presence label (the filter 'Brand presence')\nUnbranded {unbranded} answers · branded {branded} answers (this round)\nThe label's definition is being confirmed upstream.",
         "cmpTitle": "Trends by metric",
         "cmpNote": "Us vs compare brands",
-        "cmpInfo": "Each metric's values per round for us and the compare brands; the three charts point at the same round together. Values = per round (the light band = between us and the first compare brand). Gap = how far ahead (+) or behind (−) we are: us − the compare brand (first mention: the compare brand − us, as lower is earlier). Favorability has no competitor rounds and is left out (the brand table's favorability column is this round's).",
+        "cmpInfo": "Each metric's values per round for us and the compare brands; the three charts point at the same round together. Values = per round (the light band = between us and the first compare brand). Gap = how far ahead (+) or behind (−) we are: us − the compare brand (first mention: the compare brand − us, as lower is earlier). Dashed = the competitor average (top 10 rivals by mentions; exposure and share). Favorability has no competitor rounds and is left out (the brand table's favorability column is this round's).",
         "cmpMode": "Chart values",
         "modeValue": "Values",
         "modeGap": "Gap",

@@ -314,32 +314,40 @@ export interface RnScatterPoint {
 }
 
 /**
- * Two measures of the same brands (x 0–100 %, y 0–max %), one dot per brand and no reference
- * line (a line through the dots was a baseline the chart made, 2026-10-31 ⛔L). Labels:
- * emphasised points first, then the tallest; a label goes right, else left, else
- * (unemphasised) is dropped — never on a dot.
+ * Two measures of the same brands (x 0–100 %, y 0–max %), with a reference line through the
+ * origin of slope `k` (none without one) and two captions. Labels: emphasised points first,
+ * then the tallest; a label goes right, else left, else (unemphasised) is dropped — never on a dot.
  */
 export function RnScatterChart({
   points,
+  k,
   height,
   ariaLabel,
   xTitle,
   yTitle,
+  lineLabel,
+  above,
+  below,
   pct,
   lit = [],
   onHover,
 }: {
   points: ReadonlyArray<RnScatterPoint>;
+  k: number | null;
   height: number;
   ariaLabel: string;
   xTitle: string;
   yTitle: string;
+  lineLabel: string;
+  above: string;
+  below: string;
   pct: (v: number) => string;
   lit?: ReadonlyArray<string>;
   onHover?: (key: string | null) => void;
 }) {
   const yTicks = rnNiceTicks(0, Math.max(1, ...points.map((p) => p.y)) * 1.15, 4);
   const top = yTicks[yTicks.length - 1];
+  const line = k != null && k > 0 ? { k, xEnd: Math.min(100, top / k), lineLabel, above, below } : null;
   return (
     <div role="img" aria-label={ariaLabel} className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -348,7 +356,18 @@ export function RnScatterChart({
           <XAxis type="number" dataKey="x" domain={[0, 100]} ticks={[0, 20, 40, 60, 80, 100]} tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}%`} />
           <YAxis type="number" dataKey="y" width={44} domain={[0, top]} ticks={yTicks} tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${v}%`} />
           <Scatter data={points as RnScatterPoint[]} isAnimationActive={false} shape={() => <g />} />
-          <ScatterMarks points={points} top={top} xTitle={xTitle} yTitle={yTitle} pct={pct} lit={lit} onHover={onHover} />
+          {line ? (
+            <ReferenceLine
+              segment={[
+                { x: 0, y: 0 },
+                { x: line.xEnd, y: line.k * line.xEnd },
+              ]}
+              stroke="var(--color-rn-faint)"
+              strokeDasharray="4 4"
+              ifOverflow="hidden"
+            />
+          ) : null}
+          <ScatterMarks points={points} top={top} line={line} xTitle={xTitle} yTitle={yTitle} pct={pct} lit={lit} onHover={onHover} />
         </ScatterChart>
       </ResponsiveContainer>
     </div>
@@ -358,6 +377,7 @@ export function RnScatterChart({
 function ScatterMarks({
   points,
   top,
+  line,
   xTitle,
   yTitle,
   lit,
@@ -365,6 +385,7 @@ function ScatterMarks({
 }: {
   points: ReadonlyArray<RnScatterPoint>;
   top: number;
+  line: { k: number; xEnd: number; lineLabel: string; above: string; below: string } | null;
   xTitle: string;
   yTitle: string;
   pct: (v: number) => string;
@@ -403,6 +424,19 @@ function ScatterMarks({
       <text x={plot.x + plot.width} y={plot.y + plot.height + 34} textAnchor="end" fontSize={12} fontWeight={600} fill="var(--color-rn-ink-2)">
         {xTitle}
       </text>
+      {line ? (
+        <>
+          <text x={X(line.xEnd) - 6} y={Y(line.k * line.xEnd) + (line.xEnd < 100 ? 14 : -8)} textAnchor="end" fontSize={11} fontWeight={600} fill="var(--color-rn-muted)">
+            {line.lineLabel}
+          </text>
+          <text x={plot.x + 8} y={plot.y + 14} fontSize={11} fontWeight={600} fill="var(--color-rn-muted)">
+            {line.above}
+          </text>
+          <text x={plot.x + plot.width - 6} y={plot.y + plot.height - 8} textAnchor="end" fontSize={11} fontWeight={600} fill="var(--color-rn-muted)">
+            {line.below}
+          </text>
+        </>
+      ) : null}
       {draw.map(({ d, i }) => {
         const l = labels.get(i);
         const dim = fading && !lit.includes(d.p.key);

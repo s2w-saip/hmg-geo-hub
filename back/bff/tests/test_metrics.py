@@ -68,6 +68,28 @@ class Formulas(unittest.TestCase):
         self.assertEqual(f.prompt_winners(pairs), {(1, "e"): {"brand": "BMW", "choice": 3, "is_own": False}})
 
 
+class Baselines(unittest.TestCase):
+    """D-11 (2026-11-06): 경쟁사 평균 and the ACR brand average line. Both are references the data server defines, marked
+    '분석팀 리뷰 필요'."""
+
+    def test_the_average_is_over_the_values_there_are(self):
+        self.assertEqual(f.rival_average([10, None, 20]), 15)
+        self.assertEqual(f.rival_average([{"num": 1, "den": 4}, {"num": 0, "den": 0}]), 25)
+        self.assertIsNone(f.rival_average([None]))
+
+    def test_the_top_rivals_are_by_mentions_ties_as_given(self):
+        rows = [{"brand": "a", "mentions": 1}, {"brand": "b", "mentions": 3}, {"brand": "c", "mentions": 3}, {"brand": "d", "mentions": 2}]
+        self.assertEqual([r["brand"] for r in f.top_rivals(rows, 3)], ["b", "c", "d"])
+
+    def test_the_line_runs_through_the_shortlisted_brands(self):
+        self.assertEqual(f.average_line([(50, 30), (50, 10), (0, 40), (None, 40)]), 0.4)
+        self.assertIsNone(f.average_line([(0, 40)]))
+
+    def test_the_distance_is_from_the_line(self):
+        self.assertEqual(f.line_distance(50, 30, 0.4), 10)
+        self.assertIsNone(f.line_distance(50, 30, None))
+
+
 class Adapter(unittest.TestCase):
     def test_refuses_the_card_release(self):
         class Card:

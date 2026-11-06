@@ -29,6 +29,7 @@ from bff.metrics.display import share as share_pct, share1, share_whole
 from bff.access import BRANDS, reader_scope
 from bff.hub_stores import service_week
 from bff.metrics import compute
+from bff.metrics.formulas import rival_average, top_rivals
 from bff.screens import screen, split_context
 from bff.screens._competitors import competitor_value_of
 from bff.screens._convert import Exact, delta1, exact, pct1_or_null, rank_avg
@@ -51,6 +52,8 @@ TYPE_STRENGTH = ("final_choice", "recommendation", "comparison", "definition", "
 #: competitors' moves: no threshold or HUB priority decides which show or their tone, which follows the direction
 #: only — a competitor's move is not good or bad in itself (2026-10-30 W6 review, the user's go-ahead).
 FINDING_ORDER = {"standingLead": 6, "standingTrail": 6, "engine": 5, "typeTrail": 4, "typeLead": 4, "negative": 3, "mover": 2, "climb": 1}
+#: 경쟁사 평균 per type: the rivals with the most mentions (the hero line's are the KPI brand trend's top 10)
+TYPE_AVG_TOP = 5
 #: competitor rows on the board (the original table's cap, own rows excluded)
 BOARD_COMPETITORS = 12
 #: board rows shown before "more" (mention-rate BOARD_TOP)
@@ -99,6 +102,12 @@ def _js_sum(values) -> float:
 
 def round1(n: float) -> float:
     return _exact_round1(n)
+
+
+def _average1(values: Any) -> Any:
+    """경쟁사 평균 to 0.1, kept exact (its gap subtracts the exact value and rounds once); None without a value."""
+    mean = rival_average(exact(v) for v in values)
+    return None if mean is None else Exact(round1(mean), mean)
 
 
 def _sort(items: list, cmp) -> list:
@@ -391,9 +400,8 @@ def board(inp: dict) -> dict:
 
 
 def hero_trend_series(hero: dict, trend: Any, metric: str, compare: list[str]) -> dict:
-    """Hero chart series on the hero axis: 당사 + the compare brands. Without a compare brand it is 당사's line alone: the
-    competitors' average line (the top-10 rivals' mean per round, over whichever had a value) was a baseline the HUB
-    made (2026-10-31 ⛔L, renewal audit 15)."""
+    """Hero chart series on the hero axis: 당사, the compare brands and, asked without a compare brand, 경쟁사 평균 = the
+    KPI brand trend's top-10 rivals' mean per round, over whichever had a value (D-11, 2026-11-06: back from ⛔L)."""
     x = [p["key"] for p in hero["points"]]
     by_bucket = {b["bucketStart"]: b for b in (trend or {}).get("buckets") or []} if trend else {}
 
@@ -405,8 +413,11 @@ def hero_trend_series(hero: dict, trend: Any, metric: str, compare: list[str]) -
         return hit.get("exposurePct") if metric == "exposure" else hit.get("sharePct")
 
     competitors = [b["brand"] for b in ((trend or {}).get("brands") or []) if not b.get("isTracked")] if trend else []
+    # the reader's pinned top rival only adds a line to compare, it is not one of the top 10
+    top = [b["brand"] for b in ((trend or {}).get("brands") or []) if not b.get("isTracked") and not b.get("pinned")] if trend else []
     brands = [{"key": key, "values": [value_of(key, k) for k in x]} for key in compare if key in competitors]
-    return {"x": x, "own": [p["pct"] for p in hero["points"]], "brands": brands}
+    average = [_average1(value_of(b, k) for b in top) for k in x] if not compare and top else None
+    return {"x": x, "own": [p["pct"] for p in hero["points"]], "brands": brands, "average": average}
 
 
 # ── AI 엔진별 ─────────────────────────────────────────────────────────────────
@@ -439,28 +450,30 @@ def engine_rows(engine: Any, metric: str, prev_engines: dict | None = None) -> d
 
 
 def type_compare_base(tb: dict, brands: list[dict]) -> dict:
-    """The part of type_compare_rows no pick changes (the brand index and 당사 per type), computed once for the cards
-    that run every pick. The top-5 rivals' average per type, the reference without a compare brand, was a baseline
-    the HUB made and is gone (2026-10-31 ⛔L, renewal audit 15)."""
+    """The part of type_compare_rows no pick changes (the brand index, 당사 and 경쟁사 평균 per type), computed once for
+    the cards that run every pick. 경쟁사 평균 = the top-5 rivals by mentions, the reference without a compare brand
+    (D-11, 2026-11-06: back from ⛔L)."""
     by_brand = {b["brand"]: b for b in tb["brands"]}
+    rivals = top_rivals([b for b in brands if not b.get("isTracked") and b["brand"] in by_brand], TYPE_AVG_TOP)
     types = []
     for type_ in TYPE_STRENGTH:
         total = tb["totals"][type_]
         own = pct_or_null(_js_sum(b["types"][type_] for b in tb["brands"] if b.get("isTracked")), total)
-        types.append((type_, total, own))
+        avg = _average1(pct_or_null(by_brand[b["brand"]]["types"][type_], total) for b in rivals)
+        types.append((type_, total, own, avg))
     return {"byBrand": by_brand, "types": types}
 
 
 def type_compare_rows(inp: dict, base: dict | None = None) -> list[dict]:
-    """Per type: 당사, the compare brands and the reference = the leading compare brand with a value (none without
-    one: no gap). `base` = type_compare_base(inp["typesByBrand"], inp["brands"]) when the caller has it."""
+    """Per type: 당사, the compare brands, 경쟁사 평균 and the reference = the leading compare brand with a value, else
+    경쟁사 평균. `base` = type_compare_base(inp["typesByBrand"], inp["brands"]) when the caller has it."""
     tb = inp.get("typesByBrand")
     if not tb:
         return []
     base = base or type_compare_base(tb, inp["brands"])
     by_brand = base["byBrand"]
     out = []
-    for type_, total, own in base["types"]:
+    for type_, total, own, avg in base["types"]:
 
         def share(n: Any, total=total) -> Any:
             return pct_or_null(n, total)
@@ -470,13 +483,13 @@ def type_compare_rows(inp: dict, base: dict | None = None) -> list[dict]:
             hit = by_brand.get(brand)
             dots.append({"brand": brand, "value": share(hit["types"][type_]) if hit and not hit.get("isTracked") else None})
         valued = [d for d in dots if d["value"] is not None]
-        ref = {"brand": None, "value": None}
+        ref = {"brand": None, "value": avg}
         if valued:
             ref = valued[0]
             for c in valued[1:]:
                 if c["value"] > ref["value"]:
                     ref = c
-        out.append({"type": type_, "own": own, "dots": dots, "ref": ref, "gap": delta_pp(own, ref["value"])})
+        out.append({"type": type_, "own": own, "avg": avg, "dots": dots, "ref": ref, "gap": delta_pp(own, ref["value"])})
     return out
 
 
@@ -715,9 +728,8 @@ def _standing_finding(ex: Any) -> dict | None:
 
 
 def _type_finding(types_rows: Any) -> dict | None:
-    """당사 against the leading compare brand of each type; none without a compare brand (the top-5 rival average it fell
-    back to is gone, 2026-10-31 ⛔L)."""
-    types = [t for t in (types_rows or []) if t["gap"] is not None and t["ref"]["brand"] is not None]
+    """당사 against each type's reference: its leading compare brand, else 경쟁사 평균 (ref None)."""
+    types = [t for t in (types_rows or []) if t["gap"] is not None]
     if not types:
         return None
     # the type of the smallest gap (the largest trail, else the smallest lead): magnitude only, no type preferred
@@ -728,8 +740,9 @@ def _type_finding(types_rows: Any) -> dict | None:
     tone = "warn" if trail else "good" if pick["gap"] > 0 else "info"
     out = {"kind": kind, "tone": tone, "pri": FINDING_ORDER[kind], "target": "sec-mix", "kpi": "exposure"}
     ref_brand = pick["ref"]["brand"]
-    out["brand"] = ref_brand
-    out["params"] = {"type": pick["type"], "ref": ref_brand, "gap": abs(pick["gap"]),
+    if ref_brand is not None:
+        out["brand"] = ref_brand
+    out["params"] = {"type": pick["type"], "ref": "" if ref_brand is None else ref_brand, "gap": abs(pick["gap"]),
                      "own": pick["own"] if pick["own"] is not None else 0}
     if pick["gap"] == 0:
         out["params"]["dir"] = "same"
@@ -826,7 +839,7 @@ def compare_subsets(covered: list[str]) -> list[tuple[str, list[str]]]:
 
 
 def ref_candidates(row: dict) -> list[str]:
-    """The compare brands tied at the leading value of a type row ([] = no compare brand with a value)."""
+    """The compare brands tied at the leading value of a type row ([] = 경쟁사 평균 is the reference)."""
     valued = [d for d in row["dots"] if d["value"] is not None]
     if not valued:
         return []
@@ -862,7 +875,7 @@ def rank_axis_ticks(y_max: float) -> list[int]:
 
 def type_dots_top(rows: list[dict]) -> int:
     """TypeDots axis top: max(10, ceil(max value × 1.1 / 10) × 10)."""
-    vals = [v for r in rows for v in [r["own"], *[d["value"] for d in r["dots"]]] if v is not None]
+    vals = [v for r in rows for v in [r["own"], r["avg"], *[d["value"] for d in r["dots"]]] if v is not None]
     m = 0
     for v in vals:
         if v > m:
@@ -1103,7 +1116,8 @@ def rate_hero_payload(metric: str, sub: Any, prev: Any, engine: Any, period: Any
     return {
         "delta": hero["delta"],
         "standing": standing,
-        "trend": {"missing": hero["trendMissing"], "x": base["x"], "own": base["own"],
+        "trend": {"missing": hero["trendMissing"], "x": base["x"], "own": base["own"], "average": base["average"],
+                  "averageGaps": None if base["average"] is None else gap_series(base["own"], base["average"]),
                   "ownNum": [c[0] for c in counts], "ownDen": [c[1] for c in counts],
                   "competitors": uniq, "values": values, "gaps": [gap_series(base["own"], v) for v in values]},
         "board": {"rows": board_rows, "axis": b["axis"], "measuredCycles": b["measuredCycles"],
@@ -1123,14 +1137,15 @@ def _dot_cell(own: Any, value: Any) -> dict:
 
 def rate_types_payload(types_by_brand: Any, brands: list[dict], kpi: Any, engine: Any, trend: Any, degraded: bool) -> dict:
     """멘션 유형 card: the compare view (per type, per covered brand and per pick) and the 당사 view
-    of both metrics. `dots[i][t]` = covered[i] on TYPE_STRENGTH[t]; `options[pick].refs[t]` = the tied
-    leading compare brands (none: no reference, no gap)."""
+    of both metrics. `dots[i][t]` = covered[i] on TYPE_STRENGTH[t]; `avgRef[t]` = 경쟁사 평균 as the reference;
+    `options[pick].refs[t]` = the tied leading compare brands."""
     covered = covered_brands(brands, trend)
     type_base = type_compare_base(types_by_brand, brands) if types_by_brand else None
     base = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": covered}, type_base)
-    cmp: dict = {"covered": covered, "rows": [], "dots": [], "options": {}}
+    cmp: dict = {"covered": covered, "rows": [], "avgRef": [], "dots": [], "options": {}}
     if base:
-        cmp["rows"] = [{"type": r["type"], "own": r["own"]} for r in base]
+        cmp["rows"] = [{"type": r["type"], "own": r["own"], "avg": r["avg"]} for r in base]
+        cmp["avgRef"] = [_dot_cell(r["own"], r["avg"]) for r in base]
         cmp["dots"] = [[_dot_cell(r["own"], r["dots"][i]["value"]) for r in base] for i in range(len(covered))]
         for key, pick in compare_subsets(covered):
             rows = type_compare_rows({"typesByBrand": types_by_brand, "brands": brands, "compare": pick}, type_base)

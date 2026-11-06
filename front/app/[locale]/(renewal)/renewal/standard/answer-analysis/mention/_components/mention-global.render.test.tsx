@@ -30,7 +30,7 @@ const DELTA = { value: 1.2, basis: { kind: "round", prev: "2026-09-28" } };
 const rateMetric = (pct: number, standing: { rank: number; n: number } | null) => ({
   delta: DELTA,
   standing: standing && { ...standing, other: null, gap: null },
-  trend: { missing: false, x: AXIS, own: [pct - 1, pct], average: null, ownNum: [100, 110], ownDen: [200, 200], competitors: [], values: [], gaps: [] },
+  trend: { missing: false, x: AXIS, own: [pct - 1, pct], average: null, averageGaps: null, ownNum: [100, 110], ownDen: [200, 200], competitors: [], values: [], gaps: [] },
   board: { rows: [], axis: AXIS, measuredCycles: 2, barMax: pct },
 });
 const rateHero = { exposure: rateMetric(76.6, { rank: 1, n: 21 }), sov: rateMetric(18.4, { rank: 2, n: 21 }) } as unknown as RnRateHeroVM;

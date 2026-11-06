@@ -19,13 +19,15 @@ import {
   rnHighlightState,
 } from "@/components/renewal-ui";
 import { OWN_KEY, firstPicked, pickKey, type BoardRow, type RnRateTypesVM } from "../_data/screen-types";
-import { CONTEXT_COLOR, MentionCardActions, OWN_COLOR, deltaTxt, numTxt, pctTxt, ppTxt, slotLabel, useCompare, useMention } from "./mention-context";
+import { AVG_COLOR, AVG_KEY, CONTEXT_COLOR, MentionCardActions, OWN_COLOR, deltaTxt, numTxt, pctTxt, ppTxt, slotLabel, useCompare, useMention } from "./mention-context";
 import { BrandName, CardSkeleton, DegradedNote, DeltaChip, InfoTip, Legend, Stat, TwinTable, useDegradedText, useDeltaBasis, useDeltaNote } from "./mention-kit";
 import { KpiBasisChip } from "./mention-tabs";
 
 type KpiMetric = "exposure" | "sov";
 
 const DEF_KEY = { exposure: "visibility", sov: "shareOfVoice" } as const;
+/** Competitors in the type average (the BFF's top five by mentions). */
+const TYPE_AVG_TOP = 5;
 
 export function RateBody({ metric }: { metric: KpiMetric }) {
   const t = useTranslations("renewal.mention");
@@ -186,10 +188,10 @@ export function HeroTrend({ metric, title }: { metric: KpiMetric; title?: string
   const denLabel = metric === "sov" ? tTip("sovDenominator") : t("hero.exposureDenominator");
   const count = (v: number | null) => (v == null ? "—" : tTip("count", { n: numTxt(v, locale) }));
   const note = (i: number) => (s.ownNum[i] == null ? null : [`${numLabel} ${count(s.ownNum[i])}`, `${denLabel} ${count(s.ownDen[i])}`]);
-  // the picked brands' lines (looked up); none picked = 당사's line alone (the competitors' average line was a HUB-made
-  // baseline, 2026-10-31 ⛔L)
+  // the picked brands' lines (looked up) and the dashed 경쟁사 평균 (always: a compare brand is picked by default)
   const brands = compare.filter((b) => s.competitors.includes(b)).map((key) => ({ key, values: s.values[s.competitors.indexOf(key)] }));
   const series = [
+    ...(s.average ? [{ key: AVG_KEY, name: t("hero.average"), color: AVG_COLOR, values: s.average, dashed: true }] : []),
     ...brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.values })),
     { key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: s.own, own: true },
   ];
@@ -464,6 +466,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
   const [view, setView] = useState<"cmp" | "own">(initialView);
   const [unit, setUnit] = useState<"pct" | "count">("pct");
   const { rows: cmpRows, top } = useMemo(() => typeRowsOf(vm.cmp, compare), [vm.cmp, compare]);
+  const avgName = t("avg", { n: TYPE_AVG_TOP });
   const own = vm.own[metric];
   const ownRows = own.rows;
   const id = `type-${metric}`;
@@ -482,7 +485,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
     );
   const csv = () =>
     isCmp
-      ? { name: `mention-type-compare`, rows: [[t("colType"), ownLabel, ...compare, t("colGap"), t("colRef")], ...cmpRows.map((r) => [tType(r.type), r.own, ...r.dots.map((d) => d.value), r.gap, r.ref.brand ?? ""])] }
+      ? { name: `mention-type-compare`, rows: [[t("colType"), ownLabel, ...compare, avgName, t("colGap"), t("colRef")], ...cmpRows.map((r) => [tType(r.type), r.own, ...r.dots.map((d) => d.value), r.avg, r.gap, r.ref.brand ?? avgName])] }
       : {
           name: `mention-type-own-${metric}`,
           rows: [
@@ -537,17 +540,18 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
             items={[
               { key: OWN_KEY, name: ownLabel, color: OWN_COLOR, own: true },
               ...compare.map((b) => ({ key: b, name: b, color: colorOf(b) })),
+              { key: AVG_KEY, name: avgName, color: AVG_COLOR },
             ]}
           />
           {tableOn ? (
             <TwinTable
-              head={[t("colType"), ownLabel, ...compare, t("colGap")]}
-              rows={cmpRows.map((r) => [tType(r.type), pctTxt(r.own), ...r.dots.map((d) => pctTxt(d.value)), r.gap == null || !r.ref.brand ? "—" : `${ppTxt(r.gap)} ${t("vs", { brand: r.ref.brand })}`])}
+              head={[t("colType"), ownLabel, ...compare, avgName, t("colGap")]}
+              rows={cmpRows.map((r) => [tType(r.type), pctTxt(r.own), ...r.dots.map((d) => pctTxt(d.value)), pctTxt(r.avg), r.gap == null ? "—" : `${ppTxt(r.gap)} ${t("vs", { brand: r.ref.brand ?? avgName })}`])}
             />
           ) : (
             <TypeDots rows={cmpRows} top={top} />
           )}
-          <p className="m-0 text-rn-11 text-rn-muted">{compare.length ? t("footCompare") : `${t("footCompare")} · ${t("noCompare")}`}</p>
+          <p className="m-0 text-rn-11 text-rn-muted">{t("footCompare")}</p>
         </div>
       ) : (
         <div className="flex flex-col px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
@@ -598,6 +602,7 @@ export function Types({ metric, initialView = "cmp", picker }: { metric: KpiMetr
 interface TypeCompareRow {
   type: RnRateTypesVM["cmp"]["rows"][number]["type"];
   own: number | null;
+  avg: number | null;
   dots: Array<{ brand: string; value: number | null }>;
   ref: { brand: string | null; value: number | null };
   gap: number | null;
@@ -605,17 +610,18 @@ interface TypeCompareRow {
   hi: number | null;
 }
 
-/** The compare view of the picked brands: dots and the reference (the leading picked brand) looked up in the payload. */
+/** The compare view of the picked brands: dots and the reference (the leading picked brand, else 경쟁사 평균) looked up in the payload. */
 function typeRowsOf(cmp: RnRateTypesVM["cmp"], compare: readonly string[]): { rows: TypeCompareRow[]; top: number } {
   if (!cmp.rows.length) return { rows: [], top: 10 };
   const opt = cmp.options[pickKey(compare, cmp.covered)];
   const cell = (brand: string, t: number) => cmp.dots[cmp.covered.indexOf(brand)]?.[t] ?? null;
   const rows = cmp.rows.map((r, t) => {
     const ref = firstPicked(compare, opt?.refs[t] ?? []);
-    const at = (ref != null ? cell(ref, t) : null) ?? { value: null, gap: null, lo: null, hi: null };
+    const at = (ref != null ? cell(ref, t) : null) ?? cmp.avgRef[t];
     return {
       type: r.type,
       own: r.own,
+      avg: r.avg,
       dots: compare.map((brand) => ({ brand, value: cell(brand, t)?.value ?? null })),
       ref: { brand: ref, value: at.value },
       gap: at.gap,
@@ -633,6 +639,7 @@ function TypeDots({ rows, top }: { rows: TypeCompareRow[]; top: number }) {
   const tType = useTranslations("answerAnalysis.mentions.breakdown.type");
   const ticks = [0, top / 4, top / 2, (3 * top) / 4, top];
   const at = (v: number) => `${((v / top) * 100).toFixed(2)}%`;
+  const avgName = t("avg", { n: TYPE_AVG_TOP });
   const fading = lit.length > 0;
   return (
     <div role="img" aria-label={t("aria")} className="flex flex-col">
@@ -655,7 +662,7 @@ function TypeDots({ rows, top }: { rows: TypeCompareRow[]; top: number }) {
           <div
             key={r.type}
             role="group"
-            aria-label={r.ref.brand ? t("rowAria", { type: tType(r.type), own: pctTxt(r.own), ref: r.ref.brand, refValue: pctTxt(r.ref.value) }) : t("rowAriaOwn", { type: tType(r.type), own: pctTxt(r.own) })}
+            aria-label={t("rowAria", { type: tType(r.type), own: pctTxt(r.own), ref: r.ref.brand ?? avgName, refValue: pctTxt(r.ref.value) })}
             className="grid min-h-11 grid-cols-[84px_minmax(0,1fr)_92px] items-center gap-2.5 border-b border-rn-line last:border-0"
           >
             <span className="text-rn-13 font-semibold text-rn-ink">{tType(r.type)}</span>
@@ -664,6 +671,7 @@ function TypeDots({ rows, top }: { rows: TypeCompareRow[]; top: number }) {
                 <b key={v} aria-hidden className="absolute top-0 h-full w-px bg-rn-line" style={{ left: at(v) }} />
               ))}
               {lo != null && hi != null ? <span aria-hidden className={cx("absolute top-1/2 h-1.5 -translate-y-1/2 rounded", good ? "bg-rn-up/25" : "bg-rn-down/25")} style={{ left: at(lo), width: `calc(${at(hi)} - ${at(lo)})` }} /> : null}
+              {r.avg != null ? <span title={tip(avgName, r.avg)} className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45" style={{ left: at(r.avg), background: AVG_COLOR }} /> : null}
               {r.dots.map((d) =>
                 d.value == null ? null : (
                   <span
@@ -690,7 +698,7 @@ function TypeDots({ rows, top }: { rows: TypeCompareRow[]; top: number }) {
             </span>
             <span className={cx("text-right text-rn-12 font-bold tabular-nums", r.gap == null ? "text-rn-muted" : good ? "text-rn-up-ink" : "text-rn-danger-ink")}>
               {ppTxt(r.gap)}
-              {r.ref.brand ? <small className="block truncate text-rn-11 font-medium text-rn-muted">{t("vs", { brand: r.ref.brand })}</small> : null}
+              <small className="block truncate text-rn-11 font-medium text-rn-muted">{t("vs", { brand: r.ref.brand ?? avgName })}</small>
             </span>
           </div>
         );

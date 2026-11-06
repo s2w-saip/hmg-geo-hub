@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Stored with every precomputed (Gold) and cached value. A definition change moves it.
-DEFINITION_VERSION = "2026-11-06.7"
+DEFINITION_VERSION = "2026-11-06.8"
 
 # Populations (SSOT 공통 조건)
 MONITORING = "monitoring"                 # 모니터링 답변
@@ -172,7 +172,7 @@ METRICS: tuple[Metric, ...] = (
     Metric("unmentioned_split", "다른 브랜드 언급 · 브랜드 언급 없음 · 일부 엔진만 빠짐", "언급", "derived", "미언급 프롬프트를 전체 언급 유무로 나눈 수, 측정 엔진보다 언급 엔진이 적은 프롬프트 수", dims=("전체",), screens="Website Mention"),
     Metric("market_gaps", "브랜드 언급 없는 답변 · 언급 답변 변화", "언급", "derived", "국가별 전체 언급이 0인 모니터링 답변 수, tracked의 Δ", dims=("국가",), screens="Website Mention"),
     Metric("multi_rate", "복수 언급률 · 복수 언급 점유율 · 프롬프트", "언급", "derived", "브랜드 multi_answers ÷ answers, 브랜드 multi_mentions ÷ 표 브랜드 합, 복수 언급 고유 프롬프트", dims=("전체", "브랜드"), screens="레거시 Mention"),
-    Metric("rival_average", "경쟁사 평균(상위 N개사)", "언급", "derived", "엔진별로 언급 상위 N개 경쟁사 값의 평균", dims=("엔진",), screens="레거시 Mention", note="사용자 레거시 예외(2026-11-05)"),
+    Metric("rival_average", "경쟁사 평균(상위 N개사)", "언급", "derived", "언급 상위 N개 경쟁사 값 중 값이 있는 것의 평균. 엔진별은 레거시 규칙, 추이선은 회차마다 상위 10개사의 노출률 · 점유율, 유형별은 상위 5개사의 유형 안 점유율", dims=("엔진", "회차", "유형"), screens="레거시 Mention · Mention · Project Mention", note="사용자 레거시 예외(2026-11-05). 추이선 · 유형별은 D-11로 되살림(2026-11-06). 분석팀 리뷰 필요"),
     Metric("own_type_mix", "멘션 유형별 점유율 · 유형별 언급 건수(당사)", "언급", "derived", "당사 signals_<유형> ÷ 당사 5개 유형 합", dims=("전체", "유형"), screens="레거시 Mention"),
     Metric("branded_share", "브랜드 포함(시장별)", "언급", "derived", "국가별 브랜드 포함 프롬프트의 답변 수 ÷ answers", dims=("국가",), screens="Overview 시장별"),
     Metric("prompt_mentions", "프롬프트별 언급 수 · 점유율 · 신호 수 · 최고 순위", "언급", "derived", "프롬프트마다 브랜드 언급(또는 신호) ÷ 그 브랜드 합, 프롬프트 답변 중 가장 앞선 순위", gold=False, dims=("프롬프트", "브랜드"), screens="브랜드 서랍 · 신호 서랍", note="서랍을 열 때 조회 시점 집계"),
@@ -217,6 +217,7 @@ METRICS: tuple[Metric, ...] = (
     Metric("top1_acr", "Top1 ACR(선택률)", "ACR", "rate", "choice", "iterations", ACR_REPETITION, ssot=True, dims=("전체", "회차", "브랜드"), screens="ACR"),
     Metric("candidate_rate", "후보군 포함율", "ACR", "rate", "appeared_cells", "cells", ACR_REPETITION, ssot=True, dims=("전체", "브랜드"), screens="ACR"),
     Metric("model_conversion", "차종별 선택 전환율", "ACR", "rate", "model_choice", "model_iterations", ACR_REPETITION, ssot=True, dims=("차종",), screens="ACR"),
+    Metric("acr_average_line", "브랜드 평균선 · 평균선 대비", "ACR", "derived", "평균선 기울기 k = 표시된 브랜드의 Top1 ACR 합 ÷ 후보군 포함율 합, 평균선 대비 = Top1 ACR − k × 후보군 포함율", dims=("브랜드",), screens="ACR", note="단위가 달라(셀 · 반복) 비교 기준이고 전환율이 아니다. D-11로 되살림(2026-11-06). 분석팀 리뷰 필요"),
     Metric("head_to_head", "맞대결", "ACR", "rate", "own_wins", "duel_iterations", ACR_REPETITION, ssot=True, dims=("엔진", "브랜드"), screens="ACR", note="경쟁사 값은 rival_wins ÷ duel_iterations",
            review="SSOT 분모는 함께 후보에 오른 반복인데, geohub_gold_db acr_iter_fact는 셀마다 반복 1회 정도만 둔다(35,927회 중 3,763회). 표본 값이다"),
     # ── ACR: SSOT 밖의 화면 값 ──

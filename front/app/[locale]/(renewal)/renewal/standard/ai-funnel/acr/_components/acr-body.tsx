@@ -19,6 +19,7 @@ import {
   RnInfoTip,
   RnInfoTipItem,
   RnLineChart,
+  RnScatterChart,
   RnSectionHead,
   RnSegmented,
   RnSparkline,
@@ -31,7 +32,7 @@ import {
 } from "@/components/renewal-ui";
 import { useRnFilterReset } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import type { RnAcrInput, RnAcrView } from "../_data/screen-types";
-import { AcrCardActions, AcrProvider, CONTEXT_COLOR, OWN_COLOR, compareColor, deltaTxt, makeColorOf, pctTxt, useAcr, type AcrCtx } from "./acr-context";
+import { AcrCardActions, AcrProvider, CONTEXT_COLOR, OWN_COLOR, compareColor, deltaTxt, makeColorOf, pctTxt, ppTxt, useAcr, type AcrCtx } from "./acr-context";
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
 import { AcrConversion, AcrDuels } from "./acr-funnel";
 
@@ -134,6 +135,7 @@ function AcrMeasured({ input, view }: { input: RnAcrInput; view: RnAcrView }) {
         <AcrHero period={input.period} roundBuckets={input.roundBuckets} />
         <RnSectionHead id="sec-comp" title={t("sec.comp")} desc={t("sec.compDesc")} />
         <AcrBoard />
+        <AcrMap />
         <AcrConversion />
         <AcrDuels />
         <RnSectionHead id="sec-prompt" title={t("sec.prompt")} desc={t("sec.promptDesc")} />
@@ -440,7 +442,7 @@ function AcrBoard() {
     const rest = (
       <>
         <span className="justify-self-end">
-          {r.trend && view.showDelta ? (
+          {view.showDelta && (r.trend || r.d != null) ? (
             <RnDeltaChip delta={r.d} neutral={!r.own} format={(v) => `${Math.abs(v).toFixed(1)}pp`} emptyText={t("delta.none")} labels={DELTA_LABELS(t)} />
           ) : (
             <span className="text-rn-11 text-rn-muted" title={r.trend ? undefined : t("board.noTrendTip")}>
@@ -567,6 +569,61 @@ function AcrBoard() {
           </div>
         </>
       )}
+    </RnCard>
+  );
+}
+
+// ── 후보 → 최종 선택 (each brand's two values against the brand average line; catalog acr_average_line) ──
+
+function AcrMap() {
+  const { view, compare, colorOf, lit, hover, tables } = useAcr();
+  const t = useTranslations("renewal.acr");
+  const points = view.brands.map((b) => ({
+    key: b.brand,
+    name: b.brand,
+    x: b.mapX,
+    y: b.mapY,
+    color: colorOf(b.brand),
+    own: b.own,
+    emph: b.own || compare.includes(b.brand),
+    tip: t("map.tip", { brand: b.brand, x: pctTxt(b.coverage), y: pctTxt(b.choiceShare), dev: ppTxt(b.dev) }),
+    dev: b.dev,
+    devCsv: b.devCsv,
+  }));
+  const tableOn = tables.has("acr-map");
+  const csv = () => ({ name: "acr-shortlist-pick", rows: [[t("board.colBrand"), t("board.colCoverage"), t("board.colTop1"), t("map.colDev")], ...points.map((p) => [p.name, p.x, p.y, p.devCsv])] });
+  return (
+    <RnCard aria-label={t("map.title")}>
+      <RnCardHead
+        title={t("map.title")}
+        info={
+          <RnInfoTip label={t("map.infoLabel")}>
+            <RnInfoTipItem label={t("map.infoLabel")}>{t("map.info")}</RnInfoTipItem>
+          </RnInfoTip>
+        }
+        chips={<RnBasisChip>{t("map.chip", { n: points.length })}</RnBasisChip>}
+        actions={<AcrCardActions tableId="acr-map" section="sec-comp" csv={csv} />}
+      />
+      <div className="px-6 pb-5 [.rn-dense_&]:px-4.5 [.rn-dense_&]:pb-3.5">
+        {tableOn ? (
+          <TwinTable head={csv().rows[0]} rows={points.map((p) => [p.name, pctTxt(p.x), pctTxt(p.y), ppTxt(p.dev)])} />
+        ) : (
+          <RnScatterChart
+            points={points}
+            k={view.k}
+            height={320}
+            ariaLabel={t("map.aria")}
+            xTitle={t("map.x")}
+            yTitle={t("map.y")}
+            lineLabel={t("map.line")}
+            above={t("map.above")}
+            below={t("map.below")}
+            pct={(v) => `${v.toFixed(1)}%`}
+            lit={lit}
+            onHover={hover}
+          />
+        )}
+      </div>
     </RnCard>
   );
 }

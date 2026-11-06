@@ -143,17 +143,29 @@ describe("renewal ACR body: rounds compared", () => {
     expect(html).toContain(T.hero.basisPeriod);
     expect(html).toContain(`aria-label="${T.hero.trendAria}"`);
   });
+  // SSOT Δ, D-11 (2026-11-06): a period compares with the one before (the fixture's period before answers the same counts)
+  it("a period shows Δ against the period before", () => {
+    const view = bodies.period.view!;
+    expect(view.showDelta).toBe(true);
+    expect(view.ownDelta).toBe(0);
+    expect(render(bodies.period)).toContain(T.delta.flat);
+  });
 });
 
 describe("renewal ACR body: each number once (2026-11-05 Global 지표 정리)", () => {
-  it("has no round summary, no navy card and no 후보 → 최종 선택 map", () => {
+  it("has no round summary and no navy card", () => {
     for (const input of [bodies.snapshot, bodies.period]) {
       const html = render(input);
       expect(html).not.toContain('id="sec-summary"');
       expect(html).not.toContain('data-rn-tone="hero"');
-      expect(html).not.toContain('aria-label="후보 → 최종 선택"');
-      expect(html).not.toContain("후보군 포함율 대비 Top1 ACR");
     }
+  });
+  // D-11 (2026-11-06): the card is back with what makes it more than the board's two values
+  it("후보 → 최종 선택 draws the brands against the brand average line", () => {
+    const html = render(bodies.snapshot);
+    expect(html).toContain(`aria-label="${T.map.title}"`);
+    expect(html).toContain(`aria-label="${T.map.aria}"`);
+    expect(html).toContain(T.map.chip.replace("{n}", String(bodies.snapshot.view!.brands.length)));
   });
   it("the hero keeps Top1 ACR and 후보군 포함율; 1순위 선택 is the board's 최종 선택, the cells and repetitions the footer's", () => {
     const html = render(bodies.snapshot);

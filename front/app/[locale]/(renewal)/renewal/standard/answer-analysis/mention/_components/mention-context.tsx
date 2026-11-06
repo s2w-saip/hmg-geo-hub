@@ -3,7 +3,7 @@
 import { createContext, use, useContext, useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { RnCardActions, useRnToast } from "@/components/renewal-ui";
-import { RN_CONTEXT, RN_OWN, rnCompareColor } from "@/components/renewal-ui/palette";
+import { RN_CONTEXT, RN_GREY, RN_OWN, rnCompareColor } from "@/components/renewal-ui/palette";
 import { downloadCsv, type CsvCell } from "@/app/[locale]/(renewal)/renewal/_components/csv";
 import type { KpiTab } from "@/app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab";
 import type { RnMentionInput } from "./mention-input";
@@ -18,6 +18,9 @@ export const OWN_COLOR = RN_OWN;
 /** A compare brand's colour by its pick order: every Chart - Other colour, the list again past the fifteenth */
 export const compareColor = rnCompareColor;
 export const CONTEXT_COLOR = RN_CONTEXT;
+/** 경쟁사 평균: a reference that is read, the dashed line and the type card's diamond */
+export const AVG_COLOR = RN_GREY;
+export const AVG_KEY = "__avg";
 
 /** A signal the drawer lists the prompts of: a sentiment, or a mention type (renewal audit 7-3, the original type
  *  breakdown's drilldown; the signal route takes both). */

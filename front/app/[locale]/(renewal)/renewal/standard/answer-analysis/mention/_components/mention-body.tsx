@@ -288,10 +288,10 @@ export function Summary() {
         break;
       case "typeTrail":
       case "typeLead":
-        // against the leading compare brand of the type (the top-5 competitor average is gone, 2026-10-31 ⛔L)
+        // against the type's reference: its leading compare brand, else 경쟁사 평균
         title = t(f.kind === "typeLead" && p.dir === "same" ? "find.typeLead.titleSame" : `find.${f.kind}.title`, {
           type: tType(String(p.type) as "mention"),
-          ref: String(p.ref),
+          ref: p.ref ? String(p.ref) : t("find.competitorAvg"),
           gap: f.kind === "typeLead" ? `+${n1(p.gap)}pp` : n1(p.gap),
         });
         detail = t("find.typeDetail", { own: pctTxt(Number(p.own)) });

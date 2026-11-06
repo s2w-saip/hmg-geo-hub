@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { TrendingUp } from "lucide-react";
 import { RnCardHead, RnEmpty, RnLineChart, RnSegmented, cx } from "@/components/renewal-ui";
 import { OWN_KEY } from "../_data/screen-types";
-import { MentionCardActions, OWN_COLOR, pctTxt, posTxt, slotLabel, useCompare, useMention } from "./mention-context";
+import { AVG_COLOR, AVG_KEY, MentionCardActions, OWN_COLOR, pctTxt, posTxt, slotLabel, useCompare, useMention } from "./mention-context";
 import { DegradedNote, DeltaChip, InfoTip, useDegradedText } from "./mention-kit";
 import { KPI_KEY } from "./mention-global-trends";
 
@@ -25,6 +25,9 @@ interface Panel {
   brands: Array<{ key: string; values: (number | null)[]; gaps: (number | null)[]; delta: number | null }>;
   ownDelta: number | null;
   missing: boolean;
+  /** 경쟁사 평균 and 당사 − it, on x (exposure · share; the first-rank panel has none) */
+  average: (number | null)[] | null;
+  averageGaps: (number | null)[] | null;
 }
 
 function usePanels(): Record<CmpMetric, Panel> {
@@ -46,6 +49,8 @@ function usePanels(): Record<CmpMetric, Panel> {
         }),
       ownDelta: hero[m].delta.value,
       missing: tr.missing,
+      average: tr.average,
+      averageGaps: tr.averageGaps,
     };
   };
   return {
@@ -62,6 +67,8 @@ function usePanels(): Record<CmpMetric, Panel> {
         }),
       ownDelta: rank.hero.delta.value,
       missing: !rank.fp,
+      average: null,
+      averageGaps: null,
     },
   };
 }
@@ -79,6 +86,7 @@ export function GlobalCompareTrends() {
   const dg = useDegradedText();
   const [mode, setMode] = useState<"value" | "gap">("value");
   const panels = usePanels();
+  const avgName = t("hero.average");
   const fmt = (m: CmpMetric, v: number | null) => (v == null ? "—" : m === "first-rank" ? t("rank.unit", { n: posTxt(v) }) : pctTxt(v));
   const gapTxt = (m: CmpMetric, v: number | null) => (v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}${m === "first-rank" ? "" : "pp"}`);
   const csv = () => ({
@@ -90,6 +98,7 @@ export function GlobalCompareTrends() {
         [ownLabel, ...p.own],
         ...p.brands.map((b) => [b.key, ...b.values]),
         ...p.brands.map((b) => [`${t("g.gap")} ${b.key}`, ...b.gaps]),
+        ...(p.average ? [[avgName, ...p.average], [`${t("g.gap")} ${avgName}`, ...(p.averageGaps ?? [])]] : []),
       ];
     }),
   });
@@ -113,17 +122,19 @@ export function GlobalCompareTrends() {
         }
         actions={<MentionCardActions section="sec-g-cmp" csv={csv} />}
       />
-      {!compare.length ? (
+      {!compare.length && !panels.exposure.average ? (
         <RnEmpty className="mx-5 mb-5">{t("g.cmpEmpty")}</RnEmpty>
       ) : (
         <div className="grid grid-cols-1 pb-4 @min-[1100px]/rncontent:grid-cols-3">
           {METRICS.map((m, idx) => {
             const p = panels[m];
             const invert = m === "first-rank";
+            const avgValues = mode === "gap" ? p.averageGaps : p.average;
+            const avgLine = avgValues ? [{ key: AVG_KEY, name: avgName, color: AVG_COLOR, values: avgValues, dashed: true }] : [];
             const series =
               mode === "gap"
-                ? p.brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.gaps }))
-                : [...p.brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.values })), { key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: p.own, own: true }];
+                ? [...avgLine, ...p.brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.gaps }))]
+                : [...avgLine, ...p.brands.map((b) => ({ key: b.key, name: b.key, color: colorOf(b.key), values: b.values })), { key: OWN_KEY, name: ownLabel, color: OWN_COLOR, values: p.own, own: true }];
             return (
               <div key={m} data-rn-gcmp={m} className={cx("min-w-0 px-5", idx > 0 && "@min-[1100px]/rncontent:border-l @min-[1100px]/rncontent:border-rn-line")}>
                 <div className="mb-1.5 flex items-baseline gap-2">
@@ -193,6 +204,19 @@ export function GlobalCompareTrends() {
                         </tr>
                       );
                     })}
+                    {p.average ? (
+                      <tr data-rn-gcmp-avg className="border-b border-rn-line last:border-0">
+                        <td className="py-1.5">
+                          <span className="inline-flex items-center gap-2 font-semibold text-rn-ink-2">
+                            <i aria-hidden className="w-2 border-t-2 border-dashed" style={{ borderColor: AVG_COLOR }} />
+                            {avgName}
+                          </span>
+                        </td>
+                        <td className="py-1.5 text-right text-rn-ink-2">{fmt(m, lastOf(p.average))}</td>
+                        <td className="py-1.5 text-right text-rn-muted">—</td>
+                        <td className="py-1.5 text-right font-semibold text-rn-muted">{gapTxt(m, lastOf(p.averageGaps ?? []))}</td>
+                      </tr>
+                    ) : null}
                   </tbody>
                 </table>
               </div>

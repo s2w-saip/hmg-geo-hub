@@ -26,13 +26,15 @@ from bff import api
 from bff.access import reader_scope
 from bff.hub_stores import service_week
 from bff.screens import screen, split_context
-from bff.screens._convert import as_of_date, delta1, filter_notices, pct1_or_null, whole_suppression
+from bff.metrics.formulas import average_line, line_distance
+from bff.screens._compare import prev_period_filters
+from bff.screens._convert import as_of_date, delta1, exact, filter_notices, pct1_or_null, whole_suppression
 from bff.screens._filters import load_filter_dates, load_panel_options, read_standard_filters, to_catalog_rows
-from bff.screens._js import is_num, js_str
+from bff.screens._js import is_num, js_round, js_str
 from bff.screens._query import UMBRELLA_BRAND, analysis_query, to_api_params
 from bff.screens.overview import is_transient
 from bff.screens._sort import locale_compare, sort_by, table_orders
-from bff.screens._week import period_echo
+from bff.screens._week import period_echo, period_week
 from bff.screens.sources import source_query
 
 # ── JS helpers ───────────────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ def _territory_sheet(s: dict) -> dict:
                      for r in s["rows"]]}
 
 
-async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all", duels: bool = False) -> dict:
+async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all", duels: bool = False, top_brands: int | None = None) -> dict:
     """loadAcrScreen: GET /v1/funnel/acr with the screen's filters (analysisQuery) and the B097 flags. The renewal
     page asks for the first sheet's rows only (territory_rows=first; acr/renewal-sheet reads the others) and for the
     head-to-head (include_head_to_head). `asOf` is the read's round (meta.as_of: the snapshot's, a period's last)."""
@@ -157,6 +159,8 @@ async def load_acr_screen(filters: dict, ctx: dict, territory_rows: str = "all",
         flags["territory_rows"] = territory_rows
     if duels:
         flags["include_head_to_head"] = True
+    if top_brands is not None:
+        flags["top_brands"] = top_brands
     params = to_api_params(analysis_query(filters, ctx), flags)
     res = await api.get("funnel/acr", params)
     data, meta = res["data"], res.get("meta")
@@ -407,6 +411,12 @@ def page_state(sp: dict, filters: dict) -> dict:
             "ownLabel": ", ".join(own) if own else UMBRELLA_BRAND}
 
 
+def _period_delta(current: Any, before: dict | None) -> float | None:
+    """Top1 ACR against the period before; none when either side has no value."""
+    value = None if before is None else before.get("choiceShare")
+    return delta1(current, value) if current is not None and value is not None else None
+
+
 def _last_two(vs: list) -> float | None:
     idx: list[int] = []
     i = len(vs) - 1
@@ -417,15 +427,17 @@ def _last_two(vs: list) -> float | None:
     return delta1(vs[idx[0]], vs[idx[1]]) if len(idx) == 2 else None
 
 
-def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
+def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool, previous: dict | None = None) -> dict:
     """acr-model.ts acrView. 당사 (its brands, trend and standing) is the reader's own total: every own brand, not the
-    own brands among the top series (2026-10-29 metric review R1)."""
+    own brands among the top series (2026-10-29 metric review R1). Δ = the last two rounds; with a period picked, the
+    same read of the period before (`previous`), for every brand it holds (SSOT Δ, D-11, 2026-11-06)."""
     own_brands = list(data.get("ownBrands") or [])
     series_keys = trend_brands(data)
     series_set = set(series_keys)
     dates = [b["date"] for b in data["trend"]]
     own_trend = [b["own"] for b in data["trend"]] if own is not None and data["trend"] else None
-    show_delta = bool(round_buckets and not period)
+    show_delta = bool(round_buckets and (not period or previous is not None))
+    before = {b["brand"]: b for b in (previous or {}).get("brands") or []}
 
     def series_of(brand: Any) -> list | None:
         if not isinstance(brand, str) or brand not in series_set:
@@ -435,8 +447,15 @@ def acr_view(data: dict, own: dict | None, round_buckets: bool, period: bool) ->
     brands = []
     for i, b in enumerate(data["brands"]):
         trend = own_trend if b["isOurs"] and len(own_brands) == 1 and own_trend is not None else series_of(b["brand"])
-        brands.append({**b, "rank": i + 1, "trend": trend, "d": _last_two(trend) if show_delta and trend is not None else None})
-    own_delta = _last_two(own_trend) if show_delta and own_trend is not None else None
+        if previous is not None:
+            d = _period_delta(b["choiceShare"], before.get(b["brand"]))
+        else:
+            d = _last_two(trend) if show_delta and trend is not None else None
+        brands.append({**b, "rank": i + 1, "trend": trend, "d": d})
+    if previous is not None:
+        own_delta = _period_delta(None if own is None else own.get("choiceShare"), previous.get("own"))
+    else:
+        own_delta = _last_two(own_trend) if show_delta and own_trend is not None else None
     rivals = [b["brand"] for b in data["brands"] if not b["isOurs"] and isinstance(b["brand"], str) and b["brand"] in series_set]
     comps = [b for b in data["brands"] if not b["isOurs"]]
     standing = data.get("ownStanding") or {"rank": None, "of": None}
@@ -683,9 +702,9 @@ def _sheet(s: dict) -> dict:
                        for sort, cmp in (("gap", by_gap), ("own", by_own), ("text", text))}}
 
 
-def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool) -> dict:
+def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool, previous: dict | None = None) -> dict:
     """acrView + every value the renewal cards derived from it."""
-    v = acr_view(data, own, round_buckets, period)
+    v = acr_view(data, own, round_buckets, period, previous)
     own_brands = v["ownBrands"]
     o = v["own"]
     lead = v["leader"]
@@ -694,15 +713,21 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
         x = _n(b["choiceShare"])
         max_t1 = x if x > max_t1 else max_t1
     max_t1 = max_t1 or 1
+    # 후보 → 최종 선택: the brand average line through the shown brands and each brand's distance to it (D-11, 2026-11-06)
+    k = average_line((exact(b["coverage"]), exact(b["choiceShare"])) for b in v["brands"])
     for b in v["brands"]:
         is_own = b["brand"] in own_brands
+        dev = line_distance(exact(b["coverage"]), exact(b["choiceShare"]), k)
         b.update({"own": is_own, "sibling": _sibling(b, is_own),
                   "canCompare": (not is_own) and b["brand"] in v["rivals"],
-                  "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100})
+                  "top1Bar": (_n(b["choiceShare"]) / max_t1) * 100,
+                  "mapX": _n(b["coverage"]), "mapY": _n(b["choiceShare"]), "dev": dev,
+                  "devCsv": None if dev is None else js_round(dev * 10) / 10})
     gap = None
     if o is not None and o.get("choiceShare") is not None and lead is not None and lead.get("choiceShare") is not None:
         gap = delta1(o["choiceShare"], lead["choiceShare"])
     v.update({
+        "k": k,
         "defaultCompare": v["rivals"][:1],
         "multiOwn": len(own_brands) > 1,
         "gap": gap,
@@ -724,6 +749,15 @@ def renewal_view(data: dict, own: dict | None, round_buckets: bool, period: bool
     return v
 
 
+async def load_previous_period(filters: dict) -> dict | None:
+    """The same read on the period just before the picked one, every brand it can name (a brand new to the top keeps its
+    Δ): {brands, own} in the standard shape. None outside period mode and for a period after the service week."""
+    prev = prev_period_filters(filters, await period_week(filters))
+    if prev is None:
+        return None
+    return (await load_acr_screen(prev, {"surface": "global", "scope": reader_scope()}, "first", top_brands=100))["data"]
+
+
 @screen("acr/renewal-header")
 async def renewal_header(q) -> dict:
     """The renewal ACR page header (outside the data Suspense): the period pill, its end the service week's last day at
@@ -742,14 +776,14 @@ async def renewal(q) -> dict:
     _, sp = split_context(q)
     filters = read_standard_filters(sp, reader_scope())
     st = page_state(sp, filters)
-    (acr, options, dates), coverage = await asyncio.gather(_global_reads(filters, "first", duels=True), load_acr_coverage(filters))
+    (acr, options, dates), coverage, previous = await asyncio.gather(_global_reads(filters, "first", duels=True), load_acr_coverage(filters), load_previous_period(filters))
     options, dates = covered_options(options, dates, coverage)
     props = {"stage": "acr", **_panel_props(options, acr["languageOptions"], dates)}
     data = acr["data"]
     own = dict(data["own"]) if data.get("own") is not None else None
     body = {"measured": bool(data["measured"]), "filtered": st["filtered"], "acrPromptCount": acr["acrPromptCount"],
             "roundBuckets": True, "period": st["period"], "asOf": acr["asOf"], "ownLabel": st["ownLabel"], "totals": data["totals"],
-            "view": renewal_view(data, own, True, st["period"]) if data["measured"] else None}
+            "view": renewal_view(data, own, True, st["period"], previous) if data["measured"] else None}
     return {"props": props, "body": body}
 
 

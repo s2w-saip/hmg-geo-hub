@@ -456,6 +456,12 @@ lists in order.
   renewal). This undoes the 2026-10-29 entry's 전체 bullet: `rn-favor-matrix` no longer reads the sentiment totals. In
   the 20 changed cases (`rn-fix-*` 7, `rn-live-*` 11, `rn-fn-favor-matrix(-model)`) only `rn-favor-matrix` moves, and
   each output equals its pre-927bb1f golden.
+- 2026-11-06 D-11 (the user's '추천대로 진행해'): 경쟁사 평균 and the ACR brand average line are back, and ACR compares a
+  picked period with the one before. 59 cases: `mention/rn-*` (trend.average · averageGaps, cmp.avgRef · rows[].avg, the
+  type findings without a compare brand and the option indices they shift, the dots' top) and `acr/*-rn-*` (view.k,
+  brands[].mapX · mapY · dev · devCsv; the period cases' showDelta, d, ownDelta, boardOrders.d). Every differing path
+  was listed and belongs to those. The recording holds no read of the period before: the 8 period `acr/renewal` tapes got
+  the case's own `funnel/acr` answer in its place, so their Δ are 0; `test_screens_acr.PeriodDelta` pins real values.
 
 | Folder | Cases | Covers |
 |---|---|---|
