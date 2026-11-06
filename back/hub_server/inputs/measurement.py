@@ -24,7 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from hub_server import input_db
 from hub_server.inputs.catalog_editor import CATALOG_LOCK, LOCK_TIMEOUT, encoded, refused
 from shared.account import Principal
-from shared.measurement_view import CURRENT_SQL, OPTIONS_SQL, options_of, view
+from shared.measurement_view import CURRENT_SQL, LIST_SQL, OPTIONS_SQL, listed, options_of, view
 
 CADENCES = ("weekly", "biweekly", "monthly")
 
@@ -148,6 +148,18 @@ async def read(project_id: UUID) -> dict | None:
     except (ConnectionError, OSError, asyncpg.PostgresError, TimeoutError):
         return None
     return {"item": view(row), "options": options, "editing": _pool is not None}
+
+async def listing() -> dict | None:
+    """Admin › 측정 설정: every project and its settings, from the input store alone. None when the store is not there."""
+    if not input_db.configured():
+        return None
+    try:
+        async with input_db.connection() as conn:
+            rows = await conn.fetch(LIST_SQL)
+            options = options_of(await conn.fetch(OPTIONS_SQL))
+    except (ConnectionError, OSError, asyncpg.PostgresError, TimeoutError):
+        return None
+    return {"items": [listed(r) for r in rows], "options": options, "editing": _pool is not None}
 
 async def write(project_id: UUID, body: MeasurementWrite, actor: Principal) -> dict:
     settings = settings_of(body)

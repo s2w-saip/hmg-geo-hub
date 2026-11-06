@@ -17,6 +17,7 @@
 | `/v1/hub/ga4-properties` 생성 · 변경 · 동작(`app.py:217 · 230 · 243`) | 3 | `input_db` 쓰기 | 허브 서버 | 1f |
 | `/v1/hub/global-prompts` 목록 · 옵션 · 상세 · 생성 · 변경 · 상태 | 6 | `input_db` 읽기 · 쓰기 | 허브 서버 | 1f |
 | `/v1/hub/projects/{id}/measurement` 읽기 · 쓰기 | 2 | `input_db` 읽기 · 쓰기 | 허브 서버 | 1f |
+| `/v1/hub/measurements` 읽기, `/v1/hub/projects` 쓰기 | 2 | `input_db` 읽기 · 쓰기 | 허브 서버 | 2a(새로 만듦) |
 | `/v1/hub/projects/{id}/prompts · prompt-tags · prompt-fields` 이력 1 · 쓰기 6 | 7 | `input_db` 읽기 · 쓰기 | 허브 서버 | 1f |
 | `/v1/hub/{source-overrides · source-seeds · source-socials · source-codes · interest-keywords · interest-sources · entity-roles}/history` | 7 | `input_db` 읽기 | 허브 서버 | 1f |
 | 위 7종의 쓰기 중 Gold 확인이 없는 것(출처 교정 해제, 시드 2, 소셜 2, 코드 2, 키워드 2, 출처 2) | 11 | `input_db` 쓰기 | 허브 서버 | 1f |
@@ -92,4 +93,4 @@ React가 부르지 않아 Next에 남는 것: `website/prompts/export`, `context
 - `website/prompts/export`의 `.xlsx`는 실제 xlsx가 아니다. `gold_reader/catalog.py`가 `format=xlsx`를 읽지 않아 JSON이 나오고, Next가 그 몸체에 `.xlsx` 파일 이름을 붙인다(기준선: `application/json` 70,978바이트).
 - `citation/domains-export`는 Gold 소스에서 404다(코드 주석대로, 화면은 실패 안내).
 - 그래서 1c의 'xlsx 다운로드 동일'은 실제 파일로 확인할 수 없다. 전후 동일 비교에 바이너리 스트림 스텁 테스트를 더한다.
-- `catalog.project`를 만드는 코드는 `sync_catalog.py:508`뿐이다. T10.1 뒤에는 새 프로젝트가 생기지 않으므로, 2a 범위표에서 Website · Global 입력과 함께 물어야 한다.
+- `catalog.project`를 만드는 코드는 `sync_catalog.py:508`뿐이었다. T10.1 뒤에는 새 프로젝트가 생기지 않으므로 2a에서 Admin › 측정 설정의 '프로젝트 만들기'를 넣었다(`docs/handoff/measurement-input-scope.md`).

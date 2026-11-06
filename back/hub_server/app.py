@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from hub_server import accounts, input_db, operations_db, proxy, saved_filters
 from hub_server import auth as hub_auth
 from hub_server.inputs import catalog_editor, entity_roles, ga4_registry, hub_catalog, interest, measurement, project_prompts, source_lists, source_overrides
+from hub_server.inputs import projects as project_add
 from shared import internal_token
 from shared.errors import parse
 
@@ -399,6 +400,23 @@ async def entity_role_clear(request: Request):
 
 
 # Project › Prompt (hub_stores/project_prompts.py): the top-level administrator only (project pages are, decision J).
+# Admin › 측정 설정 (T6.3): every project's settings, and a new project.
+@app.get("/v1/hub/measurements")
+async def measurements_list(request: Request):
+    await hub_auth.admin(request.headers.get("authorization"))
+    value = await measurement.listing()
+    if value is None:
+        raise HTTPException(503, "The input store is not available")
+    return input_json(value)
+
+
+@app.post("/v1/hub/projects")
+async def project_add_route(request: Request):
+    actor = await hub_auth.admin(request.headers.get("authorization"))
+    body = parse(project_add.ProjectAdd, await json_body(request), "project")
+    return input_json(await project_add.add(body, actor))
+
+
 @app.get("/v1/hub/projects/{project_id}/measurement")
 async def project_measurement_read(project_id: UUID, request: Request):
     await hub_auth.admin(request.headers.get("authorization"))

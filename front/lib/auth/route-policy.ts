@@ -353,6 +353,13 @@ export const ROUTES = [
     roles: ADMIN_ONLY,
     group: "admin" as const,
   },
+  // HUB measurement settings (T6.3, 2026-11-07, lib/hub): new in the renewal, no original page; the renewal sidebar's Admin › 측정 설정 opens it.
+  {
+    path: "/renewal/admin/standards/measurement",
+    key: "renewalAdminMeasurement",
+    roles: ADMIN_ONLY,
+    group: "admin" as const,
+  },
   // HUB GA4 property registry (2026-10-29, lib/hub): same roles as the original GA4 연동 page; the
   // renewal sidebar's Admin › GA4 연동 opens it.
   {

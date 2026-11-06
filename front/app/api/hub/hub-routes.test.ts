@@ -23,6 +23,7 @@ const interestKeywords = await import("./interest-keywords/[[...rest]]/route");
 const interestSources = await import("./interest-sources/[[...rest]]/route");
 const entityRoles = await import("./entity-roles/[[...rest]]/route");
 const projects = await import("./projects/[id]/[...rest]/route");
+const newProject = await import("./projects/route");
 
 const ID = "8f6f0c1e-2b7a-4c1e-9d2a-1b2c3d4e5f60";
 const SITE = "http://127.0.0.1:3333";
@@ -273,6 +274,20 @@ describe("/api/hub/entity-roles", () => {
     ] as const) {
       expect((await p).status).toBe(status);
     }
+    expect(bff.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/hub/projects", () => {
+  it("passes a new project to the hub server with the token, from this site only", async () => {
+    bff.fetch.mockResolvedValue({ projectId: "p" });
+    const body = { name: "A", country: "KR", engines: ["chatgpt"] };
+    expect((await newProject.POST(req("POST", "/api/hub/projects", { body, cookie: "tok" }))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("POST", "/v1/hub/projects", { token: "tok", body });
+    bff.fetch.mockClear();
+    expect((await newProject.POST(req("POST", "/api/hub/projects", { body, cookie: "tok", origin: "http://evil.test" }))).status).toBe(403);
+    expect((await newProject.POST(req("POST", "/api/hub/projects", { body }))).status).toBe(401);
+    expect((await newProject.POST(req("POST", "/api/hub/projects", { cookie: "tok" }))).status).toBe(422);
     expect(bff.fetch).not.toHaveBeenCalled();
   });
 });

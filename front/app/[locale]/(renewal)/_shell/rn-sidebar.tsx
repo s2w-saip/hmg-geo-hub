@@ -3,7 +3,7 @@
 import { useEffect, useId, useState, type ComponentType, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Briefcase, ChevronDown, Construction, ExternalLink, KeyRound, Loader2, LogOut, Menu, X } from "lucide-react";
+import { Briefcase, ChevronDown, Construction, ExternalLink, KeyRound, Loader2, LogOut, Menu, SlidersHorizontal, X } from "lucide-react";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { carryFilterParams } from "@/components/dash/filter-carry";
@@ -105,7 +105,7 @@ export function RnSidebar({ routes, user, locale }: { routes: readonly RouteDef[
         .filter((r) => r.group === "project" && canAccessRoute(user.role, RENEWAL + r.path))
         .map((r) => ({ path: RENEWAL + r.path, label: tNav(r.key), unimplemented: !RENEWAL_PAGES.has(r.path), icon: Briefcase, children: [] })),
     },
-    { id: "admin", items: menuItems(ADMIN_SUB_ITEMS, allowed, label) },
+    { id: "admin", items: menuItems(renewalAdminTree(allowed), allowedAdmin(allowed), label) },
   ];
   // the current item: the longest menu path that holds this page (/renewal/website holds every Website page)
   const current = [...sections, ...more]
@@ -188,6 +188,18 @@ function Brand() {
 }
 
 /** One original tree, permission-filtered on the original rows; every item opens /renewal<path>. */
+// Admin › 측정 설정 (T6.3) has no legacy page: it joins the shared menu tree here, so the legacy sidebar stays as it is.
+const MEASUREMENT_ITEM = { path: "/admin/standards/measurement", i18nKey: "renewalAdminMeasurement", icon: SlidersHorizontal };
+
+function renewalAdminTree(allowed: Set<string>): StandardSubItem[] {
+  if (!allowed.has(RENEWAL + MEASUREMENT_ITEM.path)) return ADMIN_SUB_ITEMS;
+  return ADMIN_SUB_ITEMS.map((item) => (item.path === "/admin/standards" ? { ...item, children: [...(item.children ?? []), MEASUREMENT_ITEM] } : item));
+}
+
+function allowedAdmin(allowed: Set<string>): Set<string> {
+  return allowed.has(RENEWAL + MEASUREMENT_ITEM.path) ? new Set([...allowed, MEASUREMENT_ITEM.path]) : allowed;
+}
+
 function menuItems(tree: StandardSubItem[], allowed: Set<string>, label: (key: string) => string): NavItem[] {
   const leaf = (x: StandardSubItem | NonNullable<StandardSubItem["children"]>[number]): NavLeaf => ({
     path: RENEWAL + x.path,

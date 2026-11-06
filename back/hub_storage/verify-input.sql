@@ -402,8 +402,20 @@ DO $$ BEGIN
  BEGIN INSERT INTO catalog.project_version(project_id,version,definition,sha256,recorded_by)
    VALUES('00000000-0000-4000-8000-0000000000f1',2,'{}',repeat('c',64),gen_random_uuid()); RAISE EXCEPTION 'Project editor revises the Global project';
    EXCEPTION WHEN insufficient_privilege THEN NULL; END;
- BEGIN INSERT INTO catalog.project(project_id,origin) VALUES(gen_random_uuid(),'hub'); RAISE EXCEPTION 'Project editor creates projects';
+ BEGIN INSERT INTO catalog.project(project_id,origin,source_id) VALUES(gen_random_uuid(),'hub',gen_random_uuid()); RAISE EXCEPTION 'Project editor names a source project';
    EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ -- a new project (T6.3): the project surface only
+ INSERT INTO catalog.project(project_id,origin) VALUES('00000000-0000-4000-8000-0000000000f6','hub');
+ BEGIN INSERT INTO catalog.project_version(project_id,version,definition,sha256,recorded_by)
+   VALUES('00000000-0000-4000-8000-0000000000f6',1,'{"surface":2}',repeat('c',64),gen_random_uuid()); RAISE EXCEPTION 'Project editor starts a website project';
+   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN INSERT INTO catalog.project_measurement_version(project_id,version,origin,sha256,recorded_by)
+   VALUES('00000000-0000-4000-8000-0000000000f1',9,'hub',repeat('c',64),gen_random_uuid()); RAISE EXCEPTION 'Project editor sets the Global project''s measurement';
+   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ INSERT INTO catalog.project_version(project_id,version,definition,sha256,recorded_by)
+   VALUES('00000000-0000-4000-8000-0000000000f6',1,'{"surface":3}',repeat('c',64),gen_random_uuid());
+ INSERT INTO catalog.project_measurement_version(project_id,version,origin,sha256,recorded_by)
+   VALUES('00000000-0000-4000-8000-0000000000f6',1,'hub',repeat('c',64),gen_random_uuid());
  BEGIN UPDATE catalog.prompt_version SET text='changed'; RAISE EXCEPTION 'Project editor rewrites history'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN DELETE FROM catalog.prompt; RAISE EXCEPTION 'Project editor deletes stable IDs'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,recorded_by,change_seq)
@@ -419,6 +431,8 @@ DO $$ BEGIN
     OR has_table_privilege('hmg_project_editor','catalog.project_version','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.project_version','DELETE')
     OR has_table_privilege('hmg_project_editor','catalog.prompt','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.prompt','DELETE')
     OR has_table_privilege('hmg_project_editor','catalog.project','INSERT') OR has_table_privilege('hmg_project_editor','catalog.reference_set','INSERT')
+    OR has_table_privilege('hmg_project_editor','catalog.project','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.project','DELETE')
+    OR has_table_privilege('hmg_project_editor','catalog.project_measurement_version','UPDATE') OR has_table_privilege('hmg_project_editor','catalog.project_measurement_version','DELETE')
  THEN RAISE EXCEPTION 'The project editor has more than INSERT on project catalogs'; END IF;
 END $$;
 -- Source list versions (013): every change of a 인용 출처 분류 list is one whole-row version, written by the trigger only

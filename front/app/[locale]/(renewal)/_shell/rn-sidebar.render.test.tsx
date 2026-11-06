@@ -91,6 +91,7 @@ describe("renewal sidebar", () => {
           "Customer interest config → /renewal/admin/standards/customer-interest",
           "Entity catalog → /renewal/admin/standards/entities",
           "인용 출처 분류 → /renewal/admin/standards/citation-sources",
+          "측정 설정 → /renewal/admin/standards/measurement",
           "Keyword tools · 계정 dataforseo → /renewal/admin/keyword-tools",
           "GA4 연동 → /renewal/admin/ga4",
           "분석 엔진 · 미구현 → /renewal/admin/analysis",

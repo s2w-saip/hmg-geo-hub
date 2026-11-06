@@ -518,6 +518,7 @@ def install_input():
     migrate('input-002.sql', '002_measurement_reference_contract', store='input')
     migrate('input-003.sql', '003_ga4_properties_service_week', store='input')
     migrate('input-004.sql', '004_actor_names', store='input')
+    migrate('input-005.sql', '005_project_add', store='input')
     backfill_actor_names()
 
 

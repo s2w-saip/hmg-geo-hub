@@ -322,5 +322,48 @@ class Analysis(unittest.TestCase):
         self.assertEqual(query, f"cf_{FIELD}=AI&engine=gemini&projectId={PID}")
 
 
+class BeforeFirstRound(unittest.TestCase):
+    """T6.3: a project the administrator added opens before Gold holds it; one nobody holds is still a 404."""
+
+    SETTINGS = {"item": {"version": 1}, "options": {}, "editing": True}
+
+    def gone(self, *args, **kwargs):
+        raise HTTPException(404, "Project not present in Gold")
+
+    def read(self, name, measurement):
+        async def held(_):
+            return measurement
+
+        async def gone(*a, **k):
+            self.gone()
+
+        class Gone(Router):
+            async def get(self, path, params=None, **kwargs):
+                raise HTTPException(404, "Project not present in Gold")
+
+        async def catalog(_):
+            return {"version": 1, "fields": [], "prompts": [{"id": "p1", "text": "t", "kind": "standard", "lang": "ko", "custom": {}, "status": "draft", "version": 1, "origin": "hub"}],
+                    "languages": ["ko"], "editable": True}
+
+        with mock.patch.object(project_dashboard.hub_measurement, "read", held), \
+                mock.patch.object(project_dashboard, "load_panel_options", gone), mock.patch.object(project_dashboard, "load_filter_dates", gone), \
+                mock.patch.object(project_dashboard.hub_prompts, "catalog", catalog):
+            return screen(name, f"ctx.project_id={PID}", Gone({}))
+
+    def test_settings_and_prompts_and_filters_come_from_the_input_store(self):
+        settings = self.read("projects/settings", self.SETTINGS)
+        self.assertEqual((settings["identity"]["projectId"], settings["measured"], settings["fields"], settings["targets"], settings["measurement"]), (PID, None, [], 0, self.SETTINGS))
+        prompts = self.read("projects/prompts", self.SETTINGS)
+        self.assertEqual(([r["id"] for r in prompts["rows"]], prompts["listed"], prompts["editable"], prompts["rounds"]), (["p1"], 1, True, []))
+        self.assertEqual(prompts["rows"][0]["state"], project_dashboard.prompt_state(prompts["rows"][0], None))
+        self.assertEqual(self.read("projects/filters", self.SETTINGS), project_dashboard.NO_FILTERS)
+
+    def test_a_project_nobody_holds_stays_404(self):
+        for name in ("projects/settings", "projects/prompts", "projects/filters"):
+            with self.assertRaises(HTTPException) as caught:
+                self.read(name, None)
+            self.assertEqual(caught.exception.status_code, 404, name)
+
+
 if __name__ == "__main__":
     unittest.main()

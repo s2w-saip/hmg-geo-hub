@@ -6,6 +6,7 @@ import math
 from typing import Any
 
 from data_server import api
+from data_server.hub_stores import project_prompts as hub_prompts
 from data_server.metrics.display import share as share_pct
 from data_server.screens import screen, split_context
 from data_server.screens._filters import parse_time_range, split_filter_values
@@ -69,6 +70,13 @@ async def projects_list(q) -> dict:
     data = (await api.get("gold/projects"))["data"]
     for p in data["items"]:
         p["last_measured_day"] = day_of(p.get("last_measured"))
+    # the input store's name on a row, and a project the administrator added (T6.3), which Gold holds from its first round on
+    added = {p["id"]: p for p in await hub_prompts.added_projects()}
+    for p in data["items"]:
+        known = added.pop(p["id"], None)
+        if known and known["name"]:
+            p["name"] = known["name"]
+    data["items"] += list(added.values())
     return data
 
 

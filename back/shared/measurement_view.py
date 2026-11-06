@@ -7,6 +7,10 @@ CURRENT_SQL = """SELECT m.*,p.definition AS project_definition FROM catalog.curr
     LEFT JOIN catalog.current_measurement m ON m.project_id=p.project_id WHERE p.project_id=$1"""
 
 
+LIST_SQL = """SELECT p.project_id AS pid,p.definition AS project_definition,m.* FROM catalog.current_project p
+    LEFT JOIN catalog.current_measurement m ON m.project_id=p.project_id"""
+
+
 OPTIONS_SQL = """SELECT family,item_key,definition FROM catalog.reference_source
     WHERE family IN ('engine','country','brand_bit') AND status='active' ORDER BY family,item_key"""
 
@@ -23,6 +27,13 @@ def options_of(rows) -> dict:
 
 def loaded(value):
     return json.loads(value) if isinstance(value, str) else (value if value is not None else [])
+
+
+def listed(row) -> dict:
+    """One row of Admin › 측정 설정: the project as the input store holds it, and its settings."""
+    d = loaded(row["project_definition"]) or {}
+    return {"projectId": str(row["pid"]), "surface": d.get("surface"), "name": d.get("name"), "description": d.get("description"), "domain": d.get("domain"),
+            "status": d.get("status"), "measurement": view(row)}
 
 
 def view(row) -> dict:

@@ -60,6 +60,23 @@ def _common(q) -> tuple[dict, dict, dict]:
     return ctx, filters, to_api_params(analysis_query(filters, actx))
 
 
+async def before_first_round(pid: str, error: HTTPException) -> bool:
+    """A read answered 404: is this a project the input store holds, which Gold holds only from its first round on (T6.3)? Asked only then, so an ordinary read costs nothing."""
+    return error.status_code == 404 and is_uuid(pid) and await hub_measurement.read(UUID(pid)) is not None
+
+
+async def together(*reads):
+    """asyncio.gather that lets every read finish, so a 404 from two of them is one error and no stray task's."""
+    results = await asyncio.gather(*reads, return_exceptions=True)
+    for r in results:
+        if isinstance(r, BaseException):
+            raise r
+    return results
+
+
+NO_FILTERS = {"geographyOptions": [], "engineOptions": [], "dynamicAxes": [], "selectableDates": [], "latestAnchorDay": None, "collectionStartDay": None}
+
+
 @screen("projects/filters")
 async def project_filters(q) -> dict:
     """The panel's option props (측정 국가 · AI 엔진 · custom tags) and the round calendar of the project (ctx.family:
@@ -67,10 +84,15 @@ async def project_filters(q) -> dict:
     ctx, sp = split_context(q)
     filters, _ = project_page_filters(sp, ctx.get("project_id"))
     pid = ctx["project_id"]
-    options, dates = await asyncio.gather(
-        load_panel_options({"surface": "project", "projectId": pid, "dateFrom": filters.get("dateFrom"),
-                            "dateTo": filters.get("dateTo"), "scope": None, "filters": filters}),
-        load_filter_dates("project", pid, ctx.get("family") or "mentions"))
+    try:
+        options, dates = await together(
+            load_panel_options({"surface": "project", "projectId": pid, "dateFrom": filters.get("dateFrom"),
+                                "dateTo": filters.get("dateTo"), "scope": None, "filters": filters}),
+            load_filter_dates("project", pid, ctx.get("family") or "mentions"))
+    except HTTPException as error:
+        if await before_first_round(pid, error):
+            return NO_FILTERS
+        raise
     return {"geographyOptions": options.get("geographyOptions") or [], "engineOptions": options.get("engineOptions") or [],
             "dynamicAxes": options.get("dynamicAxes") or [], "selectableDates": dates["selectableDates"] or [],
             "latestAnchorDay": dates["latestAnchorDay"], "collectionStartDay": dates["collectionStartDay"]}
@@ -219,8 +241,13 @@ async def project_prompts(q) -> dict:
     pid = ctx["project_id"]
     lens = {k: v for k, v in analysis_query({k: v for k, v in filters.items() if k != "customFieldFilters"}, {**actx, "customFields": None})["query"].items()
             if k in ("country", "engine", "from", "to")}
-    reply, hub = await asyncio.gather(api.get(f"gold/projects/{pid}", {"view": "prompts", **lens}), hub_prompts.catalog(UUID(pid)))
-    data = reply["data"]
+    hub = await hub_prompts.catalog(UUID(pid))
+    try:
+        data = (await api.get(f"gold/projects/{pid}", {"view": "prompts", **lens}))["data"]
+    except HTTPException as error:
+        if not await before_first_round(pid, error):
+            raise
+        data = {"items": [], "fields": [], "rounds": []}
     gold = {str(p["prompt_id"]): p for p in data["items"]}
     gold_labels = {f["field_id"]: f["label"] for f in data["fields"]}
     picks = filters.get("customFieldFilters")
@@ -262,8 +289,13 @@ async def project_settings(q) -> dict:
     pid = ctx.get("project_id")
     if not is_uuid(pid):
         raise HTTPException(422, "ctx.project_id must be a project id")
-    listing, gate, listed, settings = await asyncio.gather(api.get("gold/projects"), api.get(f"gold/projects/{pid}", {"view": "gate"}),
-                                                           api.get(f"gold/projects/{pid}", {"view": "prompts"}), hub_measurement.read(UUID(pid)))
+    settings = await hub_measurement.read(UUID(pid))
+    try:
+        listing, gate, listed = await together(api.get("gold/projects"), api.get(f"gold/projects/{pid}", {"view": "gate"}), api.get(f"gold/projects/{pid}", {"view": "prompts"}))
+    except HTTPException as error:
+        if not await before_first_round(pid, error):
+            raise
+        return {"identity": {"projectId": pid, "scopeProjectId": pid, "regions": None}, "measured": None, "fields": [], "targets": 0, "measurement": settings}
     project = gate["data"]["project"]
     row = next((r for r in listing["data"]["items"] if r["id"] == pid), None)
     items = listed["data"]["items"]

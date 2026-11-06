@@ -218,6 +218,7 @@ describe("route-policy — visibleRoutes (SNB list)", () => {
       "/renewal/admin/standards/citation-sources",
       "/renewal/admin/standards/customer-interest",
       "/renewal/admin/standards/entities",
+      "/renewal/admin/standards/measurement",
       "/renewal/admin/ga4",
       "/admin/standards/customer-interest",
       "/admin/standards/entities",
@@ -317,8 +318,8 @@ describe("route-policy — guard bypass and default landing", () => {
 });
 
 describe("route-policy — ROUTES table integrity", () => {
-  it("exposes 47 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts, global prompts, GA4 registry and source corrections, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가, renewal Project 2026-11-03)", () => {
-    expect(ROUTES).toHaveLength(47);
+  it("exposes 48 routes (renewal Overview / Global prompts / ACR / Mention / Citation / AI Visibility / AI Conversion, HUB accounts, global prompts, GA4 registry and source corrections, production Admin 분석 엔진 / 리포트 관리 / 측정 크레딧 추가, renewal Project 2026-11-03)", () => {
+    expect(ROUTES).toHaveLength(48);
   });
 
   it("renewal pages open to exactly the roles of their originals", () => {
