@@ -3476,6 +3476,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <section id="other" aria-labelledby="h-other">
   <h2 id="h-other">같은 저장소에 있지만 로컬 서비스 밖에 있는 것</h2>
   <ul class="points">
+    <li><code>gold_db</code>에는 읽는 코드가 없는 이전 Gold 테이블 17개가 아직 있고, 교체 전 DB는 <code>gold_before_t97</code>로 보관 중이다. 지우는 스크립트는 <code>back/hub_storage/teardown-t12.sql</code>이고 실행은 사용자 확인 뒤다(T12.1).</li>
     <li>이전 재설계(DB / Back / Front 3층)의 <code>back/app/</code>·<code>back/ingest/</code>·<code>back/db/</code>·<code>back/migration/</code>와 그 시험은 2026-11-07에 지웠다(T12.3). 레거시 규칙을 찾을 때는 커밋 <code>d77f278</code>에서 본다. 코드 주석에 남은 그 경로는 이 커밋 기준이다.</li>
     <li><code>infra/</code>: 첫 커밋(<code>b18d7e1</code>, 2026-10-02)과 함께 이전 재설계 저장소에서 들여온 AWS stg·prod CLI 스크립트.
       경로는 CloudFront → ALB → 프라이빗 EC2 → 비공개 RDS PostgreSQL 17이다. 이 저장소의 서비스는 AWS에 배포한 기록이 없고, 앞으로도 AWS에는 올리지 않는다.
