@@ -1,7 +1,8 @@
 """Copy the upstream Gold database (schema gold, every table) into geohub_gold_db on the metrics server, and check the copy.
 
-The BFF keeps its connection: nothing reads the copy until the switch (docs/handoff/architecture-rebuild.md D-19). The upstream is only read,
-in one consistent snapshot, and the dump stays in .local/gold-copy: it is what the copy was restored from, so it is its backup too.
+The BFF reads the copy since the cut (2026-11-06), never the upstream: .env.gold.local names the copy, and only this script reads
+.env.gold-upstream.local. The upstream is only read, in one consistent snapshot, and the dump stays in .local/gold-copy: it is what the copy was
+restored from, so it is its backup too.
 The database takes the upstream's sort order, time zone and date settings, because the readers' ORDER BY, lower() and date casts depend on them.
 
     HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py            # dump, restore, grant, analyze, verify
@@ -47,12 +48,13 @@ def log(message: str) -> None:
 def source_parts() -> tuple[list[str], dict[str, str]]:
     """Connection arguments and environment for the upstream. The password travels in the environment, never in argv or a log."""
     url = None
-    for line in (ROOT / ".env.gold.local").read_text(encoding="utf-8").splitlines():
+    # Not .env.gold.local: since the cut (2026-11-06) that one points the BFF at the copy, and nothing but this script reads the upstream's.
+    for line in (ROOT / ".env.gold-upstream.local").read_text(encoding="utf-8").splitlines():
         found = re.match(r"\s*(?:export\s+)?HGH_GOLD_DB_URL=['\"]?([^'\"\s]+)", line)
         if found:
             url = found.group(1)
     if not url:
-        raise SystemExit("HGH_GOLD_DB_URL is not in .env.gold.local")
+        raise SystemExit("HGH_GOLD_DB_URL is not in .env.gold-upstream.local")
     u = urlparse(url)
     env = {**os.environ, "PGPASSWORD": unquote(u.password or ""), "PGCONNECT_TIMEOUT": "10", "PGAPPNAME": "hmg-geo-hub-copy", "PGTZ": "UTC"}
     if "sslmode" in parse_qs(u.query):

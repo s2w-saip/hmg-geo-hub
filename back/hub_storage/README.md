@@ -10,8 +10,8 @@
 | HUB 입력 DB | `hmg_input` / `127.0.0.1:55438` | 프롬프트, 측정 설정, 수집 · 분석 기준정보, API 호출자 · 승인(아래 '입력 DB') |
 | HUB 데이터 DB | `hmg_analytics` / `127.0.0.1:55436` | GA4·SEO, 서비스 기준 주. `catalog` · `publication`의 입력 테이블은 2026-11-06부터 동결한 옛 사본 |
 | HUB 지표 DB | `hmg_metrics` / `127.0.0.1:55439` | 사전 집계(`gold`), 캐시 DB(`cache`). 정본이 아니다(아래 '지표 DB') |
-| 현행 Gold 복사본 | `geohub_gold_db` / `127.0.0.1:55439`(지표 DB와 같은 서버) | 현행 Gold DB 전체 복사본. BFF는 아직 읽지 않는다(아래 '현행 Gold 복사본') |
-| 외부 Gold DB | `gold` / 사내망 `10.0.20.126:8097` | GEO 측정·응답·멘션·인용 등 원천 데이터, 읽기 전용 |
+| Gold 복사본 | `geohub_gold_db` / `127.0.0.1:55439`(지표 DB와 같은 서버) | 연결을 끊은 업스트림 Gold DB의 전체 복사본. BFF가 읽는 곳이다(아래 'Gold 복사본') |
+| 이전 업스트림 Gold DB | 연결 끊음(2026-11-06) | BFF는 읽지 않는다 |
 
 기존 `hmg_analytics` 이름과 GA4·SEO 스키마를 유지했다. DB를 삭제하거나 재생성하지 않는다. 데이터 DB의 기존 `ops` 스키마는 SEO 빌드·발행 메타데이터이며, 사용자·권한을 담는 운영 DB와 별개다.
 
@@ -51,9 +51,9 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 BFF가 계산해 두는 값의 자리다(SSOT `service/cache-db.md`). `gold` 스키마는 사전 집계 테이블이 들어올 자리(T5.3)이고, `cache.query_result`는 필터 조회 결과다(UNLOGGED, TTL 없음, `manage.py backup`에 들지 않음). 역할은 `hmg_metrics_reader`(읽기), `hmg_cache_writer`(캐시만, `HGH_CACHE_DB_URL`), `hmg_rollup_writer`(`gold`만, 작업 전용)이고 다른 파트에는 열지 않는다. 코드는 `bff/hub_stores/cache_db.py`(키 · 읽기 · 쓰기 · 이전 스냅샷 삭제)이고, 화면은 아직 읽지 않는다(T5.5).
 
-## 현행 Gold 복사본 (2026-11-06)
+## Gold 복사본 (2026-11-06)
 
-`geohub_gold_db`는 지표 DB 서버에 둔 현행 Gold DB 전체 복사본이다(스키마 `gold`, 테이블 86개, 1억 8,265만 행, 40 GB). BFF는 아직 읽지 않는다. 전환 시점은 `docs/handoff/architecture-rebuild.md`의 D-19에서 정한다.
+`geohub_gold_db`는 지표 DB 서버에 둔 업스트림 Gold DB 전체 복사본이다(스키마 `gold`, 테이블 86개, 1억 8,265만 행, 40 GB). 2026-11-06부터 BFF는 `HGH_GOLD_DB_URL`로 이 복사본을 읽고, 업스트림과의 연결은 끊었다. 업스트림 접속 정보는 `.env.gold-upstream.local`에만 있고 `copy_gold.py`만 읽는다.
 
 - **만들기:** `HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py`. 덤프 → 복원 → 권한 · ANALYZE → 대조 순서이고 Mac에서 약 20분 걸린다. 업스트림은 한 스냅샷으로 읽기만 한다. `--dump`는 받아 둔 덤프로 다시 복원하고, `--verify`는 대조만 한다. Docker 경로는 아직 없다.
 - **백업:** 복원에 쓴 덤프가 `.local/gold-copy/`에 남는다(6 GB). 복사본은 바뀌지 않으므로 `manage.py backup`에는 넣지 않았다.

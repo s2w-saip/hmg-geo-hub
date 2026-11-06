@@ -43,7 +43,7 @@ if listening 5555; then echo 'Port 5555 is in use by another process.' >&2; exit
 ready=
 for _ in $(seq 60); do
     health="$(curl -fs --max-time 2 http://127.0.0.1:5555/healthz || true)"
-    case "$health" in *'"database":"gold"'*'"read_only":"on"'*) ready=1; break ;; esac
+    case "$health" in *'"database":"geohub_gold_db"'*'"read_only":"on"'*) ready=1; break ;; esac
     sleep 0.5
 done
 [ -n "$ready" ] || { echo "Gold read-only health check failed. See $logs/api.log" >&2; exit 1; }
