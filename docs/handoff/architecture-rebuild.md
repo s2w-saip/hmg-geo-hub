@@ -196,7 +196,7 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 - [ ] 12.1 이전 Gold DB에서 옮겨 온 테이블 중 조회용 테이블로 대체된 것과 쓰지 않는 코드. `gold_db` 연결은 남긴다(결정 기록 2026-11-06)
 - [x] 12.2 Gold 가져오기 · Gold로 판정하는 서비스 기준 주(`71febc4`). 기준 주는 T7.6에서 매니페스트로 옮겼다
-- [ ] 12.3 쓰지 않는 이전 재설계 코드(`back/app · ingest · db · migration`)
+- [x] 12.3 쓰지 않는 이전 재설계 코드(`back/app · ingest · db · migration`)(__HASH__). 레거시 규칙은 커밋 `d77f278`에서 본다
 - [ ] 12.4 아키텍처 문서 · ERD를 최종 구조로
 
 ## 공통 완료 기준 (태스크마다)
@@ -245,6 +245,7 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 | 날짜 | 결정 | 다른 안 | 근거 |
 |---|---|---|---|
+| 2026-11-07 | T12.3: `back/app` · `ingest` · `db` · `migration`과 함께, 그 코드 없이는 돌지 않거나 그 코드만 쓰던 것을 지운다: `back/tests` · `conftest.py` · `logging.json` · `taxonomy.json` · `FEATURES.md` · `CORE-REQUESTS` · `requirements*.lock` · `ci/github-workflows/back-ci.yml`. `pyproject.toml`은 린트 · 시험 설정만 남긴다. 코드 주석의 옛 경로는 출처로 두고, 커밋 `d77f278` 기준이라고 README와 아키텍처 문서에 적는다. `README.md`는 지금 구조로 새로 썼다. `infra/` · `front-ci.yml` · `docs/reports/`는 건드리지 않았다(실행되지 않거나 지난 기록) | 네 폴더만 지우기(시험과 설정이 깨진 채 남는다), 주석의 옛 경로까지 고치기(출처를 잃는다) | 사용자 계획 T12.3, 사용자 '5단계까지 진행' |
 | 2026-11-07 | T10.2: 프롬프트 · 프로젝트 매핑은 입력 DB의 ID가 기준이다. 입력 `project_id` · `prompt_id`, OBT가 부르는 프로젝트는 `definition.scope_project_id`(새 프로젝트는 자기 ID), `gold_db` 숫자 키는 적재 잡의 `sync_projects` · `sync_prompts`가 준다. `origin` · `source_id`는 지우지 않고 기록으로 둔다(`source_id`는 Gold 행 29,008개 전부에서 자기 ID와 같고 읽는 코드가 없다, 컬럼 삭제는 뷰 · 제약을 다시 만드는 값어치가 없다) | `source_id` · `origin` 컬럼 삭제, 매핑 전용 테이블 신설 | 실측, 사용자 '항상 추천안으로' |
 | 2026-11-07 | T12.2: `sync_catalog.py`와 일회성 가져오기 4개(`import-source-overrides` · `import-source-lists` · `import-interest-keywords` · `import-entity-roles`)를 지운다. `hmg_catalog_writer`는 로그인 · 권한을 없애고(`input-006.sql`) 역할만 둔다(이전 마이그레이션이 이름을 쓴다). `catalog.sync_run`은 지난 실행 기록으로 둔다. `vm.sh sync` · `check-sync`를 지웠으므로 VM 반영 때 cron 줄도 지워야 한다 | 일회성 가져오기는 남기기(이전 Gold DB는 없는 것으로 본다), 역할까지 삭제(새 설치의 마이그레이션이 깨진다) | `CLAUDE.md` 1절, 사용자 '항상 추천안으로' |
 | 2026-11-07 | T2.5 읽는 시점: 수집은 회차를 시작하기 전에, 분석은 추출을 시작하기 전에 읽는다. 그 사이 주기는 각 파트가 정하고, 변경은 `change_seq` · etag로 알 수 있다. 기준정보는 SSOT 15종만 나가고 9종(`region` · `entity` · `source_category` · `source` · `owned_base` · `crawl_bot` · `keyword` · `perspective` · `population`)은 나가지 않는다고 통보한다. 통보문은 초안이고 보내는 것은 사용자 | 서비스가 주기까지 정하기(받는 쪽 일정을 알 수 없다), 9종을 지금 지우기(되돌리기 어렵고 쓰는 곳이 생길 수 있다) | CLAUDE.md 4절 '서비스가 정해서 통보', SSOT `prompt-reference-api.md` 변경 감지 |
@@ -478,3 +479,4 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 - 2026-11-07 — T9.8 서버 값 대조(세션 B, `72fb857` · `dec109d` · `a457847`). 남은 43개 중 35개를 `gold_db` 행에서 다시 세어 항목 153개 차이 0건, 나머지 8개는 Silver 밖이거나 값이 없어 하지 않았다. 필터 · 기간 · Project도 대조해 같다. 하지 않은 것: 비관리자 응답, Δ 대부분, 시장 커버리지, 레거시 · 리뉴얼 두 화면 비교(같은 빌더라 재계산으로 대신했다). 결함 3건을 고쳤고, 정의 버전이 `2026-11-07.3`이 되어 사전 집계를 다시 돌렸다(137초, 실패 0). 테스트: 데이터 서버 918건 OK(25 건너뜀). 맥의 `gold_db`는 한 번 고쳤다: 엔티티 합계, ACR 측정일 16,181행, 반복 번호 27,050행. 같은 값이 적재 잡 코드에도 들어가 있다. 재적재로 다시 만들어 보지는 않았다.
 - 2026-11-07 — T2 통보문 초안(세션 B). `docs/handoff/upstream-notice-2026-11-07.md`: 파이프라인, 분석, 앤써, API 공통 4개. 수치는 정의 버전 `2026-11-07.3`의 맥 가상 OBT 값으로 새로 뽑았다. 보내지 않았다. 지난 초안의 '집계 자격은 받은 값 그대로'는 서비스 판정으로 바뀌어 고쳤다. 키 발급(T8.3)과 실제 접속 정보(T9.1)는 그대로 남았다.
 - 2026-11-07 — 5단계 T10.2 · T12.2(`71febc4`). 새 프로젝트 · 프롬프트의 키 매핑을 실제 DB로 확인: 허브로 만들고 `sync_projects` · `sync_prompts`를 돌리면 `dim_project` 1행(키 259, `scope_project_id` = 자기 ID) · `dim_prompt` 행이 생기고, 두 번째 실행은 0건. 그 상태로 브라우저에서 Project 목록(이름 표시) · Setting · Prompt · Dashboard · Mention · Citation을 열어 '측정 데이터가 아직 없습니다'까지 확인했다. 테스트 행은 지움(`dim_project` 258 · `dim_prompt` 28,751, 입력 DB 프로젝트 258 · 버전 647 · 측정 설정 258). 입력 DB `input-006.sql` 적용: `hmg_catalog_writer` 로그인 불가 · 권한 0. 테스트: 두 서버 1,083개 실패 0(건너뜀 33, `test_hub_sync` 삭제로 줄음). 실행 안 함: `manage.py init`으로 새 설치(`verify-input.sql`이 이 역할로 쓰는 부분은 이제 실패하며, `manage.py verify`는 대공사 동안 고치지 않는다는 결정대로 둠), VM
+- 2026-11-07 — T12.3 이전 재설계 코드 삭제(__HASH__), 파일 1,141개. 지운 코드를 부르는 곳은 코드 주석뿐(`rg`). 전후: 두 서버 1,083개 실패 0(건너뜀 33), `start-local.sh` 정상, 재계산 'unchanged', 허브 경유 171개 요청이 `t98-after`와 `_extra_admin-*` · `_extra_read-me` 밖에서 차이 0(이 둘은 세션 44가 :5555로 직접 받아 비교 대상이 아니다). 프런트 전체 8,701개: 실패 121 · 오류 1, 1g 기준선과 같다. 이 전체 실행에서 T6.3 때 놓친 실패 1건(`support-contact.test.ts`, 측정 설정 목록의 실패 문구에 담당자 연락처 없음)을 찾아 고쳤다(4cb32a6). 실행 안 함: `front-react` 빌드 · 시험(코드 변경 없음), Docker 이미지 빌드, VM

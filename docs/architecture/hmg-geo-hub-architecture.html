@@ -3476,8 +3476,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <section id="other" aria-labelledby="h-other">
   <h2 id="h-other">같은 저장소에 있지만 로컬 서비스 밖에 있는 것</h2>
   <ul class="points">
-    <li><code>back/app/</code>·<code>back/ingest/</code>·<code>back/db/</code>·<code>back/migration/</code>: 이전 재설계(DB / Back / Front 3층)의 기능 모듈 72개, 적재 워커, DDL 사슬, 이관 도구.
-      지금 로컬 서비스의 API는 이 코드가 아니라 <code>back/data_server/</code>다.</li>
+    <li>이전 재설계(DB / Back / Front 3층)의 <code>back/app/</code>·<code>back/ingest/</code>·<code>back/db/</code>·<code>back/migration/</code>와 그 시험은 2026-11-07에 지웠다(T12.3). 레거시 규칙을 찾을 때는 커밋 <code>d77f278</code>에서 본다. 코드 주석에 남은 그 경로는 이 커밋 기준이다.</li>
     <li><code>infra/</code>: 첫 커밋(<code>b18d7e1</code>, 2026-10-02)과 함께 이전 재설계 저장소에서 들여온 AWS stg·prod CLI 스크립트.
       경로는 CloudFront → ALB → 프라이빗 EC2 → 비공개 RDS PostgreSQL 17이다. 이 저장소의 서비스는 AWS에 배포한 기록이 없고, 앞으로도 AWS에는 올리지 않는다.
       배포 대상은 내부 VM이다. 예외로 <code>infra/analytics/</code>·<code>infra/operations/</code>의 compose 파일은 서비스 저장소용으로 이 저장소에서 추가했다(<code>668238d</code>).
