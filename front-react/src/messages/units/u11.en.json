@@ -1,0 +1,55 @@
+{
+  "admin": {
+    "list": {
+      "status": {
+        "active": "Active",
+        "suspended": "Suspended"
+      }
+    },
+    "errors": {
+      "emailTaken": "This email is already registered.",
+      "scopeRequired": "Set a scope that fits the role (a brand unless admin or vendor, and a country for the country role).",
+      "rowVersionConflict": "Someone changed this user first. Refresh the list and try again.",
+      "userReferenced": "Users with activity records cannot be deleted. Suspend the account instead."
+    },
+    "toast": {
+      "suspendSuccess": "Account suspended.",
+      "resumeSuccess": "Account reactivated."
+    },
+    "edit": {
+      "dangerZone": {
+        "suspend": "Suspend account",
+        "resume": "Reactivate",
+        "suspendHint": "A suspended user cannot sign in; records are kept.",
+        "resumeHint": "Reactivating lets the user sign in again."
+      }
+    }
+  },
+  "adminStandardEntities": {
+    "catalog": {
+      "roleUpdatedPending": "Role change for {brand} requested; KPIs reflect it after the next rebuild",
+      "apiPeriodNote": "Figures: latest published cycle, global surface, attributed display brand",
+      "ownBrand": "Own brand",
+      "ownConfirm": "Set as own",
+      "ownCancel": "Cancel"
+    }
+  },
+  "adminCitationSources": {
+    "list": {
+      "source": {
+        "social": "Social"
+      },
+      "savedPending": "Saved category for {domain}; citation aggregates update once it is applied",
+      "revertedPending": "Revert of {domain} requested; it returns to the default classification once applied",
+      "hintApi": "Shows the top {limit} domains by citation count in the latest published cycle (global surface), plus every domain with a correction."
+    }
+  },
+  "adminGa4": {
+    "status": {
+      "unmappedProperty": "No market mapping"
+    }
+  },
+  "keywordTools": {
+    "pendingCollection": "{count} keywords are still being collected ({terms}). Try again shortly."
+  }
+}

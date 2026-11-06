@@ -1,0 +1,513 @@
+{
+  "Hyundai": {
+    "source": "https://www.hyundai.com/worldwide/ko/company/hyundai-world-wide",
+    "regions": [
+      {
+        "id": "hyundai-europe",
+        "labels": {
+          "ko": "유럽",
+          "en": "Europe"
+        },
+        "countries": [
+          "AL",
+          "AM",
+          "AT",
+          "AZ",
+          "BY",
+          "BE",
+          "BA",
+          "BG",
+          "HR",
+          "CY",
+          "CZ",
+          "DK",
+          "EE",
+          "FI",
+          "FR",
+          "GE",
+          "DE",
+          "GR",
+          "HU",
+          "IS",
+          "IE",
+          "IT",
+          "KZ",
+          "KG",
+          "LV",
+          "LT",
+          "LU",
+          "MK",
+          "MT",
+          "MD",
+          "NL",
+          "NO",
+          "PL",
+          "PT",
+          "RO",
+          "RU",
+          "RS",
+          "SK",
+          "SI",
+          "ES",
+          "SE",
+          "CH",
+          "TJ",
+          "TM",
+          "TR",
+          "GB",
+          "UA",
+          "UZ"
+        ]
+      },
+      {
+        "id": "hyundai-asia-pacific",
+        "labels": {
+          "ko": "아시아 & 태평양",
+          "en": "Asia & Pacific"
+        },
+        "countries": [
+          "AS",
+          "AU",
+          "BD",
+          "BT",
+          "BN",
+          "KH",
+          "CN",
+          "TL",
+          "FM",
+          "FJ",
+          "PF",
+          "GU",
+          "HK",
+          "IN",
+          "ID",
+          "JP",
+          "KR",
+          "LA",
+          "MO",
+          "MY",
+          "MH",
+          "MN",
+          "MM",
+          "NP",
+          "NC",
+          "NZ",
+          "PH",
+          "MP",
+          "SG",
+          "SB",
+          "LK",
+          "TH",
+          "TO",
+          "VU",
+          "VN",
+          "WS"
+        ]
+      },
+      {
+        "id": "hyundai-latin-america",
+        "labels": {
+          "ko": "중남미",
+          "en": "Latin America"
+        },
+        "countries": [
+          "AG",
+          "AR",
+          "AW",
+          "BS",
+          "BB",
+          "BM",
+          "BO",
+          "BR",
+          "KY",
+          "CL",
+          "CO",
+          "CR",
+          "CU",
+          "CW",
+          "DO",
+          "EC",
+          "SV",
+          "GF",
+          "GD",
+          "GP",
+          "GT",
+          "GY",
+          "HT",
+          "HN",
+          "JM",
+          "MQ",
+          "NI",
+          "PA",
+          "PY",
+          "PE",
+          "PR",
+          "KN",
+          "LC",
+          "MF",
+          "VC",
+          "SR",
+          "TT",
+          "UY",
+          "VE"
+        ]
+      },
+      {
+        "id": "hyundai-africa",
+        "labels": {
+          "ko": "아프리카",
+          "en": "Africa"
+        },
+        "countries": [
+          "DZ",
+          "AO",
+          "BJ",
+          "BF",
+          "CM",
+          "CF",
+          "TD",
+          "CG",
+          "CD",
+          "DJ",
+          "EG",
+          "ET",
+          "GM",
+          "GH",
+          "GN",
+          "GW",
+          "CI",
+          "KE",
+          "LR",
+          "LY",
+          "MG",
+          "ML",
+          "MR",
+          "MU",
+          "MA",
+          "MZ",
+          "NE",
+          "NG",
+          "RE",
+          "RW",
+          "SN",
+          "SC",
+          "SL",
+          "ZA",
+          "SD",
+          "TG",
+          "TN",
+          "ZM",
+          "ZW"
+        ]
+      },
+      {
+        "id": "hyundai-middle-east",
+        "labels": {
+          "ko": "중동",
+          "en": "Middle East"
+        },
+        "countries": [
+          "AF",
+          "BH",
+          "IQ",
+          "IL",
+          "JO",
+          "KW",
+          "LB",
+          "OM",
+          "PK",
+          "PS",
+          "QA",
+          "SA",
+          "AE",
+          "YE"
+        ]
+      },
+      {
+        "id": "hyundai-north-america",
+        "labels": {
+          "ko": "북아메리카",
+          "en": "North America"
+        },
+        "countries": [
+          "CA",
+          "MX",
+          "US"
+        ]
+      }
+    ]
+  },
+  "Kia": {
+    "source": "https://worldwide.kia.com/ko/kia-global-websites",
+    "regions": [
+      {
+        "id": "kia-asia-pacific",
+        "labels": {
+          "ko": "아시아 & 태평양",
+          "en": "Asia & Pacific"
+        },
+        "countries": [
+          "AU",
+          "BD",
+          "BT",
+          "BN",
+          "KH",
+          "CN",
+          "FJ",
+          "HK",
+          "IN",
+          "ID",
+          "JP",
+          "KR",
+          "LA",
+          "MO",
+          "MY",
+          "MN",
+          "MM",
+          "NP",
+          "NZ",
+          "PK",
+          "PH",
+          "SG",
+          "LK",
+          "TW",
+          "TH",
+          "VN",
+          "SB"
+        ]
+      },
+      {
+        "id": "kia-western-europe",
+        "labels": {
+          "ko": "Europe(W)",
+          "en": "Europe(W)"
+        },
+        "countries": [
+          "AT",
+          "BE",
+          "CZ",
+          "DK",
+          "FI",
+          "FR",
+          "DE",
+          "GR",
+          "HU",
+          "IS",
+          "IE",
+          "IT",
+          "LU",
+          "MT",
+          "NL",
+          "NO",
+          "PL",
+          "SK",
+          "PT",
+          "ES",
+          "SE",
+          "CH",
+          "GB"
+        ]
+      },
+      {
+        "id": "kia-eastern-europe",
+        "labels": {
+          "ko": "Europe(E)",
+          "en": "Europe(E)"
+        },
+        "countries": [
+          "AM",
+          "AZ",
+          "BY",
+          "BA",
+          "BG",
+          "HR",
+          "CY",
+          "EE",
+          "GE",
+          "KZ",
+          "XK",
+          "KG",
+          "LV",
+          "LT",
+          "MD",
+          "ME",
+          "RO",
+          "RU",
+          "RS",
+          "SI",
+          "TR",
+          "UA",
+          "UZ",
+          "TJ"
+        ]
+      },
+      {
+        "id": "kia-middle-east",
+        "labels": {
+          "ko": "중동",
+          "en": "Middle East"
+        },
+        "countries": [
+          "BH",
+          "IL",
+          "JO",
+          "KW",
+          "LB",
+          "IQ",
+          "OM",
+          "PS",
+          "QA",
+          "SA",
+          "AE",
+          "YE",
+          "SY"
+        ]
+      },
+      {
+        "id": "kia-africa",
+        "labels": {
+          "ko": "아프리카",
+          "en": "Africa"
+        },
+        "countries": [
+          "DZ",
+          "AO",
+          "CM",
+          "EG",
+          "CI",
+          "KE",
+          "MU",
+          "MA",
+          "RE",
+          "SC",
+          "ZA",
+          "SD",
+          "TN",
+          "GH",
+          "LY"
+        ]
+      },
+      {
+        "id": "kia-north-america",
+        "labels": {
+          "ko": "북아메리카",
+          "en": "North America"
+        },
+        "countries": [
+          "CA",
+          "US"
+        ]
+      },
+      {
+        "id": "kia-central-south-america",
+        "labels": {
+          "ko": "중남미",
+          "en": "Latin America"
+        },
+        "countries": [
+          "AR",
+          "AW",
+          "BZ",
+          "BO",
+          "BR",
+          "DM",
+          "KY",
+          "CL",
+          "CR",
+          "CW",
+          "CO",
+          "EC",
+          "SV",
+          "GT",
+          "HN",
+          "JM",
+          "MQ",
+          "MX",
+          "NI",
+          "PA",
+          "PY",
+          "PE",
+          "PR",
+          "TT",
+          "UY"
+        ]
+      }
+    ]
+  },
+  "Genesis": {
+    "source": "https://www.genesis.com/worldwide/en/change-your-region.html",
+    "regions": [
+      {
+        "id": "genesis-asia-pacific",
+        "labels": {
+          "ko": "아시아 & 태평양",
+          "en": "Asia & Pacific"
+        },
+        "countries": [
+          "KR",
+          "AU",
+          "CN",
+          "KZ",
+          "ID"
+        ]
+      },
+      {
+        "id": "genesis-middle-east",
+        "labels": {
+          "ko": "중동",
+          "en": "Middle East"
+        },
+        "countries": [
+          "BH",
+          "KW",
+          "OM",
+          "QA",
+          "SA",
+          "AE",
+          "IL"
+        ]
+      },
+      {
+        "id": "genesis-north-america",
+        "labels": {
+          "ko": "북아메리카",
+          "en": "North America"
+        },
+        "countries": [
+          "CA",
+          "US",
+          "PR"
+        ]
+      },
+      {
+        "id": "genesis-europe",
+        "labels": {
+          "ko": "유럽",
+          "en": "Europe"
+        },
+        "countries": [
+          "DE",
+          "GB",
+          "CH",
+          "RU",
+          "NL",
+          "ES",
+          "IT",
+          "FR"
+        ]
+      },
+      {
+        "id": "genesis-africa",
+        "labels": {
+          "ko": "아프리카",
+          "en": "Africa"
+        },
+        "countries": [
+          "MU",
+          "EG",
+          "TN"
+        ]
+      }
+    ]
+  }
+}

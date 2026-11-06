@@ -1,0 +1,171 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { Sparkles, TrendingUp, TriangleAlert } from "lucide-react";
+import { cx } from "./cx";
+
+// Page frame of the analysis renewal pages (ACR, Mention, Citation): section heads, a control
+// bar that stays at the top of the content area (page-level controls), the "이번 회차 요약" finding grid, one card head anatomy (title · ⓘ · basis chips ·
+// controls · actions) and a segmented radio group. Copy comes in through props.
+// A `.rn-dense` ancestor (every renewal page's content column, filter-split.tsx) tightens the rhythm and hides helper copy.
+
+/** Section heading (20px) with an optional chip (e.g. the KPI it shows) and a one-line description; `id` is the jump target. */
+export function RnSectionHead({ id, title, chip, desc }: { id: string; title: ReactNode; chip?: ReactNode; desc?: ReactNode }) {
+  return (
+    <div id={id} data-rn-sec="" className="mt-4 -mb-1 flex flex-wrap items-baseline gap-x-3 gap-y-1.5 [.rn-dense_&]:mt-2">
+      <h2 className="m-0 text-[17px] leading-[1.35] font-[650] tracking-[-0.02em] text-rn-ink">{title}</h2>
+      {chip}
+      {desc ? <p className="m-0 text-rn-12 break-keep text-rn-muted [.rn-dense_&]:hidden">{desc}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Bar that sticks to the top of the content scroll area with the page-level controls (KPI in
+ * view, compare brands, density). -top-1 = over the scroll area's pt-1, flush with its top edge.
+ * No section quick-nav.
+ */
+export function RnControlBar({
+  label,
+  children,
+}: {
+  /** Accessible name of the bar. */
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="region"
+      aria-label={label}
+      data-rn-cbar=""
+      className="sticky -top-1 z-20 flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2 rounded-[14px] bg-rn-surface py-2 pr-2.5 pl-2 shadow-rn-card"
+    >
+      {children}
+    </div>
+  );
+}
+
+export type RnFindingTone = "warn" | "good" | "info";
+export interface RnFinding {
+  key: string;
+  tone: RnFindingTone;
+  tag: ReactNode;
+  title: ReactNode;
+  detail?: ReactNode;
+}
+const TONE_BAR: Record<RnFindingTone, string> = {
+  warn: "shadow-[inset_3px_0_0_var(--color-rn-warn)]",
+  good: "shadow-[inset_3px_0_0_var(--color-rn-up)]",
+  info: "shadow-[inset_3px_0_0_var(--color-rn-navy-300)]",
+};
+const TONE_ICON: Record<RnFindingTone, string> = { warn: "text-rn-warn-ink", good: "text-rn-up-ink", info: "text-rn-navy-300" };
+
+/** "이번 회차 요약" findings: up to four read-only cards (no jump to the card, no scroll jumps). */
+export function RnFindingGrid({ items }: { items: ReadonlyArray<RnFinding> }) {
+  return (
+    <div className="grid grid-cols-1 gap-2.5 px-6 @min-[900px]/rnpage:grid-cols-4 @min-[560px]/rnpage:grid-cols-2 [.rn-dense_&]:px-4.5">
+      {items.map((x) => {
+        const Icon = x.tone === "warn" ? TriangleAlert : x.tone === "good" ? TrendingUp : Sparkles;
+        return (
+          <div
+            key={x.key}
+            data-rn-finding={x.key}
+            className={cx("flex min-w-0 flex-col gap-1 rounded-[10px] bg-rn-page pt-2.5 pr-3.5 pb-3 pl-4 break-keep [.rn-dense_&]:py-2 [.rn-hero_&]:bg-rn-surface", TONE_BAR[x.tone])}
+          >
+            <span className="flex items-center gap-1.5 text-rn-11 font-bold text-rn-muted">
+              <Icon className={cx("size-3", TONE_ICON[x.tone])} aria-hidden />
+              {x.tag}
+            </span>
+            <b className="text-rn-13 leading-[1.45] font-bold text-rn-ink">{x.title}</b>
+            {x.detail ? <span className="text-rn-12 leading-[1.45] text-rn-muted [.rn-dense_&]:hidden">{x.detail}</span> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Basis note on a card head ("측정 기준일 …", "추이 12회차"): quiet text (새 외형 2026-11-05), notes in a row joined by " · ". */
+export function RnBasisChip({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
+  return (
+    <span data-rn-basis="" className="inline-flex items-center gap-1 text-rn-12 whitespace-nowrap text-rn-muted [[data-rn-basis]+&]:-ml-2 [[data-rn-basis]+&]:before:mr-1 [[data-rn-basis]+&]:before:content-['·'] [.rn-hero_&]:text-rn-on-dark/90 [.rn-hero_&_svg]:text-rn-sky">
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+/** Card head: (icon) title · ⓘ · basis notes, then controls and the card actions on the right. */
+export function RnCardHead({
+  icon,
+  title,
+  info,
+  chips,
+  controls,
+  actions,
+  sub,
+}: {
+  /** a 16px line icon before the title (새 외형 2026-11-05) */
+  icon?: ReactNode;
+  title: ReactNode;
+  info?: ReactNode;
+  chips?: ReactNode;
+  controls?: ReactNode;
+  actions?: ReactNode;
+  sub?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 pt-[18px] pr-[22px] pb-3 pl-6 [.rn-dense_&]:pt-2.5 [.rn-dense_&]:pb-2 [.rn-dense_&]:pl-4.5">
+      {icon ? <span aria-hidden className="-mr-1.5 inline-grid place-items-center text-rn-muted [&_svg]:size-4">{icon}</span> : null}
+      <h2 className="m-0 text-rn-15 font-semibold tracking-[-0.015em] text-rn-ink [.rn-hero_&]:text-rn-on-dark">{title}</h2>
+      {info}
+      {chips}
+      {controls || actions ? (
+        <div className="ml-auto flex flex-wrap items-center gap-2.5">
+          {controls}
+          {actions}
+        </div>
+      ) : null}
+      {sub ? <p className="m-0 -mt-1 w-full text-rn-12 break-keep text-rn-muted [.rn-dense_&]:hidden">{sub}</p> : null}
+    </div>
+  );
+}
+
+/** Segmented single choice (radio group). */
+export function RnSegmented<T extends string>({
+  value,
+  onChange,
+  items,
+  label,
+  className,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  items: ReadonlyArray<{ value: T; label: ReactNode }>;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <span role="radiogroup" aria-label={label} className={cx("inline-flex gap-0.5 rounded-[9px] bg-rn-track p-[3px]", className)}>
+      {items.map((it) => {
+        const on = it.value === value;
+        return (
+          <button
+            key={it.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            data-rn-seg={it.value}
+            onClick={() => onChange(it.value)}
+            className={cx(
+              "h-7 cursor-pointer rounded-[7px] px-3 text-rn-12 whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-rn-navy",
+              on ? "bg-rn-surface font-semibold text-rn-ink shadow-rn-1" : "font-medium text-rn-muted hover:text-rn-ink",
+            )}
+          >
+            {it.label}
+          </button>
+        );
+      })}
+    </span>
+  );
+}

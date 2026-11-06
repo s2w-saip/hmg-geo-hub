@@ -1,0 +1,279 @@
+[
+  {
+    "path": "/:locale/renewal/*",
+    "source": "app/[locale]/(renewal)/renewal/[...slug]/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin/ga4",
+    "source": "app/[locale]/(renewal)/renewal/admin/ga4/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin/keyword-tools",
+    "source": "app/[locale]/(renewal)/renewal/admin/keyword-tools/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin",
+    "source": "app/[locale]/(renewal)/renewal/admin/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin/standards/citation-sources",
+    "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin/standards/customer-interest",
+    "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin/standards/entities",
+    "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/admin/standards/prompts",
+    "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/dashboard",
+    "source": "app/[locale]/(renewal)/renewal/dashboard/page.tsx",
+    "screens": [
+      "overview/as-of",
+      "overview/brand-matrix",
+      "overview/card-trend",
+      "overview/cards",
+      "overview/filters",
+      "overview/geo"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/*",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/[...sub]/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/ai-funnel/conversion",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/ai-funnel/conversion/page.tsx",
+    "screens": [
+      "conversion/renewal",
+      "conversion/renewal-header"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/analysis/citation",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/page.tsx",
+    "screens": [
+      "citation/as-of",
+      "citation/project",
+      "citation/renewal-header"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/analysis/citation/prompts",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/prompts/page.tsx",
+    "screens": [
+      "citation/prompts"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/analysis/citation/tone-urls",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/tone-urls/page.tsx",
+    "screens": [
+      "citation/tone-urls"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/analysis/mention",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/mention/page.tsx",
+    "screens": [
+      "mention/rn-asof",
+      "mention/rn-page"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/intent/google-keyword",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/google-keyword/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/intent/social-scraping",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/social-scraping/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/member",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/member/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/projects/:id",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/page.tsx",
+    "screens": [
+      "projects/as-of",
+      "projects/dash-composition",
+      "projects/dash-engines",
+      "projects/dash-status",
+      "projects/dash-summary",
+      "projects/dash-summary-deferred",
+      "projects/dash-trend"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/prompt",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/prompt/page.tsx",
+    "screens": [
+      "projects/prompts"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects/:id/setting",
+    "source": "app/[locale]/(renewal)/renewal/projects/[id]/setting/page.tsx",
+    "screens": [
+      "projects/settings"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/projects",
+    "source": "app/[locale]/(renewal)/renewal/projects/page.tsx",
+    "screens": [
+      "projects/list"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/ai-funnel/acr",
+    "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/page.tsx",
+    "screens": [
+      "acr/renewal",
+      "acr/renewal-header"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/ai-funnel/conversion",
+    "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/page.tsx",
+    "screens": [
+      "conversion/renewal",
+      "conversion/renewal-header"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/ai-funnel/visibility",
+    "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/page.tsx",
+    "screens": [
+      "visibility/renewal",
+      "visibility/renewal-header"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/answer-analysis/citation",
+    "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/page.tsx",
+    "screens": [
+      "citation/as-of",
+      "citation/filter-bar",
+      "citation/renewal-header",
+      "citation/standard"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/answer-analysis/citation/prompts",
+    "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/prompts/page.tsx",
+    "screens": [
+      "citation/prompts"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/answer-analysis/citation/tone-urls",
+    "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/tone-urls/page.tsx",
+    "screens": [
+      "citation/tone-urls"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/answer-analysis/mention",
+    "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/page.tsx",
+    "screens": [
+      "mention/rn-asof",
+      "mention/rn-page",
+      "shared/filter-dates",
+      "shared/panel-options"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/standard/prompts",
+    "source": "app/[locale]/(renewal)/renewal/standard/prompts/page.tsx",
+    "screens": []
+  },
+  {
+    "path": "/:locale/renewal/website/ai-funnel/conversion",
+    "source": "app/[locale]/(renewal)/renewal/website/ai-funnel/conversion/page.tsx",
+    "screens": [
+      "conversion/renewal",
+      "conversion/renewal-header"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/website/answer-analysis/citation",
+    "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/page.tsx",
+    "screens": [
+      "citation/as-of",
+      "citation/renewal-header",
+      "citation/website"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/website/answer-analysis/citation/prompts",
+    "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/prompts/page.tsx",
+    "screens": [
+      "citation/prompts"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/website/answer-analysis/citation/tone-urls",
+    "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/tone-urls/page.tsx",
+    "screens": [
+      "citation/tone-urls"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/website/answer-analysis/mention",
+    "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/page.tsx",
+    "screens": [
+      "mention/rn-asof",
+      "mention/rn-markets",
+      "mention/rn-page",
+      "mention/view-cards",
+      "mention/view-compare",
+      "mention/view-weekly",
+      "shared/filter-dates",
+      "shared/panel-options"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/website",
+    "source": "app/[locale]/(renewal)/renewal/website/page.tsx",
+    "screens": [
+      "overview/as-of",
+      "overview/filters",
+      "website/brands",
+      "website/composition",
+      "website/engines",
+      "website/geo",
+      "website/summary",
+      "website/summary-deferred",
+      "website/trend"
+    ]
+  },
+  {
+    "path": "/:locale/renewal/website/prompts",
+    "source": "app/[locale]/(renewal)/renewal/website/prompts/page.tsx",
+    "screens": [
+      "website/prompts-insights",
+      "website/prompts-options",
+      "website/prompts-page"
+    ]
+  }
+]

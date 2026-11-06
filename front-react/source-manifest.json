@@ -1,0 +1,1892 @@
+{
+  "importedOn": "2026-11-06",
+  "entries": [
+    "app/[locale]/(renewal)/renewal/dashboard/_components/overview-body.tsx",
+    "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-body.tsx",
+    "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-tabs.tsx",
+    "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-body.tsx",
+    "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-subpages.tsx",
+    "app/[locale]/(renewal)/renewal/standard/prompts/_components/prompts-view.tsx",
+    "app/[locale]/(renewal)/renewal/website/_overview/website-overview-body.tsx",
+    "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/website-mention-body.tsx",
+    "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompts-view.tsx",
+    "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-body.tsx",
+    "app/[locale]/(renewal)/renewal/projects/_components/project-dashboard.tsx",
+    "app/[locale]/(renewal)/renewal/projects/_components/project-list.tsx",
+    "app/[locale]/(renewal)/renewal/projects/_components/project-prompts.tsx",
+    "app/[locale]/(renewal)/renewal/projects/_components/project-settings.tsx",
+    "app/[locale]/(renewal)/renewal/admin/_components/hub-accounts-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/ga4/_components/ga4-registry-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompts-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-overrides-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-seeds-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-socials-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-codes-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-tabs.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-sources-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-keywords-manager.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-tabs.tsx",
+    "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-roles-manager.tsx",
+    "lib/auth/route-policy.ts",
+    "lib/auth/scope-policy.ts",
+    "lib/rhq/index.ts",
+    "app/[locale]/(renewal)/_shell/renewal-pages.ts"
+  ],
+  "files": [
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/geo-map-lazy.tsx",
+      "sha256": "938c2e90b382c529030eeaedf483bdf671d3baf7753e1973484b0012a01aa211",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/geo-map.tsx",
+      "sha256": "0b7c946e3ee2b4ebf13fb5b64d3e0a41962c77da4bad3abf4a37a1f303f63790",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/geo-market-evidence.tsx",
+      "sha256": "d720aead2b273139ec21898f6ef09527ce2cf27d1dde2e53bc3f21c4155b7fb7",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/geo-market-table.tsx",
+      "sha256": "a21b50b5db53958fa350a323caa52c3e419dfbc5651c54958bec4cb1e4b4bb99",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/geo-overview.tsx",
+      "sha256": "6763d7ae77d05d160bb19dc6bbae4208a6bd6a71091c3a27500f300ca5e7003b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/overview-filters.tsx",
+      "sha256": "840518d1386babf057f27409ed4139db98298487478961e2046139b532988a81",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_components/overview-kpi-cards.tsx",
+      "sha256": "2e2c5b4a8249d7b1b1f8880b9401592a2a58328c0d31c88919554333f1209d71",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_data/live-types.ts",
+      "sha256": "cf9c95adbc0c0800656d5d0a32e3b9b9b513909e4f7461e7168c5d53370bed62",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_data/model.ts",
+      "sha256": "8e184fe1ad123ec7b2e9d9d47d671d2a54946ba75644a9053c372300dc618d7b",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_data/overview-metrics.ts",
+      "sha256": "da021cb70e0e78d47e386bc5a373b27746b1e5c54d11e23dc85d2771cb77dd6e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_data/screen-types.ts",
+      "sha256": "afa7b19d8af431cbed5de880bd89b1c5a5cf5ab58607f4dbcad9b29e5e01cb4b",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(dash)/dashboard/_data/trend-kpi-family.ts",
+      "sha256": "70ccb4759602d94ccc6fb63bc2417d79c28b096962b2f7093d17e6b68c71974d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/ai-funnel/_components/acr-live-view.tsx",
+      "sha256": "4f77080a3548037050d1d0cb05ae8b2ece1a9e570c3dd1e9b6ecb2f6b5d18340",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/ai-funnel/_data/acr-screen.ts",
+      "sha256": "a333976e8f46b4bf104ae71329f5f7c53b2f307c2ea58468d8aa7fb3d2479f92",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/answer-modal.tsx",
+      "sha256": "212db15e20ff1b15c22faf424f91f648603b900c16a990b97b3f1eda20843525",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/brand-rank-table.tsx",
+      "sha256": "a9f6a275435640c1c739316736794a30f6add0be9b4e1ba5bd885e1ce45cf92f",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/citation-domain-table.tsx",
+      "sha256": "94e357d1715a8d972fee2d3cc5f8f3af5f705bbbab2f1d7e8fad5265e0ca2ecd",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/citation-prompts-page.tsx",
+      "sha256": "7d9d536115c82a7f4db483c9b8d98acafc2a63cc4a4a4acc1410764d2710bc87",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/citation-tone-urls-page.tsx",
+      "sha256": "3de3d563f3cf1c0de54b5d894d3171535ce2d35f07d21e625cbb6869d45520ca",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/citation-url-axes.ts",
+      "sha256": "2565fab70c308b00e2cb29b3c1719bd4fb557e033041b896201c9d9a5e52012b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/citations-view.tsx",
+      "sha256": "decf00a9112bc852045ab9caeaa82494227d1c47344ce3bd3cbc866ba200b5fc",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/filter-groups.ts",
+      "sha256": "d6c67291b41bd20798610fe486bf1b64207bbc59802446e830a8fbd6f29eb1c9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/kpi/chart-box.tsx",
+      "sha256": "8768419fa0a39c8fd785012a725a4fa6994fc975248c8479f2c1c1b7734a9540",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/markdown-answer.tsx",
+      "sha256": "97a42f2eb8b613b428f8cbe6dfb13045c708d4a6f5def11666e9fd67c342c881",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/mentions-drilldown.tsx",
+      "sha256": "6f3f42c671ecab0d8daa83275a773bfffac379c72053b1205cc4080e93e2b8a1",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/mentions-view.tsx",
+      "sha256": "102bdb27f941fa3bb233bde1dd1f6a541a91a215949e91082bc6f3d9c1883fc2",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_components/signal-prompts-dialog.tsx",
+      "sha256": "0c12fb28e16737a5145a58fe8d6bce5e8d9654d3e902922c36aa85c3b8edf663",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_data/citation-view.ts",
+      "sha256": "3279ac419c6bdce3cc61a14f3d81ac88ca3c89e57b97e334486fc2485e2bfc7f",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_data/drilldown-screen-types.ts",
+      "sha256": "3169f9200a266bd90dab1ff41d63b563ee38257e9623045f5ef36578320552ea",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_data/kpi-tab.ts",
+      "sha256": "da95de4cb46929ba4cd3f7f21583c2a9398a06fab2983bb5a5388f4f6c9e3eba",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_data/mention-screen.ts",
+      "sha256": "de555b95b47eb26217cd0558bf8be2919bfc16f3879443eb86e0c33aa2456a6d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/answer-analysis/_data/subpage-search.ts",
+      "sha256": "5405658f1ef5150e3210d86a4158277f3d42dcb9d37b1d2ed333d4f515eb1b39",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/prompts/_components/prompt-export.ts",
+      "sha256": "416a684ec0ad87c555da3ccbe22e07098b4ca022b962929920ae185814430edf",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/prompts/_components/prompt-list-readonly.tsx",
+      "sha256": "ad1a964ba5789a17b282042313a59a960c74bf09a17ad6df048dc74a4716edd4",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/prompts/_data/prompts-client.ts",
+      "sha256": "975499a14716f2ab8f56ab82b5b9ec23e8b38f8b76bc5c60b6213b45f4d59094",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/prompts/_data/screen-query.ts",
+      "sha256": "1d1ec016adddf81fd3cd718958cf6e320c5332dbb653cb9782cfed706fc2634b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/standard/prompts/_data/screen-types.ts",
+      "sha256": "72ef7f87e478f45b5dc8a7a6c4954260bdd075b9021c0434ce6fe57ff1fea589",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/renewal-pages.ts",
+      "sha256": "452fde5d3b5dd2214e4919b35e4b3a4c5c073946c13be0d08b39f0d5b76cf6f0",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/csv.ts",
+      "sha256": "3a68abcc52ca2e11ecfed2fceca6a49983f5cb6984f82ea81ed2694e0c2fb2bb",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/filter-runtime.tsx",
+      "sha256": "539d83aabbdad17eeab669ce64b632c6a3be1c820b66003423b31647ff200c30",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/filter-split.tsx",
+      "sha256": "ddbb2e931f762faf660256b715511e2434a2a7f1e04bc24514980f46b0f832ba",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/overview-filter-model.ts",
+      "sha256": "8434d700d78063659a6dee6a4f078650c886f19ebe7401c55c989cc8644cfced",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/overview-filters.tsx",
+      "sha256": "8e16a4915a8e0f517ef218561ab0c03b18508593eb668a259d49ef08540bb1b9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/prompt-list.tsx",
+      "sha256": "5d208d92bb389f71c9a0aa826c8e0bc615b660e5c563207f632a1c6ef409398e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/saved-filters.tsx",
+      "sha256": "6c0c0f2ca6eb6afa4c619c7c4d018e838393c5987e702d7f6281b3225f4ade08",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/_components/admin-list-page.tsx",
+      "sha256": "455c3ff503fa83bad800e03190a7eb686f2371d64bcef1f633c4f31e314e51f0",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/_components/admin-saved-filters.tsx",
+      "sha256": "fa94828fb78403b0dd10c4f15295b3e61025a5679a162c5610bfb594184c6722",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/_components/hub-account-filter-model.ts",
+      "sha256": "1c40dbc64a106eda9fa6401e4a4eab31461bb2c5d66109ba2bb5aed65c017231",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/_components/hub-account-form.tsx",
+      "sha256": "bb5cebfdf30a07c8dae0deb3160565211b8b8448d3f9472a9a0232900c502778",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/_components/hub-accounts-api.ts",
+      "sha256": "d543c9cebb3d0afee0ad1aba4dde9a68435c71139ff86bbeaa220df8e8784547",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/_components/hub-accounts-manager.tsx",
+      "sha256": "afdc5eb57da7225dfa9f7cbdb0b294251877d05d7df416126543adefe8ae0fdc",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/ga4/_components/ga4-registry-api.ts",
+      "sha256": "589aebaec8630f5fed09b18bf93850a5e02e40ff9d5a6731d0c2421c373752de",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/ga4/_components/ga4-registry-filter-model.ts",
+      "sha256": "3c3758eb6db6039bbd68223cf49d52a95fa8f564845f97b471170b4317481e96",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/ga4/_components/ga4-registry-form.tsx",
+      "sha256": "0f8cbb4a63ce978140bb1a4a045d87dded72f7c5645c0de7d34cdede3c852917",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/ga4/_components/ga4-registry-manager.tsx",
+      "sha256": "bd1564950201b703b9e477ce02d83bf3debdfb76f42dd9975f97d9fcafb71a17",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-codes-manager.tsx",
+      "sha256": "9760152b44bc433ea7b7f6938b32b5821942bd96ff15670e5fd1c3fba11427fb",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-lists-api.ts",
+      "sha256": "90a41a35fe62e9e0d3d4a9179584757b6e241358ff3dcbb9e48acca881c28569",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-lists-kit.tsx",
+      "sha256": "59f4ff70ba8fea0a597f1fa8c731351761f5a21c56624d3e6c4443e8dc16545c",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-lists-model.ts",
+      "sha256": "ab3600703a4113a54cc87c3f8e695e07f80dfddb24fd7e70c442fa5a8db9f534",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-overrides-api.ts",
+      "sha256": "a11a3f5f04878db638fab850736ec994aef602903aa43bbc38994b9ccb66b6c2",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-overrides-manager.tsx",
+      "sha256": "114b8e1b96b92bdb1848bd2aa41852eea23e14437270211f9e46157e5b4b9633",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-overrides-model.ts",
+      "sha256": "8caa20e236ea867e74802bfe809a72606ff55a955eb9a56a9be2084b4b8b5fb8",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-seeds-manager.tsx",
+      "sha256": "fe92615bb98880a80b1f7abfeb2cd358e68a4a6f48a25d85c50fec52fabd56a3",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-socials-manager.tsx",
+      "sha256": "30e62f84926e931e3f01523e6385f17883ad4422bf8cfee422331a94d61ef82f",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-tabs.tsx",
+      "sha256": "ae12440f54af8b5d4baba29c52556f46444e131acebb2cfdd24c120c87c2e693",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-api.ts",
+      "sha256": "459d650f5713be4cc7c0ac00169c2fcd2fcfd16b69924638eb6b47319dfcf33b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-keywords-manager.tsx",
+      "sha256": "6a5ebc3b706a74d43849b09ef0ca9f83178db8cfad1015963d486fa65abb9165",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-kit.tsx",
+      "sha256": "572006bdf2a5592686f179d9916e6bbf900be0422dd4afb1804b4b946f91b593",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-model.ts",
+      "sha256": "5b5009276e98b713316da05f8db93aaf0e92aa70f055cc2a94027b8826d1fe81",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-sources-manager.tsx",
+      "sha256": "429fabaf5471f4bac5d3f0ab35dfea9a4351f8c87f384ed88c3665917ec5c229",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-tabs.tsx",
+      "sha256": "8a34a26f3bff006d29a01cf3bb817f6a9ac4c2e0492a9189c08fabb41a8ce677",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-role-sheet.tsx",
+      "sha256": "499e5052ed1a4356c458d711b551e0fad7d6aa76cc4156fc23ac288e983a0a2e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-roles-api.ts",
+      "sha256": "0e0c7078f49e5c2541f951ae4d221f9c99de7dc8c825205d83205355a2a9cc5b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-roles-manager.tsx",
+      "sha256": "2a67ff59c0076833530532f3abeb55e9e6fab23dd4c8f30d3d5c21678fe349df",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-roles-model.ts",
+      "sha256": "7d5de8dd0c482670e9621568d37f0b286c4c4a383c3ada4957d6b4f336bf7b7d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompt-filter-model.ts",
+      "sha256": "acea58c17faa388bdd3bdd12e44e68d13633cffe02d37b28b9744b87025441a7",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompt-form.tsx",
+      "sha256": "fdde41c16f9d8852a11e5cd79263b983686ae079c35671d34517e299b73ff68e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompts-api.ts",
+      "sha256": "02c314024db9e51cdb29321cb33cf77749db0c90749a80a279dca6395ee8f8fc",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompts-manager.tsx",
+      "sha256": "4b48dec70d7da05a63f72758837f84d7d77203839ec8911b65c38a3dd6d6dc9f",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/dashboard/_components/overview-body.tsx",
+      "sha256": "ae4a8101963fa6725d945c8555968ed112c791f6917f8693971d074f5c1ea128",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-dashboard.tsx",
+      "sha256": "e7c5a94cd786640a011703e28b6a3fc08a909af9ec653f841bfa0a7e39b9ea1a",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-list.tsx",
+      "sha256": "b8e42f8bf8f18dafd867a07e04de70089af381f025ca57bbe2b55934cf35d270",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-measurement.tsx",
+      "sha256": "d02a69145bcc097015dde6ce468dd7af371d0f76fe53d6553d39b88fd61be8ea",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-model.ts",
+      "sha256": "cc172fe62d5de2ef27d51ab16cc9e84a592080b9a920953dc0f272622ba7f808",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-prompt-edit.tsx",
+      "sha256": "402fb50ebbdaea4700c32459d1c061fdec9a8c40b32376d674d84c22f24ff4c9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-prompts-api.ts",
+      "sha256": "fdf4568272d95c0efab1b2820d9b2cdee8af87d66370c61476a0b47639cf31a9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-prompts.tsx",
+      "sha256": "f365e788facfdaf3eb8b00b94104c5005535c110aa36516b7980fd3aaf1db771",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-settings.tsx",
+      "sha256": "367c8797d202b8b25aa1e927c558fbfb7b2695be2cb81aadeafd3c8e6543ce7f",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-body.tsx",
+      "sha256": "aeb3458fa1111a53568793e54c793f11c9cc32fc3cb6a75e859996df3335178d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-context.tsx",
+      "sha256": "b894ea63ee460f22493920e377bdb911799a333fd8423e8af813d4f967c9a957",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-detail.tsx",
+      "sha256": "c054c4a281dc60935a7d124a49df110d3a909dd9179b20e786f79d71df6e1e1a",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-funnel.tsx",
+      "sha256": "4618e3b4fe185cd88b47aa5ade1ca58c2d9a7ae1ac3140503a8c2c95b76d1064",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_data/screen-types.ts",
+      "sha256": "9b70c2a6adf51f1058836bee40cb302a9c3affa624178ad1f685e54673525a5a",
+      "kind": "types"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_data/sheet-client.ts",
+      "sha256": "96d03dca11b4d60bb9dd635c40668a14d9052725b0331a5058441c8c5636535c",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-body.tsx",
+      "sha256": "59683baf990bf2a274fbc999b6af3ac5b96334e44a82479fd3e4aa7124509e51",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-context.tsx",
+      "sha256": "e62f6862f716df227fb7cafc646fb9f72256fd1f1c6ec2fe99bd6920718e5eb9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-domains.tsx",
+      "sha256": "d975b4df34bb0fa78f4b845dec27f997961a33ad6a99c0d5ce6a5399116d62a2",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-input.ts",
+      "sha256": "3dffb07d965661d378b0a4f4c279665ababe4cf3a91eb699107016995af11e47",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-subpages.tsx",
+      "sha256": "2bc16f9c4b8ac386e2abadab8438ace3ee02e35aa46403f59b86c73b71f1d938",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-website.tsx",
+      "sha256": "e1e4a95df82cbd0d3a480a58db3da66d2db0ea40099bff205e1e411320c73a43",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-body.tsx",
+      "sha256": "04d0f28049f9039cf56e9d3e061e29748048eb1227be0d7881fd600eadc82317",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-brands.tsx",
+      "sha256": "64bc533a0017436e96d29ae217c1e8a9423c880bb1f55728dcf4c27ee51c8584",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-context.tsx",
+      "sha256": "f067458651526313820829d42bb03c7d0a97abd6695b19caa4baef5129f12d7e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-favor.tsx",
+      "sha256": "37eba313ae12f08692f503dbb9dd85e3f2db43139490edb5159210aab24908ea",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-global-board.tsx",
+      "sha256": "67c2d9196219eb0ca79c222ab826fbf706697a2078e8341a818ae5d80c979bf1",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-global-compare.tsx",
+      "sha256": "3beb88d656331895c64dd48a05997cb322cec547ab32e74782a9066d60804c97",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-global-own.tsx",
+      "sha256": "7126f2c79114b6bdcc8bab394524a1c20f3f04ac31ccac46eed31ecbe4c6f44b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-global-trends.tsx",
+      "sha256": "5dd01363e78684d394f73fab1d93fa1c6de36dc97e295f82774dc57a1f18733d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-global.tsx",
+      "sha256": "7b16220d3704e332e1abdb1c502a967964319c29669f91d6b83e87e4c7391f16",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-input.ts",
+      "sha256": "f34423eeb0929dd7351dfee01bb8d143b884be8e005fe3e6cefec7ea60b0ba72",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-kit.tsx",
+      "sha256": "079768e6cf338ac12ca82689eb8708a68a87f2fa867be8df1fe3737b17fd6638",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-rank.tsx",
+      "sha256": "665dff0daa2a03b1b43569e5663278470827e7e8be27ec40c088c9fb865aa81e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-rate.tsx",
+      "sha256": "00227c1828f0f2d9aa7227109c8a2e9209c7ecba9d8544cb47417ff5504a0720",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-tabs.tsx",
+      "sha256": "0b40ca5a0356469a396be81e9c7f21efd1aff0ae7e828e0bb1b14e06ce19b655",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/treemap-layout.ts",
+      "sha256": "87d158d940bb8742c5131f5852b8ba7e03178bf982d22e8b809be48ed687f284",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_data/screen-types.ts",
+      "sha256": "9fa04359e569938ba94f42c8f3953c4633fde6a2aba8747534f2c24ee9c11b49",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/prompts/_components/prompt-detail.tsx",
+      "sha256": "b763717cf5e59d0302cd60b1417f5b867e90c969ba551d811ec111d8b9a32bf4",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/prompts/_components/prompt-filter-model.ts",
+      "sha256": "738c6a85171e67d0cc4ac26cb4a3584da85351dd297012c4f698b8a216dc0693",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/prompts/_components/prompt-history.tsx",
+      "sha256": "2933361da4ce0a59b5c5c2d8018ffb9e035fedbf2cff8830075c0f87103ec7b2",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/prompts/_components/prompts-view.tsx",
+      "sha256": "ae6ba6510a4715045e25907bc29205c3c618d4ab878fbb8af4f074973f10cd59",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/engine-label.ts",
+      "sha256": "9da09553589568391fa7122ef2557829e53e1326c6796f386001435df3114a94",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-breakdowns.tsx",
+      "sha256": "9777a41b695546044842ad52db72c215b189a72575fe075f2385128c80a47939",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-format.tsx",
+      "sha256": "361c13a852dff0eb9b97f9661136a5451711f184e4a8bb0de65aabf7b52a76a9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-kpis.tsx",
+      "sha256": "4013ea97bc8acca6922f5e45e7f9f7f60c356394428b7b7db4b04474e37a7fb9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-markets.tsx",
+      "sha256": "b497e259ff651f4cd1985f1b02386052a78f8c3ccb069a1d051748fb15432ac6",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-overview-body.tsx",
+      "sha256": "d73959f2f619bb6afcda8bbf1e1f55b6b52cb0780d003d334674e7c8f18f28f5",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-sources.tsx",
+      "sha256": "2c6b558c54f3901f2b38d0c813445d01905853fb8ef0f3972df0a99f1cf19940",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-trend.tsx",
+      "sha256": "5403a32e7e5567d61dbd1419c4a20752cbe7f1b527278d764141f5b9f1cdff75",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/missing-prompts.tsx",
+      "sha256": "089b6c6e8fd58eb3478577da8e4f513ec206d34d63c68614002f83010f9a46da",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/site-cards.tsx",
+      "sha256": "5a33e70690ed3ee3f33f9f48bcbfd4f50dff936c14e8cdea7b9e62b5b5813fb5",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/site-compare.tsx",
+      "sha256": "56a1346525a83c70e31be391fd8a06582118b401819e52b4d91bac5a81f9a992",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/site-engines.tsx",
+      "sha256": "38957daa781e991aa0024bdb6e4bfe9a5000abafeccde2bd203f423f66e24ed4",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/site-markets.tsx",
+      "sha256": "2e4c6978bb1a58cc4dddaa22a232922c9bff3fd16d8362b66e977624c44f2ccd",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/site-summary.tsx",
+      "sha256": "4956301a22188a0aa8647a53e501709ac545c872faa690b075a15aba8ab937bf",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/website-mention-body.tsx",
+      "sha256": "003584597c8498e6dcf8c1d2a2687cc27ec57ff90965d372e2e1b606b76ea621",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/weekly-mentions.tsx",
+      "sha256": "83cf0afda52f93ffb6082ff25710a2e655899f671a796ab144e025a98c27a893",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompt-insights.tsx",
+      "sha256": "358bc00c5905490f31329c208d1de353fbb90bd704b7f09035d21ed5c5ae9ffb",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompt-list.tsx",
+      "sha256": "2954db3d1f67dae0bfab151add3f193796be26fe0beb56837dbf4d5abba2b68d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompt-model.ts",
+      "sha256": "729479dbfe825b02be17eb6a6b9b77536f062822aed4c39def27a10bc15cfa95",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompts-read.ts",
+      "sha256": "22c885602d428b0c5a93db9ca2e8f7a1c682de2fe29d08ab2a9d4eccdec3fd7e",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompts-view.tsx",
+      "sha256": "c7fe7054de1d579907422d8d310fda87627aa9df99e6756ab3e69259ca7aee64",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/account-scope-chips.tsx",
+      "sha256": "42b07edc95a79a578231f5eb187dbbcd6ffae14911c2184ee7aee77c862f325b",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/anchor-date-calendar.tsx",
+      "sha256": "e43f66e62ca270b8cb9c5cfd8b637a5a4267d3452896f109db88d1a934e2ec55",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/as-of-chip.tsx",
+      "sha256": "a3dfbb7172667a7f9ac249a66a09b6391db5c789a05529a13295b0e2b2877782",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/col-info.tsx",
+      "sha256": "c9cedff2fa411d3eead9fe117a5236539718af2eac6c6e78165e08acbcdc22fc",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/delta-chip.tsx",
+      "sha256": "e2c9a7b47285df086504de28aa8480622e558c98be8bb22e6cf5d4b584c3c866",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/dimension-filter-panel.tsx",
+      "sha256": "208249a68f11f04d481b06d614e5bd778e25173055519a44dca5c6bc206bb793",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/engine-label.ts",
+      "sha256": "5dfae0368163231ef4b423d5a8783465fb4a7a557c5aab3ef36e3b8cd7622360",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/filter-draft-actions.ts",
+      "sha256": "cf3037e51a116288cf744cd2101a8634e23b188ce021fca752a4dec06d1263e5",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/filter-encoding.ts",
+      "sha256": "0e96cd71f2357fc59553c2798a4f2fb5525a95c936890a93a2931067a7a67477",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/filter-transition.tsx",
+      "sha256": "6b606d11b19aeb689af1e24958123150cfdee56d2377e970de8d9061b718d750",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/measurement-basis-control.tsx",
+      "sha256": "b9eb749461256257b73f2cf1085e49d963ae14ec316113c6077ed392211bb21a",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/measurement-basis.ts",
+      "sha256": "af22877144e4009e625a98ae5ab1dc14e1522e6000b935d750b2ed868b023004",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/period-delta-line.tsx",
+      "sha256": "2e57516358f3de02d53d1d41cb0141e43acc4ed552df0c9d0c90b2c2b358015e",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/period-delta-slot.tsx",
+      "sha256": "aa4716bd7749e6c353efb70f090bf33910125893331ea370906a1bd0bcbd69fb",
+      "kind": "types"
+    },
+    {
+      "source": "components/dash/rhq-region-toggle.ts",
+      "sha256": "957bf497ec876897609028df371c5bb9e6c29fd59331101d3fccfe37b3603d9b",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/selectable-dates.ts",
+      "sha256": "ba59638c638b9432d063c2b6aefcdb16189cc08eee97f89ed7b78c5d23a2c261",
+      "kind": "source"
+    },
+    {
+      "source": "components/dash/trend-gap-overlay.tsx",
+      "sha256": "1c90f7b14c903cb15b40f43286e94c9bdd2ba1b9b1d6a0c2e4ccb3eb53a46382",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/button.tsx",
+      "sha256": "a178ee87b975faa64fe3a866e436e29b0e3277fa2f0c752f2eba9193a6396958",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/card-actions.tsx",
+      "sha256": "6b91b5fda24420cb204d7fa8be083c1649aa697be758a5469ae09a282175450e",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/card.tsx",
+      "sha256": "3e978f56c40a24fc111855e5682b6fb4bae56f2a5fbbbd33213d4edf15b30931",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/charts.tsx",
+      "sha256": "6232a4cbf50a6c8877e9382b182183817ac3c2e697bbf43e89da9f35941828ec",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/check.tsx",
+      "sha256": "a72b982e469cf94c0d2475a45299cd4bfd537c06019cad5925e3990850d2188d",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/chip.tsx",
+      "sha256": "8137c8376ac59c3b60578cf8163d9d18db794b566d2b2a6349e3174f5e37be2f",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/cx.ts",
+      "sha256": "6e88c4d11d511fdd11e2c268a3e1310482cb3f40965da44c57504b5c8de94496",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/delta-chip.tsx",
+      "sha256": "42c143942f65b6c7dde327a55be06e5112b475ae965b72caa1d5bef23f1dd1d9",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/drawer.tsx",
+      "sha256": "bde23f7b34642764f97efc1eca2bc5fdefcd5fe22fe4332cfa5885cdbb26b2c2",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/frame.tsx",
+      "sha256": "553605cabae7c45372de2179590d5acfc35d39195778ade0d222c754c7e4db69",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/highlight.tsx",
+      "sha256": "2051d560b536b39ad8814c54cb527a0aecfe1553d54b3ae0cd5dfbce7fb5900f",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/index.ts",
+      "sha256": "6570ed5aa8c0de604d24bdc9866559cb750d36dc576b1d22442e3b2eac778b62",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/info-tip.tsx",
+      "sha256": "09c2827f8df8957370cca5c3ecbe40ec15bc44d098f9aa68aa614c6272c5eb20",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/menu.tsx",
+      "sha256": "d21a84e38b204c1a1bab322b8bf32fffad9acff933b4fca62eedab8cd855e2fa",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/page-header.tsx",
+      "sha256": "d0a8dc6b8278debba9602fe78d3efcb1db4b175e6c7cdc0ca53bbb999b2662b4",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/palette.ts",
+      "sha256": "5302dea8b1f73837ee1e3874d17bda5fc764d94d67daf55f61eaf620e213f439",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/panel-section.tsx",
+      "sha256": "cb120d910f23c9c5c76bc4a797f0bfd98d42824ced924c54cb2020e96f32b741",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/round-calendar.tsx",
+      "sha256": "2d9a52d35a741ab87650cb30edb6bda5de13ae6a785b1291f3e77c6878604b2d",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/select.tsx",
+      "sha256": "79f19398a16be6760d3268b0b6528d3cfba573a8b65c6709323d0977e09dfe68",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/skeleton.tsx",
+      "sha256": "6e4dfd2064824b71688149c24f8cb0620adccb52241d194da5e9a3765f02bc77",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/spark-tips.tsx",
+      "sha256": "787e1ace0a0958d8ed7feb6e9364dfb4f6c6374c41103948f3eddc59eb66bb28",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/sparkline.tsx",
+      "sha256": "5c4af0510b79b1ec76da9842386cc6f569cccbcf47650cfee38ebea7f3694c48",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/tabs.tsx",
+      "sha256": "af0dda2addcfbab1700614233ce9445690ebf375d4e264d2593335e0b52f6776",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/toast.tsx",
+      "sha256": "95bb4a5f47f873455ba00e20186ac03f0ce9b756a4525fa49df2977b3982d79b",
+      "kind": "source"
+    },
+    {
+      "source": "components/renewal-ui/trunc-tip.tsx",
+      "sha256": "616c38a4e3f456528465408722ddc86a5e8a51082534aff59b3636b2e16dc20f",
+      "kind": "source"
+    },
+    {
+      "source": "components/service-week/chip.tsx",
+      "sha256": "83c49b52245b5abdf97bc76a275260380e7ca0035da94853b67ceed627c98314",
+      "kind": "source"
+    },
+    {
+      "source": "components/service-week/no-round.tsx",
+      "sha256": "7db48f62f481fc473661c6d4e271ea3749a58eade26349e7068b7da37e9975da",
+      "kind": "source"
+    },
+    {
+      "source": "components/service-week/notes.tsx",
+      "sha256": "53c9dd4a447cf09f0849119e7e4a5eec599ccc951b584880224b0920484fac7f",
+      "kind": "source"
+    },
+    {
+      "source": "components/service-week/provider.tsx",
+      "sha256": "46c74ca4fb43025f7db67fe03da2df8c9266a4bee551f1e373941b9a1a381665",
+      "kind": "source"
+    },
+    {
+      "source": "components/service-week/sync.ts",
+      "sha256": "f305a41484df32e4ddaa4024bb1ad66e8990e67fe7a7fa18dfbfd9ebd0602f95",
+      "kind": "source"
+    },
+    {
+      "source": "components/standards/prompt-audit-timeline-dialog.tsx",
+      "sha256": "e4bf2d6e24d5840bf7b63a138ffda6de770d0d90d2a25f43de0356e944f85e2e",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/badge.tsx",
+      "sha256": "c4db86823de4886f80258687bf607ade6cc9311c4c363b42318123ea9442dac4",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/button.tsx",
+      "sha256": "8abc88895e82eeecb08d5dd29dbff0fd19341676b0c20773cdf3323b3ea8080d",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/dialog.tsx",
+      "sha256": "f767649765c3abcf55b8e29942315da2540de99ec24b60970f440e8cbc0beaec",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/dropdown-menu.tsx",
+      "sha256": "de1bdb7ad1e49329dce572fc7fbdfc602ceccd37bee758068130a5b29b5e6856",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/input.tsx",
+      "sha256": "93ec443ad5450a5fea9c29b5a8e51b41efbaa5b15f6154b2a45b8207a621551c",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/label.tsx",
+      "sha256": "a476e41f08b9de5bd447de66a33d8bc2ad18f2fa6b96c064778bab4b6f439f4c",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/select.tsx",
+      "sha256": "e8492946c2b34712b31bf66625535dbf11fafc518fdd3562c358d16ddb8d9c91",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/sortable-header.tsx",
+      "sha256": "48e89a2199942be5da6cfe1f482b30470395df95bcec33fc1d4e6550a242bc16",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/tabs.tsx",
+      "sha256": "28b7b0028861832c6bf591c22896304f29bd9b40d4cb3bc7e2ec883bab0c32b0",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/tooltip.tsx",
+      "sha256": "30711729ae90f4e93a071befa1dfb413adbd9fa06e647b0a676c70a6a537762b",
+      "kind": "source"
+    },
+    {
+      "source": "hooks/use-ordered-table.ts",
+      "sha256": "3f19c687b9e2740b95dcaafa35a5d8ab5caa6f6dbba4612ec413f214b9b62238",
+      "kind": "source"
+    },
+    {
+      "source": "hooks/use-served-state.ts",
+      "sha256": "1b944b99d9c0d93b10f5eae37fa2aa745f3301b36fe2c4d9d2e60265a439cdcd",
+      "kind": "source"
+    },
+    {
+      "source": "hooks/use-sortable-table.ts",
+      "sha256": "9ff7906b3dd642615a7ced90b17c8d42b2fb21208ff8cbbb049df2e375e9cc63",
+      "kind": "types"
+    },
+    {
+      "source": "i18n/navigation.ts",
+      "sha256": "e80c04fdcf33b3770390e59406fd200be0685f5b8b41adf2ccff899bb1cb2b9a",
+      "kind": "source"
+    },
+    {
+      "source": "i18n/routing.ts",
+      "sha256": "83ce24ff7060078e496268b6f72e32eccfffeabb30d31f2ef78e528e9c044556",
+      "kind": "source"
+    },
+    {
+      "source": "lib/answer-sentiment/spans.ts",
+      "sha256": "98f28b42c915a069b5b373c508ac70d2a7905ab04c17588b9921a3e7879d7bac",
+      "kind": "types"
+    },
+    {
+      "source": "lib/answer-sentiment/stance-evidence.ts",
+      "sha256": "2586d6464981ab52426f8fb8ebcfb25832ae222bb6798244439dbd66db511575",
+      "kind": "types"
+    },
+    {
+      "source": "lib/as-of-date.ts",
+      "sha256": "32b3de1f496adfc58d64feddad25b4a1a05f918d7a587957b0ced9b0ff47c0a9",
+      "kind": "source"
+    },
+    {
+      "source": "lib/auth/errors.ts",
+      "sha256": "2fa054e2e2c4f0d247e608698f8ef86489ce139675af82dc79f493c519768350",
+      "kind": "types"
+    },
+    {
+      "source": "lib/auth/route-policy.ts",
+      "sha256": "2fcab8c706362ba2bddb9430b42263bdf40504251548803c59208639568a944e",
+      "kind": "source"
+    },
+    {
+      "source": "lib/auth/scope-policy.ts",
+      "sha256": "cb0af0ded52904c5c689f16a95d50bae2c1b6b1943deb16b88a4036341b5f33d",
+      "kind": "source"
+    },
+    {
+      "source": "lib/auth/types.ts",
+      "sha256": "161953b6c9ecda7ae480114a5986455a3f37d4d6a7bfb525c91ee7e223653a90",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/curation.ts",
+      "sha256": "d1cd5c4fe8bde50d1efe7219f371ac4b04e8a5d50e77ebed17054583f5d9834f",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/index.ts",
+      "sha256": "389e4f3b424423c2d866d82391e2f0467fd9e347f4ffddda988f26b51bda9f57",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/official-social.ts",
+      "sha256": "3848c5bf18904d7aa67210e6c43fa25f7d0616f82ce35d03e7576ce49a76069d",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/overrides-loader.ts",
+      "sha256": "973c3dad20152766fd18c2a3cee145010058f97fd416c269ad1d99d52349d962",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/rules.ts",
+      "sha256": "9fb0e23070fb9b48459519a4055d5f36b2c3f1ee5c7f7360c3b3748a44dd5a68",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/seed.json",
+      "sha256": "85bc8cf8d3e05666c3a3dae1eb22f0461082a18b95a7fb33a95ee5668cff0382",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/source.ts",
+      "sha256": "22f4aeea2f84e2637b17908158d026eaeb16f34cef68e3b004df85d6ce68a274",
+      "kind": "types"
+    },
+    {
+      "source": "lib/citation-categorizer/taxonomy.ts",
+      "sha256": "e889003234d7b4fd400a08b922028414f76b05b642d4b8c5a464e7c325ca380f",
+      "kind": "source"
+    },
+    {
+      "source": "lib/db/column-availability.ts",
+      "sha256": "068c8e2c2ce239317d118ca34e2ab277e98b8ea0d56178f06e26ef612b2d08b2",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/index.ts",
+      "sha256": "bf4787ffd8b1329c735a583e7e37a04eaafb29a3abecdb68699c173cf9768024",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/citation-group-key.ts",
+      "sha256": "7aa09bd7c3007d9e3577de2d17525065f5256fcd56b2011555648c729bcf8167",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/citation-overrides.ts",
+      "sha256": "27b4808475307a605b22da0d59d79572be01c1fe50dc059f0155a3b0200beb17",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/prompt-audit-logs.ts",
+      "sha256": "966e86e73ec4ec795521c97aecfa41a4549521036d70377220ab5bbab0a5ddb4",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/prompts.ts",
+      "sha256": "594c5ef1a5feb3c486c73085dd599e05d21ff24c97f48bad9e35d0f710149fd1",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/scope-aggregates.ts",
+      "sha256": "8dde22e9193c5eea752b7d83742edcf989dd3440b95dbdf8e10ea7fd0ad5983b",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/scope-answer-anchors.ts",
+      "sha256": "d4d7930999f6d008dfcd9ce3a11d2630aa01c58732ff7ced3bae40fbe7d61fac",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/scope-mirror-progress-read.ts",
+      "sha256": "4a100bd1cd12297c774dc65701d58bdafb9e8e7a393b97397994b8440bc04cde",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/standards.ts",
+      "sha256": "39995420a9dd979714dfb9ab68937f31b0ea09e6671624089b14fcde628ded98",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/summary-pre-catalog-cycles.ts",
+      "sha256": "75b2b1231ae9087c5cbeeb8556f1f825abab1311cb74932b97201b1068c0e25d",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/summary-settings.ts",
+      "sha256": "1ddf98bdabd3335bb71384f8150d870733b1c2ec49313cc69fcc99267291b94d",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/website-geo-pred.ts",
+      "sha256": "9eb6a7f1b2fdf58f53ee73645b5f03c2e51d9e9633ce884d1b3ecdf605d76621",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/repositories/website-sites.ts",
+      "sha256": "83231032024148f9b54dcc79712c7b30d1f7d40f30b5d17c75b17fbb8582c37c",
+      "kind": "types"
+    },
+    {
+      "source": "lib/db/schema.ts",
+      "sha256": "8ae51a3d98dfcb14b72f936128953e2b6884bada92b6866f1ca01b3590504f96",
+      "kind": "types"
+    },
+    {
+      "source": "lib/export/csv.ts",
+      "sha256": "b85d204f973437293ffb8124e13e4d55bdaf8a1492eee8fd01bf0a6bac4871b4",
+      "kind": "source"
+    },
+    {
+      "source": "lib/export/xlsx.ts",
+      "sha256": "1e29bab24f64d0970c0fecfd4d793df8e995099d2b5493775f3cf971b3434bc8",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/_data/web-geo-final.json",
+      "sha256": "959b314a2ee2a708619b4ca421b962d065cad20bf1c589e0d9d82722e2ab363a",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/country-codes.ts",
+      "sha256": "6663f8c5ef29e5cc6255fffc72c0fb330167f380ffb16a7284ae70167939f540",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/country-name.ts",
+      "sha256": "cbf906768461b9898b8793f7cc356ef8004e589ed690a1f2c416fcc94cfdc809",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/country-numeric.ts",
+      "sha256": "823edec4f08e3939f6aded89643eff3dcc8622864bfd0cbb4098c610ab78055f",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/geo-code-label.ts",
+      "sha256": "d6fdc880fe42e3326b3aa701452b1bf919d77dc72827898ee346250dacaa1582",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/index.ts",
+      "sha256": "1be13dbe1b1c0f4b78c9b8ed4980bd43b03fdffc78ef2895742fcff37eedbce5",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/language-name.ts",
+      "sha256": "6991083db6fe8b508cc18d3d46b7bbdef703ca4d45019b0616861e5303be6941",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/owned.ts",
+      "sha256": "e046c254804793de2a8e08eea064aca3c9f92545233d401e54b1bef29730978a",
+      "kind": "types"
+    },
+    {
+      "source": "lib/geo-catalog/pseudo-country.ts",
+      "sha256": "687d3fd6baa96066ec1d61502c887fce58f84687456d9dc0835bb3651953d640",
+      "kind": "source"
+    },
+    {
+      "source": "lib/geo-catalog/types.ts",
+      "sha256": "1a6631206cf1cfa92b80e378c68f8b6b62da16f9e891e9bad5d3a0347b7e7609",
+      "kind": "source"
+    },
+    {
+      "source": "lib/hgh/api-types.ts",
+      "sha256": "2f23ed9bb66db5da1f059aa9a1a00c4526316919bdf33dd886d2229b795f40f6",
+      "kind": "types"
+    },
+    {
+      "source": "lib/hgh/convert.ts",
+      "sha256": "6f2b3025ddb22ccede4f1228b8b57b5916d5995e6d942e28a3523f05c4580dde",
+      "kind": "types"
+    },
+    {
+      "source": "lib/hgh/filter-types.ts",
+      "sha256": "096409770850e54a3c9c584b0af247d33a7dd9653bdee8c2adb34e6f77d6c4bd",
+      "kind": "types"
+    },
+    {
+      "source": "lib/keyword/location-presets.ts",
+      "sha256": "8ef27b21cae47fc6ca304955ecd8a48b1392c4e67ab3bd0f122da295bbaf5365",
+      "kind": "source"
+    },
+    {
+      "source": "lib/kpi/first-position-rank.ts",
+      "sha256": "0b97b26c758d9e9dc1f97f15e9504b80bc64a9eef157f4bc335e5c20b98aeb09",
+      "kind": "types"
+    },
+    {
+      "source": "lib/kpi/overview-card-values.ts",
+      "sha256": "bb8fba7dd97872be68371c8a7087ad8a92e11e4dee1432b5c362b01b39825811",
+      "kind": "types"
+    },
+    {
+      "source": "lib/kpi/period-compare-view.ts",
+      "sha256": "467286b8c00ace743835ae4a971817c15b72cdbbf90a8e0bc87fc5e83f6dabe9",
+      "kind": "types"
+    },
+    {
+      "source": "lib/kpi/period-compare.ts",
+      "sha256": "608c4b68506687ba3d2d3cb37340d1f4969b1721fea26d60ee4b5785e04fbfb8",
+      "kind": "types"
+    },
+    {
+      "source": "lib/local-readonly.ts",
+      "sha256": "ad7a3eeabc061185c714d9f9ede32d72bd89eb7a14a915ec436f8213a1741eba",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period-chip-text.ts",
+      "sha256": "b624543622ecca14c5011d693ca85b7c07082c074160143c336b25ee20b769ac",
+      "kind": "source"
+    },
+    {
+      "source": "lib/period/anchor-axis-flag.ts",
+      "sha256": "be842643e96daa264346f9b2fbf27f931ecc9085f82fa82532838bb7183f455d",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/anchor-axis-state.ts",
+      "sha256": "50969ecb66dc3b1549c64685f0ecf8dfc89b2581ac28c56607336dfce79662f7",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/anchor-axis.ts",
+      "sha256": "9cb6aeef929d3702a9b6f8b21c23ea11be2a73008d9f91dfaa192ec03e686d02",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/cell-snapshot.ts",
+      "sha256": "666f5146c5e20138ce087d390937e9e2d5a8fef044081653dddac045c8dd935b",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/day-arith.ts",
+      "sha256": "ba2acb52561b5510f32f8d0c6edfe6227bc8d062335dab6b763da677ce212ffe",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/period-bounds.ts",
+      "sha256": "64d8ef4a85a5fc6727930410d4ab529f9cd3f2e87a7b6f231748181bc314fa11",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/period-mode.ts",
+      "sha256": "7aff78de65c5f3823293890b03992b197950ebce46b71260ac6f2cca20233478",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/sql-day.ts",
+      "sha256": "70fa9d6e8e5e15e16ac41445c4b376fbb2273c14e6448464bdd56ed56b9df0ae",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/trend-grid-axis.ts",
+      "sha256": "c48b03f53add6ad0c3b28fb6a542088af714db768ff7d610178de6eb4adceb28",
+      "kind": "types"
+    },
+    {
+      "source": "lib/period/trend-grid-flag.ts",
+      "sha256": "5574f13b61eb4be984aefa7c68a6facc70878a48ee29e0c7d9a61ec48d9cfbbc",
+      "kind": "types"
+    },
+    {
+      "source": "lib/public-suffix/data.ts",
+      "sha256": "4430d16c91611b3b5c8b961f7bdc91d5e0b606b0f44cbc065c882228d1dd2d51",
+      "kind": "types"
+    },
+    {
+      "source": "lib/public-suffix/index.ts",
+      "sha256": "2e6a3ca0150de55e4e1c1730e04e96782001ea3fcca37807e2a467f1c9564889",
+      "kind": "types"
+    },
+    {
+      "source": "lib/request-dedupe.ts",
+      "sha256": "300468f18412506cd7f12e59a90e6763c40296ee012847784583a8728ba4e961",
+      "kind": "types"
+    },
+    {
+      "source": "lib/rhq/_data/rhq-map.json",
+      "sha256": "ba42a61c3e3fe2c80e985d72f8d36780e53f95c7bea722f22bcf6c4dc7ef7083",
+      "kind": "source"
+    },
+    {
+      "source": "lib/rhq/index.ts",
+      "sha256": "5ca97cff71c32f4c41ffa4258c361d35122318c0359b36d7a2d6929a7d26623a",
+      "kind": "source"
+    },
+    {
+      "source": "lib/scope/brand-display-aliases.ts",
+      "sha256": "e2464253ea8bf745c5ca114697e0383b7df2286303863c4256d3c688b0a1c07f",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/brand-presence.ts",
+      "sha256": "97b7c595f60bba2018983f8f3737bdd1cb21c47e57cb36cea9facbb74ca549ca",
+      "kind": "source"
+    },
+    {
+      "source": "lib/scope/client.ts",
+      "sha256": "946bf9e3bd1829df6545e4826cf799895c73acabc3d5f87d866b12b72cd16b35",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/dimensions.ts",
+      "sha256": "462c39478665d4c24c7122a80d8d5e246c4581cbba8d2d0e8aa3b06c124e0541",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/engines.ts",
+      "sha256": "21c74929e65f4429840aacd71b23af10eafabd40e6fbde06be61ad984c66e884",
+      "kind": "source"
+    },
+    {
+      "source": "lib/scope/hidden-regions.ts",
+      "sha256": "0ee3aa6db3ef0f76be7ff6935634c029cea594dc8b839d1c1977620d9cced84e",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/hmg-brands.ts",
+      "sha256": "74fc9b8cc3d6abf2d00276c8ec47a1b6aab352af10ecc30b077ca2cef7e5eb30",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/http.ts",
+      "sha256": "2dedaf53ceb739ce57a2083f8979e182edd20aa0b0baf5771437e33b8988f376",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/index.ts",
+      "sha256": "7c8d1c25122a4c2aa715991c8a630e63170f3634c7c4eb63f4455438b0244469",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/kpi-tab-budget.ts",
+      "sha256": "236855c2c4e510beb447298c684ce1125eec229b776e421967e46649dfcd822c",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/non-competitor-brands.ts",
+      "sha256": "1fa34dde205aa78c1ace50eae4a22d1442aa63f47116847decd2f594f388d3b4",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/paging.ts",
+      "sha256": "1c593db9f3ea51fd3b123c4ee138eb8f3a77aa5f684bb1ac814ce6de62b8b8e4",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/region-tagging.ts",
+      "sha256": "fef9e073645eb79c23c730a7ff7b09ab873bb1afe111c1effc58a241d538483a",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/result-adapter.ts",
+      "sha256": "ee009ce73425e2935ae2b4cb0b047643aa2cf397d9bca357ec95a8a463069099",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/standard-prompt-exclusions.ts",
+      "sha256": "572e32fdaa1f1b01f3f1a3389fa3d1c7ac033ced5e2ea8d010ec0de202af6140",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/text-trim.ts",
+      "sha256": "4af82af1e36f6772d367b1dd951059ca48d0a789800cb069470b248fd8c65aa5",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/types.ts",
+      "sha256": "547437c0ff88f5f4117c89dad04e8e12ba7ca897819c6c2ad18bbae3ac4e97d7",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/url-match-sql.ts",
+      "sha256": "4fdce2e4830347032508af5ea5aab19c407780764a4d28ead03eda2ac7714eec",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/url-match.ts",
+      "sha256": "2fe9caa037ac607f1a30ddf7d173a2b6851c78db0ac20389916f552e0ecc4021",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/website-owned-unit-flag.ts",
+      "sha256": "b46c6a9e06bbc986a13a886c52a60d3048c124362ffeea5fdf81d1b967e59315",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/website-owned-unit-state.ts",
+      "sha256": "40e2836d30b54f4bc8bc5ebd66557f8819f984b00cd074cb8e848f12a507bfc2",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/website-owned-unit.ts",
+      "sha256": "93cfe58169c4b1aa6e9704daf5809b35ef38ef0b65c7212da7f533fd0204daf6",
+      "kind": "types"
+    },
+    {
+      "source": "lib/scope/website-virtual-geo.ts",
+      "sha256": "209cb0c3f86f127d674ae5d0decb3b96dd3df39e8ffb4e2a67f7160ba2bbda69",
+      "kind": "source"
+    },
+    {
+      "source": "lib/service-week.ts",
+      "sha256": "92794a7ff7f0144f875e699e1479238c1d48e4873e4112f96d98b56b7a1e9e42",
+      "kind": "source"
+    },
+    {
+      "source": "lib/standards/audit.ts",
+      "sha256": "d71b79bf9743d705d81d57b55b87cef4a6b6b3274a80412c94c91f08bd89fc2a",
+      "kind": "source"
+    },
+    {
+      "source": "lib/standards/catalog-page.ts",
+      "sha256": "978e5957e650d85235081fc82f8bc53849d25ccddbdf2e9816edd7c39c9ed272",
+      "kind": "source"
+    },
+    {
+      "source": "lib/standards/prompt-markets.ts",
+      "sha256": "c5e964d286961dffcddb92970f39e9129e1d17878755a208f798580a8b233879",
+      "kind": "source"
+    },
+    {
+      "source": "lib/summary/generate/types.ts",
+      "sha256": "4f3461e878f4b3daa9502cec695db0f738e0321cbbdfba359d997bfb32dc8dc5",
+      "kind": "types"
+    },
+    {
+      "source": "lib/summary/read/screens.ts",
+      "sha256": "85fcc81c5573af335dc2a44ba43b8c496819963d09a82abded853ce7277272e8",
+      "kind": "types"
+    },
+    {
+      "source": "lib/support-contact.ts",
+      "sha256": "7c85f545c23043e389ae82d677cc46b021bdfae57eed78cb6ea6c544367c0be9",
+      "kind": "source"
+    },
+    {
+      "source": "lib/surface/run-surface.ts",
+      "sha256": "ae83d425ff46f65d6272ff71aa6deb929b05498bc2b7601a23f0f4940e735503",
+      "kind": "types"
+    },
+    {
+      "source": "lib/url-display.ts",
+      "sha256": "3afe6749aae8ec78f6f017722926cc4a80da91b171d3ff7a6e0c6b52d8728113",
+      "kind": "source"
+    },
+    {
+      "source": "lib/utils.ts",
+      "sha256": "4f2f8623be1f63cf577de7179da55ba88527d6c73a1ba1e3c2a091bd709c9977",
+      "kind": "source"
+    },
+    {
+      "source": "lib/viz/chart-tooltip.ts",
+      "sha256": "6dfccbfdc304650dac37caff0f373d043162e68455f51419c97ce6ba18f89217",
+      "kind": "source"
+    },
+    {
+      "source": "lib/viz/trend-gap-curve.ts",
+      "sha256": "abe8e9ef94f8f539ff62bd8c382009c92e8cf00ab03bdf0ddf0c43c843f27f93",
+      "kind": "source"
+    },
+    {
+      "source": "lib/viz/trend-gap-stack.ts",
+      "sha256": "8d30fd441ffa63933e562938e2a57ec27985c7cc75a63e3cce9030c34e0200dc",
+      "kind": "source"
+    },
+    {
+      "source": "lib/viz/trend-gap.ts",
+      "sha256": "3641ecfcacead4df8c5dabcf45d513854b2b365e159016e9bfdc901b69a5477c",
+      "kind": "source"
+    },
+    {
+      "source": "lib/hgh/errors.ts",
+      "sha256": "6e77b63f04023229b1d723d0c59dac2e1d9f2e3c3ce3f190acae17f01eb9d9a7",
+      "kind": "reference"
+    },
+    {
+      "source": "app/globals.css",
+      "sha256": "73aae0586f1b42a4a4637c886ff7158fb335c0ffb54538bf42150d1d2a89b8fe",
+      "kind": "reference"
+    },
+    {
+      "source": "app/renewal-theme.css",
+      "sha256": "76baa15301d56b06adad1bc0ee846d765599782ad2ec6f7827c4827555afbc3f",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/page.tsx",
+      "sha256": "aa91c4fd697bb007a55596aa0680d456956cd6c6742089280978351d4f97d8e9",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/page.tsx",
+      "sha256": "fa273e15259d70af2e6bdd22cb52cb34d383123a22160a1ce359599e358c941a",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/page.tsx",
+      "sha256": "c40834781a481c67310c4bef09c1e2e16b668fa7e986a76b806acd5020fec5ec",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/tone-urls/page.tsx",
+      "sha256": "b404a2464f6dd7fbfcd771aa3693cf7a8011ecc9424196a5c0e0a1320ea86649",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/prompts/page.tsx",
+      "sha256": "0d378148661d99d77ae70f8898319e0203aa99d1916fa771fdf3c92eda7d42f5",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/mention/page.tsx",
+      "sha256": "231c79469f939676d4f24cb39e4b2e5c76f7cd8ff0e5894ed50d59cffa5bb84f",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/member/page.tsx",
+      "sha256": "ad90d662c4b9f2ded258dd1e89b5a489347249b358a988200ce618e5443bf8ad",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/social-scraping/page.tsx",
+      "sha256": "a272b13ac1b695b78b58f9e62c34ce9eea519584da2b6cecc6b9bec5fbc667df",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/google-keyword/page.tsx",
+      "sha256": "b1ab9937586c8167fd03f8ce200dea6fa3075cd8f7e368c1e167b0c965ac4d9c",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/prompt/page.tsx",
+      "sha256": "9348fd20593354e23c7f67b7ebe546e90acdaa20f9617b2aa7325403700df8ee",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/[...sub]/page.tsx",
+      "sha256": "15a4f79ea7e59f418c154a225f5151c61f2e121f4e65b45d85f9266eef5519da",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/setting/page.tsx",
+      "sha256": "76639b38510873a087a133a504a2932c1a77f832907007106abb789c1550a232",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/ai-funnel/conversion/page.tsx",
+      "sha256": "195bf9c85613b839850dc93ffe5c54309c53b4dfca7f1d96506c80aaaa43939e",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/page.tsx",
+      "sha256": "a9a05af3017463496d665bdb9c0aa9b45adac62c82fd3a7927113deb873992de",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/page.tsx",
+      "sha256": "cd7a35abf359f96198dcd68a1e103e0ae9fa24f50f1a4ce518f85c85d7620706",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/ai-funnel/conversion/page.tsx",
+      "sha256": "fc6ba7ef950ddd25959e74ff1f4124bc2479451907b0f70731166990912ea216",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/page.tsx",
+      "sha256": "1029af1d88a6931f085b999239fed71aa1a6ee3c80ab49b06491e1f149a4821d",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/tone-urls/page.tsx",
+      "sha256": "a93706859fb7a292b9ed47a221d36f8fe65ed7a45fcfb81c8ab7f6d7456f82cc",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/prompts/page.tsx",
+      "sha256": "174b958fd5afbe65976239bc8a8b65204b25cf9b3c0e2ae026cb095453dfb6ba",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/page.tsx",
+      "sha256": "157350934d3d35eb559b5ed1ce6d7f6d5ab5c643bf75e7dce9dbaadd0bbeb23a",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/page.tsx",
+      "sha256": "a68ee17dd05fdf6ec66f8f0381e0f9aef6e3c60cc0fd76ee91642133a44882c3",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/ga4/page.tsx",
+      "sha256": "68b2a6c2aae50917146107b0af23578107a310235a1caafda757db195d507d59",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/keyword-tools/page.tsx",
+      "sha256": "a69cf0ee50bed837a2853f9241829771e04271b14a827ed15acf1c0ed3fbaa1e",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/page.tsx",
+      "sha256": "011f61ba79778acf72496834482c6ce02048e287950971f3d884be674b8fd3a5",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/page.tsx",
+      "sha256": "5b4571e737725b9e16c558ad3d4099f613dbcd3d7b7028aa6dc20fc648080473",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/page.tsx",
+      "sha256": "509d5fd8e8b2e13598184f6362fbe38650c06ded05b23a8638310686b313559b",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/page.tsx",
+      "sha256": "06218821e0c4783cbc703a45e9dfdb57dd637f6826410077ae7a393577c825bf",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/[...slug]/page.tsx",
+      "sha256": "eb93ce47080b869de63a22894dc6c28b546c4a8bf43d536ab3509f9f04520576",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/prompts/page.tsx",
+      "sha256": "80d90c02b08ff222e39aa0e78236fe527a9d54a78dfccb3fcc885455854a6084",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/page.tsx",
+      "sha256": "a1e4305a511f5b8e6ed2296baabaa19b3556d384ebf5b8f9913cf2d9dbf476e3",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/page.tsx",
+      "sha256": "d258215810a3e5abc9ee86717dd19f918f2940df5a21934bdccc96fea6cb0e2c",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/page.tsx",
+      "sha256": "78f8316369acb09290ec2d03252e10b029f6ac3bf9afd940babef4d8137dcf32",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/page.tsx",
+      "sha256": "dcb3c7c8f042b9c74b8c2b5361b668d63a1e7c0fa9459a2bbe9f19eb6fe17472",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/tone-urls/page.tsx",
+      "sha256": "ff122dfbf29c9201599b1df9d4f4ed60481e682cf8edcd81f21ccc1a4ff2dbdf",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/prompts/page.tsx",
+      "sha256": "20c07fdb4ff99cc2bef3870f5bdbbb84167cb429b37bc7d8360a5e3e1c8611e8",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/page.tsx",
+      "sha256": "0a8df4ddc52265583c80a6cb2920e5e6990d4012a99a2185ba3d482697f8db50",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/dashboard/page.tsx",
+      "sha256": "f11f641040ad958758f7d7c1e673e1570fa642aac2b129c635438d82fa464897",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/en.json",
+      "sha256": "2672678a64531cbf63b5a51283e94056488774462fe72e647e321c1cffcceebd",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/ko.json",
+      "sha256": "eaadbe1a2e769f8003283592949b8380219aba4fb3af9cac7d9ec11512910602",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u1.en.json",
+      "sha256": "65c7dd20d19f4be673940e86527ef861af042740dd99206fecc28a21eba0a9f3",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u5.ko.json",
+      "sha256": "dee44bdd4ec7e40a575a0f08d3180e648bd21315946318f97342b29ff406ab4a",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u8.en.json",
+      "sha256": "9051b8e90eafd2e4c735f5c98a9b6413e7e058cfaec25fb400757d33e15498ce",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u4.ko.json",
+      "sha256": "022161aa1eb5ebb06129c2a16637547fc5a9a1f5c2f6b414ad840bfdd0a5dac3",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u9.en.json",
+      "sha256": "192152ef5450a8f0e93e2fb04b00155eacad989a17824138db59e2dd274330ad",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u11.en.json",
+      "sha256": "b02450e1d2dc815a02eca250af35ec0d848f3ce4f60348fa7b6248ae1cc33396",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u7.ko.json",
+      "sha256": "338cb9a7c498383561a50cb73060ae993013e608af8c35ff4e4af819520f4cda",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u10.en.json",
+      "sha256": "21abb8f2f5e4b0330f1132a0b163d6fd219bd9f9d78e445999bd7c0b47aebf95",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u11.ko.json",
+      "sha256": "ddf00d9004bde8c9673552780e22186bdae020c88b6eef7a765ce56e96fade2c",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u10.ko.json",
+      "sha256": "716616c143e524b546c745b452d928f42cfb27242a6187eec35ad2dd71dc4e50",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u7.en.json",
+      "sha256": "8551b75ea8bf2a70c2e881549f1461abfdfee7b230db6aa32429a7762aab98f0",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u5.en.json",
+      "sha256": "a583543e90b1623ed740be2ecdbbae1ec479386e8f5c126e7ba5b55e53fb2c96",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u8.ko.json",
+      "sha256": "43b6e9641b99da2a695027233d7c99fb7bed1953d06319a54b24f5401a1b1458",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u1.ko.json",
+      "sha256": "f2d38f643039dfbda56b41567510f3cc58501a880c4be637ffae63fa541f599c",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u4.en.json",
+      "sha256": "e12de94a588bd5f1de0d8b9dee364704ebcf9227e5fc7ec569f7cc909ddd0ca0",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u9.ko.json",
+      "sha256": "439700c7436c7d1da444eac97244ab734448107ed4e49478deb30da5d18754c2",
+      "kind": "reference"
+    },
+    {
+      "source": "public/brand/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "reference"
+    },
+    {
+      "source": "public/brand/hyundai-logo.svg",
+      "sha256": "4007a5f721bc50b4bb871b84b751e6f7cce6c60930e8e2e8d2c0baef0be26173",
+      "kind": "reference"
+    },
+    {
+      "source": "public/brand/hmg-logo.svg",
+      "sha256": "e311fa38393c7ceb11e4c757d4fdeebafce4864382cc179628decc0394a96de4",
+      "kind": "reference"
+    },
+    {
+      "source": "public/fonts/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "reference"
+    },
+    {
+      "source": "public/fonts/PretendardVariable.woff2",
+      "sha256": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4",
+      "kind": "reference"
+    }
+  ]
+}

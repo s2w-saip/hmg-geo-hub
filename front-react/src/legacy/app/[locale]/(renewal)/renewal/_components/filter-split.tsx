@@ -1,0 +1,118 @@
+"use client";
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { cx } from "@/components/renewal-ui";
+import { RnServiceWeekNotices, type ServiceWeekNotesPeriod } from "@/components/service-week/notes";
+
+// ─── layout: panel | content, collapsible ([ key) ──────────────────────────
+
+const SplitContext = createContext<{ collapse: () => void; expand: () => void }>({ collapse: () => {}, expand: () => {} });
+
+/** collapse / expand of the enclosing RnFilterSplit (panel and rail buttons). */
+export function useRnSplit() {
+  return useContext(SplitContext);
+}
+
+// ─── viewport frame ──────────────────────────────────────────────────────────
+// The window never scrolls on a renewal page (2026-10-23): only the content area scrolls, and the
+// filter panel scrolls apart from it. The frame takes the viewport next to the
+// renewal shell's sidebar (app/renewal-theme.css, [data-rn-frame]); the page header stays put and
+// the content area scrolls on its own, out to the right edge of the window. --rn-edge is the S급
+// gutter around a 1480px column; top 24px / bottom 72px (20 / 64 up to 1279px), the
+// '스크롤 영역' values of docs/design/ui/design-rules.html. Both reserve the scrollbar gutter so the header lines up with the content.
+// While the beta notice card floats at the bottom right (2026-11-05), the bottom is at least the height it covers + 12px
+// (--rn-toast-space, _shell/beta-toast.tsx), so the last row (a list's pager) scrolls clear of the card.
+
+// 새 외형 (2026-11-05): the header sits on a hairline over the filter column | content row, inside the shell's white panel.
+const FRAME = "@container/rnframe flex flex-col pt-[18px]";
+const FRAME_HEAD = "min-w-0 shrink-0 overflow-hidden border-b border-rn-line px-[var(--rn-edge)] pb-4 [scrollbar-gutter:stable]";
+// Every renewal page is dense (2026-10-29, the user: "기본적으로 UI는 모두 촘촘모드로"): the content column
+// carries .rn-dense — the tight rhythm, no helper copy — and no page has a density toggle.
+// The service week's notes (2026-11-02: a late next week, a week Gold left sites out of) head that column, inside the
+// frame: a strip above the frame would make the window scroll.
+const DENSE = "rn-dense flex min-w-0 flex-col gap-2.5";
+const FRAME_SCROLL = "min-h-0 min-w-0 overflow-y-auto overscroll-contain pt-4 pr-[var(--rn-edge)] pb-[max(4.5rem,var(--rn-toast-space,0px)_+_0.75rem)] max-xl:pb-[max(4rem,var(--rn-toast-space,0px)_+_0.75rem)] [scrollbar-gutter:stable]";
+
+/** Page layout without a filter panel: the page header on top, the content scrolling below it. */
+export function RnPageFrame({ header, children }: { header: ReactNode; children: ReactNode }) {
+  return (
+    <div data-rn-frame="" className={FRAME}>
+      <div className={FRAME_HEAD}>{header}</div>
+      <div data-rn-scroll="" className={cx(FRAME_SCROLL, "flex-1 pl-[var(--rn-edge)]")}>
+        <div className={DENSE}>
+          <RnServiceWeekNotices />
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Page layout: the page header across the full width on top (2026-10-21), then the filter panel |
+ * content row below it.
+ * The panel and the content scroll apart (the panel card scrolls inside its own height), so
+ * scrolling the content never moves the filters.
+ * `top` (2026-10-27) heads the content column, right of the panel, and stays put above the
+ * scrolling content: a page switch there (Mention's KPI tabs) reads as one more view under the
+ * same filters, the panel standing beside every view.
+ * `notesPeriod`: the period the service week's notes take on a page that shows every round with no
+ * `time` (Website · Global Prompts, review r1-13); without it, the URL `time` or the service week.
+ */
+/** `delayInHeader`: the header chip names the publish delay, so the content shows no delay note (Global Mention, 2026-11-05 개편). */
+export function RnFilterSplit({ header, top, panel, rail, notesPeriod, delayInHeader = false, children }: { header?: ReactNode; top?: ReactNode; panel: ReactNode; rail: ReactNode; notesPeriod?: ServiceWeekNotesPeriod; delayInHeader?: boolean; children: ReactNode }) {
+  // null = automatic (open from 1360px wide, collapsed below) until the viewer toggles.
+  const [open, setOpen] = useState<boolean | null>(null);
+  const isOpenNow = useCallback(() => (open === null ? window.matchMedia("(min-width: 1360px)").matches : open), [open]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "[" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = document.activeElement;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || (el as HTMLElement).isContentEditable)) return;
+      e.preventDefault();
+      setOpen(!isOpenNow());
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpenNow]);
+  const auto = open === null;
+  const split = useMemo(() => ({ collapse: () => setOpen(false), expand: () => setOpen(true) }), []);
+  // the content's left gutter sits inside the scroller so card shadows are not clipped
+  const scroll = (
+    <div data-rn-scroll="" className={cx(FRAME_SCROLL, "pl-[var(--rn-edge)]", top ? "flex-1" : "")}>
+      <div className={cx("@container/rncontent", DENSE)}>
+        <RnServiceWeekNotices period={notesPeriod} delay={!delayInHeader} />
+        {children}
+      </div>
+    </div>
+  );
+  return (
+    <SplitContext.Provider value={split}>
+      <div data-rn-frame="" className={FRAME}>
+        {header ? <div className={FRAME_HEAD}>{header}</div> : null}
+        <div
+          data-rn-split={auto ? "auto" : open ? "open" : "closed"}
+          className={cx(
+            "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)]",
+            auto ? "grid-cols-[52px_minmax(0,1fr)] min-[1360px]:grid-cols-[296px_minmax(0,1fr)]" : open ? "grid-cols-[296px_minmax(0,1fr)]" : "grid-cols-[52px_minmax(0,1fr)]",
+          )}
+        >
+          {/* the filter column is flush with the panel's left edge, a hairline on its right; the panel scrolls inside it, apart from the content */}
+          <div className={cx("min-h-0 border-r border-rn-line", auto ? "hidden min-[1360px]:block" : open ? "block" : "hidden")}>{panel}</div>
+          <div className={cx("min-h-0 border-r border-rn-line", auto ? "min-[1360px]:hidden" : open ? "hidden" : "block")}>{rail}</div>
+          {top ? (
+            <div className="flex min-h-0 min-w-0 flex-col">
+              {/* top edge = the panel card's (pt-1); the scrollbar gutter lines its right end up with the content */}
+              <div data-rn-split-top="" className="rn-dense min-w-0 shrink-0 overflow-hidden pt-4 pr-[var(--rn-edge)] pb-3 pl-[var(--rn-edge)] [scrollbar-gutter:stable]">
+                {top}
+              </div>
+              {scroll}
+            </div>
+          ) : (
+            scroll
+          )}
+        </div>
+      </div>
+    </SplitContext.Provider>
+  );
+}

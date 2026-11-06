@@ -1,0 +1,146 @@
+/* ---------------------------------------------------------------------------
+ * Renewal design library tokens (2026-10-20).
+ *
+ * The `rn-` namespace is used only by the /renewal/* pages and
+ * components/renewal-ui. Existing pages never reference these utilities, so
+ * adding or re-tuning a value here cannot change an existing screen.
+ *
+ * Palette = the service palette (2026-11-05, the user's final palette; rules:
+ * docs/design/ui/design-rules.html): Point · Surface · Text · Chart - Own · System. The names keep
+ * the S-grade roles (rn-navy = the point blue: 당사 · 선택 · 링크). Text colours keep WCAG AA on
+ * their surfaces; --color-rn-up / -down / -warn are for fills and tints only — text and icons use
+ * rn-up-ink · rn-danger-ink · rn-warn-ink (the same hue mixed with the text black). Chart series
+ * take their hex values from components/renewal-ui/palette.ts.
+ * Type scale is fixed: 40 / 32 / 20 / 15 / 13 / 12 / 11 px.
+ * ------------------------------------------------------------------------- */
+@theme {
+  /* Point 1 = Chart - Own base: 당사 · 선택 · 링크 · primary button */
+  --color-rn-navy: #1e38fa;
+  /* Chart - Own 2 · 1 · 3: pressed, dark text on a blue tint and the hero (accent card) fill; the darkest step; sibling text and bar hover */
+  --color-rn-navy-900: #111f8a;
+  --color-rn-navy-ink: #0b1458;
+  --color-rn-navy-500: #172abc;
+  /* Chart - Own 5 · 7: rings, dashed lines, the second bar; badge and avatar fills */
+  --color-rn-navy-300: #6274fc;
+  --color-rn-navy-50: #d2d7fe;
+  /* Chart - Own 7 at 40% on white: the own row and the selected cell */
+  --color-rn-navy-25: #edefff;
+  /* Point 2: lines, outlines and titles on the hero and the ink tooltips (5.4:1 or more there) */
+  --color-rn-sky: #00cfff;
+  /* Surface */
+  --color-rn-page: #f8f8f9;
+  --color-rn-canvas: #f8f8f9;
+  --color-rn-head: #f8f8f9;
+  --color-rn-inset: #e5e6e9;
+  /* quiet track (2026-11-05 새 외형): segmented controls, bar tracks, hover fills */
+  --color-rn-track: #f1f2f4;
+  --color-rn-sand: #e5e6e9;
+  --color-rn-surface: #ffffff;
+  /* Text 1–4 (rn-faint = no value, disabled: never a value someone reads) */
+  --color-rn-ink: #101012;
+  --color-rn-ink-2: #222326;
+  --color-rn-muted: #6c6d70;
+  --color-rn-faint: #d5d5d6;
+  /* Text 5: text and icons on dark fills (the hero, the ink tooltips, the point blue) */
+  --color-rn-on-dark: #f7f7f7;
+  --color-rn-line: #e5e6e9;
+  --color-rn-line-2: #d5d5d6;
+  /* System: good · bad · warn (fills and tints only) */
+  --color-rn-up: #3df134;
+  --color-rn-down: #fa1e2a;
+  --color-rn-warn: #faf600;
+  /* their text and icon tones: 4.5:1 on white and on their 12% tints */
+  --color-rn-up-ink: #278323;
+  --color-rn-danger-ink: #d01b26;
+  --color-rn-warn-ink: #77750a;
+  /* Overview market heat table: Chart - Own 7 · 6 · 5 and the steps between (ink text stays AA on every step), evenly spaced in lightness */
+  --color-rn-heat-0: #e8ebfe;
+  --color-rn-heat-1: #d2d7fe;
+  --color-rn-heat-2: #bcc3fe;
+  --color-rn-heat-3: #a5affd;
+  --color-rn-heat-4: #8492fc;
+
+  --text-rn-40: 2.5rem;
+  --text-rn-40--line-height: 1.15;
+  --text-rn-32: 2rem;
+  --text-rn-32--line-height: 1.2;
+  --text-rn-20: 1.25rem;
+  --text-rn-20--line-height: 1.35;
+  --text-rn-15: 0.9375rem;
+  --text-rn-15--line-height: 1.45;
+  --text-rn-13: 0.8125rem;
+  --text-rn-13--line-height: 1.5;
+  --text-rn-12: 0.75rem;
+  --text-rn-12--line-height: 1.5;
+  --text-rn-11: 0.6875rem;
+  --text-rn-11--line-height: 1.45;
+  /* analysis renewal (2026-10-21): hero value · KPI value · card stat value */
+  --text-rn-56: 3.5rem;
+  --text-rn-56--line-height: 1;
+  --text-rn-28: 1.75rem;
+  --text-rn-28--line-height: 1.1;
+  --text-rn-24: 1.5rem;
+  --text-rn-24--line-height: 1.15;
+  /* S급 (2026-10-23): page title · key number on the hero card · card title */
+  --text-rn-26: 1.625rem;
+  --text-rn-26--line-height: 1.25;
+  --text-rn-34: 2.125rem;
+  --text-rn-34--line-height: 1.05;
+  --text-rn-16: 1rem;
+  --text-rn-16--line-height: 1.4;
+
+  --radius-rn-card: 16px;
+  --radius-rn-control: 8px;
+
+  --shadow-rn-1: 0 1px 2px rgba(16, 16, 18, 0.05), 0 1px 3px rgba(16, 16, 18, 0.06);
+  --shadow-rn-3: 0 24px 56px -16px rgba(16, 16, 18, 0.3), 0 6px 16px rgba(16, 16, 18, 0.08);
+  /* S급 cards: a 1px line + a very faint shadow (shadow-rn-1 stays for segmented / tab pills) */
+  --shadow-rn-card: 0 1px 2px rgba(16, 16, 18, 0.04), 0 0 0 1px var(--color-rn-line);
+  --shadow-rn-bar: 0 1px 2px rgba(16, 16, 18, 0.05), 0 0 0 1px var(--color-rn-line), 0 8px 24px -18px rgba(16, 16, 18, 0.35);
+  --shadow-rn-hero: 0 18px 40px -24px rgba(11, 20, 88, 0.7);
+
+  --animate-rn-progress: rn-progress 1s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  @keyframes rn-progress {
+    from { left: -35%; }
+    to { left: 100%; }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The one accent card per page (S급 테마, 2026-10-23): Overview = KPI 5종,
+ * Mention · Citation · ACR = 이번 회차 요약. RnCard tone="hero" sets it;
+ * parts inside read `[.rn-hero_&]` variants for their on-dark tone.
+ * Flat Chart - Own 2, not the point blue: the white/72 text on it would fall
+ * to 4.3:1. No gradient and no glass anywhere (2026-11-05).
+ * ------------------------------------------------------------------------- */
+.rn-hero {
+  background-color: var(--color-rn-navy-900);
+  box-shadow: var(--shadow-rn-hero);
+  color: var(--color-rn-on-dark);
+}
+
+/* ---------------------------------------------------------------------------
+ * Viewport frame of the renewal pages (2026-10-23): only the content area
+ * scrolls, never the whole window; the filters and the content scroll apart.
+ *
+ * RnPageFrame / RnFilterSplit mark their root [data-rn-frame]. The renewal
+ * shell (app/[locale]/(renewal)/layout.tsx) has no top bar; from lg the frame sits in the
+ * shell's white panel (10px off the window's top, right and bottom edges, 2026-11-05 새 외형),
+ * below lg it takes the viewport under the 3rem menu bar. --rn-edge = the page gutter (32px,
+ * 24px up to 1279px, 16px below lg); the content spans the panel (no 1480px column: the filter
+ * column sits flush with the panel's left edge).
+ * ------------------------------------------------------------------------- */
+[data-rn-frame] {
+  --rn-gutter: 1.5rem;
+  --rn-edge: var(--rn-gutter);
+  height: 100vh;
+}
+@media (width >= 64rem) {
+  [data-rn-frame] { height: calc(100vh - 1.25rem); }
+}
+@media (width >= 80rem) {
+  [data-rn-frame] { --rn-gutter: 2rem; }
+}
+@media (width < 64rem) {
+  [data-rn-frame] { --rn-gutter: 1rem; height: calc(100vh - 3rem); }
+}

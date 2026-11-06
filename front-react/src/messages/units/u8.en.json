@@ -1,0 +1,13 @@
+{
+  "adminGa4": {
+    "events": {
+      "apiErrors": {
+        "invalid": "The property ID or an event name is malformed",
+        "notRegistered": "This property is not in the GA4 registry, so the selection cannot be saved",
+        "loadFailed": "Could not load the events. Please try again shortly.",
+        "saveFailed": "Could not save the events. Please try again shortly."
+      },
+      "savedPending": "Conversion event selection saved. The conversion numbers update after the next data load"
+    }
+  }
+}

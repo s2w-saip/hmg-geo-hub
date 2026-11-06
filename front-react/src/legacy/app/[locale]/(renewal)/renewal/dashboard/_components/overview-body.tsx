@@ -1,0 +1,466 @@
+"use client";
+
+// Renewal Overview body — "at a glance" (2026-10-22). Three cards, no KPI selection:
+//   KPI 5종        read-only: value, Δ, spark; the card opens its analysis page
+//   브랜드 비교    brands × 5 KPIs (당사 + every KPI's compared competitors)
+//   시장별 현황    기존 GeoJSON 지도, KPI 전환, 국가 선택과 수치 표
+// 2026-11-05 Global 지표 정리: the card's '비교 브랜드 N개 중 M위' (the table's column head says it), 당사's Δ in the
+// table (the card's) and the header's '추이 = 최근 N회차' (the spark's dates) are gone — each said a number twice.
+// 2026-11-05: the table shows 당사's brands under 당사 (HMG 3사 against single competitor brands hid each brand's place).
+// Every number comes from the overview screens (back/bff/screens/overview.py), the same as /dashboard:
+//   value / pending / period chip + caption   overview/cards (compareTitle = the compare the cards share; when
+//                                             the cards compare different rounds each names its own, audit 3-4)
+//   Δ, sparkline, its domain and labels        overview/card-trend
+//   brand table (cells, best, bar, rivals' Δ)  overview/brand-matrix (+ the parts that failed)
+//   markets                                    overview/geo (GeoOverview)
+// This file formats and lays them out. What the numbers count is said on the page (Gold metric review ⚠️,
+// 2026-10-29): AI 노출률 counts 대표 답변, the other KPIs every answer, as on Mention / Citation (2026-11-06), and a read
+// that failed says so instead of vanishing or reading as "no competitor value".
+
+import { Suspense, use } from "react";
+import Link from "~/app/link";
+import { useLocale, useTranslations } from "use-intl";
+import { ArrowUpRight } from "lucide-react";
+import {
+  RnCard,
+  RnCardHeader,
+  RnDeltaChip,
+  RnEmpty,
+  RnInfoTip,
+  RnInfoTipItem,
+  RnSkeleton,
+  RnSparkAxis,
+  RnSparkline,
+  RnTag,
+  RnToneChip,
+  cx,
+  type RnTone,
+} from "@/components/renewal-ui";
+import { NO_DELTA, detailHref } from "@/app/[locale]/(dash)/dashboard/_components/overview-kpi-cards";
+import { OVERVIEW_KPI_KEYS, type OverviewKpiKey } from "@/app/[locale]/(dash)/dashboard/_data/overview-metrics";
+import type {
+  BrandCellView,
+  BrandMatrixView,
+  CardTrendView,
+  OverviewCardView,
+  OverviewGeoView,
+  ScreenMessage,
+} from "@/app/[locale]/(dash)/dashboard/_data/screen-types";
+import { periodChipText } from "@/lib/period-chip-text";
+import { GeoOverview } from "@/app/[locale]/(dash)/dashboard/_components/geo-overview";
+import { marketViewOf } from "@/app/[locale]/(dash)/dashboard/_components/geo-market-table";
+import { SUPPORT } from "@/lib/support-contact";
+
+/** overview/brand-matrix with the old labels of the parts that failed transiently (absent = none failed). */
+export type RnBrandMatrixView = BrandMatrixView & { degraded?: string[] };
+/** The brand table's read: the table, null (no answers) or "failed" (its screen failed transiently). */
+export type RnBrandMatrixRead = RnBrandMatrixView | null | "failed";
+
+export interface OverviewDeferredData {
+  trend: Promise<CardTrendView>;
+  matrix: Promise<RnBrandMatrixRead>;
+}
+
+/** The rank KPI reads lower = better (reversed spark, Δ tone). */
+const isRank = (k: OverviewKpiKey) => k === "position";
+
+const infoKeyOf = (k: OverviewKpiKey) => (k === "citationShare" ? "citationShareGlobal" : k);
+/** The analysis page of a KPI, which counts every answer (the menu label of its nav key). */
+const analysisPageOf = (k: OverviewKpiKey) => (k === "citationShare" ? "answerAnalysisCitation" : "answerAnalysisMention");
+
+function useFormat() {
+  const tUnit = useTranslations("metricUnit");
+  const tO = useTranslations("dashboard.overview");
+  const value = (k: OverviewKpiKey, v: number | null, empty = tO("cardEmpty")) =>
+    v == null ? empty : isRank(k) ? tUnit("position", { n: v.toFixed(1) }) : `${v.toFixed(1)}%`;
+  // Δ shows the magnitude; the arrow carries the direction (the card's DeltaBlock rule).
+  const delta = (k: OverviewKpiKey, r: number) => (isRank(k) ? tUnit("position", { n: Math.abs(r).toFixed(1) }) : `${Math.abs(r).toFixed(1)}pp`);
+  return { value, delta };
+}
+
+export function RnOverviewBody({
+  cards,
+  compareTitle,
+  deferred,
+  geo,
+  qs,
+}: {
+  cards: OverviewCardView[];
+  /** What Δ compares against when a period compare answered (null = the trend wording). */
+  compareTitle: ScreenMessage | null;
+  deferred: OverviewDeferredData;
+  /** null = this account does not see the GEO section (showsGeoMap). */
+  geo: Promise<OverviewGeoView> | null;
+  qs: string;
+}) {
+  const compare = useCompare(cards, compareTitle);
+  return (
+    <>
+      <KpiRow cards={cards} compare={compare} deferred={deferred} qs={qs} />
+      {/* brand comparison before the (long) market table so it is not buried */}
+      <Suspense fallback={<CardSkeleton rows={5} />}>
+        <BrandMatrix matrix={deferred.matrix} compare={compare} />
+      </Suspense>
+      {geo ? (
+        <Suspense fallback={<CardSkeleton rows={8} />}>
+          <MarketMatrix geo={geo} qs={qs} />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
+/** What the cards' Δ compares against: `period` = a period compare answered; `text` = the header's wording (the label
+ * the cards share, "each card names its own" when they differ, else the round wording); `perCard` = each card shows
+ * its own label beside its chip. */
+interface CompareBasis {
+  period: boolean;
+  text: string;
+  perCard: boolean;
+}
+
+function useCompare(cards: OverviewCardView[], compareTitle: ScreenMessage | null): CompareBasis {
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const tP = useTranslations("periodCompare");
+  const perCard = compareTitle == null && cards.some((c) => c.period);
+  if (compareTitle) return { period: true, text: tP(compareTitle.key as "label.weekly", compareTitle.params), perCard };
+  return perCard ? { period: true, text: t("comparePerCard"), perCard } : { period: false, text: tO("compare"), perCard };
+}
+
+function CardSkeleton({ rows }: { rows: number }) {
+  return (
+    <RnCard className="p-6">
+      <RnSkeleton className="mb-4 h-4 w-40" />
+      <div className="flex flex-col gap-2.5">
+        {Array.from({ length: rows }, (_, i) => (
+          <RnSkeleton key={i} className="h-5 w-full" />
+        ))}
+      </div>
+    </RnCard>
+  );
+}
+
+// ─── KPI 5종 (read-only) ────────────────────────────────────────────────────
+
+function KpiRow({
+  cards,
+  compare,
+  deferred,
+  qs,
+}: {
+  cards: OverviewCardView[];
+  compare: CompareBasis;
+  deferred: OverviewDeferredData;
+  qs: string;
+}) {
+  const t = useTranslations("renewal.overview");
+  const tKpi = useTranslations("dashboard.kpi");
+  const tNav = useTranslations("nav");
+  const locale = useLocale();
+  const byKey = new Map(cards.map((c) => [c.key, c]));
+  return (
+    <RnCard tone="hero" className="@container/rnkpi" aria-label={t("kpiTitle")}>
+      <RnCardHeader title={t("kpiTitle")} hint={`${t("kpiHintBasis")} · ${t("kpiHintDelta", { compare: compare.text })}`} />
+      <div className="grid grid-cols-5 px-2.5 pt-0.5 pb-5 @max-[600px]/rnkpi:grid-cols-3 @max-[600px]/rnkpi:gap-y-3.5">
+        {OVERVIEW_KPI_KEYS.map((key, i) => {
+          const card = byKey.get(key);
+          const pending = card?.pending ?? true;
+          const name = tKpi(`name.${key}`);
+          return (
+            <div
+              key={key}
+              data-rn-kpi={key}
+              className="group/kpi relative flex min-w-0 flex-col gap-[7px] border-l border-white/14 px-4 py-1 first:border-l-0 @max-[600px]/rnkpi:nth-[3n+1]:border-l-0"
+            >
+              <span className="flex items-center gap-1 text-rn-13 font-bold text-rn-on-dark/86">
+                <span className="truncate">{name}</span>
+                {/* above the card's link, so ⓘ shows its tip instead of opening the page */}
+                <span className="relative z-[1] inline-flex">
+                  <RnInfoTip label={t("infoLabel", { name })} align={i >= 3 ? "end" : "start"}>
+                    <RnInfoTipItem label={t("definition")}>{key === "visibility" ? t("definitionVisibility") : tKpi(`definition.${infoKeyOf(key)}` as "definition.visibility")}</RnInfoTipItem>
+                    {/* 우선 노출도: the card shows "N번째"; the shared formula (legacy dashboard copy) names the unit "위" */}
+                    <RnInfoTipItem label={t("formula")}>{key === "position" ? t("formulaPosition") : key === "visibility" ? t("formulaVisibility") : tKpi(`formula.${infoKeyOf(key)}` as "formula.visibility")}</RnInfoTipItem>
+                    <RnInfoTipItem label={t("basisLabel")}>{t("basisTip", { page: tNav(analysisPageOf(key)) })}</RnInfoTipItem>
+                  </RnInfoTip>
+                </span>
+              </span>
+              <KpiValue k={key} value={card?.value ?? null} />
+              <span className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5">
+                <DeltaCell k={key} card={card} pending={pending} trend={deferred.trend} perCard={compare.perCard} />
+              </span>
+              <div className="mt-0.5 min-h-[46px]">
+                {pending ? null : (
+                  <Suspense fallback={<RnSkeleton className="h-[30px] w-full" />}>
+                    <SparkCell k={key} trend={deferred.trend} />
+                  </Suspense>
+                )}
+              </div>
+              {/* The whole card opens its analysis page (2026-10-28, in place of a 상세 link) in a new tab,
+                  so the Overview being read stays as it is: the link covers the card, last so it lies
+                  above the card's parts; hover lightens it and shows ↗. */}
+              <Link
+                prefetch={false}
+                href={detailHref(key, locale, qs, "/renewal")}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("detailLabel", { name })}
+                className="absolute inset-0 rounded-[10px] transition-colors hover:bg-white/6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rn-sky"
+              />
+              <ArrowUpRight
+                aria-hidden
+                className="pointer-events-none absolute top-1.5 right-3 size-4 text-rn-sky opacity-0 transition-opacity group-focus-within/kpi:opacity-100 group-hover/kpi:opacity-100"
+              />
+            </div>
+          );
+        })}
+      </div>
+    </RnCard>
+  );
+}
+
+function KpiValue({ k, value }: { k: OverviewKpiKey; value: number | null }) {
+  const tO = useTranslations("dashboard.overview");
+  const tUnit = useTranslations("metricUnit");
+  // on the navy KPI card (S급): the value 34px white, the unit small
+  const big = "text-rn-34 font-bold tracking-[-0.03em] whitespace-nowrap text-rn-on-dark tabular-nums";
+  if (value == null) return <span className="text-rn-15 leading-[2.2] font-semibold text-rn-on-dark/72">{tO("cardEmpty")}</span>;
+  if (isRank(k)) {
+    // "{n}번째" — the number big, the unit word small (same string as the card).
+    const full = tUnit("position", { n: value.toFixed(1) });
+    const n = value.toFixed(1);
+    const at = full.indexOf(n);
+    return (
+      <span className={big} data-rn-value={k}>
+        {at >= 0 ? (
+          <>
+            {full.slice(0, at)}
+            {n}
+            <small className="ml-px text-[14px] font-semibold text-rn-on-dark/80">{full.slice(at + n.length)}</small>
+          </>
+        ) : (
+          full
+        )}
+      </span>
+    );
+  }
+  return (
+    <span className={big} data-rn-value={k}>
+      {value.toFixed(1)}
+      <small className="ml-px text-[14px] font-semibold text-rn-on-dark/80">%</small>
+    </span>
+  );
+}
+
+function DeltaCell({
+  k,
+  card,
+  pending,
+  trend,
+  perCard,
+}: {
+  k: OverviewKpiKey;
+  card: OverviewCardView | undefined;
+  pending: boolean;
+  trend: Promise<CardTrendView>;
+  /** The cards compare different rounds: this card names its own compare beside the chip. */
+  perCard: boolean;
+}) {
+  const t = useTranslations("renewal.overview");
+  const tP = useTranslations("periodCompare");
+  if (pending) return null;
+  const period = card?.period;
+  if (period) {
+    // the chip's direction is better / worse; the arrow is the value's (2026-11-05: a rank that fell read ↑ in green)
+    const tone: RnTone = period.chip.suppressed ? "none" : period.chip.direction;
+    const icon = isRank(k) && (tone === "up" || tone === "down") ? (tone === "up" ? "down" : "up") : undefined;
+    return (
+      <>
+        <RnToneChip tone={tone} icon={icon} onDark title={period.caption.key === "window" ? undefined : tP(period.caption.key, period.caption.params)}>
+          {periodChipText(period.chip)}
+        </RnToneChip>
+        {perCard ? (
+          <span data-rn-compare-label="" className="text-rn-11 text-rn-on-dark/72">
+            {tP(period.label.key as "label.weekly", period.label.params)}
+          </span>
+        ) : null}
+      </>
+    );
+  }
+  return (
+    <Suspense fallback={<RnSkeleton className="h-6 w-16" />}>
+      <TrendDelta k={k} trend={trend} labels={{ up: t("deltaUp"), down: t("deltaDown"), flat: t("deltaFlat") }} />
+    </Suspense>
+  );
+}
+
+function TrendDelta({ k, trend, labels }: { k: OverviewKpiKey; trend: Promise<CardTrendView>; labels: { up: string; down: string; flat: string } }) {
+  const d = use(trend).cards[k].delta;
+  const f = useFormat();
+  return <RnDeltaChip delta={d} lowerIsBetter={isRank(k)} format={(r) => f.delta(k, r)} emptyText={NO_DELTA} labels={labels} onDark />;
+}
+
+// The spark draws on the card's y domain, with every shown round dated (M/D) under its point —
+// 2026-10-28: the first and the last alone read as two rounds. Two rounds on one day show that day twice.
+// Hovering or focusing a point names its round, its value and the change from the round before (renewal audit 3-2,
+// the original card's "value · WoW" tooltip): wow is the screen's (the two Gold values' difference, rounded once); the
+// first drawn round and a round after one without a value have none. Two rounds on one day add the anchor's time.
+function SparkCell({ k, trend }: { k: OverviewKpiKey; trend: Promise<CardTrendView> }) {
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const f = useFormat();
+  const spark = use(trend).cards[k].spark;
+  if (!spark.hasValue) return null;
+  const points = spark.points;
+  const md = (day: string | undefined) => (day ? `${+day.slice(5, 7)}/${+day.slice(8, 10)}` : "");
+  const tips = points.map((p) => {
+    const day = p.display?.time ? `${md(p.display.day)} ${p.display.time}` : md(p.display?.day);
+    const head = t("sparkTip", { day, value: f.value(k, p.value, tO("cardEmpty")) });
+    if (p.value == null || p.wow == null) return head;
+    const change = p.wow === 0 ? t("deltaFlat") : `${p.wow > 0 ? "▲" : "▼"}${f.delta(k, p.wow)}`;
+    return `${head}\n${t("sparkTipChange", { delta: change })}`;
+  });
+  return (
+    <>
+      <RnSparkline values={points.map((p) => p.value)} tone="onDark" invert={isRank(k)} domain={spark.domain} tips={tips} className="h-[30px]" />
+      {points.length > 1 ? <RnSparkAxis labels={points.map((p) => md(p.display?.day))} tone="onDark" /> : null}
+    </>
+  );
+}
+
+// ─── 브랜드 비교 (brands × KPIs) ────────────────────────────────────────────
+
+function BrandMatrix({ matrix, compare: basis }: { matrix: Promise<RnBrandMatrixRead>; compare: CompareBasis }) {
+  const t = useTranslations("renewal.overview");
+  const tO = useTranslations("dashboard.overview");
+  const tKpi = useTranslations("dashboard.kpi.name");
+  const f = useFormat();
+  const m = use(matrix);
+  // the table's screen failed: the card says so instead of leaving the page without it (review ⚠️ #31)
+  if (m === "failed")
+    return (
+      <RnCard aria-label={t("brandsTitle")}>
+        <RnCardHeader title={t("brandsTitle")} />
+        <RnEmpty className="mx-6 mb-5">{t("brandsFailed", SUPPORT)}</RnEmpty>
+      </RnCard>
+    );
+  if (!m) return null;
+  const { rows, cols } = m;
+  // 당사's row has no Δ: the KPI cards above show it (2026-11-05 Global 지표 정리). The rivals' Δ is their last two rounds
+  // and a period has none (97da2a0); the hint says so (review ⚠️ #28).
+  const compare = tO("compare");
+  const hint = basis.period ? t("brandsHintPeriod") : t("brandsHint", { compare });
+  const deltaText = (k: OverviewKpiKey, mark: BrandCellView["deltaMark"]) => {
+    // a compared value without Δ says so (renewal audit 3-6: the place was left empty) with the cards' no-Δ mark,
+    // as the website brand table does — '—' alone is the cell of a brand not compared on the KPI
+    if (mark == null)
+      return (
+        <span data-rn-no-delta="" className="text-rn-11 text-rn-faint" title={t("noDelta")}>
+          {NO_DELTA}
+        </span>
+      );
+    if (mark.tone === "flat") return <span className="text-rn-11 font-semibold text-rn-muted">{t("deltaFlat")}</span>;
+    // a rival's move keeps its arrow without the better / worse colour (2026-11-02 premise review)
+    return (
+      <span className="text-rn-11 font-semibold tabular-nums text-rn-muted" title={compare}>
+        {mark.r > 0 ? "▲" : "▼"}
+        {f.delta(k, mark.r)}
+      </span>
+    );
+  };
+  return (
+    <RnCard aria-label={t("brandsTitle")}>
+      <RnCardHeader title={t("brandsTitle")} hint={hint} />
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-rn-13" data-rn-brand-matrix="">
+          <colgroup>
+            <col className="w-[168px]" />
+            {OVERVIEW_KPI_KEYS.map((k) => (
+              <col key={k} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr className="text-left text-rn-12 text-rn-muted">
+              <th scope="col" className="border-y border-rn-line bg-rn-head py-2 pr-3 pl-6 align-bottom font-semibold">{t("colBrand")}</th>
+              {cols.map((c) => (
+                <th key={c.key} scope="col" title={tKpi(c.key)} className="border-y border-rn-line bg-rn-head px-3 py-2 align-bottom font-semibold">
+                  <span className="flex flex-col gap-px text-rn-ink-2">
+                    {t(`short.${c.key}`)}
+                    {c.standing ? <small className="text-rn-11 font-medium text-rn-muted">{t("colStanding", { rank: c.standing.rank, count: c.standing.count })}</small> : null}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr
+                key={`${r.own ? "own:" : r.ownBrand ? "own-brand:" : ""}${r.name}`}
+                data-rn-brand-row={r.own ? "own" : r.name}
+                data-rn-own-brand={r.ownBrand ? "" : undefined}
+                className={r.own ? "bg-rn-navy-25" : undefined}
+              >
+                {/* 당사's brands sit under 당사, indented, in the lighter own colour (design-rules: Chart - Own steps) */}
+                <td className={cx("h-10 border-b border-rn-line pr-3", r.ownBrand ? "pl-10" : "pl-6")}>
+                  <span className={cx("flex min-w-0 items-center gap-1.5", r.ownBrand ? "font-medium text-rn-ink-2" : "font-semibold text-rn-ink")}>
+                    <span className="truncate">{r.name}</span>
+                    {r.own ? <RnTag>{t("ownTag")}</RnTag> : null}
+                  </span>
+                </td>
+                {cols.map((c) => {
+                  const cell = r.cells[c.key];
+                  if (!cell)
+                    return (
+                      <td
+                        key={c.key}
+                        className="h-10 border-b border-rn-line px-3 text-rn-muted"
+                        title={r.ownBrand ? t("ownBrandNoValue", { kpi: tKpi(c.key) }) : t("notCompared", { kpi: tKpi(c.key) })}
+                      >
+                        —
+                      </td>
+                    );
+                  // one line per cell (2026-10-28, 1920×1050): value · bar · Δ (당사: value · bar); the value and
+                  // the bar keep fixed widths so the bars of a column start and scale alike down the brands
+                  return (
+                    <td key={c.key} className="h-10 border-b border-rn-line px-3">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <b className={cx("w-[52px] shrink-0 tabular-nums text-rn-ink", cell.best ? "font-extrabold" : "font-semibold")}>{f.value(c.key, cell.value, "—")}</b>
+                        <span className={cx("h-[5px] w-14 shrink-0 overflow-hidden rounded-[2px]", r.own ? "bg-rn-surface" : "bg-rn-page")}>
+                          <i
+                            className={cx("block h-full rounded-[2px]", r.own ? "bg-rn-navy" : r.ownBrand ? "bg-rn-navy-300" : "bg-rn-faint")}
+                            style={{ width: `${cell.bar.toFixed(1)}%` }}
+                          />
+                        </span>
+                        {/* 당사's Δ is the KPI cards'; its brands have none (the brand trend counts 당사 as one) */}
+                        {r.own || r.ownBrand ? null : deltaText(c.key, cell.deltaMark ?? null)}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {m.degraded?.length ? (
+        <RnEmpty className="mx-6 mt-3">{t("brandsPartial", SUPPORT)}</RnEmpty>
+      ) : !rows.some((r) => !r.own && !r.ownBrand) ? (
+        <RnEmpty className="mx-6 mt-3">{tO("noCompetitorData")}</RnEmpty>
+      ) : null}
+      <p className="m-0 px-6 pt-2.5 pb-4 text-rn-11 leading-[1.55] break-keep text-rn-muted">
+        {rows.some((r) => r.ownBrand) ? `${t("brandsFootOwnBrands")} · ` : null}
+        {t("brandsFoot")}
+      </p>
+    </RnCard>
+  );
+}
+
+// ─── 시장별 현황 (권역 › 국가 × KPIs) ───────────────────────────────────────
+
+function MarketMatrix({ geo: geoP, qs }: { geo: Promise<OverviewGeoView>; qs: string }) {
+  const geo = use(geoP).geo;
+  const t = useTranslations("renewal.overview");
+  if (!geo) return null;
+  // the table's view as the URL asks (a reload or a copied link opens the same table)
+  return <GeoOverview geo={geo} title={t("marketsTitle")} renewal initialMarketView={marketViewOf(new URLSearchParams(qs))} />;
+}

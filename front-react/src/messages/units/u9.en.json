@@ -1,0 +1,38 @@
+{
+  "projectDetail": {
+    "setting": {
+      "aiEngines": {
+        "savedQueued": "AI engine settings saved (waiting to reach measurement)"
+      },
+      "scopeLink": {
+        "linkProbe": {
+          "title": "Measurement link check",
+          "stateLabel": "State",
+          "roundLabel": "Latest round",
+          "round": "{date} ({status})",
+          "jobsLabel": "Measurement jobs",
+          "jobs": "Served {served} / total {total} ({pct}%) · in progress {inProgress} · failed {failed}",
+          "jobsNone": "No measurement jobs yet",
+          "outboxLabel": "Sync queue",
+          "outbox": "Pending {pending} · errors {erroring} · prompts pending {promptPending}",
+          "state": {
+            "unlinked": "No linked scope project",
+            "pending_link": "Link pending",
+            "link_error": "Link error",
+            "no_data": "Linked, no measurement data",
+            "partial": "Only part of the measurements served",
+            "healthy": "Healthy"
+          },
+          "fix": {
+            "unlinked": "The project is not linked to the measurement engine yet. Press 'Save + run' on the Prompt tab to request the link.",
+            "pending_link": "The link request is queued. Refresh in a moment to check the state.",
+            "link_error": "The link request stopped with an error. Check the error count in the sync queue and tell an operator.",
+            "no_data": "The link works but no servable measurement exists yet. Check whether measurement ran and the latest round.",
+            "partial": "Only part of the measurement jobs are served. Check the failed and in-progress counts.",
+            "healthy": "The setup is healthy. If an analysis screen looks empty, check the filters and whether the latest round is published."
+          }
+        }
+      }
+    }
+  }
+}
