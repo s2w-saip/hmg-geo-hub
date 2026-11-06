@@ -56,6 +56,11 @@ class ContractOnly(unittest.TestCase):
                         self.assertIn("silver_contract.", sql)
                         self.assertNotIn(" silver.", sql)
 
+    def test_the_first_acr_iteration_is_the_one_measured_last(self):
+        # legacy (ingest/project/apply/queries.py): measured_at DESC. Oldest first left a cell measured twice in a run with no answer:
+        # its first iteration was not the representative, and its representative was a later iteration (T9.8: Global 08-31 lost 942)
+        self.assertIn("ORDER BY y.measured_at DESC,y.answer_key DESC) AS acr_iter", run("global", CALLS["answers"])[0])
+
     def test_the_rules_are_judgments(self):
         sql = run("global", CALLS["answers"])[0]
         self.assertIn(judgments.REGION_TAGGING_CUTOFF, sql)  # eligible(), not a copy of it

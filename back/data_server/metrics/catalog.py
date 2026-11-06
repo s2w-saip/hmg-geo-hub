@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Stored with every precomputed (Gold) and cached value. A definition change moves it.
-DEFINITION_VERSION = "2026-11-07.2"
+DEFINITION_VERSION = "2026-11-07.3"
 
 # Populations (SSOT 공통 조건)
 MONITORING = "monitoring"                 # 모니터링 답변

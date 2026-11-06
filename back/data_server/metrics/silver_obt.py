@@ -230,7 +230,7 @@ class SilverObtSource:
         where = "TRUE" if every_answer else " AND ".join([f"NOT {older}", *outer])
         return f"""p AS MATERIALIZED (SELECT id AS prompt_id,funnel,in_root,is_korean,CASE WHEN regions='' THEN NULL ELSE string_to_array(regions,',') END AS regions,is_acr,web_reg,brand_group FROM {prompts}),
             x AS MATERIALIZED (SELECT y.answer_key,y.prompt_id::text AS prompt_id,y.project_id,y.engine,y.country,y.lang,y.measured_at,y.analysis_state,y.s1_normalize_round_date AS round_date{extra},
-                row_number() OVER (PARTITION BY y.run_id,y.prompt_id,y.engine,y.country,y.lang ORDER BY y.measured_at,y.answer_key) AS acr_iter,
+                row_number() OVER (PARTITION BY y.run_id,y.prompt_id,y.engine,y.country,y.lang ORDER BY y.measured_at DESC,y.answer_key DESC) AS acr_iter,
                 row_number() OVER (PARTITION BY y.cycle_id,y.prompt_id,y.engine,y.country,y.lang ORDER BY y.measured_at DESC,y.answer_key)=1 AS last_measured
                 FROM silver_contract.answer_analysis y WHERE {' AND '.join(filters)}),
             a AS MATERIALIZED (SELECT x.*,{market} AS market,p.web_reg,p.funnel,{elig} AS eligible,{citation} AS citation_monitoring,{monitoring} AS monitoring,
