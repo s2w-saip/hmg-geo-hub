@@ -1,4 +1,4 @@
-"""Draw the HUB DB ERDs into hmg-geo-hub-architecture.html, between its <!-- erd:NAME --> markers.
+"""Draw the service DB ERDs into hmg-geo-hub-architecture.html, between its <!-- erd:NAME --> markers.
 
 The tables, keys and foreign keys below mirror the SQL named on each figure; each table also carries a one-sentence
 Korean description of what its rows hold. When a migration changes a table, change its entry here and run
@@ -164,7 +164,7 @@ class Figure:
 
 def operations() -> Figure:
     """geohub_operations_db: back/hub_storage/operations-001.sql … operations-004.sql."""
-    f = Figure("ops", 776, "HUB 운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
+    f = Figure("ops", 776, "운영 DB system 스키마 ERD. user_account와 project_reference가 중심이고, "
                "project_reference는 입력 DB catalog.project와 같은 UUID만 보관한다. "
                "global_role은 계정의 역할과 열람 범위, saved_filter는 계정별 저장한 필터다.")
     f.table("system.project_member", 616, 40, 270, "사용자가 어느 프로젝트에 어떤 역할로 속하는지 담는다.", [
@@ -215,7 +215,7 @@ def operations() -> Figure:
 
 def catalog() -> Figure:
     """geohub_bm_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql."""
-    f = Figure("cat", 740, "HUB 입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
+    f = Figure("cat", 740, "입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
                "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "definition", "jsonb"),
@@ -262,7 +262,7 @@ def catalog() -> Figure:
 def external() -> Figure:
     """geohub_bm_db reference values and the prompt and reference API boundary: back/hub_storage/input-001.sql (the structure of data-005, -007
     ... -010 and -013 as it moved) and input-002.sql (the reference values the store owns, versions of every list, who reads what)."""
-    f = Figure("ext", 1610, "HUB 입력 DB의 기준정보와 프롬프트·기준정보 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 수집 또는 분석으로 키와 허용 프로젝트를 가지며, "
+    f = Figure("ext", 1610, "입력 DB의 기준정보와 프롬프트·기준정보 API 경계 ERD. 기준값은 종류별 set과 항목으로 쌓이고, 호출자는 수집 또는 분석으로 키와 허용 프로젝트를 가지며, "
                "ext 뷰는 트랜잭션 설정 hgh.key_hash로 한 호출자의 범위만 보여 준다. 아래 두 줄은 관리자가 Admin › 인용 출처 분류에서 고치는 "
                "출처 분류 입력(교정 · 시드 · 공식 소셜 · 코드표)과 그 버전, Admin › 고객 관심 데이터 관리에서 고치는 시드 키워드 · 커뮤니티 소스, 그 이력이고, "
                "Admin › 엔티티 카탈로그에서 고치는 엔티티 역할이고, 각각 기준값 종류 source_override · source_seed · source_social · source_code · "
@@ -420,8 +420,8 @@ def metrics() -> Figure:
     gy = 40
     g = [f'<rect class="vgrp" x="696" y="{gy}" width="488" height="170" rx="8"/>',
          f'<text class="m b" x="712" y="{gy + 26}">계정<tspan class="mu" dx="10">다른 파트에 열지 않는다</tspan></text>',
-         f'<text class="m" x="712" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="882" y="{gy + 58}">BFF 읽기 · geohub_gold_db SELECT</text>',
-         f'<text class="m" x="712" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="882" y="{gy + 82}">BFF 캐시 · geohub_cache_db 읽기 · 쓰기</text>',
+         f'<text class="m" x="712" y="{gy + 58}">hmg_metrics_reader</text><text class="mu sm" x="882" y="{gy + 58}">데이터 서버 읽기 · geohub_gold_db SELECT</text>',
+         f'<text class="m" x="712" y="{gy + 82}">hmg_cache_writer</text><text class="mu sm" x="882" y="{gy + 82}">데이터 서버 캐시 · geohub_cache_db 읽기 · 쓰기</text>',
          f'<text class="m" x="712" y="{gy + 106}">hmg_rollup_writer</text><text class="mu sm" x="882" y="{gy + 106}">사전 집계 작업 · 테이블 4개만 쓰기</text>',
          f'<text class="mu sm" x="712" y="{gy + 142}">API는 hmg_rollup_writer를 받지 않는다</text>']
     f.raw("\n".join(g))
