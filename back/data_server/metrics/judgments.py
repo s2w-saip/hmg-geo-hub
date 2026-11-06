@@ -74,7 +74,7 @@ def eligible(c: AnswerColumns, *, is_global: bool) -> str:
 
 
 def later_iteration(c: AnswerColumns) -> str:
-    """ACR 측정의 뒤 반복: a cell counts its first iteration."""
+    """ACR 측정의 뒤 반복: a cell counts its first iteration, which is the one measured last (legacy numbers them from it: ingest/project/apply/queries.py)."""
     return f"({c.is_acr} AND coalesce({c.acr_iteration},0)>1)"
 
 

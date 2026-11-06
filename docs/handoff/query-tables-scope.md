@@ -84,6 +84,22 @@ B 세션이 맡는다. 세션 분할은 결정 기록에 있다.
 
 옛 행과 다른 나머지는 이미 정한 것이다: 대표 답변 규칙(옛 5개 회차), ACR 반복 번호, 사우디 도시 통합(`geo_key`), 카탈로그 소속 변경 뒤의 `bgrp`, 태도의 `first_turn`(어댑터와 같이 `turn_index=1`).
 
+이 대조의 어댑터 쪽과 테이블 쪽은 ACR 반복 번호를 같은 오름차순으로 매겨 그 결함을 드러내지 못했다. T9.8에서 찾아 `a457847`로 고쳤다(`kept-metric-parity.md`). 옛 행과 다른 것 중 'ACR 반복 번호'는 그래서 해소됐다.
+
+### 2026-11-07 교체 뒤 화면 대조 (세션 A, 171개 요청)
+
+128개가 같고 43개가 달랐다. 상태 코드 차이는 0건이다. 표는 달랐던 것의 결론이고, 정의 버전 `2026-11-07.3` 기준이다.
+
+| 차이 | 결론 |
+|---|---|
+| Project 브랜드 이름 · SOV(`Mitsubishi` → `Škoda`, 57.6 → 57.3) | 지금 값이 맞다. 행의 `brand`와 `brand_rollup_entity_id`가 갈리는 행이고, 어댑터는 읽는 범위 안에서만 이름을 접었다. 옛 `answer_brand_fact`와 같다. 추출 쪽 이상값이라 통보에 넣는다 |
+| ACR 12개 브랜드, 시트 +1(IT · CZ · SE) | 정한 규칙. 10-05 6셀이 옛 표시 false → 규칙 true, 셀 3,567 → 3,573. 옛 값의 근거인 `run_status`가 가상 OBT에 없다 |
+| Global 언급 · 인용 소폭 | 결함이었고 고쳤다. 인용 수는 교체 전 935,072로 돌아왔고, `noBrandAnswers` · `missing` 합계도 돌아왔다(1,610 · 3,425) |
+| Mercedes 08-31 −16 | Project와 같은 이름 접기. `Mercedes-Benz`로 적힌 17 언급의 롤업이 `Mercedes-AMG`다. 위 결함 수정 뒤 값은 20,720 |
+| Website SA-Riyadh · SA-Jeddah 필터 없어짐, `unmeasured` −2 | 2026-11-06 결정 'Website SA 통합'이 화면에 나타난 것 |
+| Admin 엔티티 12,523행 | 결함이었고 고쳤다(`72fb857`), 1,927행 |
+| `release.as_of` 10-27 → 10-05, `generation` +3 | 정상. `release`는 진단 경로 `/v1/source`에만 나가고 화면은 `meta.as_of`를 읽는다. generation은 적재마다 올라 커서가 다시 시작한다 |
+
 남는 위험: 실제 Silver가 가상 OBT와 다를 수 있다. SSOT는 Silver를 '추출 컬럼만'으로 적었고(`shared/project-architecture.md` 45줄) T9.6은 `answer_text`에 기댄다. T9.1에서 드러나며 재작업이 생길 수 있다.
 
 ## 6. T12.1 철거 대상
@@ -96,3 +112,4 @@ T9.7 교체 뒤 읽는 코드가 없는 `gold_db` 테이블이다. 삭제는 되
 | 새 DB의 빈 테이블 | `kpi_cell` · `citation_cell` · `brand_cell` · `kpi_rollup` · `url_prompt_cell` · `answer_citation_raw` | 읽는 코드 없음, `gold_next`에는 행이 없다 |
 | 복사돼 있지만 읽지 않음 | `pub_cell` · `pub_cell_web` · `pub_prompt` · `pub_prompt_axis` · `pub_brand_name` · `report_value` · `answer_registry` · `acr_cell_job` | 읽는 코드 없음 |
 | T7.6 뒤 읽지 않음 | `publication` · `cycle_pick_basis` · `data_version` | 기준 주가 매니페스트로 옮겨 간 뒤 |
+| 운영 스냅샷이 없는 회차의 옛 행 | `job_index` Website 29,385행 · `answer_mention_raw` 77,814행(`ready` 스냅샷 34개) | 화면은 `servable`로 걸러 읽고 답변 본문은 없다. Admin 엔티티 합계(`refresh_entity_totals`)는 이 행도 센다. 그 회차가 운영 반영되면 적재가 덮어쓴다 |
