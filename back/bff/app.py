@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 
 from bff import access, api, screens
 from bff.gold_reader.db import close_pool, connection, open_pool
-from bff.hub_stores import (accounts, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, metrics_db, hub_auth, hub_catalog, input_db, measurement, interest,
+from bff.hub_stores import (silver_db, accounts, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, metrics_db, hub_auth, hub_catalog, input_db, measurement, interest,
                              operations_db, project_prompts, saved_filters, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI):
     await open_pool()
     await analytics_db.open_pool()
     await input_db.open_pool()
+    await silver_db.open_pool()
     await cache_db.open_pool()
     await metrics_db.open_pool()
     await measurement.open_pool()
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
         await close_pool()
         await analytics_db.close_pool()
         await input_db.close_pool()
+        await silver_db.close_pool()
         await cache_db.close_pool()
         await metrics_db.close_pool()
         await measurement.close_pool()

@@ -84,7 +84,7 @@ COPY (
     LEFT JOIN LATERAL (
         SELECT jsonb_agg(jsonb_build_object('citation_seq',lc.ord,'url_norm',u.url_norm,'domain',coalesce(s.domain,u.domain),'group_key',s.skey,'category',k.name,
                    'category_method',CASE s.category_src WHEN 1 THEN 'override' WHEN 2 THEN 'official_social' WHEN 3 THEN 'owned_domain' WHEN 4 THEN 'seed' WHEN 5 THEN 'rule' WHEN 6 THEN 'default' END,
-                   'is_owned',lc.owner_key IS NOT NULL,'matched_base_url',o.prefix,'matched_brand',o.brand_code,'matched_base_country',NULL,'loc_owned',lc.loc_owned,'tgt_hit',lc.tgt_hit) ORDER BY lc.ord) AS judgments,
+                   'is_owned',coalesce(lc.owner_key,0)<>0,'matched_base_url',o.prefix,'matched_brand',o.brand_code,'matched_base_country',NULL,'loc_owned',lc.loc_owned,'tgt_hit',lc.tgt_hit) ORDER BY lc.ord) AS judgments,
                jsonb_agg(jsonb_build_object('citation_seq',lc.ord,'src_first',lc.src_first,'scope_key',lc.scope_key) ORDER BY lc.ord) AS judgment_ext
         FROM live_citation lc LEFT JOIN gold.dim_url u ON u.url_key=lc.url_key LEFT JOIN gold.dim_source s ON s.source_key=lc.source_key
              LEFT JOIN gold.dim_category k ON k.category_key=s.category_key LEFT JOIN gold.dim_owned_base o ON o.owner_key=lc.owner_key

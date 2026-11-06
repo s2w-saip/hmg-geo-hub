@@ -22,7 +22,7 @@ if [ -f "$repo/.local/pg/operations/PG_VERSION" ]; then
         echo 'Service week check failed (above). The API starts anyway with the last recorded week; with none recorded its Gold screens answer 503.' >&2
         echo "  Retry after manage.py init has applied 011: HGH_HUB_NATIVE=1 $python -X utf8 back/hub_storage/manage.py sync-service-week" >&2
     fi
-    for f in .env.analytics.local .env.operations.local .env.input.local .env.metrics.local .env.hub-edit.local; do
+    for f in .env.analytics.local .env.operations.local .env.input.local .env.metrics.local .env.hub-edit.local .env.silver.local; do
         [ -f "$repo/$f" ] && hub_env+=("$repo/$f")
     done
 fi

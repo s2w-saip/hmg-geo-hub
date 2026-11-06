@@ -296,7 +296,12 @@ def stop_recording(token: Token) -> None:
 
 
 def metric_source(ctx: Context) -> Any:
-    """The data source of a /v1 read: Gold's rows for what a first screen reads, the snapshot for a filtered read."""
+    """The data source of a /v1 read: Gold's rows for what a first screen reads, the snapshot for a filtered read. HGH_METRIC_SOURCE=silver: every read is counted on the OBT
+    (adapter ②); the rows and the cache come with the manifest's signals (T9.3)."""
+    from bff.metrics import silver_obt  # it reads through gold_current during the move
+    if silver_obt.enabled():
+        _mark_live()
+        return silver_obt.ObtForContext(ctx)
     live = GoldCurrentSource(ctx)
     scope = scope_of(ctx)
     if scope is None:

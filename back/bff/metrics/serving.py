@@ -130,7 +130,7 @@ async def read(path: str, q: QueryParams, run: Callable[[], Awaitable[str]]) -> 
     active = _recording.get()
     if active is not None:
         return await active.read(path, q, run)
-    if not keeps_values(path):
+    if not keeps_values(path) or os.environ.get("HGH_METRIC_SOURCE", "").strip().lower() == "silver":  # values on the OBT are not kept yet (T9.3)
         return await run()
     try:
         snapshot = await snapshot_of(surface_of(path, q))
