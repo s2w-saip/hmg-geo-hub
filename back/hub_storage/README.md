@@ -10,7 +10,7 @@
 | HUB 입력 DB | `geohub_bm_db` / `127.0.0.1:55438` | 프롬프트, 측정 설정, 수집 · 분석 기준정보, API 호출자 · 승인(아래 '입력 DB') |
 | HUB 데이터 DB | `hmg_analytics` / `127.0.0.1:55436` | GA4·SEO, 서비스 기준 주. `catalog` · `publication`의 입력 테이블은 2026-11-06부터 동결한 옛 사본 |
 | HUB 지표 DB | `hmg_metrics` / `127.0.0.1:55439` | 사전 집계(`gold`), 캐시 DB(`cache`). 정본이 아니다(아래 '지표 DB') |
-| Gold 복사본 | `geohub_gold_db` / `127.0.0.1:55439`(지표 DB와 같은 서버) | 답변 단위 테이블 86개. BFF가 읽는 곳이다(아래 'Gold 복사본') |
+| `geohub_gold_db` | `geohub_gold_db` / `127.0.0.1:55439`(지표 DB와 같은 서버) | 답변 단위 테이블 86개. BFF가 읽는 곳이다(아래 '`geohub_gold_db`') |
 
 기존 `hmg_analytics` 이름과 GA4·SEO 스키마를 유지했다. DB를 삭제하거나 재생성하지 않는다. 데이터 DB의 기존 `ops` 스키마는 SEO 빌드·발행 메타데이터이며, 사용자·권한을 담는 운영 DB와 별개다.
 
@@ -50,12 +50,12 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 
 BFF가 계산해 두는 값의 자리다(SSOT `service/cache-db.md`). `gold` 스키마는 사전 집계 테이블이 들어올 자리(T5.3)이고, `cache.query_result`는 필터 조회 결과다(UNLOGGED, TTL 없음, `manage.py backup`에 들지 않음). 역할은 `hmg_metrics_reader`(읽기), `hmg_cache_writer`(캐시만, `HGH_CACHE_DB_URL`), `hmg_rollup_writer`(`gold`만, 작업 전용)이고 다른 파트에는 열지 않는다. 코드는 `bff/hub_stores/cache_db.py`(키 · 읽기 · 쓰기 · 이전 스냅샷 삭제)이고, 화면은 아직 읽지 않는다(T5.5).
 
-## Gold 복사본 (2026-11-06)
+## `geohub_gold_db` (2026-11-06)
 
 `geohub_gold_db`는 지표 DB 서버의 서비스 DB다(스키마 `gold`, 테이블 86개, 1억 8,265만 행, 40 GB). BFF는 `HGH_GOLD_DB_URL`로 읽는다.
 
 - **복원:** `HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py --dump .local/gold-copy/gold-….dump`. 복원 → 권한 · ANALYZE 순서다.
-- **백업:** 복원에 쓴 덤프가 `.local/gold-copy/`에 남는다(6 GB). 복사본은 바뀌지 않으므로 `manage.py backup`에는 넣지 않았다.
+- **백업:** 복원에 쓴 덤프가 `.local/gold-copy/`에 남는다(6 GB). 답변 단위 테이블은 바뀌지 않으므로 `manage.py backup`에는 넣지 않았다.
 - **설정:** 시간대는 UTC, 날짜 형식은 ISO다. 정렬은 ICU `en-US-u-ka-shifted`다. 레이블 · 한글 정렬에서 동점 행 순서가 달라질 수 있다.
 - **권한:** `hmg_metrics_reader`만 접속해 읽을 수 있다. 사전 집계 · 캐시 계정은 접속하지 못한다.
 

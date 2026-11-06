@@ -70,4 +70,4 @@ BFF 코드를 쓰지 않고 답변 단위 테이블에 직접 SQL을 돌렸다. 
 
 ## ② · ③ 재비교 (7d)
 
-값이 바뀌면 안 되는 작업이므로 ① 직후 응답(`after-step1`)과 차이 0건이 기준이다. 복사본으로 읽으면 `filters/options` 23건과 `citations/sources/tone` 2건이 행 순서만 다르게 나올 수 있다(세션 fc 대조).
+값이 바뀌면 안 되는 작업이므로 ① 직후 응답(`after-step1`)과 차이 0건이 기준이다. `geohub_gold_db`로 읽으면 `filters/options` 23건과 `citations/sources/tone` 2건이 행 순서만 다르게 나올 수 있다(세션 fc 대조).
