@@ -1,6 +1,6 @@
 # HMG-GEO-HUB
 
-현재 로컬 서비스는 외부 Gold, HUB 데이터 DB, HUB 운영 DB를 읽습니다. DB 접속 계정은 서버에서만 사용하며,
+현재 로컬 서비스는 서비스 DB만 읽습니다. DB 접속 계정은 서버에서만 사용하며,
 `127.0.0.1:3333`에서 읽기 전용으로 실행합니다. 모든 화면은 HUB 로그인(최상위 관리자, `manage.py set-admin`)이 필요합니다.
 
 HUB 데이터 DB `hmg_analytics`는 GA4·SEO와 프로젝트·프롬프트 버전을 관리하고,
@@ -8,7 +8,7 @@ HUB 데이터 DB `hmg_analytics`는 GA4·SEO와 프로젝트·프롬프트 버�
 [운영/데이터 DB 분리와 실행 안내](back/hub_storage/README.md), [GA4·SEO 스키마·ERD](back/analytics/README.md)를 참고하십시오.
 GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연결하지 않았습니다.
 
-1. `.env.gold.example`을 `.env.gold.local`로 복사하고 제공받은 실제 접속 정보를 입력합니다.
+1. `.env.gold.local`에 서비스 DB `geohub_gold_db`의 접속 정보(`HGH_GOLD_DB_URL`)를 둡니다.
 2. `front/.env.example`을 `front/.env.local`로 복사합니다. 최초 설치 시 `front`에서 `npm ci`를 실행합니다.
 3. 저장소 루트에서 `powershell -File scripts/start-hub-storage.ps1`을 실행합니다. 두 HUB DB 구성·검증, API 시작, 실제 Gold 카탈로그 가져오기를 수행합니다.
 4. 이후 API만 재시작하려면 `powershell -File scripts/start-gold.ps1`을 실행합니다. 각 DB의 조회 계정만 API에 전달합니다.
@@ -16,14 +16,14 @@ GA4·SEO 화면은 데이터 DB로 연결했고, 실제 수집기는 아직 연�
 포트는 프론트 `3333`, API `5555`로 고정합니다. Docker 없는 macOS·Linux에서는 `HGH_PYTHON=<Python 3.12 경로> bash scripts/start-local.sh`로
 Gold만 연결해 API와 프론트를 시작합니다. 이 Python에는 `back/bff/requirements.txt`가 설치되어 있어야 하며, HUB 두 DB는 연결하지 않습니다.
 
-현재 FastAPI BFF/API는 `back/bff/`에 있습니다(화면 계층 `screens/`, 외부 Gold DB 읽기 `gold_reader/`, HUB 자체 저장소 읽기 `hub_stores/`). Gold는 `active_release`와 검증 완료된 빌드를 고정해서 조회합니다.
+현재 FastAPI BFF/API는 `back/bff/`에 있습니다(화면 계층 `screens/`, Gold 복사본 읽기 `gold_reader/`, HUB 자체 저장소 읽기 `hub_stores/`). Gold는 `active_release`와 검증 완료된 빌드를 고정해서 조회합니다.
 서비스의 DB 조회는 읽기 전용 트랜잭션입니다. 관리 명령은 별도 쓰기 계정으로 실제 카탈로그 정의와 UUID 참조를 등록합니다.
 합성 DB·시드·가상 계정·측정값 생성기는 사용하지 않습니다.
 시장별 현황은 기존 GeoJSON 지도에 Gold 국가별 KPI를 연결합니다. 원천에서 제공되지 않는 값은 채우지 않습니다.
 
 | 화면·지표 | 현재 데이터 원천 | 미제공·미수집 시 표시 |
 | --- | --- | --- |
-| 국가별 GEO·언급·인용·답변·프롬프트·ACR | 외부 Gold의 발행된 활성 빌드 | 데이터 없음 |
+| 국가별 GEO·언급·인용·답변·프롬프트·ACR | Gold 복사본의 발행된 활성 빌드 | 데이터 없음 |
 | 키워드 검색량·검색 결과·관련 키워드 | Gold `kw_volume_monthly`·`kw_serp`·`kw_suggestion` | 데이터 없음 |
 | 소셜 맥락·요구·조합·관계·근거 발화 | Gold의 활성 `ctx_snapshot` 및 연관 데이터 | 데이터 없음 |
 | GA4 세션·기간 사용자·전환·이벤트·페이지 | HUB `hmg_analytics.analytics.ga4_*` | 현재 미수집: 데이터 없음 |

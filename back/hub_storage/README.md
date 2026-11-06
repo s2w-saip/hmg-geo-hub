@@ -1,6 +1,6 @@
 # HUB DB 분리
 
-네 개의 독립 PostgreSQL 컨테이너·볼륨·계정을 사용한다. 외부 Gold에는 쓰지 않는다.
+네 개의 독립 PostgreSQL 컨테이너·볼륨·계정을 사용한다.
 
 [서비스 구조·DB ERD 정본](../../docs/architecture/hmg-geo-hub-architecture.html) (운영 DB ERD `#erd-ops`, 데이터 DB ERD `#erd-data`)
 
@@ -10,8 +10,7 @@
 | HUB 입력 DB | `hmg_input` / `127.0.0.1:55438` | 프롬프트, 측정 설정, 수집 · 분석 기준정보, API 호출자 · 승인(아래 '입력 DB') |
 | HUB 데이터 DB | `hmg_analytics` / `127.0.0.1:55436` | GA4·SEO, 서비스 기준 주. `catalog` · `publication`의 입력 테이블은 2026-11-06부터 동결한 옛 사본 |
 | HUB 지표 DB | `hmg_metrics` / `127.0.0.1:55439` | 사전 집계(`gold`), 캐시 DB(`cache`). 정본이 아니다(아래 '지표 DB') |
-| Gold 복사본 | `geohub_gold_db` / `127.0.0.1:55439`(지표 DB와 같은 서버) | 연결을 끊은 업스트림 Gold DB의 전체 복사본. BFF가 읽는 곳이다(아래 'Gold 복사본') |
-| 이전 업스트림 Gold DB | 연결 끊음(2026-11-06) | BFF는 읽지 않는다 |
+| Gold 복사본 | `geohub_gold_db` / `127.0.0.1:55439`(지표 DB와 같은 서버) | 답변 단위 테이블 86개. BFF가 읽는 곳이다(아래 'Gold 복사본') |
 
 기존 `hmg_analytics` 이름과 GA4·SEO 스키마를 유지했다. DB를 삭제하거나 재생성하지 않는다. 데이터 DB의 기존 `ops` 스키마는 SEO 빌드·발행 메타데이터이며, 사용자·권한을 담는 운영 DB와 별개다.
 
@@ -53,13 +52,12 @@ BFF가 계산해 두는 값의 자리다(SSOT `service/cache-db.md`). `gold` 스
 
 ## Gold 복사본 (2026-11-06)
 
-`geohub_gold_db`는 지표 DB 서버에 둔 업스트림 Gold DB 전체 복사본이다(스키마 `gold`, 테이블 86개, 1억 8,265만 행, 40 GB). 2026-11-06부터 BFF는 `HGH_GOLD_DB_URL`로 이 복사본을 읽고, 업스트림과의 연결은 끊었다. 업스트림 접속 정보는 `.env.gold-upstream.local`에만 있고 `copy_gold.py`만 읽는다.
+`geohub_gold_db`는 지표 DB 서버의 서비스 DB다(스키마 `gold`, 테이블 86개, 1억 8,265만 행, 40 GB). BFF는 `HGH_GOLD_DB_URL`로 읽는다.
 
-- **만들기:** `HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py`. 덤프 → 복원 → 권한 · ANALYZE → 대조 순서이고 Mac에서 약 20분 걸린다. 업스트림은 한 스냅샷으로 읽기만 한다. `--dump`는 받아 둔 덤프로 다시 복원하고, `--verify`는 대조만 한다. Docker 경로는 아직 없다.
+- **복원:** `HGH_HUB_NATIVE=1 python back/hub_storage/copy_gold.py --dump .local/gold-copy/gold-….dump`. 복원 → 권한 · ANALYZE 순서다.
 - **백업:** 복원에 쓴 덤프가 `.local/gold-copy/`에 남는다(6 GB). 복사본은 바뀌지 않으므로 `manage.py backup`에는 넣지 않았다.
-- **설정:** 시간대 · 날짜 형식은 업스트림과 같다. 정렬은 ICU `en-US-u-ka-shifted`다. macOS libc는 업스트림의 `en_US.utf8`처럼 정렬하지 않고, 이 설정이면 도메인 · 호스트 순서가 같아진다. 레이블 · 한글 정렬은 일부 다르다.
+- **설정:** 시간대는 UTC, 날짜 형식은 ISO다. 정렬은 ICU `en-US-u-ka-shifted`다. 레이블 · 한글 정렬에서 동점 행 순서가 달라질 수 있다.
 - **권한:** `hmg_metrics_reader`만 접속해 읽을 수 있다. 사전 집계 · 캐시 계정은 접속하지 못한다.
-- **읽기 전용 계정의 한계:** 시퀀스 위치를 읽지 못해 덤프에서 빼고, 복원 뒤 컬럼 최댓값으로 맞춘다.
 
 ## 프로젝트·프롬프트의 기준
 
@@ -143,10 +141,10 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh   # 
 리뉴얼 Admin › 인용 출처 분류(`/renewal/admin/standards/citation-sources`)에서 최상위 관리자가 AI 답변이 인용한 출처의 카테고리를 교정한다. 사람이 정하는 출처 분류 입력(교정, 그리고 아래 절의 시드 · 공식 소셜 · 코드표)은 HUB가 정본이고, 자동 분류(규칙)는 Gold 값을 읽기만 한다. 같은 구조를 시드 키워드 · 엔티티 역할도 따른다([`docs/handoff/admin-todo.md`](../../docs/handoff/admin-todo.md) '기준값 편집 공통 구조').
 
 - **저장(`007_source_overrides`, 데이터 DB):** `catalog.source_override`에 출처 키(Gold `dim_source.skey`, 소문자 · 앞 `www.` 제거)마다 카테고리(`gold.dim_category.slug`)와 상태(`active` · `cleared`)를 둔다. 지우지 않고, 원복은 `cleared`다. 바꿀 때마다 `source_override_event`(`changes = {필드: [전, 후]}`, 실린 목록의 `published_seq`)가 남는다.
-- **업스트림 전달:** 쓰기마다 같은 트랜잭션에서 발행 함수 `catalog.publish_source_overrides()`가 활성 교정 전체를 기준값 종류 `source_override`(source `hub_edit`)의 새 set으로 기록한다(내용이 같으면 기록 안 함, catalog lock 617427413). 외부 API는 `GET /ext/v1/reference/source_override`로 내보내고, 공개는 `publish-reference source_override`로 승인한다. `hub_edit`은 `ext.meta.hub_reference`에 들지 않아 편집해도 `contract_version`이 바뀌지 않는다. Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.
+- **API 전달:** 쓰기마다 같은 트랜잭션에서 발행 함수 `catalog.publish_source_overrides()`가 활성 교정 전체를 기준값 종류 `source_override`(source `hub_edit`)의 새 set으로 기록한다(내용이 같으면 기록 안 함, catalog lock 617427413). 외부 API는 `GET /ext/v1/reference/source_override`로 내보내고, 공개는 `publish-reference source_override`로 승인한다. `hub_edit`은 `ext.meta.hub_reference`에 들지 않아 편집해도 `contract_version`이 바뀌지 않는다. Gold 가져오기는 이 표와 이 종류를 쓰지 않는다.
 - **처음 값:** `import-source-overrides`가 Gold가 지금 적용 중인 교정(`dim_source.category_src = 1`)을 API 이미지 안에서 읽어 한 번 넣는다(`origin = gold_import`). HUB에 교정이 하나라도 있으면 거부한다. 2026-10-30 기준 2건(arxiv.org, danawa.com).
 - **계정과 권한:** 목록은 데이터 DB 조회 계정과 Gold 조회 계정으로 읽고, 쓰기는 `HGH_SOURCE_OVERRIDE_EDITOR_DB_URL`(`hmg_source_override_editor`: `source_override` INSERT와 카테고리 · 상태 · 시각 · 행위자 UPDATE, `source_override_event` INSERT, 발행 함수 실행)로 한다. 키 · 출처 · 메모 변경, DELETE, `reference_set` 직접 쓰기(다른 역할이 `hub_edit` set을 쓰면 트리거가 거부), 다른 catalog 표, 운영 DB 접속은 없다.
-- **화면:** Gold 최신 회차(글로벌 live)의 인용 수 상위 500개 출처, HUB가 교정한 출처, Gold가 교정을 적용한 출처를 보인다. 행마다 Gold 값과 HUB 값을 비교해 반영됨 · 반영 대기 · 업스트림 교정으로 표시한다. 카테고리를 고르면 바로 저장하고, 숫자에는 파이프라인이 목록을 가져가 Gold를 다시 만든 뒤 반영된다.
+- **화면:** Gold 최신 회차(글로벌 live)의 인용 수 상위 500개 출처, HUB가 교정한 출처, Gold가 교정을 적용한 출처를 보인다. 행마다 Gold 값과 HUB 값을 비교해 반영됨 · 반영 대기로 표시한다. 카테고리를 고르면 바로 저장하고, 숫자에는 파이프라인이 목록을 가져가 Gold를 다시 만든 뒤 반영된다.
 - **API:** `GET /v1/hub/source-overrides`, `GET /v1/hub/source-overrides/history?skey=`, `POST /v1/hub/source-overrides`(`{skey, category}`), `POST /v1/hub/source-overrides/clear`(`{skey}`) (관리자만). 브라우저는 Next `/api/hub/source-overrides`를 거친다.
 
 ```bash
@@ -161,7 +159,7 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh     
 
 - **저장(`008_source_lists`, 데이터 DB):** `catalog.source_seed`(도메인 키 → 카테고리, `active` · `removed`), `catalog.source_social`(계정 키 = 표시 키의 소문자, 도메인, 매칭 규칙 `[{prefix, boundary}]` 1~10개, `active` · `stopped`, 카테고리는 Official (HMG) 고정), `catalog.source_code`(`category` 13개: 번호 = Gold `category_key` = `answer_fact.cit_c<k>`, `layer` 6개: 번호 = `category_src` = 우선순위; 이름(영 · 한) · 순서 · 설명). 표마다 이력 표(`*_event`)가 있고 지우지 않는다.
 - **버전(`013_source_versions`, 2026-11-03):** 교정 · 시드 · 공식 소셜 · 코드표 네 표는 행이 바뀔 때마다 트리거 `catalog.record_source_version()`이 행 전체를 다음 버전으로 `catalog.<표>_version`에 쌓는다. 키마다 1, 2, …로 번호를 매기고, 기록 시각 · 기록자(`updated_by`) · `change_seq`(프롬프트 버전과 같은 순번)를 담는다. 시각 · 기록자만 바뀐 UPDATE는 버전을 만들지 않는다. 트리거만 쓰고, 화면 역할과 조회 계정은 SELECT만 한다. 현재 행은 늘 최신 버전과 같다(`verify`가 확인). 013 전의 변경은 이력 표를 현재 행부터 거꾸로 되짚어 버전으로 옮겼고, 발행된 set 21개가 모두 그 시점의 버전과 같다(`bff.tests.test_hub_source_versions`). 목록 단위 버전은 그대로 발행 set(`reference_set.version`)이다.
-- **업스트림 전달:** 쓰기마다 `catalog.publish_source_seeds()` · `publish_source_socials()` · `publish_source_codes()`가 기준값 종류 `source_seed` · `source_social` · `source_code`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `publish-reference <종류>`.
+- **API 전달:** 쓰기마다 `catalog.publish_source_seeds()` · `publish_source_socials()` · `publish_source_codes()`가 기준값 종류 `source_seed` · `source_social` · `source_code`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `publish-reference <종류>`.
 - **처음 값:** `import-source-lists`가 목록마다 한 번 넣는다(이미 있는 목록은 그대로 둔다). 코드표는 Gold `dim_category`(번호 · 영문 이름 · 순서)와 화면 문구(`citationCategories`, `hubSourceOverrides.source`), 시드는 `seed.json` 795개(영문 카테고리 이름 → slug), 공식 소셜은 `official-social.ts` 9개.
 - **계정과 권한:** 교정과 같은 `hmg_source_override_editor`가 쓴다(화면 하나의 입력 묶음). 시드는 카테고리 · 상태, 소셜은 매칭 규칙 · 상태, 코드표는 이름 · 설명 · 순서만 UPDATE한다. 코드표 행 추가 · 삭제, 키 · 출처 · 메모 변경, DELETE, 공용 발행 함수 직접 실행은 없다.
 - **API:** `GET|POST /v1/hub/source-seeds`, `POST …/remove`, `GET …/history?skey=`; `GET|POST /v1/hub/source-socials`, `POST …/stop|resume`, `GET …/history?key=`; `GET|POST /v1/hub/source-codes`, `POST …/order`, `GET …/history?kind=&code=` (관리자만). 브라우저는 Next `/api/hub/source-seeds` · `source-socials` · `source-codes`를 거친다.
@@ -176,7 +174,7 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-source-lists  
 리뉴얼 Admin › 고객 관심 데이터 관리의 키워드 · 수집 소스 탭이다(admin-todo 결정 A · E, '기준값 편집 공통 구조'). 무엇을 수집할지는 HUB가 정하고, 수집한 결과는 Gold가 가진다. 화면은 Gold 값을 옆에 보일 뿐 고치지 않는다.
 
 - **저장(`009_interest_inputs`, 데이터 DB):** `catalog.interest_keyword`(키 = Gold `dim_keyword.term_norm`과 같은 규칙의 `catalog.interest_term_norm`, 수집 조건 `[{location_code, language_code}]`, 소스, 브랜드, `active` · `stopped`), `catalog.interest_source`(키 = 소문자 · scheme · 앞 `www.` · 쿼리 · 끝 `/` 뺀 URL, 입력한 URL, 채널, 브랜드, `active` · `stopped`)와 이력 표 `*_event`. 행은 지우지 않는다. 정규화는 ICU로 소문자를 만든다(이 저장소는 C 로케일이라 `lower()`가 비ASCII를 접지 못한다).
-- **업스트림 전달:** 쓰기마다 `catalog.publish_interest_keywords()` · `publish_interest_sources()`가 기준값 종류 `interest_keyword` · `interest_source`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference interest_keyword interest_source`다.
+- **API 전달:** 쓰기마다 `catalog.publish_interest_keywords()` · `publish_interest_sources()`가 기준값 종류 `interest_keyword` · `interest_source`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference interest_keyword interest_source`다.
 - **처음 값:** `import-interest-keywords`가 Gold 시드 행(`kw_suggestion.is_seed`, 기준값 종류 `keyword`와 같은 읽기)을 한 번 넣는다(`origin = gold_import`, 소스 Google Keyword, 브랜드 공통). HUB에 키워드가 하나라도 있으면 거부한다. 수집 소스는 Gold에 대응 목록이 없어 처음 값이 없다.
 - **계정과 권한:** 쓰기는 `HGH_INTEREST_EDITOR_DB_URL`(`hmg_interest_editor`, 비밀번호 `.env.interest-db.local`)이다. 값 · 상태 · 메모 · 시각 · 행위자 열만 UPDATE하고, 키 · 원문 · 출처 변경, DELETE, 공용 발행 함수 직접 실행, 다른 catalog 표 읽기, 운영 DB 접속은 없다.
 - **API:** `GET|POST /v1/hub/interest-keywords`, `POST …/stop|resume`, `GET …/history?term=`; `GET|POST /v1/hub/interest-sources`, `POST …/stop|resume`, `GET …/history?url=`. 최상위 관리자 전용이고 쓰기는 catalog lock 안에서 한다.
@@ -191,7 +189,7 @@ HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py import-interest-keywo
 리뉴얼 Admin › 엔티티 카탈로그다(admin-todo 결정 A · F, '기준값 편집 공통 구조'). 누가 자사이고 누가 제외인지는 사람이 정하므로 HUB가 갖고, 엔티티 · 표시 브랜드 · 수치는 Gold 값을 읽기만 한다. 경쟁사는 기본값이라 저장하지 않는다.
 
 - **저장(`010_entity_roles`, 데이터 DB):** `catalog.entity_role`(키 = Gold `entity_id`, 대표 이름, 역할 `own` · `excluded`, 자사 브랜드, 메모, `active` · `cleared`)과 이력 표 `entity_role_event`. 두 DB 사이에 키가 없어 BFF가 쓰기 전에 Gold를 읽어 엔티티를 확인한다. 경쟁사로 되돌리면 행은 `cleared`로 남는다.
-- **업스트림 전달:** 쓰기마다 `catalog.publish_entity_roles()`가 기준값 종류 `entity_role`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference entity_role`이다. 사람이 정한 역할만 내보내고, 분석이 찾은 엔티티는 내보내지 않는다.
+- **API 전달:** 쓰기마다 `catalog.publish_entity_roles()`가 기준값 종류 `entity_role`(source `hub_edit`)의 새 set을 기록한다(내용이 같으면 기록 안 함). 공개 승인은 `manage.py publish-reference entity_role`이다. 사람이 정한 역할만 내보내고, 분석이 찾은 엔티티는 내보내지 않는다.
 - **처음 값:** `import-entity-roles`가 Gold 명부(`dim_entity.registry_role`, 자사 5 · 제외 14)를 한 번 넣는다(`origin = gold_import`). HUB에 역할이 하나라도 있으면 거부한다.
 - **계정과 권한:** 쓰기는 `HGH_ENTITY_ROLE_EDITOR_DB_URL`(`hmg_entity_role_editor`, 비밀번호 `.env.entity-role-db.local`)이다. 역할 · 자사 브랜드 · 메모 · 상태 · 시각 · 행위자 열만 UPDATE하고, 엔티티 · 이름 · 출처 변경, DELETE, 공용 발행 함수 직접 실행, 다른 catalog 표 읽기, 운영 DB 접속은 없다.
 - **API:** `GET|POST /v1/hub/entity-roles`, `POST …/clear`, `GET …/history?entity=`, `GET …/mentions?entity=`. 최상위 관리자 전용이고 쓰기는 catalog lock 안에서 한다. 초안 · 미리보기 · 승인은 없다(결정 F).

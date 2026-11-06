@@ -14,7 +14,7 @@
 <h1>Next 는 불러와서 보여주기만 한다 — 화면 계산을 FastAPI BFF 로 옮겼다</h1>
 <p class="lead"><strong>분석 화면의 모든 계산(합·비율·Δ·순위·정렬·상위 N·기간 해석·인사이트 규칙·기준 데이터)을 <code>back/bff/screens</code> 의 화면 계층으로 옮기고, Next 는 완성된 화면 모델을 받아 그리기만 하게 했다.</strong></p>
 <p>화면·문구·숫자는 바꾸지 않았다. 옮긴 계산은 옛 TypeScript 결과를 녹화한 골든과 Python 결과를 대조해 1:1 이식을 증명했고, 이전/이후 화면을 같은 API·같은 시각에 나란히 띄워 DOM·픽셀을 비교했다.</p>
-<p class="meta">운영 API·인증·DB 쓰기 0건. 외부 Gold DB 는 읽기 전용 계정으로만 읽었다.</p>
+<p class="meta">운영 API·인증·DB 쓰기 0건.</p>
 </header>
 
 <section>

@@ -157,8 +157,7 @@ Deliberate changes (what the screen shows changed by decision):
   was one cell, and the tapes recorded which brands a cell listed, not how often). The 35 `acr/renewal` cases with a
   view change only in `view.sheet`, rebuilt by the new code after checking it against the recorded one: the rest of
   the view, every row's kept fields, the picked entries and the old text / own orders (now `[...]["all"]`) are the same.
-- 2026-10-29 ACR rounds not compared (the user's decision on the measurement break, P1 of
-  docs/handoff/acr-next-session.html: for the same prompts, countries and engines the answers judged generic went
+- 2026-10-29 ACR rounds not compared (the user's decision on the measurement break: for the same prompts, countries and engines the answers judged generic went
   76.8 % → 2.6 % from the 09-28 to the 10-05 round, and 27 % → 86 % at 08-31, with the same models and Gold rule,
   so a Δ, a trend or a period sum across rounds shows a change of measurement as a change of the market). Until Gold
   marks each round's measurement method `acr.COMPARE_ROUNDS` is off — no date, no inferred boundary: the renewal

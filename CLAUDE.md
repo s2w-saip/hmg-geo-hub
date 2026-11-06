@@ -18,7 +18,8 @@
 | 매니페스트 | 파이프라인이 쓰는 적재 기록(회차, 스냅샷 ID, 행 수, 추출 규칙 버전, 상태) |
 | Gold | BFF가 계산해 저장하는 사전 집계 테이블. 필터 없는 초기 화면의 지표 값 |
 | 캐시 DB | 필터 조회 결과를 다음 회차가 운영 반영될 때까지 두는 서비스 전용 DB. BFF가 만들어 저장한다. 정본이 아니다 |
-| 현행 Gold DB | 지금 BFF가 읽는 업스트림 DB(`kpi_cell`, `answer_fact` 등) |
+| Gold 복사본 | 서비스 DB `geohub_gold_db`의 `gold` 스키마 테이블(`answer_fact`, `kpi_cell` 등). 지금 BFF가 읽는 곳이다 |
+| 가상 OBT | 서비스 DB `geohub_silver_db`의 `silver.answer_analysis` · `silver.acr_rollup`. Silver 자리에 둔다 |
 
 - 데이터는 한 방향으로 흐른다: 프롬프트·기준정보 원본(서비스 DB) → 프롬프트·기준정보 API → 수집 · Bronze(앤써) → 분석 입력 준비(파이프라인) → 추출(분석팀) → Silver 적재 · 운영 반영(파이프라인) → 지표 계산(BFF) ↔ Gold 사전 집계 · 캐시 DB(서비스) → 화면 · 지표 API.
 - 프롬프트 · 측정 설정 · 수집 기준정보 · 분석 기준정보는 서비스가 만들고 관리하며, Gold DB와 분리한 서비스 DB에 둔다. 수집(앤써)은 프롬프트 · 측정 설정 · 수집 기준정보를, 분석은 분석 기준정보를 프롬프트·기준정보 API로 읽는다. 분석은 자사 브랜드 · 엔티티 역할로 Silver에 자사 분류를 남기고, 자사 여부 판정은 BFF가 한다.
@@ -33,7 +34,7 @@
 - 측정 방식이나 범위(추출 규칙 버전 포함)가 회차마다 달라 값이 튀어도 숨기거나 경고하지 않는다.
 - 지표는 BFF로만 내보낸다. 지표 API를 포함해 모든 소비자가 BFF를 거친다. GA4 속성은 외부로 내보내지 않는다.
 - 키 · 토큰 · 자격 증명은 DB나 git에 두지 않는다. git에서 제외된 `.env.*.local`에만 둔다.
-- 이관 기간: Silver 운영 스냅샷이 나오기 전까지 BFF는 현행 Gold DB를 읽기만 하고 쓰지 않는다. 이관 순서는 `docs/handoff/admin-todo.md` D-10에서 정한다.
+- 이전에 쓰던 외부 DB는 없는 것으로 본다. 모든 작업은 서비스 DB를 기준으로 한다. 지표 계산은 Gold 복사본에서 하고, Silver는 가상 OBT다.
 
 판단이 애매하면 아래 예시를 따른다.
 
@@ -80,7 +81,7 @@
 
 ## 6. 완료 기준
 
-- 값은 BFF 지표 정의와, 읽는 테이블의 컬럼 설명(Silver 운영 스냅샷, 이관 기간에는 현행 Gold DB)에 대조한다. 테이블의 집계 단위(grain)와 인덱스도 확인한다. 원본 화면과 숫자가 같아도 두 화면이 같은 BFF를 읽는다면 증거가 되지 않는다.
+- 값은 BFF 지표 정의와, 읽는 테이블의 컬럼 설명(Silver 운영 스냅샷, 이관 기간에는 Gold 복사본)에 대조한다. 테이블의 집계 단위(grain)와 인덱스도 확인한다. 원본 화면과 숫자가 같아도 두 화면이 같은 BFF를 읽는다면 증거가 되지 않는다.
 - 테스트는 기준선(작업 전 결과)보다 새 실패가 없어야 한다. 기준선에 이미 있던 실패면 그렇게 적는다. 실행하지 않은 테스트는 실행하지 않았다고 적는다.
 - 버그 수정은 재현 테스트(수정 전 실패 확인) → 수정 → 전후 비교 순서로 한다.
 - 새 화면은 Playwright e2e로 핵심 흐름을 한 번 확인한다. 단위 · 렌더 테스트로 확인되는 작은 변경에는 e2e를 실행하지 않는다.
@@ -114,5 +115,4 @@
 | 모든 정의: 프로젝트 전체 구조 · 팀 간 데이터 계약 · 용어 · 지표 가공 · 캐시 DB · 지표 정의 | `../hmg-geo-hub-ssot/shared/project-architecture.md` · `shared/glossary.md` · `shared/input-contract.md` · `service/cache-db.md` · `service/metric-definitions.md` |
 | 시스템 구조 · ERD | `docs/architecture/hmg-geo-hub-architecture.html` |
 | 화면 디자인 | `docs/design/ui/design-rules.html` |
-| 지표별 데이터 출처 | `docs/handoff/kpi-data-lineage.html` |
-| 업스트림 질문 | `docs/handoff/upstream-questions-2026-10-30.md` |
+| 지표 정의 · 데이터 출처 | `docs/ssot-staging/service/metric-definitions.md`(코드 `back/bff/metrics/catalog.py`에서 생성) |
