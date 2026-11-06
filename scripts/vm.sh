@@ -94,34 +94,9 @@ proxy)
         -v "$repo/infra/vm/ext-proxy:/etc/nginx/conf.d:ro" -v "$repo/$tls:/etc/nginx/tls:ro" \
         -p "$host_ip:$ext_port:8443" nginx:1.27-alpine >/dev/null
     echo "Proxy on https://$host_ip:$ext_port/ext/ (certificate $tls/ext.crt)" ;;
-sync)
-    exec 9>.local/vm-sync.lock
-    flock -n 9 || { log 'sync skipped: the previous run is still going'; exit 0; }
-    if out="$(python3 -X utf8 back/hub_storage/manage.py sync-gold-catalog 2>&1)"; then
-        log "sync ok $(printf '%s' "$out" | tail -1 | python3 -c 'import json,sys; d=json.load(sys.stdin)
-print(" ".join(f"{k}={d[k]}" for k in ("projects","prompts","new_project_versions","new_prompt_versions",
-      "new_reference_sets","removed_projects","removed_prompts")))')"
-    else
-        log "sync FAILED $(printf '%s' "$out" | tail -1 | cut -c1-400)"; exit 1
-    fi ;;
-check-sync)
-    hours="$(docker exec hgh-input-db psql -X -A -t -U hmg_input_reader -d input_db -c \
-        "SELECT coalesce(round(extract(epoch FROM now()-max(finished_at))/3600,1)::text,'never')
-         FROM catalog.sync_run WHERE result='ok'")"
-    limit="${HGH_SYNC_STALE_HOURS:-3}"
-    if [ "$hours" = never ] || python3 -c "import sys; sys.exit(not float('$hours') > $limit)"; then
-        log "check-sync WARN last successful import: $hours h ago (limit $limit h)"; exit 1
-    fi
-    log "check-sync ok last successful import $hours h ago" ;;
-rollup)
-    exec 9>.local/vm-rollup.lock
-    flock -n 9 || { log 'rollup skipped: the previous run is still going'; exit 0; }
-    if out="$(python3 -X utf8 back/hub_storage/manage.py rollup 2>&1)"; then
-        log "rollup ok $(printf '%s' "$out" | tail -1 | cut -c1-400)"
-    else
-        log "rollup FAILED $(printf '%s' "$out" | tail -1 | cut -c1-400)"; exit 1
-    fi
-    ;;
+sync|check-sync)
+    # The Gold import stopped (T10.1, 2026-11-07): the service owns its inputs. The code goes in T12.2.
+    log "$1: the Gold import stopped" ;;
 service-week)
     exec 9>.local/vm-service-week.lock
     flock -n 9 || { log 'service-week skipped: the previous run is still going'; exit 0; }

@@ -329,15 +329,9 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="h" x="124" y="765" style="fill:var(--data)">데이터 서버 cron job</text>
     <text class="sm" x="124" y="785">잡별 독립 프로세스</text>
 
-    <rect class="proc" x="424" y="742" width="200" height="54" rx="6"/>
-    <text class="mb c" x="524" y="759">sync-service-week</text>
-    <text class="sm c" x="524" y="775"><tspan class="ms">gold_db</tspan> 읽기</text>
-    <text class="sm c" x="524" y="790">서비스 기준 주 판정</text>
-
-    <rect class="proc" x="634" y="742" width="216" height="54" rx="6"/>
-    <text class="mb c" x="742" y="759">sync-gold-catalog</text>
-    <text class="sm c" x="742" y="775"><tspan class="ms">gold_db</tspan> 읽기</text>
-    <text class="sm c" x="742" y="790">프롬프트 · 프로젝트 정의 · 키 동기화</text>
+    <rect class="proc" x="424" y="742" width="426" height="54" rx="6"/>
+    <text class="mb c" x="637" y="761">sync-service-week</text>
+    <text class="sm c" x="637" y="782">매니페스트로 서비스 기준 주 판정</text>
 
     <rect class="proc" x="862" y="742" width="190" height="54" rx="6"/>
     <text class="mb c" x="957" y="759" style="font-size:12px">ga4_collect.py</text>
@@ -349,10 +343,8 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="sm c" x="1297" y="782">Silver 가공 · 사전 집계 저장 · 이전 캐시 삭제</text>
 
     <!-- 배치 → DB -->
-    <path class="w" d="M524,742V702" marker-end="url(#aw)"/>
-    <text class="lb lbw r" x="516" y="722">서비스 기준 주</text>
-    <path class="w" d="M742,742V702" marker-end="url(#aw)"/>
-    <text class="lb lbw r" x="734" y="722">프롬프트 · 프로젝트 정의 · gold_db 키</text>
+    <path class="w" d="M637,742V702" marker-end="url(#aw)"/>
+    <text class="lb lbw r" x="629" y="722">서비스 기준 주</text>
     <path class="w" d="M957,742V700" marker-end="url(#aw)"/>
     <text class="lb lbw" x="965" y="722">GA4 결과 저장</text>
     <path class="w" d="M1120,742V703" marker-end="url(#aw)"/>
@@ -368,6 +360,8 @@ text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
     <text class="b c" x="957" y="848">GA4 Data API</text>
     <text class="sm c" x="957" y="866">Google</text>
 
+    <path class="e" d="M700,796V899H1565V887" marker-end="url(#ae)"/>
+    <text class="lb" x="708" y="892">매니페스트 읽기</text>
     <path class="e" d="M1480,796V826" marker-end="url(#ae)"/>
     <text class="lb r" x="1472" y="826">Silver OBT 읽기 · 운영 스냅샷 · 매니페스트</text>
     <path class="ext" d="M1420,832V878A145,7 0 0 0 1710,878V832"/><ellipse class="ext" cx="1565" cy="832" rx="145" ry="7"/>

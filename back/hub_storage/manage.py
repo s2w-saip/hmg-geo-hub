@@ -759,7 +759,9 @@ def status():
 
 
 def sync(args):
-    """Import actual Gold catalog definitions only, using transient writer connections."""
+    """Import actual Gold catalog definitions only, using transient writer connections. Stopped since T10.1 (2026-11-07): the service owns its inputs,
+    and the import read gold.dim_*, which become Silver's processed results. The code goes in T12.2."""
+    raise SystemExit('The Gold import stopped (T10.1, 2026-11-07). Inputs are edited in the service; nothing is imported.')
     data = analytics.env_file(DATA_SECRET)
     config = {
         'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/input_db",

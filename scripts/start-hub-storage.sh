@@ -11,7 +11,6 @@ cd "$repo"
 export HGH_HUB_NATIVE=1
 "$python" -X utf8 back/hub_storage/manage.py init
 HGH_PYTHON="$python" bash scripts/start-local.sh
-"$python" -X utf8 back/hub_storage/manage.py sync-gold-catalog
 "$python" -X utf8 back/hub_storage/manage.py sync-service-week
 "$python" -X utf8 back/hub_storage/manage.py verify
 echo 'HUB stores ready. Register the top-level administrator once:'

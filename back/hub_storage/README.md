@@ -21,7 +21,6 @@
 ./scripts/start-hub-storage.ps1
 # 개별 관리
 python -X utf8 back/hub_storage/manage.py status
-python -X utf8 back/hub_storage/manage.py sync-gold-catalog
 python -X utf8 back/hub_storage/manage.py sync-service-week
 python -X utf8 back/hub_storage/manage.py verify
 python -X utf8 back/hub_storage/manage.py backup
@@ -65,7 +64,8 @@ macOS(Docker 없음)는 네이티브 모드로 같은 일을 한다: `HGH_PYTHON
 - `catalog.project` / `catalog.prompt`: 삭제되지 않는 UUID, 원천(`gold` 또는 `hub`), 원천 UUID.
 - `catalog.*_version`: 정의가 달라질 때 추가되는 버전. 서비스 계정은 수정·삭제할 수 없다. `current_*` 뷰는 최신 버전을 읽는다.
 - Gold 가져오기는 현재 원천 정의의 버전 기록이다. Gold 측정 사실 전체를 복제하지 않는다. 원천에 없는 프로젝트 이름은 `null`이다. `registered_at`, `recorded_at`은 HUB 등록/관측 시각이며 원천 생성 시각이 아니다.
-- `origin=gold`는 HUB가 고치기 전까지 Gold 동기화가 관리한다. `origin=hub` 정의와 HUB가 고친 항목은 가져오기가 덮어쓰지 않는다. 글로벌 프롬프트는 최상위 관리자가 HUB에서 만들고 고칠 수 있다(아래 절). 프로젝트 프롬프트 · 커스텀 태그는 2026-11-03부터 HUB가 정본이고, HUB가 고친 항목은 가져오기가 HUB 키를 지킨다(아래 '프로젝트 프롬프트' 절). Gold 측정 파이프라인으로의 전달(측정 실행)은 아직 구현하지 않았다.
+- **Gold 가져오기는 2026-11-07에 멈췄다(T10.1).** 입력은 서비스에서 고친다. 코드는 T12.2에서 지운다. 지금 새 프로젝트를 만드는 코드는 없다(`catalog.project`를 만드는 곳이 가져오기뿐이었다, T6.3 범위). 아래 가져오기 설명은 지금 행이 어떻게 들어왔는지를 설명한다.
+- `origin=gold`는 HUB가 고치기 전까지 Gold 동기화가 관리했다. `origin=hub` 정의와 HUB가 고친 항목은 가져오기가 덮어쓰지 않는다. 글로벌 프롬프트는 최상위 관리자가 HUB에서 만들고 고칠 수 있다(아래 절). 프로젝트 프롬프트 · 커스텀 태그는 2026-11-03부터 HUB가 정본이고, HUB가 고친 항목은 가져오기가 HUB 키를 지킨다(아래 '프로젝트 프롬프트' 절). Gold 측정 파이프라인으로의 전달(측정 실행)은 아직 구현하지 않았다.
 - 운영 DB는 `system.project_reference`에 **같은 UUID만** 보관한다(258행). 2026-11-07부터 가져오기가 운영 DB에 쓰지 않고(T13.7), 프로젝트 멤버를 쓰는 코드가 생기면 허브 서버가 그때 등록한다. 두 DB 사이 FK나 원자적 트랜잭션은 없다.
 - 향후 프로젝트 생성/설정 변경 서비스도 이 검증·등록 경로를 사용해야 한다. 프로젝트 제거는 새 정의의 보관 상태로 처리하고 정체성 행을 지우지 않는다. 설정·측정 실행은 프롬프트 버전과 설정 버전을 고정해서 기록해야 한다. 기존 Gold 측정에는 과거 HUB 버전 대응을 임의로 붙이지 않는다.
 - `system.integration.credential_ref`에는 비밀 저장소 참조만 보관한다. 실제 키·토큰은 설정 JSON에 저장하지 않는다. 사용자/설정/권한에는 가상 초기 행을 넣지 않았다. 로컬 모드는 조회와 쓰기(글로벌 프롬프트 편집) 모두 HUB 로그인을 요구한다(2026-10-28부터 조회도).
@@ -238,7 +238,6 @@ HGH_PYTHON=~/micromamba/envs/hgh-bff/bin/python bash scripts/start-local.sh     
 ```bash
 m() { HGH_HUB_NATIVE=1 python -X utf8 back/hub_storage/manage.py "$@"; }   # Windows는 HGH_HUB_NATIVE 없이 같은 명령
 m init                                   # 005_external_api, hmg_ext_api 계정, .env.ext-api.local
-m sync-gold-catalog                      # 정의와 기준값 가져오기 (거부되면 사유를 보고 플래그 판단)
 m publish-project <project_id> [projects] [prompts]     # 공개 승인 (기본 둘 다) · unpublish-project
 m publish-reference <family ...|all>     # API 계약의 기준값 종류 공개 승인 · unpublish-reference
 m ext-client-add "<호출자 이름>" --audience collect|analyze   # client_id 출력 · ext-client-disable / ext-client-enable
@@ -249,7 +248,7 @@ m ext-list                               # 호출자·키(해시 제외)·허용
 cd back && uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json   # .env.ext-api.local 필요
 ```
 
-**내부 VM(taeho-dev).** 2026-11-06 입력 · Gold · 캐시 DB를 적용하려면 `init` → `vm.sh bff` · `ext` → `sync-gold-catalog` → `verify` 순서로 한다(Docker 경로는 Mac에 Docker가 없어 아직 실행하지 않았다). Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 10분에 `vm.sh service-week`(서비스 기준 주, 위 절), 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. `service-week FAILED` 줄은 그 실행이 아무것도 기록하지 않았다는 뜻이고(사유는 줄 끝), 화면은 마지막 기준 주를 그대로 쓴다. 011을 처음 적용하면 `vm.sh bff` 뒤에 `vm.sh service-week`를 한 번 손으로 돌린다. crontab 줄은 `scripts/vm.sh` 머리말에 있다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
+**내부 VM(taeho-dev).** 2026-11-06 입력 · Gold · 캐시 DB를 적용하려면 `init` → `vm.sh bff` · `ext` → `verify` 순서로 한다(Gold 가져오기는 2026-11-07에 멈췄다, T10.1)(Docker 경로는 Mac에 Docker가 없어 아직 실행하지 않았다). Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 10분에 `vm.sh service-week`(서비스 기준 주, 위 절), 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. `service-week FAILED` 줄은 그 실행이 아무것도 기록하지 않았다는 뜻이고(사유는 줄 끝), 화면은 마지막 기준 주를 그대로 쓴다. 011을 처음 적용하면 `vm.sh bff` 뒤에 `vm.sh service-week`를 한 번 손으로 돌린다. crontab 줄은 `scripts/vm.sh` 머리말에 있다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
 
 관리자는 `publication.project_access`의 `projects`, `prompts`, `ga4`, `seo`를 **각각** 승인한다(`projects`·`prompts`는 위 `publish-project` 명령, `ga4`·`seo`는 아직 명령 없이 DB 관리자가 직접). 승인을 바꾸면 트리거가 `access_seq`를 새로 받는다. 프로젝트 승인만으로 프롬프트나 측정 데이터가 공개되지 않는다. 승인한 범위의 최신 버전만 공개한다. 호출자별 범위는 외부 API(`ext`)가 맡는다. 이 계정은 하나의 공통 승인 범위를 위한 계정이고 `ext`는 읽지 못한다.
 
