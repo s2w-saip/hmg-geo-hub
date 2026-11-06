@@ -9,7 +9,7 @@ next to what Gold applies now and `state` compares the two (a comparison of valu
   social, owned) · pending (Gold has the source otherwise) · upstream (Gold's seed the HUB does not have) · None.
 - social: applied (Gold has the account at layer social) · pending · upstream · None (Gold has no such source).
 - category: applied (Gold's name and order equal the HUB's) · pending.
-Code rows are only imported (manage.py import-source-lists); the screen changes names, description and the category
+Code rows came from Gold once; the screen changes names, description and the category
 order, never adds or removes one.
 
 Writes use the 인용 출처 분류 role (hmg_source_override_editor, the pool of source_overrides.py) under the catalog lock,

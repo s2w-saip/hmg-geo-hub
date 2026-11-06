@@ -1,15 +1,12 @@
 """Global prompts in the input store (input_db), managed by the top-level administrator (2026-10-27).
 
 Every Global prompt is created, edited, archived and restored here (2026-11-06, T4.2: the service holds the source of the prompts, as
-Project › Prompt has since 2026-11-03). The first HUB revision of a Gold-imported prompt makes it HUB-owned: sync_catalog.py keeps its
-text and HUB keys from then on and still records Gold's own keys (surface, catalog rows). Reaching the measurement waits for 앤써 to read
-the prompt and reference API (docs/handoff/architecture-rebuild.md 2.5).
+Project › Prompt has since 2026-11-03). Reaching the measurement waits for 앤써 to read the prompt and reference API (docs/handoff/architecture-rebuild.md 2.5).
 Every change is one more catalog.prompt_version row written by the INSERT-only editor role
 (HGH_CATALOG_EDITOR_DB_URL); an archive is a revision with status=archived, so ids and history stay.
 A write names the version it was made against and a stale one is refused with 409 (the revision
-primary key is the last guard). Codes must be Gold's: the taxonomy fields take the codes of the taxonomy the
-last Gold import recorded (catalog.current_reference, family taxon; Gold itself is never called while the
-catalog lock is held), and depth2/depth3 must sit under the depth1/depth2 chosen with them. Language and
+primary key is the last guard). The taxonomy fields take the codes of the reference values (catalog.current_reference,
+family taxon), and depth2/depth3 must sit under the depth1/depth2 chosen with them. Language and
 markets take the ones the Global catalog already uses. A Gold prompt that left Gold without a HUB revision is
 `removed` and stays read only."""
 from __future__ import annotations
@@ -43,7 +40,7 @@ def label_sql(key: str) -> str:
 TAXON_AXES = {"funnel": "funnel", "presence": "brandPresence", "list_type": "listType",
               "depth1": "depth1", "depth2": "depth2", "depth3": "depth3", "depth4": "depth4"}
 
-# The taxonomy as the last Gold import recorded it; path = the ancestor codes (depth3: depth1, depth2).
+# The taxonomy in the reference values; path = the ancestor codes (depth3: depth1, depth2).
 TAXON_SQL = """SELECT definition->>'axis' AS axis,definition->>'code' AS code,definition->'path' AS path
     FROM catalog.current_reference WHERE family='taxon'"""
 
@@ -57,9 +54,9 @@ LIST_LIMIT_MAX = 200
 
 HISTORY_LIMIT = 100
 
-CATALOG_LOCK = 617427413   # the Gold import's lock (sync_catalog.py): one catalog writer at a time
+CATALOG_LOCK = 617427413   # one catalog writer at a time: change_seq order = commit order
 
-LOCK_TIMEOUT = "5s"        # a write waits this long for a running Gold import, then 503
+LOCK_TIMEOUT = "5s"        # a write waits this long for another writer, then 503
 
 STATUSES = ("active", "archived", "removed")
 
@@ -140,7 +137,7 @@ def normalize(fields: PromptFields) -> tuple[str, dict]:
     return text, definition
 
 def check_vocabulary(definition: dict, vocabulary: dict[str, list[dict]]) -> None:
-    """Every code must be one `vocabulary` offers: Gold's taxonomy, the catalog's languages and markets."""
+    """Every code must be one `vocabulary` offers: the taxonomy, the catalog's languages and markets."""
     known = {k: {v["value"] for v in values} for k, values in vocabulary.items()}
     unknown = []
     for api, key in SCALARS.items():
@@ -150,7 +147,7 @@ def check_vocabulary(definition: dict, vocabulary: dict[str, list[dict]]) -> Non
     if any(r not in known.get("regions", set()) for r in definition["regions"]):
         unknown.append("regions")
     if unknown:
-        raise refused(422, "unknown_code", "Use Gold's taxonomy codes and the languages and markets the Global catalog uses", {"fields": unknown})
+        raise refused(422, "unknown_code", "Use the reference taxonomy codes and the languages and markets the Global catalog uses", {"fields": unknown})
 
 def check_taxonomy_path(definition: dict, taxa: list[tuple[str, str, tuple]]) -> None:
     """depth2 must sit under the chosen depth1, depth3 under depth1/depth2: the same code exists under
@@ -205,7 +202,7 @@ async def writing():
         try:
             await conn.execute("SELECT pg_advisory_xact_lock($1)", CATALOG_LOCK)
         except asyncpg.LockNotAvailableError:
-            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
+            raise HTTPException(503, "Another edit is writing the catalog; try again shortly") from None
         yield conn
 
 @asynccontextmanager
@@ -223,7 +220,7 @@ async def global_project(conn) -> UUID:
     return rows[0]["project_id"]
 
 async def taxonomy(conn) -> list[tuple[str, str, tuple]]:
-    """(API field, code, ancestor codes) for every taxon the last Gold import recorded; none before the first
+    """(API field, code, ancestor codes) for every taxon of the reference values; none before the first
     import (then only the codes the HUB catalog already uses are offered and accepted)."""
     out = []
     for r in await conn.fetch(TAXON_SQL):

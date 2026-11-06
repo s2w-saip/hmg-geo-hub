@@ -1,5 +1,5 @@
 """Adding a project (T6.3, 2026-11-07): the project surface only, with the fields of the legacy /projects/new form. The project, its first version and its first
-measurement settings go in one transaction. Nothing else starts a project since the Gold import stopped (T10.1)."""
+measurement settings go in one transaction. Nothing else starts a project (the Gold import, the only other way, stopped with T10.1)."""
 from __future__ import annotations
 
 from uuid import uuid4

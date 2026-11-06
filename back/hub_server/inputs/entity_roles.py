@@ -94,7 +94,7 @@ async def writing():
         try:
             await conn.execute(LOCK_SQL, CATALOG_LOCK)
         except asyncpg.LockNotAvailableError:
-            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
+            raise HTTPException(503, "Another edit is writing the catalog; try again shortly") from None
         yield conn
 
 async def history(entity: str | None) -> dict:

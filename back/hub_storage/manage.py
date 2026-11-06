@@ -75,7 +75,7 @@ AUDIENCES = ('collect', 'analyze')  # 수집 reads prompts, settings and the col
 KEY_DAYS, KEY_DAYS_MAX, KEYS_PER_CLIENT = 180, 365, 2
 RETIRED_DATA_STORE = ROOT / '.local' / 'analytics-retired'  # a container host: the old store's volume stays until removed by hand
 KEY_LOCK = 617427414     # one key issue at a time, so the per-client limit holds
-CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB editors): change_seq order = commit order
+CATALOG_LOCK = 617427413  # every catalog writer (the hub server's editors): change_seq order = commit order
 
 
 def sanitize(message):
@@ -499,7 +499,6 @@ def install_input():
     editor = ("SET statement_timeout='15s'", 'CONNECTION LIMIT 4')
     roles = [login_role('hmg_input_reader', values['INPUT_READER_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='15s'"),
              login_role('hmg_measurement_editor', values['MEASUREMENT_EDITOR_PASSWORD'], *editor),
-             login_role('hmg_catalog_writer', env(DATA_SECRET)['CATALOG_WRITER_PASSWORD'], "SET statement_timeout='60s'"),
              login_role('hmg_catalog_editor', env(EDIT_SECRET)['CATALOG_EDITOR_PASSWORD'], *editor),
              login_role('hmg_project_editor', env(PROJECT_EDITOR_SECRET)['PROJECT_EDITOR_PASSWORD'], *editor),
              login_role('hmg_source_override_editor', env(SOURCE_OVERRIDE_SECRET)['SOURCE_OVERRIDE_EDITOR_PASSWORD'], *editor),
@@ -510,15 +509,18 @@ def install_input():
              login_role('hmg_analytics_writer', ga4_roles()['ANALYTICS_WRITER_PASSWORD'], "SET statement_timeout='5min'"),
              login_role('hmg_ext_api', env(EXT_SECRET)['EXT_API_PASSWORD'], 'SET default_transaction_read_only=on', "SET statement_timeout='10s'",
                         "SET idle_in_transaction_session_timeout='15s'", 'SET search_path=ext', 'CONNECTION LIMIT 8')]
-    logins = ['hmg_input_reader', 'hmg_measurement_editor', 'hmg_catalog_writer', 'hmg_catalog_editor', 'hmg_project_editor',
+    logins = ['hmg_input_reader', 'hmg_measurement_editor', 'hmg_catalog_editor', 'hmg_project_editor',
               'hmg_source_override_editor', 'hmg_interest_editor', 'hmg_entity_role_editor', 'hmg_ga4_registry_editor', 'hmg_service_week_writer',
               'hmg_analytics_writer', 'hmg_ext_api']
+    # the Gold import's account: earlier migrations name it, input-006 takes everything away (T12.2)
+    roles.append("DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='hmg_catalog_writer') THEN CREATE ROLE hmg_catalog_writer NOLOGIN; END IF; END $$;\nALTER ROLE hmg_catalog_writer NOLOGIN;\n")
     isql('BEGIN;\n' + ''.join(roles) + store_database('input', logins) + 'COMMIT;')
     migrate('input-001.sql', '001_input_store', store='input')
     migrate('input-002.sql', '002_measurement_reference_contract', store='input')
     migrate('input-003.sql', '003_ga4_properties_service_week', store='input')
     migrate('input-004.sql', '004_actor_names', store='input')
     migrate('input-005.sql', '005_project_add', store='input')
+    migrate('input-006.sql', '006_no_gold_import', store='input')
     backfill_actor_names()
 
 
@@ -784,22 +786,8 @@ def status():
             'migrations',(SELECT json_agg(version ORDER BY version) FROM {migrations}.schema_migration));""", store=store).stdout.strip())
 
 
-def sync(args):
-    """Import actual Gold catalog definitions only, using transient writer connections. Stopped since T10.1 (2026-11-07): the service owns its inputs,
-    and the import read gold.dim_*, which become Silver's processed results. The code goes in T12.2."""
-    raise SystemExit('The Gold import stopped (T10.1, 2026-11-07). Inputs are edited in the service; nothing is imported.')
-    data = analytics.env_file(DATA_SECRET)
-    config = {
-        'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/input_db",
-        'allow_removals': args.allow_removals, 'expect_mass_change': args.expect_mass_change,
-    }
-    # Secrets travel over stdin, never argv, image layers, logs or the frontend.
-    script = (HERE / 'sync_catalog.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
-    print(api_python(script).strip())
-
-
 def service_week(args):
-    """sync-service-week: record the service week from Gold's status (service_week.py) with the transient writer.
+    """sync-service-week: record the service week from the manifest (service_week.py) with the transient writer.
     --dry-run decides and prints without writing; before init has made the writer it decides as if nothing were recorded."""
     config = {'dry_run': args.dry_run}
     if SERVICE_WEEK_SECRET.exists():
@@ -912,54 +900,6 @@ COMMIT;""", True).stdout.strip()
 
 
 # ═══ source category corrections: the first values (2026-10-30) ═══════════════════════════════════════════
-
-# Read inside the API image (the Gold credentials stay there): the corrections Gold applies (dim_source.category_src 1).
-GOLD_OVERRIDES_SCRIPT = '''import asyncio, json, os
-import asyncpg
-async def main():
-    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
-    try:
-        rows = await conn.fetch("SELECT s.skey,c.slug FROM gold.dim_source s JOIN gold.dim_category c USING(category_key) WHERE s.category_src=1 ORDER BY s.skey")
-    finally:
-        await conn.close()
-    print(json.dumps([[r['skey'], r['slug']] for r in rows]))
-asyncio.run(main())
-'''
-
-
-def source_key(value):
-    """The key the HUB and the pipeline compare: lower case, trimmed, no leading www. (catalog.source_override)."""
-    return re.sub(r'^www\.', '', value.strip().lower())
-
-
-def import_source_overrides(args):
-    """import-source-overrides: the HUB's first source corrections are the ones Gold applies now. Runs once: refused
-    when the HUB already has a correction. Records them (origin gold_import), their history and the first
-    `source_override` list for the external API, in one transaction under the catalog lock."""
-    rows = json.loads(api_python(GOLD_OVERRIDES_SCRIPT).strip().splitlines()[-1])
-    found = {}
-    for skey, slug in rows:
-        key = source_key(skey)
-        if found.get(key, slug) != slug:
-            raise RuntimeError(f'Gold has two categories for {key}; nothing imported')
-        found[key] = slug
-    if not found:
-        print('Gold applies no source correction; nothing imported')
-        return
-    values = ','.join(f"({analytics.literal(k)},{analytics.literal(v)},'gold_import')" for k, v in sorted(found.items()))
-    isql(f"""BEGIN;
-SELECT pg_advisory_xact_lock({CATALOG_LOCK});
-DO $$ BEGIN
- IF EXISTS(SELECT 1 FROM catalog.source_override) THEN RAISE EXCEPTION 'The HUB already has source corrections; the first import runs once'; END IF;
-END $$;
-INSERT INTO catalog.source_override(skey,category,origin) VALUES{values};
-SELECT count(*) FROM catalog.publish_source_overrides();
-INSERT INTO catalog.source_override_event(skey,action,changes,published_seq)
-SELECT skey,'import',jsonb_build_object('category',jsonb_build_array(NULL,category)),
-       (SELECT change_seq FROM catalog.current_reference_set WHERE family='source_override')
-FROM catalog.source_override;
-COMMIT;""")
-    print(json.dumps({'imported': len(found), 'corrections': dict(sorted(found.items()))}, ensure_ascii=False))
 
 
 # ═══ external API: approvals, callers, keys (data DB; the API itself only reads them) ═══════════════════
@@ -1142,194 +1082,14 @@ def dump_store(store):
     print(f'Backup created: {output}')
 
 
-# Source classification lists (2026-10-30, admin-todo decisions 코드표 and G): the first values come from where the HUB
-# kept them before the DB, the original app's categorizer files and the category labels of front/messages. Gold gives
-# the category numbers (dim_category.category_key, tied to answer_fact.cit_c<k>), English names and order.
-CATEGORIZER = ROOT / 'front' / 'lib' / 'citation-categorizer'
-LAYER_CODES = ('override', 'social', 'owned', 'seed', 'rule', 'fallback')  # dim_source.category_src 1..6, in priority order
-GOLD_CATEGORIES_SCRIPT = '''import asyncio, json, os
-import asyncpg
-async def main():
-    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
-    try:
-        rows = await conn.fetch("SELECT category_key,slug,name,ord FROM gold.dim_category WHERE coalesce(slug,'')<>'' ORDER BY category_key")
-    finally:
-        await conn.close()
-    print(json.dumps([[r['category_key'], r['slug'], r['name'], r['ord']] for r in rows]))
-asyncio.run(main())
-'''
-SOCIAL_ENTRY = re.compile(r'\{\s*(?://[^\n]*\n\s*)*key:\s*"([^"]+)",\s*domain:\s*"([^"]+)",\s*matchers:\s*\[(.*?)\]\s*,?\s*\}', re.S)
-SOCIAL_MATCHER = re.compile(r'\{\s*prefix:\s*"([^"]+)",\s*boundary:\s*(true|false)\s*\}')
-
-
-def official_social_accounts():
-    """The accounts of official-social.ts, in file order: [{key, domain, matchers: [{prefix, boundary}]}]."""
-    text = (CATEGORIZER / 'official-social.ts').read_text(encoding='utf8')
-    accounts = []
-    for key, domain, body in SOCIAL_ENTRY.findall(text):
-        matchers = [{'prefix': p, 'boundary': b == 'true'} for p, b in SOCIAL_MATCHER.findall(body)]
-        if not matchers or not key.lower().startswith(domain + '/') or any(not m['prefix'].startswith(domain + '/') for m in matchers):
-            raise RuntimeError(f'official-social.ts: cannot read the account {key}; nothing imported')
-        accounts.append({'key': key, 'domain': domain, 'matchers': matchers})
-    if not accounts:
-        raise RuntimeError('official-social.ts: no account found; nothing imported')
-    return accounts
-
-
-def import_source_lists(args):
-    """import-source-lists: the HUB's first code table, seeds and official social accounts (Admin › 인용 출처 분류).
-    Each list is imported once; a list the HUB already has stays as it is. Records the rows (origin file_import),
-    their history and the first source_code / source_seed / source_social sets, in one transaction under the catalog
-    lock."""
-    counts = {name: int(isql(f"SELECT count(*) FROM catalog.{table};").stdout.strip() or 0)
-              for name, table in (('code', 'source_code'), ('seed', 'source_seed'), ('social', 'source_social'))}
-    gold = json.loads(api_python(GOLD_CATEGORIES_SCRIPT).strip().splitlines()[-1])
-    labels = {lang: json.loads((ROOT / 'front' / 'messages' / f'{lang}.json').read_text(encoding='utf8')) for lang in ('ko', 'en')}
-    name_to_slug = {name: slug for _, slug, name, _ in gold}
-    statements, done = [], {}
-    if not counts['code']:
-        rows = [('category', slug, key, name, labels['ko']['citationCategories'][slug], ord) for key, slug, name, ord in gold]
-        rows += [('layer', code, i, labels['en']['hubSourceOverrides']['source'][code], labels['ko']['hubSourceOverrides']['source'][code], i)
-                 for i, code in enumerate(LAYER_CODES, 1)]
-        values = ','.join(f"({analytics.literal(k)},{analytics.literal(c)},{n},{analytics.literal(en)},{analytics.literal(ko)},{o})"
-                          for k, c, n, en, ko, o in rows)
-        statements.append(f"""INSERT INTO catalog.source_code(kind,code,number,name_en,name_ko,ord) VALUES{values};
-SELECT count(*) FROM catalog.publish_source_codes();
-INSERT INTO catalog.source_code_event(kind,code,action,changes,published_seq)
-SELECT kind,code,'import',jsonb_build_object('name_en',jsonb_build_array(NULL,name_en),'name_ko',jsonb_build_array(NULL,name_ko),
-       'ord',jsonb_build_array(NULL,ord)),(SELECT change_seq FROM catalog.current_reference_set WHERE family='source_code')
-FROM catalog.source_code;""")
-        done['code'] = len(rows)
-    if not counts['seed']:
-        seeds = {}
-        for domain, name in json.loads((CATEGORIZER / 'seed.json').read_text(encoding='utf8')).items():
-            key, slug = source_key(domain), name_to_slug.get(name)
-            if slug is None or '/' in key or seeds.get(key, slug) != slug:
-                raise RuntimeError(f'seed.json: {domain} → {name} has no single Gold category; nothing imported')
-            seeds[key] = slug
-        values = ','.join(f"({analytics.literal(k)},{analytics.literal(v)},'file_import')" for k, v in sorted(seeds.items()))
-        statements.append(f"""INSERT INTO catalog.source_seed(skey,category,origin) VALUES{values};
-SELECT count(*) FROM catalog.publish_source_seeds();
-INSERT INTO catalog.source_seed_event(skey,action,changes,published_seq)
-SELECT skey,'import',jsonb_build_object('category',jsonb_build_array(NULL,category)),
-       (SELECT change_seq FROM catalog.current_reference_set WHERE family='source_seed')
-FROM catalog.source_seed;""")
-        done['seed'] = len(seeds)
-    if not counts['social']:
-        accounts = official_social_accounts()
-        values = ','.join(f"({analytics.literal(a['key'].lower())},{analytics.literal(a['key'])},{analytics.literal(a['domain'])},"
-                          f"{analytics.literal(json.dumps(a['matchers']))}::jsonb,'file_import')" for a in accounts)
-        statements.append(f"""INSERT INTO catalog.source_social(account_key,display_key,domain,matchers,origin) VALUES{values};
-SELECT count(*) FROM catalog.publish_source_socials();
-INSERT INTO catalog.source_social_event(account_key,action,changes,published_seq)
-SELECT account_key,'import',jsonb_build_object('matchers',jsonb_build_array(NULL,matchers)),
-       (SELECT change_seq FROM catalog.current_reference_set WHERE family='source_social')
-FROM catalog.source_social;""")
-        done['social'] = len(accounts)
-    if statements:
-        isql(f"BEGIN;\nSELECT pg_advisory_xact_lock({CATALOG_LOCK});\n" + '\n'.join(statements) + '\nCOMMIT;')
-    print(json.dumps({'imported': done, 'already_present': {k: v for k, v in counts.items() if v}}, ensure_ascii=False))
-
-
-GOLD_KEYWORDS_SCRIPT = '''import asyncio, json, os
-import asyncpg
-async def main():
-    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
-    try:
-        rows = await conn.fetch("""SELECT DISTINCT k.term,k.term_norm,s.location_code,s.language_code FROM gold.kw_suggestion s
-            JOIN gold.dim_keyword k ON k.kw_key=s.kw_key WHERE s.is_seed ORDER BY k.term_norm,k.term,s.location_code,s.language_code""")
-    finally:
-        await conn.close()
-    print(json.dumps([[r['term'], r['term_norm'], r['location_code'], r['language_code']] for r in rows]))
-asyncio.run(main())
-'''
-
-
-def import_interest_keywords(args):
-    """import-interest-keywords: the HUB's first seed keywords are Gold's seed rows (the reference family `keyword`). Runs
-    once: refused when the HUB already has a keyword. Records them (origin gold_import, Google keyword, common to every
-    brand), their history and the first `interest_keyword` list for the external API, in one transaction under the
-    catalog lock."""
-    rows = json.loads(api_python(GOLD_KEYWORDS_SCRIPT).strip().splitlines()[-1])
-    found = {}
-    for term, term_norm, location, language in rows:
-        item = found.setdefault(term_norm, {'term': term, 'conditions': []})
-        item['conditions'].append({'location_code': location, 'language_code': language})
-    if not found:
-        print('Gold has no seed keyword; nothing imported')
-        return
-    values = ','.join(f"({analytics.literal(k)},{analytics.literal(v['term'])},{analytics.literal(json.dumps(v['conditions'], ensure_ascii=False))}::jsonb,"
-                      "ARRAY['google_keyword'],'gold_import')" for k, v in sorted(found.items()))
-    isql(f"""BEGIN;
-SELECT pg_advisory_xact_lock({CATALOG_LOCK});
-DO $$ BEGIN
- IF EXISTS(SELECT 1 FROM catalog.interest_keyword) THEN RAISE EXCEPTION 'The HUB already has seed keywords; the first import runs once'; END IF;
-END $$;
-INSERT INTO catalog.interest_keyword(term_norm,term,conditions,source_types,origin) VALUES{values};
-SELECT count(*) FROM catalog.publish_interest_keywords();
-INSERT INTO catalog.interest_keyword_event(term_norm,action,changes,published_seq)
-SELECT term_norm,'import',jsonb_build_object('conditions',jsonb_build_array(NULL,conditions)),
-       (SELECT change_seq FROM catalog.current_reference_set WHERE family='interest_keyword')
-FROM catalog.interest_keyword;
-COMMIT;""")
-    print(json.dumps({'imported': len(found)}))
-
-
-GOLD_ROLES_SCRIPT = '''import asyncio, json, os
-import asyncpg
-async def main():
-    conn = await asyncpg.connect(os.environ['HGH_GOLD_DB_URL'], server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '30000'})
-    try:
-        rows = await conn.fetch("""SELECT e.entity_id::text AS entity_id,coalesce(e.rep_name,b.name) AS rep_name,e.registry_role,
-            CASE WHEN b.kind=1 THEN b.name END AS brand FROM gold.dim_entity e LEFT JOIN gold.dim_brand b USING(brand_key)
-            WHERE e.registry_role IS NOT NULL ORDER BY e.entity_id""")
-    finally:
-        await conn.close()
-    print(json.dumps([[r['entity_id'], r['rep_name'], r['registry_role'], r['brand']] for r in rows], ensure_ascii=False))
-asyncio.run(main())
-'''
-
-
-def import_entity_roles(args):
-    """import-entity-roles: the HUB's first entity roles are Gold's registry_role rows (the reference family `entity`).
-    Runs once: refused when the HUB already has a role. Records them (origin gold_import), their history and the first
-    `entity_role` list for the external API, in one transaction under the catalog lock."""
-    rows = json.loads(api_python(GOLD_ROLES_SCRIPT).strip().splitlines()[-1])
-    if not rows:
-        print('Gold has no entity role; nothing imported')
-        return
-    for entity_id, name, role, brand in rows:
-        if role not in ('own', 'excluded') or not name or (role == 'own' and brand is None):
-            raise RuntimeError(f'Gold entity {entity_id}: role {role} with brand {brand}; nothing imported')
-    values = ','.join(f"({analytics.literal(e)}::uuid,{analytics.literal(n)},{analytics.literal(r)},"
-                      f"{analytics.literal(b) if r == 'own' else 'NULL'},'gold_import')" for e, n, r, b in rows)
-    isql(f"""BEGIN;
-SELECT pg_advisory_xact_lock({CATALOG_LOCK});
-DO $$ BEGIN
- IF EXISTS(SELECT 1 FROM catalog.entity_role) THEN RAISE EXCEPTION 'The HUB already has entity roles; the first import runs once'; END IF;
-END $$;
-INSERT INTO catalog.entity_role(entity_id,rep_name,role,brand,origin) VALUES{values};
-SELECT count(*) FROM catalog.publish_entity_roles();
-INSERT INTO catalog.entity_role_event(entity_id,action,changes,published_seq)
-SELECT entity_id,'import',jsonb_build_object('role',jsonb_build_array(NULL,role),'brand',jsonb_build_array(NULL,brand)),
-       (SELECT change_seq FROM catalog.current_reference_set WHERE family='entity_role')
-FROM catalog.entity_role;
-COMMIT;""")
-    print(json.dumps({'imported': len(rows), 'own': sum(r[2] == 'own' for r in rows), 'excluded': sum(r[2] == 'excluded' for r in rows)}))
-
-
 COMMANDS = {
-    'init': lambda a: initialize(), 'start': lambda a: start(), 'sync-gold-catalog': sync, 'status': lambda a: status(),
+    'init': lambda a: initialize(), 'start': lambda a: start(), 'status': lambda a: status(),
     'verify': lambda a: verify(), 'backup': lambda a: backup(), 'set-admin': lambda a: set_admin(), 'revoke-admin': lambda a: revoke_admin(),
     'publish-project': lambda a: set_project_access(a, True), 'unpublish-project': lambda a: set_project_access(a, False),
     'publish-reference': lambda a: set_reference_access(a, True), 'unpublish-reference': lambda a: set_reference_access(a, False),
     'ext-client-add': client_add, 'ext-client-disable': lambda a: client_status(a, 'disabled'),
     'ext-client-enable': lambda a: client_status(a, 'active'), 'ext-key-issue': key_issue, 'ext-key-revoke': key_revoke,
     'grant-project': lambda a: grant(a, True), 'withdraw-project': lambda a: grant(a, False), 'ext-list': ext_list,
-    'import-source-overrides': import_source_overrides,
-    'import-source-lists': import_source_lists,
-    'import-interest-keywords': import_interest_keywords,
-    'import-entity-roles': import_entity_roles,
     'sync-service-week': service_week,
     'internal-token': lambda a: internal_token(),
     'load-query-tables': load_query_tables,
@@ -1341,8 +1101,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=list(COMMANDS))
     parser.add_argument('params', nargs='*', help='ids, flags or families for the external API commands')
-    parser.add_argument('--allow-removals', type=int, default=0, help='sync: accept up to N Gold removals above the guard')
-    parser.add_argument('--expect-mass-change', action='store_true', help='sync: accept more than the guard share of new revisions')
     parser.add_argument('--days', type=int, help='ext-key-issue: lifetime in days')
     parser.add_argument('--audience', default='collect', help='ext-client-add: collect (수집) or analyze (분석)')
     parser.add_argument('--dry-run', action='store_true', help='sync-service-week: decide and print, write nothing')

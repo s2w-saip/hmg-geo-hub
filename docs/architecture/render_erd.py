@@ -252,7 +252,7 @@ def catalog() -> Figure:
          f'<text class="m" x="662" y="{gy + 58}">current_project</text>',
          f'<text class="m" x="842" y="{gy + 58}">current_prompt</text>',
          f'<text class="m" x="1022" y="{gy + 58}">current_measurement</text>',
-         f'<text class="mu sm" x="662" y="{gy + 88}">화면 편집 역할과 Gold 가져오기는 버전 행을 더하기만 한다(UPDATE · DELETE 없음)</text>',
+         f'<text class="mu sm" x="662" y="{gy + 88}">화면 편집 역할은 버전 행을 더하기만 한다(UPDATE · DELETE 없음)</text>',
          f'<text class="mu sm" x="662" y="{gy + 108}">측정 설정 API: /ext/v1/projects/{{id}}의 measurement</text>',
          f'<text class="mu sm" x="662" y="{gy + 128}">프로젝트 change_seq · etag는 정의와 측정 설정을 함께 따른다</text>']
     f.raw("\n".join(g))
@@ -276,7 +276,7 @@ def external() -> Figure:
     f.table("publication.reference_access", 626, 40, 270, "기준값 종류별 공개 승인이다. HUB 코드표 세 종류는 늘 공개된다.", [
         ("PK", "family", "⇢ reference_set"), ("", "enabled", "boolean"), ("", "approved_by", "text"),
         ("", "approved_at", "timestamptz"), ("", "access_seq", "bigint")])
-    f.table("catalog.sync_run", 936, 40, 248, "Gold 가져오기 한 번당 한 행으로, 읽은 것과 기록한 것, 거부 사유를 남긴다.", [
+    f.table("catalog.sync_run", 936, 40, 248, "Gold 가져오기(2026-11-07까지) 실행 기록이다. 더 쌓이지 않는다.", [
         ("PK", "run_id", "uuid"), ("", "started_at", "timestamptz"), ("", "finished_at", "timestamptz"),
         ("", "result", "=running|ok|refused|failed"), ("", "reason", "text"), ("", "gold_versions", "jsonb"),
         ("", "gold_release", "jsonb"), ("", "counts", "jsonb"), ("", "removal_candidates", "jsonb")])

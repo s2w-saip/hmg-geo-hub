@@ -5,8 +5,6 @@
 #   ext         the external API on hgh-ext-network, no host port, its ext-only DB connection
 #   proxy       TLS on $HGH_VM_IP:$HGH_EXT_PORT for the internal network (infra/vm/ext-proxy/ext.conf); 8087
 #               because the network between the office and the VM passes 80xx ports (8443 and 9443 time out)
-#   sync        cron, hourly: the Gold catalog import (refused reads are recorded and retried next run)
-#   check-sync  cron: WARN when the last successful import is older than HGH_SYNC_STALE_HOURS (3)
 #   service-week cron, hourly at minute 10: the service week check (manage.py sync-service-week, in the BFF container):
 #               a new catalog.service_week row when Gold completed a later week or the week's cycles changed, else the
 #               newest row's checked_at; a refused read records nothing and the screens keep the last week
@@ -20,7 +18,7 @@
 #               kept on the renewal Admin › GA4 연동 screen (analytics.ga4_registry).
 #   ga4-cron    cron, daily: `ga4` with its defaults (the last 3 days again). The production and dev builds share
 #               the one HUB data DB, so this one schedule serves both; a run by hand only replaces the same days.
-# sync, check-sync, service-week and ga4-cron append one line each to .local/vm-cron.log. The user's crontab (installed by
+# service-week and ga4-cron append one line each to .local/vm-cron.log. The user's crontab (installed by
 # hand; this script installs nothing) for service-week, after manage.py init has applied 011:
 #   10 * * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh service-week >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1
 #   20 * * * * bash /home/taeho/hmg-geo-hub/scripts/vm.sh rollup >>/home/taeho/hmg-geo-hub/.local/vm-cron.log 2>&1
@@ -60,7 +58,7 @@ bff)
     replace hgh-gold-api
     docker run -d --name hgh-gold-api --restart unless-stopped "${logs[@]}" --env-file .env.gold.local \
         "${hub_env[@]}" -p 127.0.0.1:18091:8000 hgh-gold-api:local >/dev/null
-    # The HUB reads and the login reach both stores here; manage.py also runs the Gold import in this container.
+    # The HUB reads and the login reach both stores here.
     docker network connect hgh-analytics-network hgh-gold-api
     docker network connect hgh-operations-network hgh-gold-api
     docker network connect hgh-input-network hgh-gold-api
@@ -94,9 +92,6 @@ proxy)
         -v "$repo/infra/vm/ext-proxy:/etc/nginx/conf.d:ro" -v "$repo/$tls:/etc/nginx/tls:ro" \
         -p "$host_ip:$ext_port:8443" nginx:1.27-alpine >/dev/null
     echo "Proxy on https://$host_ip:$ext_port/ext/ (certificate $tls/ext.crt)" ;;
-sync|check-sync)
-    # The Gold import stopped (T10.1, 2026-11-07): the service owns its inputs. The code goes in T12.2.
-    log "$1: the Gold import stopped" ;;
 service-week)
     exec 9>.local/vm-service-week.lock
     flock -n 9 || { log 'service-week skipped: the previous run is still going'; exit 0; }
@@ -123,5 +118,5 @@ print(" ".join(p["property"]+"/"+p["country"]+"="+p["status"]+(" "+p["from"]+"..
     log "ga4 $state $line"
     [ "$state" = ok ] ;;
 *)
-    echo "usage: $0 bff|ext|proxy|sync|check-sync|service-week|ga4|ga4-cron" >&2; exit 2 ;;
+    echo "usage: $0 bff|ext|proxy|service-week|ga4|ga4-cron" >&2; exit 2 ;;
 esac

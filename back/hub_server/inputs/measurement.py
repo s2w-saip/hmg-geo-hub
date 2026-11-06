@@ -2,9 +2,8 @@
 brands and countries to measure, the website units and their base URLs, the AI engines, the cadence, the ACR repeat count, the owned and
 tracked URLs and the tracked brands and models. 수집 reads them through the prompt and reference API (back/ext).
 
-catalog.project_measurement_version holds one numbered version per change and the newest is current. The Gold import records what Gold
-holds as version 1 (origin gold_import) for a project with no version yet and leaves it alone afterwards; everything else starts empty
-(CLAUDE.md 1절: nothing is made up). A change names the version it was made against; a stale one gets 409.
+catalog.project_measurement_version holds one numbered version per change and the newest is current. A project's first values came from Gold
+once (origin gold_import, before T10.1) or from Admin › 측정 설정 when it is added; everything else starts empty (CLAUDE.md 1절: nothing is made up). A change names the version it was made against; a stale one gets 409.
 
 Writes use hmg_measurement_editor (HGH_MEASUREMENT_EDITOR_DB_URL): new versions only, naming their account, under the catalog lock
 (617427413), so versions take change_seq in commit order. Top-level administrator only, like the other project pages (decision J)."""
@@ -99,7 +98,7 @@ def digest(settings: dict) -> str:
     return hashlib.sha256(encoded(settings).encode()).hexdigest()
 
 def check_known(settings: dict, options: dict) -> None:
-    """Every code must be one the reference values hold. Before the first Gold import there are none to check against."""
+    """Every code must be one the reference values hold. A store with none has nothing to check against."""
     unknown = {name: bad for name in ("brands", "countries", "engines") if options[name]
                and (bad := [v for v in settings[name] if v not in options[name]])}
     if unknown:
@@ -131,12 +130,12 @@ async def writing():
         try:
             await conn.execute("SELECT pg_advisory_xact_lock($1)", CATALOG_LOCK)
         except asyncpg.LockNotAvailableError:
-            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
+            raise HTTPException(503, "Another edit is writing the catalog; try again shortly") from None
         yield conn
 
 async def read(project_id: UUID) -> dict | None:
     """The screen's value: the current settings and the codes the form offers. None when the input store is not there or does not hold
-    the project (a Gold project the import has not recorded yet)."""
+    the project."""
     if not input_db.configured():
         return None
     try:

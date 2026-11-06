@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-# API field -> definition key (the keys sync_catalog.py records for Gold prompts)
+# API field -> definition key
 LABELS = {"funnel": "funnel", "brandPresence": "brand_presence", "listType": "list_type",
           "depth1": "depth1", "depth2": "depth2", "depth3": "depth3", "depth4": "depth4"}
 
@@ -35,7 +35,7 @@ def normalize_region(raw: str) -> str | None:
 
 
 def encoded(value) -> str:
-    """The same canonical JSON as hub_storage/sync_catalog.py, so HUB and Gold revisions hash alike."""
+    """One canonical JSON, so every revision of a prompt hashes alike."""
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
 
 
@@ -86,7 +86,7 @@ def audit_event(event: str, changes: dict) -> str:
 
 
 def audit_row(row) -> dict:
-    """One revision as a history row. A Gold import writes a run's revisions in one transaction, one recorded_at: one batch."""
+    """One revision as a history row. The Gold import, until T10.1, wrote a run's revisions with one recorded_at: one batch."""
     before = [{"text": row["prev_text"], "definition": row["prev_definition"], "version": row["prev_version"],
                "recorded_at": None, "recorded_by": None}] if row["prev_version"] is not None else []
     event = history([*before, row])[0]

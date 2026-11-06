@@ -12,7 +12,7 @@ Gold's attribution: a correction reaches the citation numbers after the pipeline
 
 Writes use hmg_source_override_editor (HGH_SOURCE_OVERRIDE_EDITOR_DB_URL), which can write the corrections and their
 history and call catalog.publish_source_overrides(), nothing else. Every write runs under the catalog lock
-(617427413, the Gold import's), records a source_override_event row and publishes the active corrections as the
+(617427413), records a source_override_event row and publishes the active corrections as the
 reference family `source_override` for the external API when they changed (change_seq). A revert keeps the row
 (status cleared). The data store records the whole row as its next version on every change (data-013,
 catalog.source_override_version, change_seq like prompt revisions). Gold is read before the lock, never under it."""
@@ -32,9 +32,9 @@ from hub_server import data_checks, input_db
 from shared.account import Principal
 from shared.input_common import CONTROL, KEY_MAX, invalid, override_view as hub_view
 
-CATALOG_LOCK = 617427413   # the Gold import's lock (sync_catalog.py): one catalog writer at a time
+CATALOG_LOCK = 617427413   # one catalog writer at a time: change_seq order = commit order
 
-LOCK_TIMEOUT = "5s"        # a write waits this long for a running Gold import, then 503
+LOCK_TIMEOUT = "5s"        # a write waits this long for another writer, then 503
 
 HISTORY_LIMIT = 100
 
@@ -109,7 +109,7 @@ async def writing():
         try:
             await conn.execute(LOCK_SQL, CATALOG_LOCK)
         except asyncpg.LockNotAvailableError:
-            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
+            raise HTTPException(503, "Another edit is writing the catalog; try again shortly") from None
         yield conn
 
 @asynccontextmanager

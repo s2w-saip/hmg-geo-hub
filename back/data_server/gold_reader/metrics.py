@@ -543,7 +543,7 @@ async def options(ctx: Context) -> dict:
 
 async def options_data(ctx: Context) -> tuple[dict, bool]:
     """The options and whether the read was consistent: something to answer from, and no key without its
-    dimension row (the sign of a table read from another generation, as in hub_storage/sync_catalog.py)."""
+    dimension row (the sign of a table read from another generation)."""
     b = SQL()
     where = ctx.predicate(b, family="fact", dates=False, dimensions=False, taxonomy=False)
     # Distinct keys over the facts first, codes joined to those few rows (the text DISTINCT sorted every fact).

@@ -1,20 +1,18 @@
 """Project prompts and their custom tags on the renewal Project › Prompt screen (2026-11-03).
 
 What a project measures is decided by people, so it is the HUB's (docs/handoff/admin-todo.md, decisions A and '프로젝트
-프롬프트 적재'). The prompts stay where the Gold import first recorded them: catalog.prompt / prompt_version (one revision per
-change, exported in change_seq order by ext.prompts) and the project's tag columns in its definition (custom_fields), each
-prompt's tag values in its own (custom_values). A HUB change is one more revision with recorded_by; from then on the Gold
-import keeps the HUB keys of that item (back/hub_storage/sync_catalog.py PROMPT_HUB_KEYS / PROJECT_HUB_KEYS). Rows are never
-deleted: a delete is status=archived and can be restored.
+프롬프트 적재'): catalog.prompt / prompt_version (one revision per change, exported in change_seq order by ext.prompts) and the
+project's tag columns in its definition (custom_fields), each prompt's tag values in its own (custom_values). A change is one more
+revision with recorded_by. Rows are never deleted: a delete is status=archived and can be restored.
 
 Statuses, as the original page had them where the HUB can hold them: draft (added here, not sent for measurement; the text
 and language can change only now), active (measured or to be), paused (measurement stop asked), archived (deleted), removed
-(a Gold prompt that left Gold, read only). Sending drafts to Scope (the original 실행) waits for the Scope path (D-7 ③);
+(left the measured catalog before the import stopped, read only). Sending drafts to Scope (the original 실행) waits for the Scope path (D-7 ③);
 nothing here calls Scope. Gold is never written: the screen compares the HUB values with Gold's (screens/project_dashboard).
 
 Writes use hmg_project_editor (HGH_PROJECT_EDITOR_DB_URL): INSERT of prompts and of prompt / project revisions of project-
 surface catalogs only, each naming its account (data-012). Every write runs under the catalog lock (617427413), so revisions
-take change_seq in commit order and never interleave with a Gold import."""
+take change_seq in commit order."""
 from __future__ import annotations
 
 import os
@@ -192,7 +190,7 @@ async def writing():
         try:
             await conn.execute("SELECT pg_advisory_xact_lock($1)", CATALOG_LOCK)
         except asyncpg.LockNotAvailableError:
-            raise HTTPException(503, "The Gold import is writing the catalog; try again shortly") from None
+            raise HTTPException(503, "Another edit is writing the catalog; try again shortly") from None
         yield conn
 
 async def project_row(conn, project_id: UUID):
