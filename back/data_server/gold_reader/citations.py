@@ -4,7 +4,7 @@ from __future__ import annotations
 from data_server.gold_reader.context import Context, SQL, brand_key_of, envelope, flag, limit, values
 from data_server.metrics import compute
 from data_server.metrics.formulas import rate
-from data_server.metrics.gold_judged import own_url
+from data_server.metrics.gold_judged import own_url, target_url
 from data_server.gold_reader.metrics import TYPES
 from data_server.metrics.gold_rows import metric_source
 
@@ -202,9 +202,10 @@ async def targets(ctx: Context) -> dict:
     measured = (await summary(ctx))["data"]
     b = SQL()
     where = predicate(ctx, b)
+    target = await target_url(ctx, b)
     rows = await ctx.conn.fetch(f"""SELECT u.url,u.title,u.domain,count(*)::int AS citations,
         count(DISTINCT f.prompt_key)::int AS prompts,count(DISTINCT f.answer_key)::int AS answers
-        FROM gold.citation_fact f JOIN gold.dim_url u USING(url_key) WHERE {where} AND f.tgt_hit
+        FROM gold.citation_fact f JOIN gold.dim_url u USING(url_key) WHERE {where} AND {target}
         GROUP BY u.url,u.title,u.domain ORDER BY citations DESC,u.url LIMIT {b.bind(limit(ctx.q))}""", *b.args)
     return envelope(ctx, {"measured": (measured.get("target_url_rate") or {}).get("den", 0),
         "target": measured.get("target_url_rate"), "owned": measured.get("owned_url_rate"), "items": [dict(r) for r in rows]})

@@ -82,8 +82,8 @@ def scope_of(ctx: Context) -> str | None:
 def round_snapshot(ctx: Context, day: date) -> str:
     """A round's snapshot: on the OBT its operating snapshots in the manifest (T9.3), otherwise the Gold builds that publish it. A new
     snapshot or build of one round moves that round only."""
-    # website's 자사 URL counts depend on what the sites registered: a change makes every round of it late until the rollup counts it again
-    registered = ctx.populations.registered_digest if ctx.sf == 2 else ""
+    # website's and a project's 자사 · 타겟 URL counts depend on what was registered: a change makes every round of it late until the rollup counts it again
+    registered = ctx.populations.registered_digest if ctx.sf in (2, 3) else ""
     if ctx.public_snapshots is not None:
         return "silver:" + hashlib.sha256(f"{ctx.public_snapshots.get(day, '')}:{registered}".encode()).hexdigest()[:16]
     builds = sorted(b for b, d in ctx.build_dates.items() if d == day)

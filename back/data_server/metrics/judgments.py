@@ -122,6 +122,18 @@ def is_registered(url: str | None, registered: Iterable[str]) -> bool:
     return any(u == r or u.startswith(r + "/") for r in registered)
 
 
+def tracked_urls(values: Iterable[str] | None) -> set[str]:
+    """타겟 URL (추적 URL, 2026-11-07, D-25와 같은 시점): the project's 추적 URL as entered, each the address and what is under it. Unlike 자사 URL it stays the path it names."""
+    return {url for url in map(normal_url, values or []) if url}
+
+
+def is_target(url: str | None, *, prompt_target: str | None, tracked: Iterable[str] = ()) -> bool:
+    """타겟 URL 인용 on one URL, which gold_judged.target_url and silver_obt._target run in SQL: the URL the prompt names (website, the SSOT's '그 프롬프트에 지정한 타겟 URL'),
+    or a project's 추적 URL."""
+    u = normal_url(url)
+    return bool(u) and (u == normal_url(prompt_target) or any(u == r or u.startswith(r + "/") for r in tracked))
+
+
 def excluded_from_ranks(name: str | None, *, is_own: bool, excluded: Collection[str]) -> bool:
     """엔티티 명부 '제외' (legacy lib/scope/excluded-brands.ts, 2026-09-30 HMG QA): out of the brand ranks, the lists and the competitor pick, never out
     of a KPI or its denominator, and 당사's own rows never leave."""

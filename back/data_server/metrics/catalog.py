@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 #: Stored with every precomputed (Gold) and cached value. A definition change moves it.
-DEFINITION_VERSION = "2026-11-06.8"
+DEFINITION_VERSION = "2026-11-07.1"
 
 # Populations (SSOT 공통 조건)
 MONITORING = "monitoring"                 # 모니터링 답변
@@ -74,8 +74,8 @@ BASE_COUNTS: dict[str, tuple[str, str, str]] = {
     "citations": ("인용", "전체 출처 인용 횟수(호스트 있는 인용)", "citation_fact source_key ≠ 0 행 수"),
     "citations_all": ("인용", "호스트 없는 인용까지 센 횟수", "citation_fact 행 수"),
     "official": ("인용", "출처 카테고리 공식 (HMG) 인용", "citation_fact × dim_source 카테고리 공식 (HMG) 행 수"),
-    "owned": ("인용", "자사 URL 인용. website = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, project = 등록값이 없어 업스트림 표시, global = 관점의 소유 베이스", "website 등록 URL 규칙 · project loc_owned · global owner_key"),
-    "target": ("인용", "타겟 URL 인용", "citation_fact tgt_hit 행 수"),
+    "owned": ("인용", "자사 URL 인용. website · project = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, 아직 등록하지 않은 project = 추출 표시, global = 관점의 소유 베이스", "등록 URL 규칙(미등록 project loc_owned) · global owner_key"),
+    "target": ("인용", "타겟 URL 인용. website = 프롬프트에 지정한 URL, project = 등록한 추적 URL과 그 하위, 아직 등록하지 않은 project와 global = 추출 표시", "프롬프트 target_url · 추적 URL 규칙(미등록 tgt_hit)"),
     "category_citations": ("인용", "그 출처 카테고리 인용", "citation_fact × dim_source.category_key(조회 시점 값)"),
     "source_citations": ("인용", "그 출처 인용", "citation_fact 행 수"),
     "source_answers": ("답변", "그 출처를 인용한 답변", "count(DISTINCT answer_key)"),
@@ -86,9 +86,9 @@ BASE_COUNTS: dict[str, tuple[str, str, str]] = {
     # the website's URL measures (url_counts)
     "url_prompts": ("프롬프트", "측정 프롬프트", "dim_prompt web_reg인 answer_fact의 고유 prompt_key"),
     "url_own_prompts": ("프롬프트", "자사 URL이 1회 이상 인용된 프롬프트", "자사 URL 인용 행이 있는 답변의 고유 prompt_key"),
-    "url_target_prompts": ("프롬프트", "그 프롬프트에 지정한 타겟 URL이 인용된 프롬프트", "tgt_hit 행이 있는 답변의 고유 prompt_key"),
+    "url_target_prompts": ("프롬프트", "그 프롬프트에 지정한 타겟 URL이 인용된 프롬프트", "타겟 URL 인용 행이 있는 답변의 고유 prompt_key"),
     "url_own_answers": ("답변", "당사 도메인이 인용된 답변", "대표 답변 중 자사 URL 또는 타겟 인용 행이 있는 답변"),
-    "url_target_answers": ("답변", "당사 타깃 도메인이 인용된 답변", "그중 tgt_hit 행이 있는 답변"),
+    "url_target_answers": ("답변", "당사 타깃 도메인이 인용된 답변", "그중 타겟 URL 인용 행이 있는 답변"),
     # ACR (acr_totals, acr_brand_counts, acr_model_counts, acr_duel_counts)
     "cells": ("셀", "전체 셀", "acr_cell_fact 행 수, acr_in"),
     "iterations": ("반복", "전체 반복", "Σvalid_acr, acr_in"),

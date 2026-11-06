@@ -191,10 +191,26 @@ class Inputs_(unittest.TestCase):
     def test_a_korean_prompt_is_one_with_hangul_in_its_text(self):
         class Bm:
             async def fetch(self, sql, *args):
+                if "target_url" in sql:
+                    return []
                 if "current_prompt" in sql:
                     return [{"id": "p1", "text": "현대차 추천", "d": "{\"language\": \"\"}"}, {"id": "p2", "text": "best SUV", "d": "{\"language\": \"ko\"}"}]
                 return []
         self.assertEqual(asyncio.run(silver_obt.read_inputs(Bm())).is_korean, [True, False])
+
+    def test_a_projects_registered_urls_are_keyed_as_the_obt_names_it(self):
+        """The OBT names a project by its scope id (ObtForContext._scope), the input store by its project id: a registration keyed by the latter counted 0 (2026-11-07)."""
+        class Bm:
+            async def fetch(self, sql, *args):
+                if "current_measurement" in sql:
+                    return [{"id": "scope-of-p", "surface": "3", "owned_urls": ["kia.com/kr"], "tracked_urls": ["kia.com/kr/ev"], "units": "[]"},
+                            {"id": "site-1", "surface": "2", "owned_urls": ["hyundai.com/kr"], "tracked_urls": [], "units": "[]"}]
+                if "'surface'='2'" in sql:
+                    return [{"id": "site-1", "country": "KR", "bit": 1}]
+                return []
+        inputs = asyncio.run(silver_obt.read_inputs(Bm()))
+        self.assertEqual(inputs.registered, {"scope-of-p": ["kia.com"], "site-1": ["hyundai.com"]})
+        self.assertEqual(inputs.tracked, {"scope-of-p": ["kia.com/kr/ev"]})
 
     def test_a_project_pick_narrows_to_that_projects_prompts(self):
         seen = []

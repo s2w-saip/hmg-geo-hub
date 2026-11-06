@@ -152,7 +152,10 @@ class AgainstCells(unittest.TestCase):
                 source = GoldCurrentSource(ctx)
                 ours = (await source.citation_counts())[0]
                 cell = await cell_sums(ctx, CITATIONS)
-                self.assert_same(ours, cell, [("citations", "cit_total"), ("target", "cit_target")])
+                self.assert_same(ours, cell, [("citations", "cit_total")])
+                # 타겟 URL = the URL the prompt names (2026-11-07): on every round 3 rows the upstream flag missed, none it had and the rule has not
+                if input_db.configured():
+                    self.assertIn(ours["target"] - cell["cit_target"], range(4))
                 self.assertEqual(ours["owned"], ours["citations"] and ours["owned"])
                 url, cells = (await source.url_counts())[0], await self.url_cell_sums(ctx)
                 self.assert_same(url, cells, [("url_prompts", "measured"), ("url_target_prompts", "target")])

@@ -154,6 +154,17 @@ class Judgments(unittest.TestCase):
         for url in ("eu-www.kia.com/de", "dealers.kia.com", "kia.com.cn/zh", "notkia.com/us/en", None):
             self.assertFalse(judgments.is_registered(url, registered), url)
 
+    def test_target_is_the_prompts_url_or_a_tracked_path(self):
+        # 2026-11-07: a website prompt's target is the URL it names, nothing else; a project's 추적 URL also covers what is under it, and stays the path it names
+        self.assertEqual(judgments.tracked_urls(["https://www.Kia.com/us/en/", None and "", "  "]), {"kia.com/us/en"})
+        tracked = judgments.tracked_urls(["kia.com/us/en"])
+        self.assertTrue(judgments.is_target("https://www.kia.com/us/en/ev9/", prompt_target="https://kia.com/us/en/ev9"))
+        self.assertFalse(judgments.is_target("kia.com/us/en/ev9/specs", prompt_target="kia.com/us/en/ev9"))
+        self.assertTrue(judgments.is_target("kia.com/us/en/ev9/specs", prompt_target=None, tracked=tracked))
+        self.assertFalse(judgments.is_target("kia.com/kr/ev9", prompt_target=None, tracked=tracked))
+        self.assertFalse(judgments.is_target("kia.com/us/english", prompt_target=None, tracked=tracked))
+        self.assertFalse(judgments.is_target(None, prompt_target=None, tracked=tracked))
+
     def test_only_global_asks_more_than_a_finished_run(self):
         self.assertEqual(judgments.eligible(self.C, is_global=False), "(r)")
         rule = judgments.eligible(self.C, is_global=True)

@@ -15,8 +15,8 @@ from datetime import date
 
 from data_server.gold_reader.acr import cell_where, head_to_head
 from data_server.gold_reader.context import SQL, Context
-from data_server.metrics.catalog import CITATION_MONITORING, MONITORING, REPRESENTATIVE, SENTIMENTS, TYPES
-from data_server.metrics.gold_judged import in_keys, mention_columns, mention_keys, merge, official, own_url
+from data_server.metrics.catalog import CITATION_MONITORING, REPRESENTATIVE, SENTIMENTS, TYPES
+from data_server.metrics.gold_judged import target_url, in_keys, mention_columns, mention_keys, merge, official, own_url
 
 GROUPS = {"round": "f.round_date", "engine": "f.engine_key", "country": "f.geo_key", "prompt": "f.prompt_key",
           # Gold's own keys, for the /v1 reads in gold_reader (the names above answer codes, as adapter ② will)
@@ -241,9 +241,10 @@ class GoldCurrentSource:
         # global 자사 is judged citation by citation, against the bases a country or language pick narrows
         registered = await own_url(self.ctx, b)
         judged = await self._owned(b) if self.ctx.sf == 1 and owned else registered
+        target = await target_url(self.ctx, b)
         sql = f"""SELECT {_select(group)}count(*) FILTER(WHERE f.source_key<>0)::bigint AS citations,count(*)::bigint AS citations_all,
-            count(*) FILTER(WHERE {official('f')})::bigint AS official,count(*) FILTER(WHERE f.tgt_hit)::bigint AS target,
-            count(*) FILTER(WHERE {judged})::bigint AS owned,count(*) FILTER(WHERE {registered} OR f.tgt_hit)::bigint AS owned_or_target
+            count(*) FILTER(WHERE {official('f')})::bigint AS official,count(*) FILTER(WHERE {target})::bigint AS target,
+            count(*) FILTER(WHERE {judged})::bigint AS owned,count(*) FILTER(WHERE {registered} OR {target})::bigint AS owned_or_target
             FROM gold.citation_fact f WHERE {where} {_group_by(group)}"""
         by_key = {tuple(r[g] for g in group): r for r in await self._rows(sql, b.args, group)}
         for r in rows:
@@ -271,7 +272,7 @@ class GoldCurrentSource:
             count(*)::int AS citations,count(DISTINCT f.answer_key)::int AS answers,
             count(DISTINCT f.prompt_key)::int AS prompts,
             count(*) FILTER(WHERE {owned})::int AS owned,
-            bool_or(f.tgt_hit) AS target
+            bool_or({await target_url(self.ctx, b)}) AS target
             FROM gold.citation_fact f WHERE {where} AND f.source_key<>0 GROUP BY f.source_key)
             SELECT s.skey,s.domain,s.is_social,s.owned_brand_bit,s.competitor_brand_key,
             c.category_key,c.slug,c.name AS category_name,br.name AS competitor_brand,
@@ -327,7 +328,7 @@ class GoldCurrentSource:
         where = self._citation_where(b) + " AND f.source_key<>0"
         owned = await self._owned(b)
         sql = f"""WITH a AS (SELECT f.source_key,count(*)::bigint AS citations,count(DISTINCT f.answer_key)::bigint AS answers,
-            count(DISTINCT f.prompt_key)::bigint AS prompts,count(*) FILTER(WHERE {owned})::bigint AS owned,bool_or(f.tgt_hit) AS target
+            count(DISTINCT f.prompt_key)::bigint AS prompts,count(*) FILTER(WHERE {owned})::bigint AS owned,bool_or({await target_url(self.ctx, b)}) AS target
             FROM gold.citation_fact f WHERE {where} GROUP BY f.source_key)
             SELECT a.citations,a.answers,a.prompts,a.owned,a.target,s.skey,coalesce(s.domain,s.skey) AS domain,s.is_social,
             s.competitor_brand_key,c.slug,c.name AS category,br.name AS competitor_brand
@@ -389,9 +390,9 @@ class GoldCurrentSource:
         rows = await self._rows(f"""SELECT {_select(group)}count(DISTINCT f.prompt_key)::bigint AS url_prompts FROM gold.answer_fact f WHERE {scope(b)} {_group_by(group)}""", b.args, group)
         b = SQL()
         where = scope(b)
-        own = await own_url(self.ctx, b)
-        inner = self._per_answer(b, group, where, "citation_fact", f"""count(*) FILTER(WHERE {own}) AS owned,count(*) FILTER(WHERE f.tgt_hit) AS target,
-            count(*) FILTER(WHERE {own} OR f.tgt_hit) AS owned_or_target""")
+        own, target = await own_url(self.ctx, b), await target_url(self.ctx, b)
+        inner = self._per_answer(b, group, where, "citation_fact", f"""count(*) FILTER(WHERE {own}) AS owned,count(*) FILTER(WHERE {target}) AS target,
+            count(*) FILTER(WHERE {own} OR {target}) AS owned_or_target""")
         rep = "c.rep_ AND " if website else ""
         keys = "".join(f"c.{g}," for g in group)
         cited = await self._rows(f"""SELECT {keys}count(DISTINCT c.p_) FILTER(WHERE c.owned>0)::bigint AS url_own_prompts,

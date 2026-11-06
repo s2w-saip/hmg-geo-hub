@@ -94,10 +94,14 @@ class Inputs(NamedTuple):
     sites: dict[str, tuple[str | None, int]]
     #: category name as the extraction writes it -> slug
     categories: dict[str, str]
-    #: website: site -> what it registered (judgments.registered_urls)
+    #: site or project -> what it registered (judgments.registered_urls); a project with nothing registered is not here
     registered: dict[str, list[str]]
     #: the roster's 'excluded' entities
     excluded_entities: list[str]
+    #: project -> its 추적 URL (judgments.tracked_urls), where it registered any
+    tracked: dict[str, list[str]] = {}
+    #: prompt -> the URL it names, as URLs are compared (website)
+    prompt_targets: dict[str, str] = {}
 
 
 def with_past_catalogs(inputs: Inputs, rows: Sequence[Mapping[str, Any]]) -> Inputs:
@@ -135,11 +139,17 @@ async def read_inputs(conn: Any) -> Inputs:
     sites = {r["id"]: (r["country"], r["bit"] or 0) for r in await conn.fetch(
         "SELECT project_id::text AS id,definition->>'country' AS country,(definition->>'site_brand_bit')::int AS bit FROM catalog.current_project WHERE definition->>'surface'='2'")}
     categories = {r["name"]: r["code"] for r in await conn.fetch("SELECT code,name_en AS name FROM catalog.source_code WHERE kind='category'")}
-    registered = {r["id"]: sorted(j.registered_urls(r["owned_urls"], json.loads(r["units"]) if r["units"] else [])) for r in await conn.fetch(
-        """SELECT m.project_id::text AS id,m.owned_urls,m.web_units::text AS units FROM catalog.current_measurement m
-           JOIN catalog.current_project p USING(project_id) WHERE p.definition->>'surface'='2'""")}
+    # the OBT names a project by its scope id (ObtForContext._scope), and a website by the id the input store has
+    measured = await conn.fetch("""SELECT CASE WHEN p.definition->>'surface'='3' THEN coalesce(p.definition->>'scope_project_id',m.project_id::text) ELSE m.project_id::text END AS id,
+           p.definition->>'surface' AS surface,m.owned_urls,m.tracked_urls,m.web_units::text AS units FROM catalog.current_measurement m
+           JOIN catalog.current_project p USING(project_id) WHERE p.definition->>'surface' IN ('2','3')""")
+    registered = {r["id"]: sorted(j.registered_urls(r["owned_urls"], json.loads(r["units"]) if r["units"] else [])) for r in measured}
+    registered = {k: v for k, v in registered.items() if k in sites or v}
+    tracked = {r["id"]: sorted(j.tracked_urls(r["tracked_urls"])) for r in measured if r["surface"] == "3" and r["tracked_urls"]}
+    prompt_targets = {r["id"]: j.normal_url(r["url"]) for r in await conn.fetch(
+        "SELECT prompt_id::text AS id,definition->>'target_url' AS url FROM catalog.current_prompt WHERE definition->>'target_url' IS NOT NULL") if j.normal_url(r["url"])}
     excluded = [r["id"] for r in await conn.fetch("SELECT entity_id::text AS id FROM catalog.entity_role WHERE role='excluded' AND status='active'")]
-    return Inputs(*columns, hidden, names, entities, sites, categories, registered, excluded)
+    return Inputs(*columns, hidden, names, entities, sites, categories, registered, excluded, tracked, prompt_targets)
 
 
 def merge(rows: list[dict], others: list[dict], group: Sequence[str], columns: Sequence[str]) -> list[dict]:
@@ -375,17 +385,35 @@ class SilverObtSource:
                 WHERE a.citation_monitoring AND jsonb_typeof(a.s1_normalize_citations)='array')"""
 
     def _owned(self, b: Binder, alias: str = "c") -> str:
-        """자사 URL 인용. Website: what the site registered, only (judgments.registered_urls). Project: the extraction's mark, as no project has a registered URL yet.
+        """자사 URL 인용. Website: what the site registered, only (judgments.registered_urls). Project: the same, for a project that registered any (D-25, 2026-11-07);
+        the extraction's mark for one that has not, which the rule would make 0 %.
         Global: a matched base of the perspective's brands (every base when it has none); is_owned alone also holds rows no base matched on the stand-in."""
-        if self.surface == "project":
-            return f"coalesce({alias}.loc_owned,false)"
-        if self.surface == "website":
-            pairs = [(site, url) for site, urls in self.inputs.registered.items() for url in urls]
+        if self.surface in ("website", "project"):
+            mark = f"coalesce({alias}.loc_owned,false)"
+            mine = {k: v for k, v in self.inputs.registered.items() if (k in self.inputs.sites) == (self.surface == "website")}
+            if self.surface == "project" and not mine:
+                return mark
+            pairs = [(site, url) for site, urls in mine.items() for url in urls]
             url = j.normal_url_sql(f"coalesce({alias}.url_norm,{alias}.url)")
-            return (f"EXISTS(SELECT 1 FROM unnest({b([k for k, _ in pairs], 'text[]')},{b([u for _, u in pairs], 'text[]')}) AS r(site,url) "
+            rule = (f"EXISTS(SELECT 1 FROM unnest({b([k for k, _ in pairs], 'text[]')},{b([u for _, u in pairs], 'text[]')}) AS r(site,url) "
                     f"WHERE r.site={alias}.project_id::text AND ({url}=r.url OR starts_with({url},r.url||'/')))")
+            return rule if self.surface == "website" else f"(CASE WHEN {alias}.project_id::text=ANY({b(list(mine), 'text[]')}) THEN {rule} ELSE {mark} END)"
         codes = [name for name, bit in self.inputs.own_names.items() if bit & self.scope.bits]
         return f"(coalesce({alias}.is_owned,false) AND {alias}.matched_base_url IS NOT NULL AND lower({alias}.matched_brand)=ANY({b(codes or list(self.inputs.own_names), 'text[]')}))"
+
+    def _target(self, b: Binder, alias: str = "c") -> str:
+        """타겟 URL 인용 (judgments.is_target). Website: the URL the prompt names. Project: its 추적 URL where it registered any, the extraction's mark until then. Global: the mark."""
+        mark = f"coalesce({alias}.tgt_hit,false)"
+        url = j.normal_url_sql(f"coalesce({alias}.url_norm,{alias}.url)")
+        if self.surface == "website":
+            targets = self.inputs.prompt_targets
+            return f"({alias}.prompt_id::text,{url}) IN (SELECT r.prompt,r.url FROM unnest({b(list(targets), 'text[]')},{b(list(targets.values()), 'text[]')}) AS r(prompt,url))"
+        if self.surface == "project" and self.inputs.tracked:
+            pairs = [(k, u) for k, urls in self.inputs.tracked.items() for u in urls]
+            rule = (f"EXISTS(SELECT 1 FROM unnest({b([k for k, _ in pairs], 'text[]')},{b([u for _, u in pairs], 'text[]')}) AS r(project,url) "
+                    f"WHERE r.project={alias}.project_id::text AND ({url}=r.url OR starts_with({url},r.url||'/')))")
+            return f"(CASE WHEN {alias}.project_id::text=ANY({b(list(self.inputs.tracked), 'text[]')}) THEN {rule} ELSE {mark} END)"
+        return mark
 
     async def citation_counts(self, group: Sequence[str] = (), *, owned: bool = True) -> list[dict]:
         b = Binder()
@@ -394,13 +422,13 @@ class SilverObtSource:
         b = Binder()
         answers = self._answers(b, self.CITATIONS)
         cites = self._rows_of_citations(b)
-        own = self._owned(b)
-        marked = own if self.surface == "website" else "coalesce(c.loc_owned,false)"
+        own, target = self._owned(b), self._target(b)
+        marked = own if self.surface in ("website", "project") else "coalesce(c.loc_owned,false)"
         by = "".join(f"{GROUPS[g].replace('a.', 'c.')} AS {g}," for g in group)
         grouping = f"GROUP BY {','.join(GROUPS[g].replace('a.', 'c.') for g in group)}" if group else ""
         cited = await self._fetch(f"""WITH {answers},{cites} SELECT {by}count(*) FILTER(WHERE c.skey IS NOT NULL)::bigint AS citations,count(*)::bigint AS citations_all,
-            count(*) FILTER(WHERE c.slug='{OFFICIAL_HMG}')::bigint AS official,count(*) FILTER(WHERE c.tgt_hit)::bigint AS target,
-            count(*) FILTER(WHERE {own})::bigint AS owned,count(*) FILTER(WHERE {marked} OR c.tgt_hit)::bigint AS owned_or_target
+            count(*) FILTER(WHERE c.slug='{OFFICIAL_HMG}')::bigint AS official,count(*) FILTER(WHERE {target})::bigint AS target,
+            count(*) FILTER(WHERE {own})::bigint AS owned,count(*) FILTER(WHERE {marked} OR {target})::bigint AS owned_or_target
             FROM c {grouping}""", b.args)
         return merge(rows, cited, group, ("citations", "citations_all", "official", "target", "owned", "owned_or_target"))
 
@@ -417,10 +445,10 @@ class SilverObtSource:
         b = Binder()
         answers = self._answers(b, self.CITATIONS)
         cites = self._rows_of_citations(b)
-        own = self._owned(b)
+        own, target = self._owned(b), self._target(b)
         return await self._fetch(f"""WITH {answers},{cites} SELECT c.skey,coalesce(min(c.domain),c.skey) AS domain,c.slug,min(c.category) AS category,
             count(*)::bigint AS citations,count(DISTINCT c.answer_key)::bigint AS answers,count(DISTINCT c.prompt_id)::bigint AS prompts,
-            count(*) FILTER(WHERE {own})::bigint AS owned,bool_or(c.tgt_hit) AS target
+            count(*) FILTER(WHERE {own})::bigint AS owned,bool_or({target}) AS target
             FROM c WHERE c.skey IS NOT NULL GROUP BY c.skey,c.slug ORDER BY citations DESC,c.skey""", b.args)
 
     async def source_engine_counts(self) -> list[dict]:
@@ -487,7 +515,7 @@ class SilverObtSource:
         rows = await self._fetch(f"WITH {self._answers(b)} SELECT {_select(group)}count(DISTINCT a.prompt_id)::bigint AS url_prompts FROM a WHERE {scope} {_group_by(group)}", b.args)
         b = Binder()
         answers = self._answers(b, self.CITATIONS)
-        own = self._owned(b, "d")
+        own, target = self._owned(b, "d"), self._target(b, "d")
         keys = "".join(f"pa.{g}," for g in group)
         rep = "pa.last_measured AND " if website else ""
         cited = await self._fetch(f"""WITH {answers},
@@ -495,8 +523,8 @@ class SilverObtSource:
                 FROM a CROSS JOIN LATERAL jsonb_to_recordset(a.s1_normalize_citations) q(citation_seq int,url text,url_norm text)
                 LEFT JOIN LATERAL jsonb_to_recordset(a.s2_citation_judgments) j2(citation_seq int,loc_owned boolean,is_owned boolean,matched_brand text,matched_base_url text,tgt_hit boolean) ON j2.citation_seq=q.citation_seq
                 WHERE {scope} AND jsonb_typeof(a.s1_normalize_citations)='array'),
-            pa AS (SELECT {''.join(f'd.{g},' for g in group)}d.answer_key,d.prompt_id,d.last_measured,count(*) FILTER(WHERE {own}) AS owned,count(*) FILTER(WHERE d.tgt_hit) AS target,
-                count(*) FILTER(WHERE {own} OR d.tgt_hit) AS owned_or_target FROM d GROUP BY {''.join(f'd.{g},' for g in group)}d.answer_key,d.prompt_id,d.last_measured)
+            pa AS (SELECT {''.join(f'd.{g},' for g in group)}d.answer_key,d.prompt_id,d.last_measured,count(*) FILTER(WHERE {own}) AS owned,count(*) FILTER(WHERE {target}) AS target,
+                count(*) FILTER(WHERE {own} OR {target}) AS owned_or_target FROM d GROUP BY {''.join(f'd.{g},' for g in group)}d.answer_key,d.prompt_id,d.last_measured)
             SELECT {keys}count(DISTINCT pa.prompt_id) FILTER(WHERE pa.owned>0)::bigint AS url_own_prompts,count(DISTINCT pa.prompt_id) FILTER(WHERE pa.target>0)::bigint AS url_target_prompts,
             count(*) FILTER(WHERE {rep}pa.owned_or_target>0)::bigint AS url_own_answers,count(*) FILTER(WHERE {rep}pa.owned_or_target>0 AND pa.target>0)::bigint AS url_target_answers
             FROM pa {('GROUP BY ' + keys.rstrip(',')) if group else ''}""", b.args)

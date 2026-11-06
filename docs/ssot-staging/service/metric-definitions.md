@@ -2,7 +2,7 @@
 
 서비스(BFF)가 정의하고 계산하는 지표 전체다. 코드 `back/data_server/metrics/catalog.py`에서 만든 문서이므로 여기를 직접 고치지 않는다. SSOT `service/metric-definitions.md`의 지표 19개와 공통 조건 7개에, 화면에 나오지만 SSOT에 없는 값을 더했다. SSOT 반영은 SSOT 세션이 한다.
 
-지표 정의 버전: `2026-11-06.8`
+지표 정의 버전: `2026-11-07.1`
 
 '사전 집계' 지표는 필터 없는 초기 화면 값이라 회차마다 Gold에 저장한다. '차원'은 저장 · 조회 단위다.
 
@@ -74,7 +74,7 @@
 | 지표 | 분자 · 계산식 | 분모 | 모수 | 차원 | 방향 | 화면 | 비고 |
 |---|---|---|---|---|---|---|---|
 | AI 인용 점유율(global) | 출처 카테고리 공식 (HMG) 인용 | 전체 출처 인용 횟수(호스트 있는 인용) | 인용 모니터링 답변 | 전체 · 회차 · 엔진 · 국가 · 권역 |  | Overview · Citation | 공식 (HMG) = HMG 3사 공식 사이트와 공식 소셜 계정 |
-| AI 인용 점유율(website) | 자사 URL 인용. website = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, project = 등록값이 없어 업스트림 표시, global = 관점의 소유 베이스 | 전체 출처 인용 횟수(호스트 있는 인용) | 인용 모니터링 답변 | 전체 · 회차 · 엔진 · 국가 · 권역 |  | Website Overview · Citation | 자사 URL = 측정 설정의 소유 URL · 등록 대표 주소의 오리진에 속한 모든 URL. 하위 도메인은 다른 오리진이라 등록해야 센다 |
+| AI 인용 점유율(website) | 자사 URL 인용. website · project = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, 아직 등록하지 않은 project = 추출 표시, global = 관점의 소유 베이스 | 전체 출처 인용 횟수(호스트 있는 인용) | 인용 모니터링 답변 | 전체 · 회차 · 엔진 · 국가 · 권역 |  | Website Overview · Citation | 자사 URL = 측정 설정의 소유 URL · 등록 대표 주소의 오리진에 속한 모든 URL. 하위 도메인은 다른 오리진이라 등록해야 센다 |
 | 인용 비중 | 그 출처 카테고리 인용 | 전체 출처 인용 횟수(호스트 있는 인용) | 인용 모니터링 답변 | 전체 · 회차 · 엔진 · 국가 · 권역 · 카테고리 |  | Citation · Website Citation | 출처 카테고리별. 예: 공식 (HMG) · 딜러·마켓 |
 | 자사 URL 인용률(website) | 자사 URL이 1회 이상 인용된 프롬프트 | 측정 프롬프트 | website 측정 답변 | 전체 · 회차 · 엔진 |  | Website Overview · Citation · Project | 프롬프트 단위 |
 | 타겟 URL 인용률(website) | 그 프롬프트에 지정한 타겟 URL이 인용된 프롬프트 | 측정 프롬프트 | website 측정 답변 | 전체 · 회차 · 엔진 |  | Website Overview · Citation · Project | 다른 프롬프트의 타겟 인용은 뺀다 |
@@ -91,7 +91,7 @@
 | 도메인 인용 프롬프트 | 그 출처를 인용한 프롬프트 | — | 인용 모니터링 답변 | 전체 · 출처 |  | Citation |  |
 | 주별 도메인 순위 | 회차마다 인용 수 내림차순 순위(인용 상위 15개) | — | — | 회차 · 출처 |  | Citation |  |
 | 경쟁사 공식 출처 인용 점유율 | 경쟁사 공식 출처 인용을 그 브랜드로 더한 값 ÷ citations | — | — | 전체 · 국가 · 브랜드 |  | Overview |  |
-| 공식(당사) 인용 비중 | 자사 URL 인용. website = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, project = 등록값이 없어 업스트림 표시, global = 관점의 소유 베이스 | 전체 출처 인용 횟수(호스트 있는 인용) | 인용 모니터링 답변 | 전체 · 회차 |  | Website Citation |  |
+| 공식(당사) 인용 비중 | 자사 URL 인용. website · project = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, 아직 등록하지 않은 project = 추출 표시, global = 관점의 소유 베이스 | 전체 출처 인용 횟수(호스트 있는 인용) | 인용 모니터링 답변 | 전체 · 회차 |  | Website Citation |  |
 | 엔진 × 출처 카테고리 | 엔진별 category_citations ÷ 그 엔진 citations | — | — | 엔진 · 카테고리 |  | Citation |  |
 | 멘션 유형 × 출처 카테고리 | 그 유형으로 당사가 나온 답변의 인용을 카테고리로 나눈 비중 | — | — | 유형 · 카테고리 |  | Citation |  |
 | 긍정 · 부정 답변의 인용 URL | 당사 감성이 긍정(부정)으로 기운 답변의 고유 URL · 인용 · 답변 수 | — | — | 전체 |  | Citation |  |
@@ -225,8 +225,8 @@
 | citations | 인용 | 전체 출처 인용 횟수(호스트 있는 인용) | citation_fact source_key ≠ 0 행 수 |
 | citations_all | 인용 | 호스트 없는 인용까지 센 횟수 | citation_fact 행 수 |
 | official | 인용 | 출처 카테고리 공식 (HMG) 인용 | citation_fact × dim_source 카테고리 공식 (HMG) 행 수 |
-| owned | 인용 | 자사 URL 인용. website = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, project = 등록값이 없어 업스트림 표시, global = 관점의 소유 베이스 | website 등록 URL 규칙 · project loc_owned · global owner_key |
-| target | 인용 | 타겟 URL 인용 | citation_fact tgt_hit 행 수 |
+| owned | 인용 | 자사 URL 인용. website · project = 등록한 소유 URL · 대표 주소의 오리진에 속한 모든 URL, 아직 등록하지 않은 project = 추출 표시, global = 관점의 소유 베이스 | 등록 URL 규칙(미등록 project loc_owned) · global owner_key |
+| target | 인용 | 타겟 URL 인용. website = 프롬프트에 지정한 URL, project = 등록한 추적 URL과 그 하위, 아직 등록하지 않은 project와 global = 추출 표시 | 프롬프트 target_url · 추적 URL 규칙(미등록 tgt_hit) |
 | category_citations | 인용 | 그 출처 카테고리 인용 | citation_fact × dim_source.category_key(조회 시점 값) |
 | source_citations | 인용 | 그 출처 인용 | citation_fact 행 수 |
 | source_answers | 답변 | 그 출처를 인용한 답변 | count(DISTINCT answer_key) |
@@ -236,9 +236,9 @@
 | uncited_prompts | 프롬프트 | 인용은 있지만 자사 URL 인용이 없는 프롬프트 | cited_prompts − own_cited_prompts |
 | url_prompts | 프롬프트 | 측정 프롬프트 | dim_prompt web_reg인 answer_fact의 고유 prompt_key |
 | url_own_prompts | 프롬프트 | 자사 URL이 1회 이상 인용된 프롬프트 | 자사 URL 인용 행이 있는 답변의 고유 prompt_key |
-| url_target_prompts | 프롬프트 | 그 프롬프트에 지정한 타겟 URL이 인용된 프롬프트 | tgt_hit 행이 있는 답변의 고유 prompt_key |
+| url_target_prompts | 프롬프트 | 그 프롬프트에 지정한 타겟 URL이 인용된 프롬프트 | 타겟 URL 인용 행이 있는 답변의 고유 prompt_key |
 | url_own_answers | 답변 | 당사 도메인이 인용된 답변 | 대표 답변 중 자사 URL 또는 타겟 인용 행이 있는 답변 |
-| url_target_answers | 답변 | 당사 타깃 도메인이 인용된 답변 | 그중 tgt_hit 행이 있는 답변 |
+| url_target_answers | 답변 | 당사 타깃 도메인이 인용된 답변 | 그중 타겟 URL 인용 행이 있는 답변 |
 | cells | 셀 | 전체 셀 | acr_cell_fact 행 수, acr_in |
 | iterations | 반복 | 전체 반복 | Σvalid_acr, acr_in |
 | acr_prompts | 프롬프트 | 측정 프롬프트 | count(DISTINCT prompt_key) |

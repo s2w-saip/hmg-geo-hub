@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from starlette.datastructures import QueryParams
 
 from data_server.gold_reader.context import Context, SQL, envelope, flag, limit
-from data_server.metrics.gold_judged import citation_keys, citations_of_row, in_keys, mention_keys, mentions_of_row, own_url
+from data_server.metrics.gold_judged import target_url, citation_keys, citations_of_row, in_keys, mention_keys, mentions_of_row, own_url
 from data_server.metrics.judgments import analysis_gap
 
 SPLIT_KPIS = ("visibility", "shareOfVoice", "sentiment", "position", "citationShare")
@@ -137,8 +137,8 @@ async def detail(ctx: Context, job_id: str) -> dict:
     stances = await ctx.conn.fetch("SELECT * FROM gold.answer_stance_raw WHERE answer_key=$1 ORDER BY turn_index,entity_id", row["answer_key"])
     bound = SQL()
     answer, build = bound.bind(row["answer_key"]), bound.bind(row["build_id"])
-    owned = await own_url(ctx, bound)
-    citations = await ctx.conn.fetch(f"""SELECT f.ord,u.url,u.title,u.domain,c.name AS category,{owned} AS owned,f.tgt_hit
+    owned, target = await own_url(ctx, bound), await target_url(ctx, bound)
+    citations = await ctx.conn.fetch(f"""SELECT f.ord,u.url,u.title,u.domain,c.name AS category,{owned} AS owned,{target} AS tgt_hit
         FROM gold.citation_fact f LEFT JOIN gold.dim_url u USING(url_key)
         LEFT JOIN gold.dim_source s ON s.source_key=f.source_key LEFT JOIN gold.dim_category c ON c.category_key=s.category_key
         WHERE f.answer_key={answer} AND f.build_id={build} ORDER BY f.ord""", *bound.args)
