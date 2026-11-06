@@ -61,6 +61,10 @@ class GoldConn:
     def __init__(self, rounds, extra=None, unseen=()):
         self.rounds, self.extra, self.unseen, self.seen = rounds, extra or {}, unseen, []
 
+    async def fetchval(self, sql, *args):
+        self.seen.append((sql, args))
+        return False   # no gold.silver_load: the release's builds are the snapshot
+
     async def fetch(self, sql, *args):
         self.seen.append((sql, args))
         if "SELECT * FROM gold.active_release" in sql:
@@ -427,8 +431,9 @@ class WeekNotes(unittest.TestCase):
         # Gold's completion rule over the weeks up to the service week, on the KST day
         self.assertIn(NOV2, args)
         self.assertIn(OCT11, args)
-        for gate in ("gold.publication", "gold.cycle_pick_basis", "release_item", "fleet_visible"):
-            self.assertIn(gate, sql)
+        self.assertIn("release_item", sql)
+        for gone in ("gold.publication", "gold.cycle_pick_basis", "fleet_visible"):
+            self.assertNotIn(gone, sql)
 
     def test_a_scoped_read_counts_its_own_sites(self):
         _, _, args = self.notes("brand=Kia&country=DE")
@@ -538,22 +543,19 @@ class WeekNotes(unittest.TestCase):
                 # the sites of an account's or a page's brands with a job on its countries, languages and engines (the
                 # reads' own sites, SITES_CLAUSES); the global surface is everyone's
                 "SELECT d.cyc_key,d.surface,d.project_key,d.round_date,date_trunc('week',d.round_date)::date AS wk,",
-                "coalesce(d.hidden_scope,0) AS hidden_scope, CASE WHEN d.surface=2 THEN coalesce(b.fleet_visible,true) ELSE true END "
-                "AS fleet_visible, CASE d.surface WHEN 1 THEN 'global' ELSE 'website' END AS scope "
-                "FROM gold.dim_cycle d LEFT JOIN gold.cycle_pick_basis b ON b.cyc_key=d.cyc_key "
-                "LEFT JOIN gold.dim_project dp ON dp.project_key=d.project_key ",
+                "coalesce(d.hidden_scope,0) AS hidden_scope, CASE d.surface WHEN 1 THEN 'global' ELSE 'website' END AS scope "
+                "FROM gold.dim_cycle d LEFT JOIN gold.dim_project dp ON dp.project_key=d.project_key ",
                 *self.SITES_CLAUSES,
-                # complete(): published, servable, visible on the KST day, an active publication, in every active release
+                # complete(): the operating snapshot is loaded (the load job keeps dim_cycle to the manifest), in the live release
                 "(c.status=2 AND c.servable AND (c.view_date IS NULL OR c.view_date<=$1::date) "
-                "AND EXISTS (SELECT 1 FROM gold.publication p WHERE p.cyc_key=c.cyc_key AND p.state='active') "
                 "AND EXISTS (SELECT 1 FROM rel r WHERE r.scope=c.scope) "
                 "AND NOT EXISTS (SELECT 1 FROM rel r WHERE r.scope=c.scope AND NOT EXISTS ( "
                 "SELECT 1 FROM gold.release_item ri JOIN gold.build bu ON bu.build_id=ri.build_id AND bu.status='validated' "
                 "WHERE ri.release_id=r.release_id AND ri.family='fact' AND ri.state='ready' "
                 "AND ri.slice_key='cyc:'||c.cyc_key::text)) ) AS complete",
-                # blocking(): not hidden, not complete, and open, closed as its site's week representative, or published
+                # blocking(): not hidden, not complete, and on its way
                 "(j.hidden_scope<>1 AND NOT j.complete "
-                "AND (j.status=0 OR (j.status=1 AND j.fleet_visible) OR (j.status=2 AND j.servable))) AS blocking",
+                "AND (j.status=0 OR (j.status=2 AND j.servable))) AS blocking",
                 # per site and week: shown = complete and not hidden; else held back, else hidden, else Gold's own setting aside
                 "SELECT surface,wk,project_key,bool_or(complete AND hidden_scope<>1) AS shown,bool_or(blocking) AS waiting, "
                 "bool_or(hidden_scope=1) AS hidden FROM verdict GROUP BY 1,2,3",

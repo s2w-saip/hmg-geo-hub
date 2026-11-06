@@ -579,6 +579,7 @@ def install_metrics():
     migrate('metrics-004.sql', '004_ga4_seo', store='metrics')
     migrate('metrics-005.sql', '005_keyword_social', store='metrics')
     migrate('metrics-006.sql', '006_query_load', store='metrics')
+    migrate('metrics-007.sql', '007_load_projects', store='metrics')
     migrate('cache-001.sql', '001_cache', store='cache')
 
 
@@ -808,12 +809,14 @@ def service_week(args):
         raise RuntimeError(f'{SERVICE_WEEK_SECRET.name} is missing: run manage.py init first')
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.
     script = (HERE / 'service_week.py').read_text(encoding='utf8') + '\nasyncio.run(main(' + repr(config) + '))\n'
-    print(api_python(script).strip())
+    print(api_python(script, api_env=True).strip())
 
 
 def rollup(args):
     """rollup: compute the unfiltered first screens' values into Gold for the surfaces whose live snapshot or definition version moved
     (data_server/metrics/rollup.py). --force runs them although nothing moved; params name surfaces (global · website · project), default all."""
+    if QUERY_LOADER_SECRET.exists() and (ROOT / '.env.silver.local').exists():
+        load_query_tables(args)   # the query tables first: the rollup counts on them
     metrics = analytics.env_file(METRICS_SECRET)
     config = {'dsn': f"postgresql://hmg_rollup_writer:{metrics['ROLLUP_WRITER_PASSWORD']}@{service_host('metrics')}/{STORES['metrics'].database}",
               'surfaces': args.params or None, 'force': args.force}

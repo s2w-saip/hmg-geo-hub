@@ -2,12 +2,9 @@
 (2026-11-02, decision '기준 주 세부': a site with no round in a week does not hold the week back, its absence is said as
 it is). The screens put it next to a period that holds such a week: 'Website 7월 4주차: Gold가 발행하지 않은 사이트 1곳'.
 
-Gold's completion rule, the one the HUB job advances the week by (back/hub_storage/service_week.py, rule A of the
-service week's reference SQL, checked on live Gold 2026-11-02; the job's twin, so the two change together, pinned clause
-by clause in data_server.tests.test_gold_service_week.WeekNotes): a cycle is shown when Gold published it (status 2,
-servable, an active publication, visible today in Korea) into the live release of its scope; one Gold has not
-finished holds its site back (open, a closed week representative, or published but not yet in the live release); hidden_scope
-1 is an operator's hiding. Per site and week:
+The completion rule the job advances the week by (back/hub_storage/service_week.py; the job's twin, so the two change together, pinned clause by clause in
+data_server.tests.test_gold_service_week.WeekNotes): dim_cycle follows the manifest (the load job): a cycle is shown when its operating snapshot is loaded (status 2, servable) into the live
+release of its scope; one on its way holds its site back (status 0, or public and not in the live release). Per site and week:
 - shown: a shown cycle;
 - unpublished: none shown, one held back;
 - hidden: none shown or held back, one hidden;
@@ -68,9 +65,8 @@ NOTES_SQL = """WITH rel AS (
   cyc AS (
     SELECT d.cyc_key,d.surface,d.project_key,d.round_date,date_trunc('week',d.round_date)::date AS wk,d.status,d.servable,d.view_date,
            coalesce(d.hidden_scope,0) AS hidden_scope,
-           CASE WHEN d.surface=2 THEN coalesce(b.fleet_visible,true) ELSE true END AS fleet_visible,
            CASE d.surface WHEN 1 THEN 'global' ELSE 'website' END AS scope
-      FROM gold.dim_cycle d LEFT JOIN gold.cycle_pick_basis b ON b.cyc_key=d.cyc_key
+      FROM gold.dim_cycle d
       LEFT JOIN gold.dim_project dp ON dp.project_key=d.project_key
       LEFT JOIN gold.dim_country dc ON dc.geo_key=dp.site_geo_key
       LEFT JOIN measured m ON m.project_key=d.project_key
@@ -79,7 +75,6 @@ NOTES_SQL = """WITH rel AS (
             AND (m.on_axes OR (m.project_key IS NULL AND ($5::text[] IS NULL OR lower(dc.code)=ANY($5::text[]))))))),
   judged AS (
     SELECT c.*,(c.status=2 AND c.servable AND (c.view_date IS NULL OR c.view_date<=$1::date)
-        AND EXISTS (SELECT 1 FROM gold.publication p WHERE p.cyc_key=c.cyc_key AND p.state='active')
         AND EXISTS (SELECT 1 FROM rel r WHERE r.scope=c.scope)
         AND NOT EXISTS (SELECT 1 FROM rel r WHERE r.scope=c.scope AND NOT EXISTS (
             SELECT 1 FROM gold.release_item ri JOIN gold.build bu ON bu.build_id=ri.build_id AND bu.status='validated'
@@ -88,7 +83,7 @@ NOTES_SQL = """WITH rel AS (
       FROM cyc c),
   verdict AS (
     SELECT j.*,(j.hidden_scope<>1 AND NOT j.complete
-        AND (j.status=0 OR (j.status=1 AND j.fleet_visible) OR (j.status=2 AND j.servable))) AS blocking
+        AND (j.status=0 OR (j.status=2 AND j.servable))) AS blocking
       FROM judged j),
   site_week AS (
     SELECT surface,wk,project_key,bool_or(complete AND hidden_scope<>1) AS shown,bool_or(blocking) AS waiting,

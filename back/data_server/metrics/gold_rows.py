@@ -27,7 +27,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from data_server.gold_reader.context import Context, values
-from data_server.hub_stores import metrics_db
+from data_server.hub_stores import metrics_db, silver_db
 from data_server.metrics import compute, silver_obt
 from data_server.metrics.catalog import CITATION_MONITORING, DEFINITION_VERSION, MONITORING, REPRESENTATIVE, URL_MEASURED
 from data_server.metrics.gold_current import GoldCurrentSource
@@ -169,9 +169,11 @@ class GoldRowsSource:
                 and state["snapshot_id"] == round_snapshot(self.ctx, day))
 
     async def _read_manifest(self) -> None:
-        """On the OBT a round's snapshot is the manifest's."""
+        """A round's snapshot: the manifest's when a read counts on the OBT, else the one the query tables hold."""
         if silver_obt.enabled():
             self.ctx.public_snapshots = await silver_obt.public_snapshots(self.surface)
+        else:
+            self.ctx.public_snapshots = await silver_obt.loaded_snapshots(self.ctx.conn, self.surface) or None
 
     async def _answer(self, name: str, method: Callable, args: tuple, kwargs: dict) -> Any:
         rounds = list(self.ctx.selected_dates)
@@ -190,10 +192,15 @@ class GoldRowsSource:
         ready = [d for d in rounds if self._current(d, states.get(d))]
         late = [d for d in rounds if d not in ready]
         if late and (not by_round or not ready):
+            self._called = name
             return await self._count_late(method, args, kwargs)
         counted = await self._count_late_rounds(name, args, kwargs, late) if late else []
         stored = await metrics_db.metric_rows(self.surface, _project(self.ctx), call, self.scope, ready)
         return _assemble(stored, kwargs, by_round, len(ready) > 1 or bool(counted), counted)
+
+    def _last_resort_source(self) -> Any:
+        """What the last resort counts on: the operating snapshots themselves when the reads count on the query tables (the tables may be what is late). No OBT connection: where the reads count."""
+        return silver_obt.ObtForContext(self.ctx) if not silver_obt.enabled() and silver_db.configured() else self.live
 
     async def _count_late(self, method: Callable, args: tuple, kwargs: dict) -> Any:
         """The last resort for a read no row can answer. If it fails too, the value is not shown."""
@@ -201,7 +208,7 @@ class GoldRowsSource:
         try:
             async with last_resort():
                 await self.ctx.load_catalog()
-                answer = await method(*args, **kwargs)
+                answer = await getattr(self._last_resort_source(), self._called, method)(*args, **kwargs)
         except Exception as error:  # noqa: BLE001 - whatever stopped the count, the screen part says the value is not ready
             log.warning("The last resort failed: %s %s", self.surface, self.scope, exc_info=True)
             raise HTTPException(503, NOT_READY) from error
@@ -214,7 +221,7 @@ class GoldRowsSource:
         try:
             async with last_resort():
                 await self.ctx.load_catalog()
-                rows = await getattr(self.live.for_rounds(late), name)(*args, **kwargs)
+                rows = await getattr(self._last_resort_source().for_rounds(late), name)(*args, **kwargs)
         except Exception:  # noqa: BLE001 - the other rounds still answer
             log.warning("The last resort failed: %s %s %s", self.surface, self.scope, late, exc_info=True)
             self.ctx.late_rounds = {*self.ctx.late_rounds, *late}

@@ -95,8 +95,8 @@ def number(value: Any) -> Decimal | None:
 
 def inputs_digest(inputs: Inputs) -> str:
     """What the stored judgments and groups rest on: a change loads every cycle again. Not the registered URLs or a prompt's funnel, which a read takes as they are."""
-    held = (inputs.prompt_ids, inputs.in_root, inputs.is_korean, inputs.regions, inputs.is_acr, inputs.web_reg, inputs.brand_group, sorted(inputs.hidden_markets), sorted(inputs.own_names.items()),
-            sorted(inputs.own_entities.items()), sorted(inputs.sites.items(), key=lambda kv: kv[0]), sorted(inputs.excluded_entities))
+    held = (sorted(zip(inputs.prompt_ids, inputs.in_root, inputs.is_korean, inputs.regions, inputs.is_acr, inputs.web_reg, inputs.brand_group), key=lambda row: row[0]), sorted(inputs.hidden_markets),
+            sorted(inputs.own_names.items()), sorted(inputs.own_entities.items()), sorted(inputs.sites.items(), key=lambda kv: kv[0]), sorted(inputs.excluded_entities))
     return hashlib.sha256(json.dumps(held, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()[:16]
 
 
@@ -129,11 +129,27 @@ def prompt_values(text: str | None, d: Mapping[str, Any], langs: Mapping[str, in
             "is_korean": HANGUL.search(text or "") is not None, "cat_mask": sum({e.get("brand_bit") or 0 for e in d.get("catalogs") or []}) if d.get("catalogs") else 0}
 
 
+async def sync_projects(gold: Any, source: Any) -> int:
+    """A project added on the hub server gets its row here (the Gold import made them before T10.1). Only the project surface is added there; a project is its own scope."""
+    known = set()
+    for r in await gold.fetch("SELECT scope_project_id::text AS scope,project_id::text AS id FROM gold.dim_project"):
+        known.update(k for k in (r["scope"], r["id"]) if k)
+    fresh = [r for r in await source.fetch("SELECT project_id::text AS id,definition->>'scope_project_id' AS scope,(definition->>'surface')::smallint AS surface FROM catalog.current_project")
+             if r["id"] not in known and (not r["scope"] or r["scope"] not in known)]
+    key = await gold.fetchval("SELECT coalesce(max(project_key),0) FROM gold.dim_project")
+    for r in fresh:
+        key += 1
+        await gold.execute("INSERT INTO gold.dim_project(project_key,scope_project_id,surface,is_root,project_id,site_brand_bit) VALUES($1,$2,$3,false,$4,0)", key, r["scope"] or r["id"], r["surface"], r["id"])
+    return len(fresh)
+
+
 async def sync_prompts(gold: Any, source: Any, rule: str | None) -> dict[str, int]:
     """dim_prompt from the input store: a new prompt gets a key, a changed one its new values. What a prompt once was in the catalog stays (cat_mask_all, in_root_catalog_all)."""
     langs = {(r["code"] or "").lower(): r["lang_key"] for r in await gold.fetch("SELECT code,lang_key FROM gold.dim_lang")}
     taxons = {(r["axis"], r["code"], r["parent_key"]): r["taxon_key"] for r in await gold.fetch("SELECT axis,code,parent_key,taxon_key FROM gold.dim_taxon")}
-    projects = {r["id"]: r["project_key"] for r in await gold.fetch("SELECT scope_project_id::text AS id,project_key FROM gold.dim_project WHERE scope_project_id IS NOT NULL")}
+    projects: dict[str, int] = {}
+    for r in await gold.fetch("SELECT scope_project_id::text AS scope,project_id::text AS id,project_key FROM gold.dim_project"):
+        projects.update({k: r["project_key"] for k in (r["scope"], r["id"]) if k})
     old = {r["id"]: r for r in await gold.fetch("SELECT prompt_id::text AS id,* FROM gold.dim_prompt WHERE prompt_id IS NOT NULL")}
     next_key = await gold.fetchval("SELECT coalesce(max(prompt_key),0) FROM gold.dim_prompt")
     counts = {"new_prompts": 0, "changed_prompts": 0, "unknown_project": 0}
@@ -277,7 +293,8 @@ async def read_dims(gold: Any) -> Dims:
     d.countries = {r["code"]: r["geo_key"] for r in await gold.fetch("SELECT code,geo_key FROM gold.dim_country")}
     d.langs = {(r["code"] or "").upper(): r["lang_key"] for r in await gold.fetch("SELECT code,lang_key FROM gold.dim_lang")}
     d.prompts = {r["id"]: (r["prompt_key"], r["project_key"]) for r in await gold.fetch("SELECT prompt_id::text AS id,prompt_key,project_key FROM gold.dim_prompt")}
-    d.projects = {r["id"]: r["project_key"] for r in await gold.fetch("SELECT scope_project_id::text AS id,project_key FROM gold.dim_project WHERE scope_project_id IS NOT NULL")}
+    for r in await gold.fetch("SELECT scope_project_id::text AS scope,project_id::text AS id,project_key FROM gold.dim_project"):
+        d.projects.update({k: r["project_key"] for k in (r["id"], r["scope"]) if k})
     for r in await gold.fetch("SELECT brand_key,name,bare FROM gold.dim_brand"):
         if r["name"]:
             d.brands[r["name"]] = r["brand_key"]
@@ -647,6 +664,7 @@ async def _run(config: Mapping[str, Any]) -> dict:
     try:
         if not await gold.fetchval("SELECT pg_try_advisory_lock($1)", LOCK):
             return {**out, "status": "busy"}
+        out["new_projects"] = await sync_projects(gold, source)
         out.update(await sync_prompts(gold, source, None))
         inputs = await read_inputs(source)
         past = await gold.fetch("""SELECT prompt_id::text AS id,in_root_catalog_all,cat_mask_all FROM gold.dim_prompt

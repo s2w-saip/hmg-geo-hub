@@ -124,9 +124,17 @@ class Signals(unittest.TestCase):
         self.assertNotEqual(one, moved)
 
     def test_off_the_snapshot_id_stays_as_it_was(self):
-        with mock.patch.dict(os.environ, {"HGH_METRIC_SOURCE": ""}):
+        with mock.patch.dict(os.environ, {"HGH_METRIC_SOURCE": ""}), mock.patch.object(silver_obt, "loaded_snapshots", mock.AsyncMock(return_value={})):
             off = self.snapshot_id({})
         self.assertEqual(off, "gold-release:7:2:" + hashlib.sha256(b"2026-10-05:d").hexdigest()[:12] + ":-")
+
+    def test_on_the_query_tables_the_snapshot_id_follows_what_is_loaded(self):
+        with mock.patch.dict(os.environ, {"HGH_METRIC_SOURCE": ""}), mock.patch.object(silver_obt, "loaded_snapshots", mock.AsyncMock(return_value={date(2026, 10, 5): "s1"})):
+            one = self.snapshot_id({})
+        with mock.patch.dict(os.environ, {"HGH_METRIC_SOURCE": ""}), mock.patch.object(silver_obt, "loaded_snapshots", mock.AsyncMock(return_value={date(2026, 10, 5): "s2"})):
+            moved = self.snapshot_id({})
+        self.assertTrue(one.startswith("silver:7:2:"))
+        self.assertNotEqual(one, moved)
 
     def test_a_call_by_round_is_counted_round_by_round_and_others_at_once(self):
         d1, d2 = date(2026, 9, 28), date(2026, 10, 5)

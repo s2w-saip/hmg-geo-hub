@@ -1,31 +1,17 @@
-"""The service week (서비스 기준 주): the last ISO week (Monday..Sunday) of Gold rounds that every screen shows.
-Invoked inside the API image with a transient credential (manage.py sync-service-week); hourly on the VM (vm.sh
-service-week), by hand and at scripts/start-local.sh locally.
+"""The service week (서비스 기준 주): the last ISO week (Monday..Sunday) of operating snapshots that every screen shows.
+Invoked with a transient credential (manage.py sync-service-week); hourly on the VM (vm.sh service-week), by hand and at scripts/start-local.sh locally.
 
-Decisions '발행 시점 판정' and '기준 주 세부' (2026-11-02, docs/handoff/admin-todo.md): one week for the whole service
-(Global and Website; the project surface has none), moved by this job from Gold's own status. Gold is trusted (no
-'unchanged for n hours' wait), and nothing is pinned to what is recorded here: the screens read Gold's live release up to
-the week's Sunday, so a Gold re-publication of an older week is followed.
-
-Rule A, per cycle of surfaces 1 and 2 in the ISO week of its round_date (checked on live Gold, 2026-11-02):
-- complete: published (status 2), servable, an active gold.publication, visible today (view_date NULL or <= today KST)
-  and a ready, validated 'fact' release item cyc:<cyc_key> in the live release of its scope, the one snapshot the screens read
-  (until Silver's manifest, T9: going live is Gold's live release taking the round; 2026-11-06, the card and grid releases are not read).
-- blocking: not hidden (hidden_scope <> 1), not complete, and open (status 0), closed as its site's week representative
-  (status 1 and fleet-visible; Global always is) or published and servable. Hidden cycles, superseded duplicates
-  (status 2, not servable), other closed cycles of a site (status 1, not fleet-visible) and stale ones (3) never block.
-- a week is a candidate when it has ended (its Sunday < today KST), nothing in it blocks and at least one cycle in it is
-  complete and not hidden. A surface with no cycle that week holds it back until Gold lists a later cycle of it (before
-  that the week may only not be loaded yet); after that the week was skipped and its screens show '측정 없음'.
+One week for the whole service (Global and Website; the project surface has none), moved by this job from the manifest (T7.6, SSOT shared/project-architecture.md 5: 운영 반영 is a snapshot
+going public). Per cycle of surfaces global and website in the ISO week of its round:
+- complete: its operating snapshot is public and in the query tables (gold.silver_load, the load job), so the screens can read it.
+- blocking: a snapshot on its way (loading or ready, or public and not loaded yet). A cycle with only retired snapshots never blocks.
+- a week is a candidate when it has ended (its Sunday < today KST), nothing in it blocks and at least one cycle in it is complete. A surface with no cycle that week holds it back until the
+  manifest lists a later cycle of it (before that the week may only not be loaded yet); after that the week was skipped and its screens show '측정 없음'.
 - the service week is the latest candidate, and it never moves back: an older latest candidate keeps the recorded week.
-The screens' per-week notes judge each cycle by the same rule in SQL (data_server/gold_reader/week_notes.py NOTES_SQL, its
-twin): change the two together (each pinned clause by clause, data_server.tests.test_hub_service_week.GoldReads and
-test_gold_service_week.WeekNotes).
+The screens' per-week notes judge each cycle by the same rule on dim_cycle, which the load job keeps to the manifest (data_server/gold_reader/week_notes.py NOTES_SQL, its twin): change the two
+together (pinned clause by clause, data_server.tests.test_hub_service_week and test_gold_service_week.WeekNotes).
 
-catalog.service_week (data-011) gets a row only when the week or its cycle sets change; otherwise the run moves the
-newest row's checked_at (the last check that confirmed it). Gold reloads its tables one by one, so a read that shows a
-reload in progress (data_version going back, a publication or release item whose cycle is missing) or releases the
-screens could not pick either is refused, and nothing is written."""
+catalog.service_week (data-011) gets a row only when the week or its cycle sets change; otherwise the run moves the newest row's checked_at (the last check that confirmed it)."""
 import asyncio  # noqa: F401  (manage.py appends asyncio.run(main(...)) to this script)
 import contextlib
 import json
@@ -42,7 +28,7 @@ KST = ZoneInfo('Asia/Seoul')             # the screens' day (gold_reader/context
 # The job's own limits on Gold (review r2-2, 2026-11-03): a Gold that stops answering (frozen, a half-open connection)
 # never sends its statement_timeout, and the run, vm.sh's lock and start-local.sh's API start would wait with it. A
 # statement's limit is above that 60 s, so a live but slow Gold still reports its own timeout first.
-GOLD_TIMEOUTS = {'timeout': 30, 'command_timeout': 90}
+READ_TIMEOUTS = {'timeout': 30, 'command_timeout': 90}
 # And on the HUB data DB (review r4-6, 2026-11-03): after a statement timed out, asyncpg's next statement on that
 # connection (a transaction's ROLLBACK) and a graceful close wait for the answer to its cancel request, with no end on a
 # frozen server. So nothing more goes over a connection a statement failed on: on any failure main drops it (the server
@@ -91,66 +77,47 @@ def delay_days(week_end, today):
     return (today - week_end).days
 
 
-# ═══ Gold reads ══════════════════════════════════════════════════════════════════════════════════════════
+# ═══ the manifest ════════════════════════════════════════════════════════════════════════════════════════
 
-# The active releases the screens pick from, one per scope and read mode (HGH_GOLD_RULE_SIGNATURE as the BFF).
-RELEASES_SQL = '''SELECT scope,read_mode,release_id,version,rule_signature,last_build_id,as_of FROM gold.active_release
-    WHERE scope IN ('global','website') AND read_mode='live' AND ($1::text IS NULL OR rule_signature=$1)
-    ORDER BY scope,read_mode'''
-# One row per cycle of surfaces 1 and 2, with the facts rule A needs; fleet_visible is NULL without a pick row.
-CYCLES_SQL = '''WITH rel AS (SELECT scope,release_id FROM gold.active_release
-        WHERE scope IN ('global','website') AND read_mode='live' AND ($1::text IS NULL OR rule_signature=$1))
-    SELECT d.cycle_id,d.cyc_key,d.surface,d.project_key,d.round_date,d.status,d.servable,d.view_date,d.hidden_scope,b.fleet_visible,
-        EXISTS(SELECT 1 FROM gold.publication p WHERE p.cyc_key=d.cyc_key AND p.state='active') AS has_active_publication,
-        (EXISTS(SELECT 1 FROM rel r WHERE r.scope=s.scope) AND NOT EXISTS(SELECT 1 FROM rel r WHERE r.scope=s.scope AND NOT EXISTS(
-            SELECT 1 FROM gold.release_item i JOIN gold.build bu ON bu.build_id=i.build_id AND bu.status='validated'
-            WHERE i.release_id=r.release_id AND i.family='fact' AND i.state='ready' AND i.slice_key='cyc:'||d.cyc_key::text))
-        ) AS in_every_active_release
-    FROM gold.dim_cycle d LEFT JOIN gold.cycle_pick_basis b ON b.cyc_key=d.cyc_key
-    CROSS JOIN LATERAL (SELECT CASE d.surface WHEN 1 THEN 'global' ELSE 'website' END AS scope) s
-    WHERE d.surface IN (1,2) ORDER BY d.cyc_key'''
-VERSIONS_SQL = 'SELECT scope,version FROM gold.data_version ORDER BY scope'
-# Keys that point at a cycle row the read does not have: a table read from another generation than dim_cycle.
-ORPHANS_SQL = '''SELECT (SELECT count(*) FROM gold.publication p WHERE p.state='active'
-        AND NOT EXISTS(SELECT 1 FROM gold.dim_cycle d WHERE d.cyc_key=p.cyc_key)) AS publications,
-    (SELECT count(*) FROM gold.release_item i WHERE i.release_id=ANY($1::bigint[]) AND i.family='fact' AND i.state='ready'
-        AND i.slice_key LIKE 'cyc:%' AND NOT EXISTS(SELECT 1 FROM gold.dim_cycle d WHERE 'cyc:'||d.cyc_key::text=i.slice_key)) AS items'''
+MANIFEST_SQL = '''SELECT k.cycle_id,k.surface,max(m.round_date) AS round_date,
+        (array_agg(m.snapshot_id::text) FILTER (WHERE m.status='public'))[1] AS public,bool_or(m.status IN ('loading','ready')) AS owed
+    FROM ops.cycle k JOIN ops.snapshot_manifest m USING(cycle_id) WHERE k.surface IN ('global','website') AND m.round_date IS NOT NULL GROUP BY 1,2 ORDER BY 1'''
+LOADED_SQL = 'SELECT cycle_id,snapshot_id::text AS snapshot_id FROM gold.silver_load'
 
 
-async def read_gold(conn, rule_signature):
-    """Everything rule A and the checks need, read on one connection (gold_snapshot: one repeatable-read snapshot)."""
-    g = {'versions': {r['scope']: r['version'] for r in await conn.fetch(VERSIONS_SQL)},
-         'releases': [dict(r) for r in await conn.fetch(RELEASES_SQL, rule_signature)],
-         'cycles': [dict(r) for r in await conn.fetch(CYCLES_SQL, rule_signature)]}
-    orphans = await conn.fetchrow(ORPHANS_SQL, [r['release_id'] for r in g['releases']])
-    g['orphan_publications'], g['orphan_items'] = orphans['publications'], orphans['items']
-    return g
+def cycle_rows(manifest, loaded):
+    """The manifest as rule A reads a cycle: public and loaded = complete, on its way (or public and not loaded yet) = blocking, only retired = neither."""
+    rows = []
+    for r in manifest:
+        complete = bool(r['public']) and loaded.get(r['cycle_id']) == r['public']
+        rows.append({'cycle_id': r['cycle_id'], 'cyc_key': r['cycle_id'], 'surface': {'global': 1, 'website': 2}[r['surface']], 'round_date': r['round_date'], 'project_key': None,
+                     'status': 2 if complete else 0 if r['public'] or r['owed'] else 3, 'servable': complete, 'view_date': None, 'hidden_scope': None, 'fleet_visible': None,
+                     'has_active_publication': complete, 'in_every_active_release': complete})
+    return rows
 
 
-async def gold_snapshot(dsn, rule_signature):
-    """read_gold in one read-only repeatable-read transaction on a connection of its own, closed before anything is
-    written. Any failure drops the connection at once: with Gold silent, a rollback, the cancel request of a timed-out
-    statement and a graceful close would each wait for it with no end."""
-    conn = await asyncpg.connect(dsn, **GOLD_TIMEOUTS, server_settings={'default_transaction_read_only': 'on',
-                                                                        'statement_timeout': '60000'})
+async def read_snapshots(silver_dsn, gold_dsn):
+    """The manifest and what the query tables hold. Any failure drops the connections at once: with a server silent, a rollback, the cancel request of a timed-out statement and a graceful
+    close would each wait for it with no end."""
+    silver = await asyncpg.connect(silver_dsn, **READ_TIMEOUTS, server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '60000'})
+    gold = None
     try:
-        read = conn.transaction(isolation='repeatable_read', readonly=True)
-        await read.start()
-        g = await read_gold(conn, rule_signature)
-        await read.commit()
-        await conn.close()
+        gold = await asyncpg.connect(gold_dsn, **READ_TIMEOUTS, server_settings={'default_transaction_read_only': 'on', 'statement_timeout': '60000'})
+        manifest = await silver.fetch(MANIFEST_SQL)
+        loaded = {r['cycle_id']: r['snapshot_id'] for r in await gold.fetch(LOADED_SQL)}
+        await silver.close()
+        await gold.close()
     except BaseException:
-        conn.terminate()
+        silver.terminate()
+        if gold is not None:
+            gold.terminate()
         raise
-    return g
+    return {'versions': {}, 'releases': [], 'cycles': cycle_rows(manifest, loaded), 'orphan_publications': 0, 'orphan_items': 0}
 
 
 def gold_release(g):
-    """The active releases, {scope: {read_mode: row}}, recorded with the week (never used to pin a read)."""
-    out = {}
-    for r in g['releases']:
-        out.setdefault(r['scope'], {})[r['read_mode']] = {k: r[k] for k in ('release_id', 'version', 'rule_signature', 'last_build_id', 'as_of')}
-    return out
+    """Recorded with the week (never used to pin a read): how many cycles it was judged over."""
+    return {'cycles': len(g['cycles'])}
 
 
 def check_read(g, previous_versions):
@@ -312,10 +279,10 @@ async def main(config):
         elif not dry_run:
             raise RuntimeError('No HUB data DB connection to record the service week in')
         try:
-            g = await gold_snapshot(os.environ['HGH_GOLD_DB_URL'], os.environ.get('HGH_GOLD_RULE_SIGNATURE') or None)
+            g = await read_snapshots(os.environ['HGH_SILVER_DB_URL'], os.environ['HGH_GOLD_DB_URL'])
         except TimeoutError:
-            raise RuntimeError('Service week not recorded: Gold did not answer (limits: connect {timeout} s, '
-                               'a statement {command_timeout} s)'.format(**GOLD_TIMEOUTS)) from None
+            raise RuntimeError('Service week not recorded: the manifest did not answer (limits: connect {timeout} s, '
+                               'a statement {command_timeout} s)'.format(**READ_TIMEOUTS)) from None
         today = today_kst()
         try:
             if dry_run:
@@ -330,7 +297,7 @@ async def main(config):
     except BaseException as failure:
         if data is not None:
             data.terminate()
-        if isinstance(failure, TimeoutError):   # Gold's is reported above, so this one is the HUB data DB's
+        if isinstance(failure, TimeoutError):   # the manifest's is reported above, so this one is the HUB data DB's
             raise RuntimeError('Service week check stopped: the HUB data DB did not answer (limits: connect {timeout} s, '
                                'a statement {command_timeout} s)'.format(**DATA_TIMEOUTS)) from None
         raise

@@ -70,12 +70,13 @@ async def current_snapshot(surface: str) -> str:
             raise HTTPException(503, "No published Gold release for this surface and read mode")
         rounds = [r["round_date"].isoformat() for r in await conn.fetch(
             CALENDAR_SQL, SURFACES[surface], None, today, release["release_id"], capped.end if capped is not None else None)]
+        on_obt = silver_obt.enabled()
+        held = {} if on_obt else await silver_obt.loaded_snapshots(conn, surface)
     # what a kept read depends on from the input store (the registered URLs, the excluded roles): a change is a new key, so it applies at once
     inputs = (await read_inputs()).inputs_digest
-    on_obt = silver_obt.enabled()
-    public = f":{sorted((await silver_obt.public_snapshots(surface)).items())}" if on_obt else ""
+    public = f":{sorted((await silver_obt.public_snapshots(surface)).items())}" if on_obt else (f":{sorted(held.items())}" if held else "")
     digest = hashlib.sha256(f"{','.join(rounds)}:{inputs}{public}".encode()).hexdigest()[:12]
-    return f"{'silver' if on_obt else 'gold-release'}:{release['release_id']}:{release['version']}:{digest}:{capped.seq if capped is not None else '-'}"
+    return f"{'silver' if on_obt or held else 'gold-release'}:{release['release_id']}:{release['version']}:{digest}:{capped.seq if capped is not None else '-'}"
 
 
 async def snapshot_of(surface: str) -> str:

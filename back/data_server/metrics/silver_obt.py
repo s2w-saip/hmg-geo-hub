@@ -649,11 +649,24 @@ GOLD_KEYS = {"round_date": "round", "engine_key": "engine", "geo_key": "country"
 _CACHE_SECONDS = 5
 _cached: tuple[float, Inputs] | None = None
 _public: dict[str, tuple[float, dict[date, str]]] = {}
+_loaded: dict[str, tuple[float, dict[date, str]]] = {}
 
 
 def enabled() -> bool:
     """HGH_METRIC_SOURCE=silver: the base counts come from the OBT. Set beside HGH_SILVER_DB_URL in .env.silver.local; a machine without them counts on gold_db."""
     return os.environ.get("HGH_METRIC_SOURCE", "").strip().lower() == "silver"
+
+
+async def loaded_snapshots(conn: Any, surface: str) -> dict[date, str]:
+    """The operating snapshots in the query tables, by round: what a kept value's snapshot id is made of when the reads count on those tables. conn = gold_db. Read at most every few seconds."""
+    kept = _loaded.get(surface)
+    now = time.monotonic()
+    if kept is None or now - kept[0] >= _CACHE_SECONDS:
+        rows = []
+        if await conn.fetchval("SELECT to_regclass('gold.silver_load') IS NOT NULL"):
+            rows = await conn.fetch("SELECT round_date,string_agg(snapshot_id::text,',' ORDER BY snapshot_id::text) AS ids FROM gold.silver_load WHERE surface=$1 GROUP BY 1", surface)
+        kept = _loaded[surface] = (now, {r["round_date"]: r["ids"] for r in rows})
+    return kept[1]
 
 
 async def public_snapshots(surface: str) -> dict[date, str]:

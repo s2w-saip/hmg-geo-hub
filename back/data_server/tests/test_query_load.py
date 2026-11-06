@@ -104,6 +104,19 @@ class Prompts(unittest.TestCase):
         self.assertFalse(q.same_value("text", "a", "b"))
 
 
+class Digest(unittest.TestCase):
+    @staticmethod
+    def inputs(order, group=3):
+        rows = {"p1": (True, False, "", False, False, group), "p2": (False, True, "KR", True, True, 1)}
+        return q.Inputs(order, [None] * 2, [], *([rows[p][i] for p in order] for i in range(6)), ["XX"], {"kia": 2}, {"e": 2}, {"s": ("KR", 1)}, {}, {}, ["x"])
+
+    def test_the_order_rows_come_in_does_not_load_everything_again(self):
+        self.assertEqual(q.inputs_digest(self.inputs(["p1", "p2"])), q.inputs_digest(self.inputs(["p2", "p1"])))
+
+    def test_a_change_the_stored_judgments_rest_on_does(self):
+        self.assertNotEqual(q.inputs_digest(self.inputs(["p1", "p2"])), q.inputs_digest(self.inputs(["p1", "p2"], group=1)))
+
+
 class Small(unittest.TestCase):
     def test_a_json_column(self):
         self.assertEqual(q.array('[{"a": 1}]'), [{"a": 1}])

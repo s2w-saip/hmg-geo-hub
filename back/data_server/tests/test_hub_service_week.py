@@ -290,92 +290,32 @@ def flat(sql):
     return " ".join(sql.split())
 
 
-class GoldReads(unittest.TestCase):
-    """Review r2-3 (2026-11-03): rule A's SQL half. No server answers these reads in the default run, so they are pinned
-    clause by clause (whitespace aside) like their twin, the notes' NOTES_SQL (data_server.tests.test_gold_service_week
-    .WeekNotes.test_the_rule_is_the_jobs): change the two together. GoldSchema runs them on PostgreSQL."""
+class Manifest(unittest.TestCase):
+    """T7.6: the manifest as rule A reads a cycle. A week moves only when what it shows is in the query tables."""
+    ROWS = [{"cycle_id": "a", "surface": "global", "round_date": date(2026, 10, 5), "public": "s1", "owed": False},
+            {"cycle_id": "b", "surface": "website", "round_date": date(2026, 10, 9), "public": "s2", "owed": False},
+            {"cycle_id": "c", "surface": "website", "round_date": date(2026, 10, 9), "public": None, "owed": True},
+            {"cycle_id": "d", "surface": "website", "round_date": date(2026, 10, 9), "public": None, "owed": False}]
 
-    def test_the_sql_half_of_rule_a(self):
-        for sql, clauses in (
-                (sw.RELEASES_SQL, (
-                    # the releases the screens read: Global and Website, live, one rule signature
-                    "SELECT scope,read_mode,release_id,version,rule_signature,last_build_id,as_of FROM gold.active_release "
-                    "WHERE scope IN ('global','website') AND read_mode='live' "
-                    "AND ($1::text IS NULL OR rule_signature=$1) ORDER BY scope,read_mode",)),
-                (sw.CYCLES_SQL, (
-                    # the same releases for the cycles' check
-                    "WITH rel AS (SELECT scope,release_id FROM gold.active_release WHERE scope IN ('global','website') "
-                    "AND read_mode='live' AND ($1::text IS NULL OR rule_signature=$1))",
-                    "SELECT d.cycle_id,d.cyc_key,d.surface,d.project_key,d.round_date,d.status,d.servable,d.view_date,"
-                    "d.hidden_scope,b.fleet_visible,",
-                    # complete(): an active publication
-                    "EXISTS(SELECT 1 FROM gold.publication p WHERE p.cyc_key=d.cyc_key AND p.state='active') AS has_active_publication",
-                    # complete(): a ready fact item of a validated build in every active release of its scope (and one at least)
-                    "(EXISTS(SELECT 1 FROM rel r WHERE r.scope=s.scope) AND NOT EXISTS(SELECT 1 FROM rel r WHERE r.scope=s.scope "
-                    "AND NOT EXISTS( SELECT 1 FROM gold.release_item i JOIN gold.build bu ON bu.build_id=i.build_id "
-                    "AND bu.status='validated' WHERE i.release_id=r.release_id AND i.family='fact' AND i.state='ready' "
-                    "AND i.slice_key='cyc:'||d.cyc_key::text)) ) AS in_every_active_release",
-                    # fleet_visible(): the pick row, NULL without one; every cycle of surfaces 1 and 2, the project surface left out
-                    "FROM gold.dim_cycle d LEFT JOIN gold.cycle_pick_basis b ON b.cyc_key=d.cyc_key "
-                    "CROSS JOIN LATERAL (SELECT CASE d.surface WHEN 1 THEN 'global' ELSE 'website' END AS scope) s "
-                    "WHERE d.surface IN (1,2) ORDER BY d.cyc_key")),
-                (sw.VERSIONS_SQL, ("SELECT scope,version FROM gold.data_version",)),
-                (sw.ORPHANS_SQL, (
-                    # a reload in progress: an active publication or a ready fact item of the read's releases with no cycle row
-                    "(SELECT count(*) FROM gold.publication p WHERE p.state='active' "
-                    "AND NOT EXISTS(SELECT 1 FROM gold.dim_cycle d WHERE d.cyc_key=p.cyc_key)) AS publications",
-                    "(SELECT count(*) FROM gold.release_item i WHERE i.release_id=ANY($1::bigint[]) AND i.family='fact' "
-                    "AND i.state='ready' AND i.slice_key LIKE 'cyc:%' "
-                    "AND NOT EXISTS(SELECT 1 FROM gold.dim_cycle d WHERE 'cyc:'||d.cyc_key::text=i.slice_key)) AS items"))):
-            for clause in clauses:
-                self.assertIn(clause, flat(sql))
+    def test_public_and_loaded_is_complete_and_the_rest_waits_or_stays_out(self):
+        rows = {r["cycle_id"]: r for r in sw.cycle_rows(self.ROWS, {"a": "s1", "b": "older"})}
+        self.assertTrue(sw.complete(rows["a"], TODAY))
+        self.assertFalse(sw.complete(rows["b"], TODAY))    # public, an older snapshot loaded
+        self.assertTrue(sw.blocking(rows["b"], TODAY))
+        self.assertTrue(sw.blocking(rows["c"], TODAY))     # on its way
+        self.assertFalse(sw.blocking(rows["d"], TODAY))    # only retired
+        self.assertFalse(sw.complete(rows["d"], TODAY))
 
-    def test_the_notes_twin_asks_the_same(self):
-        """The pieces of the rule the job reads in SQL are the notes' too (aliases and 'EXISTS (' aside), so a change to
-        one twin and its pin alone fails here."""
-        if importlib.util.find_spec("data_server.gold_reader.week_notes") is None:
-            self.skipTest("data_server.gold_reader.week_notes is not there")
+    def test_the_manifests_week_is_the_rules(self):
+        rows = sw.cycle_rows(self.ROWS[:2], {"a": "s1", "b": "s2"})
+        decision = sw.decide(rows, date(2026, 10, 12))
+        self.assertEqual((decision["week_start"], decision["global"], decision["website"]), (date(2026, 10, 5), ["a"], ["b"]))
 
-        def same(sql):
-            return re.sub(r"EXISTS\s*\(\s*", "EXISTS(", flat(sql))
-
-        notes, job = same(importlib.import_module("data_server.gold_reader.week_notes").NOTES_SQL), same(sw.CYCLES_SQL)
-        for piece in (
-                # the releases: Global and Website, live, the one rule signature
-                "scope IN ('global','website') AND", "read_mode='live' AND", "::text IS NULL OR",
-                "rule_signature=$",
-                # an active publication
-                "EXISTS(SELECT 1 FROM gold.publication p WHERE p.cyc_key=", "AND p.state='active')",
-                # in one active release of the scope at least, and in every one: a ready fact item of a validated build
-                "EXISTS(SELECT 1 FROM rel r WHERE r.scope=", "AND NOT EXISTS(SELECT 1 FROM rel r WHERE r.scope=",
-                "AND NOT EXISTS(SELECT 1 FROM gold.release_item ", "JOIN gold.build bu ON bu.build_id=",
-                "AND bu.status='validated'", ".release_id=r.release_id AND ", "family='fact' AND ", "state='ready' AND ",
-                "slice_key='cyc:'||",
-                # the pick basis, surfaces 1 and 2 and their scopes
-                "FROM gold.dim_cycle d LEFT JOIN gold.cycle_pick_basis b ON b.cyc_key=d.cyc_key", "WHERE d.surface IN (1,2)",
-                "CASE d.surface WHEN 1 THEN 'global' ELSE 'website' END AS scope"):
-            self.assertIn(piece, job)
-            self.assertIn(piece, notes)
-
-    def test_one_read_asks_with_the_rule_signature_and_counts_orphans_of_its_own_releases(self):
-        rows = live_today()
-        releases = gold([])["releases"]
-        calls = []
-
-        class Conn:
-            async def fetch(self, sql, *args):
-                calls.append((sql, args))
-                return {sw.VERSIONS_SQL: [{"scope": "cycle", "version": 3183}], sw.RELEASES_SQL: releases, sw.CYCLES_SQL: rows}[sql]
-
-            async def fetchrow(self, sql, *args):
-                calls.append((sql, args))
-                return {"publications": 0, "items": 2}
-
-        g = asyncio.run(sw.read_gold(Conn(), "2026-10-25.provisional.2"))
-        self.assertEqual(calls, [(sw.VERSIONS_SQL, ()), (sw.RELEASES_SQL, ("2026-10-25.provisional.2",)),
-                                 (sw.CYCLES_SQL, ("2026-10-25.provisional.2",)), (sw.ORPHANS_SQL, ([1, 2, 3, 4, 5, 6],))])
-        self.assertEqual((g["versions"], g["releases"], g["cycles"], g["orphan_publications"], g["orphan_items"]),
-                         ({"cycle": 3183}, releases, rows, 0, 2))
+    def test_the_query_reads_the_two_surfaces_and_public_only_counts_as_public(self):
+        sql = flat(sw.MANIFEST_SQL)
+        self.assertIn("k.surface IN ('global','website')", sql)
+        self.assertIn("FILTER (WHERE m.status='public')", sql)
+        self.assertIn("m.status IN ('loading','ready')", sql)
 
 
 class Line(unittest.TestCase):
@@ -385,12 +325,8 @@ class Line(unittest.TestCase):
             "week_start": "2026-10-05", "week_end": "2026-10-11", "label": "10월 2주차", "changed": True, "held": False,
             "latest": "2026-10-05", "global_cycles": 1, "website_cycles": 96, "delay_days": 22, "seq": 7, "today": "2026-11-02"})
 
-    def test_the_release_record_is_scope_by_read_mode(self):
-        out = sw.gold_release(gold([]))
-        self.assertEqual(sorted(out), ["global", "website"])
-        self.assertEqual(sorted(out["website"]), ["card", "grid", "live"])
-        self.assertEqual(set(out["global"]["live"]), {"release_id", "version", "rule_signature", "last_build_id", "as_of"})
-        self.assertEqual(json.loads(sw.encoded(out))["global"]["live"]["as_of"], "2026-10-29")
+    def test_the_record_says_how_many_cycles_it_judged(self):
+        self.assertEqual(sw.gold_release(gold([cycle(G, date(2026, 10, 5))])), {"cycles": 1})
 
 
 class DataConn:
@@ -475,7 +411,7 @@ class Writes(unittest.TestCase):
                          ("2026-10-05", True, 1, ["BEGIN", "current", "insert", "COMMIT"]))
         row = data.rows[-1]
         self.assertEqual((row["week_start"], row["global_cycles"], row["website_cycles"]), (date(2026, 10, 5), ids(week, G), ids(week, W)))
-        self.assertEqual((json.loads(row["gold_versions"]), sorted(json.loads(row["gold_release"]))), (versions, ["global", "website"]))
+        self.assertEqual((json.loads(row["gold_versions"]), sorted(json.loads(row["gold_release"]))), (versions, ["cycles"]))
         again = run(rows)                                            # the same week and cycles: checked_at only
         self.assertEqual((again["changed"], again["seq"], data.log), (False, 1, ["BEGIN", "current", "confirm", "COMMIT"]))
         late = [*rows, *published(W, date(2026, 10, 9))]             # a late site in the same week: a new row
@@ -507,7 +443,7 @@ class Run(unittest.TestCase):
     the dry run, the day, and the exits vm.sh logs as 'service-week FAILED'."""
 
     DSN = "postgresql://writer@test/hub"
-    GOLD = {"HGH_GOLD_DB_URL": "postgresql://gold@test/gold", "HGH_GOLD_RULE_SIGNATURE": "2026-10-25.provisional.2"}
+    GOLD = {"HGH_GOLD_DB_URL": "postgresql://gold@test/gold", "HGH_SILVER_DB_URL": "postgresql://silver@test/silver"}
 
     def setUp(self):
         self.connect, self.snapshot = mock.AsyncMock(), mock.AsyncMock(return_value=gold(live_today()))
@@ -516,7 +452,7 @@ class Run(unittest.TestCase):
         """main(config): the line it prints."""
         self.connect.return_value, out = data, io.StringIO()
         with mock.patch.dict(os.environ, self.GOLD), mock.patch.object(sw.asyncpg, "connect", self.connect), \
-                mock.patch.object(sw, "gold_snapshot", self.snapshot), clock(sw, datetime(2026, 10, 11, 23, 0, tzinfo=UTC)), \
+                mock.patch.object(sw, "read_snapshots", self.snapshot), clock(sw, datetime(2026, 10, 11, 23, 0, tzinfo=UTC)), \
                 contextlib.redirect_stdout(out):
             asyncio.run(sw.main(config))
         return json.loads(out.getvalue())
@@ -529,7 +465,7 @@ class Run(unittest.TestCase):
                          ("2026-10-05", "2026-10-12", 1, True, 1, False))
         self.assertEqual(data.log, ["lock", "BEGIN", "current", "insert", "COMMIT", "close"])
         self.assertEqual([c.args for c in self.connect.await_args_list], [(self.DSN,)])
-        self.snapshot.assert_awaited_once_with("postgresql://gold@test/gold", "2026-10-25.provisional.2")
+        self.snapshot.assert_awaited_once_with("postgresql://silver@test/silver", "postgresql://gold@test/gold")
 
     def test_a_dry_run_decides_against_the_record_and_writes_nothing(self):
         rows = live_today()
@@ -653,14 +589,14 @@ class SilentGold(unittest.TestCase):
 
     async def scenario(self):
         async with HushedGold() as gold:
-            with mock.patch.dict(os.environ, {"HGH_GOLD_DB_URL": gold.dsn}), \
-                    mock.patch.object(sw, "GOLD_TIMEOUTS", {"timeout": 5, "command_timeout": 0.2}, create=True):
+            with mock.patch.dict(os.environ, {"HGH_GOLD_DB_URL": gold.dsn, "HGH_SILVER_DB_URL": gold.dsn}), \
+                    mock.patch.object(sw, "READ_TIMEOUTS", {"timeout": 5, "command_timeout": 0.2}, create=True):
                 run = asyncio.ensure_future(sw.main({"dry_run": True}))
                 started = time.monotonic()
                 try:
                     await asyncio.wait({run}, timeout=5)
                     self.assertTrue(run.done(), f"the job still waits on a silent Gold after {time.monotonic() - started:.0f} s")
-                    with self.assertRaisesRegex(RuntimeError, "^Service week not recorded: Gold did not answer"):
+                    with self.assertRaisesRegex(RuntimeError, "^Service week not recorded: the manifest did not answer"):
                         run.result()
                 finally:
                     if not run.done():   # let it go: the server closes, the job's waits end
@@ -669,9 +605,9 @@ class SilentGold(unittest.TestCase):
                         await asyncio.wait({run}, timeout=5)
                     run.cancel()
                     await asyncio.gather(run, return_exceptions=True)
-        self.assertLessEqual(sw.GOLD_TIMEOUTS["timeout"], 60)            # the job's own limits: a connect,
-        self.assertGreater(sw.GOLD_TIMEOUTS["command_timeout"], 60)      # a statement above a live Gold's 60 s timeout
-        self.assertLess(sw.GOLD_TIMEOUTS["command_timeout"], 600)        # and well inside the hourly run
+        self.assertLessEqual(sw.READ_TIMEOUTS["timeout"], 60)            # the job's own limits: a connect,
+        self.assertGreater(sw.READ_TIMEOUTS["command_timeout"], 60)      # a statement above a live Gold's 60 s timeout
+        self.assertLess(sw.READ_TIMEOUTS["command_timeout"], 600)        # and well inside the hourly run
 
 
 class SilentData(unittest.TestCase):
@@ -704,10 +640,10 @@ class SilentData(unittest.TestCase):
         """main(config) with `server` as the HUB data DB: (the error it ended with or None, what it printed)."""
         out = io.StringIO()
         async with server:
-            with mock.patch.dict(os.environ, {"HGH_GOLD_DB_URL": "postgresql://gold@test/gold"}), \
+            with mock.patch.dict(os.environ, {"HGH_GOLD_DB_URL": "postgresql://gold@test/gold", "HGH_SILVER_DB_URL": "postgresql://silver@test/silver"}), \
                     mock.patch.object(sw, "DATA_TIMEOUTS", {"timeout": 5, "command_timeout": 0.2}, create=True), \
                     mock.patch.object(sw, "DATA_CLOSE", 0.2, create=True), \
-                    mock.patch.object(sw, "gold_snapshot", mock.AsyncMock(return_value=gold(live_today()))), \
+                    mock.patch.object(sw, "read_snapshots", mock.AsyncMock(return_value=gold(live_today()))), \
                     clock(sw, datetime(2026, 10, 11, 23, 0, tzinfo=UTC)), contextlib.redirect_stdout(out):
                 run = asyncio.ensure_future(sw.main({**config, "data": server.dsn}))
                 started = time.monotonic()
@@ -871,8 +807,6 @@ class GoldSchema(unittest.TestCase):
     not, releases the screens could not pick left out, the orphans of a reload, the week they give, the notes' twin
     (NOTES_SQL) counting the same sites on the same rows, and the notes of a page's sites (review r5-1)."""
 
-    def test_the_reads_judge_each_cycle_by_rule_a(self):
-        asyncio.run(self.scenario(self.reads))
 
     def test_the_notes_are_the_pages_sites(self):
         asyncio.run(self.scenario(self.sites))
@@ -904,76 +838,6 @@ class GoldSchema(unittest.TestCase):
             await conn.executemany("INSERT INTO gold.release_item VALUES ($1,$2,$3,$4,$5)",
                                    [(RELEASE_IDS[sw.SURFACES[surface], mode], family, f"cyc:{key}", 1000 + key, item) for mode in modes])
 
-    async def reads(self, conn):
-        await conn.executemany("INSERT INTO gold.active_release VALUES ($1,$2,$3,$4,1,10,'2026-10-29')",
-                               [(scope, mode, SIGNATURE, i) for (scope, mode), i in RELEASE_IDS.items()]
-                               + [("website", "live", "another rule", 7), ("website", "draft", SIGNATURE, 8)])   # never picked
-        none, shown, quiet, owed = {"publication": None, "modes": ()}, "shown", "quiet", "owed"
-        closed, friday = {"status": 1, "servable": False, **none}, date(2026, 10, 30)
-        cycles = {   # cyc_key: surface, round date, what Gold has of it, the job's verdict
-            1: (G, date(2026, 9, 28), {}, shown), 2: (W, date(2026, 10, 2), {}, shown),
-            3: (G, date(2026, 10, 5), {}, shown), 4: (W, date(2026, 10, 9), {}, shown),
-            5: (W, date(2026, 10, 9), {"project": 2, "view_date": TODAY}, shown),                   # visible from today
-            6: (W, date(2026, 10, 9), {"servable": False, "fleet": False, **none}, quiet),           # a superseded duplicate
-            7: (W, date(2026, 10, 9), {"project": 3, "fleet": False, **closed}, quiet),               # not the site's representative
-            8: (W, date(2026, 10, 9), {"project": 4, **closed, "status": 0, "hidden": 1}, quiet),     # hidden everywhere
-            9: (W, date(2026, 10, 9), {"project": 5, **closed, "status": 3}, quiet),                  # stale
-            10: (P, date(2026, 10, 6), {**closed, "status": 0}, None),                                # never read
-            11: (G, date(2026, 10, 12), {}, shown), 12: (W, date(2026, 10, 16), {"modes": ("card", "grid")}, owed),   # not in live
-            13: (G, date(2026, 10, 19), {}, shown), 14: (W, date(2026, 10, 23), {"publication": "retired"}, owed),
-            15: (G, date(2026, 10, 26), {}, shown),
-            16: (W, friday, {"item": "building"}, owed), 17: (W, friday, {"project": 2, "build": "failed"}, owed),
-            18: (W, friday, {"project": 3, "family": "dim"}, owed),
-            19: (W, friday, {"project": 4, "view_date": TODAY + timedelta(days=1)}, owed),           # from tomorrow
-            20: (W, friday, {"project": 5, **closed, "status": 0}, owed),                             # still collecting
-            21: (W, friday, {"project": 6, **closed}, owed),                                          # closed, no pick row
-            22: (G, TODAY, {}, shown)}                                                               # its week runs on
-        for key, (surface, day, facts, _) in cycles.items():
-            await self.put(conn, key, surface, day, **facts)
-        g = await sw.read_gold(conn, SIGNATURE)
-        self.assertEqual(sorted((r["scope"], r["read_mode"]) for r in g["releases"]), sorted(RELEASE_IDS))
-        self.assertEqual((g["versions"], g["orphan_publications"], g["orphan_items"]), ({"cycle": 3183, "dim": 6028}, 0, 0))
-
-        def verdict(c):
-            return shown if sw.complete(c, TODAY) and not sw.hidden(c) else owed if sw.blocking(c, TODAY) else quiet
-
-        self.assertEqual({c["cyc_key"]: verdict(c) for c in g["cycles"]}, {key: v for key, (*_, v) in cycles.items() if v})
-        ids = {c["cyc_key"]: c["cycle_id"] for c in g["cycles"]}
-        decision, is_changed = sw.plan(g, TODAY, None)
-        self.assertEqual((decision["week_start"], decision["global"], decision["website"], is_changed),
-                         (date(2026, 10, 5), [ids[3]], sorted([ids[4], ids[5]]), True))
-        if importlib.util.find_spec("data_server.gold_reader.week_notes") is not None:
-            # the twin on the same rows: per week with a site not shown, sites, shown, unpublished, hidden, other and the
-            # round days the note is about (review r2-10)
-            notes_sql = importlib.import_module("data_server.gold_reader.week_notes").NOTES_SQL
-            self.assertEqual([tuple(r.values()) for r in await conn.fetch(notes_sql, TODAY, SIGNATURE, None, None, None, None, None)],
-                             [(W, date(2026, 10, 5), 5, 2, 0, 1, 2, [date(2026, 10, 9)]),
-                              (W, date(2026, 10, 12), 1, 0, 1, 0, 0, [date(2026, 10, 16)]),
-                              (W, date(2026, 10, 19), 1, 0, 1, 0, 0, [date(2026, 10, 23)]),
-                              (W, date(2026, 10, 26), 6, 0, 6, 0, 0, [friday])])
-            # review r4-2: the notes' rounds (shared/service-week `rounds`, '측정 없음') hold a week's round exactly where
-            # the reads' calendar (Context.create's dates under that week) takes one, per release they pick from
-            context = importlib.import_module("data_server.gold_reader.context")
-            rounds_sql = importlib.import_module("data_server.gold_reader.week_notes").ROUNDS_SQL
-            for start in (date(2026, 9, 28), date(2026, 10, 5), date(2026, 10, 12), date(2026, 10, 19), date(2026, 10, 26)):
-                end = start + timedelta(days=6)
-                calendar = {(scope, mode): any(start <= r["round_date"] <= end for r in await conn.fetch(
-                                context.CALENDAR_SQL, {"global": G, "website": W}[scope], None, TODAY, release, end))
-                            for (scope, mode), release in RELEASE_IDS.items() if mode == "live"}
-                rounds = {(r["scope"], r["read_mode"]): r["holds"] for r in await conn.fetch(rounds_sql, TODAY, SIGNATURE, start, end)}
-                self.assertEqual(rounds, calendar, start)
-                if start == date(2026, 10, 12):   # 12, of 10-16, is in no live release: the live calendar has no round
-                    self.assertFalse(rounds["website", "live"])
-        await conn.execute("INSERT INTO gold.publication VALUES (99,'active'),(98,'retired')")   # cycles a reload has not brought
-        await conn.execute("INSERT INTO gold.release_item VALUES (4,'fact','cyc:97',1001,'ready'),"
-                           "(8,'fact','cyc:96',1001,'ready'),(5,'fact','cyc:95',1001,'building')")
-        g = await sw.read_gold(conn, SIGNATURE)
-        self.assertEqual((g["orphan_publications"], g["orphan_items"]), (1, 1))
-        with self.assertRaises(sw.Refused):
-            sw.check_read(g, None)
-        await conn.execute("DELETE FROM gold.active_release WHERE scope='website'")   # a scope with no release completes nothing
-        g = await sw.read_gold(conn, SIGNATURE)
-        self.assertEqual({c["cyc_key"] for c in g["cycles"] if sw.complete(c, TODAY)}, {1, 3, 11, 13, 15, 22})
 
     async def sites(self, conn):
         """Review r5-1 (2026-11-03): cycles/week-notes read with a page's picks (week_notes.read on a Context built

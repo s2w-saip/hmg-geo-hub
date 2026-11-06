@@ -54,6 +54,17 @@ class Failing(Live):
         raise OSError("down")
 
 
+_no_load_record = mock.patch("data_server.metrics.silver_obt.loaded_snapshots", mock.AsyncMock(return_value={}))
+
+
+def setUpModule():
+    _no_load_record.start()   # these reads have no connection: a round's snapshot is its builds
+
+
+def tearDownModule():
+    _no_load_record.stop()
+
+
 def ctx_q(ctx):
     return ctx.q
 
@@ -282,6 +293,19 @@ class Recording(unittest.TestCase):
         self.record(ctx, writer, [{**self.ROW, "round_date": D3}])
         self.assertEqual(json.loads(writer.rows_[0][1]), {"engine_key": 1})
         self.assertNotIn("round_date", json.loads(writer.rows_[0][2]))
+
+
+class LastResort(unittest.TestCase):
+    def test_it_counts_on_the_obt_when_the_reads_count_on_the_tables(self):
+        from data_server.hub_stores import silver_db
+        from data_server.metrics import gold_rows, silver_obt
+        live = mock.Mock(surface="global", snapshot_id="s")
+        live.ctx = mock.Mock(card=False, surface="global", release={"release_id": 1, "version": 1})
+        source = gold_rows.GoldRowsSource(live, "bits=7")
+        with mock.patch.object(silver_db, "configured", return_value=True), mock.patch.object(silver_obt, "enabled", return_value=False):
+            self.assertIsInstance(source._last_resort_source(), silver_obt.ObtForContext)
+        with mock.patch.object(silver_db, "configured", return_value=False), mock.patch.object(silver_obt, "enabled", return_value=False):
+            self.assertIs(source._last_resort_source(), live)   # no connection to the OBT: where the reads count
 
 
 if __name__ == "__main__":

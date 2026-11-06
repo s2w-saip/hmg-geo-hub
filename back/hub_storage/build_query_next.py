@@ -94,11 +94,19 @@ def build(replace: bool) -> None:
     pipe(CACHE_SOURCE, CACHE_TARGET, "--schema-only")
     pipe(CACHE_SOURCE, CACHE_TARGET, "--data-only", "--table=cache.schema_migration")
     log(f"{CACHE_TARGET}: schema")
-    text = (HERE / "metrics-006.sql").read_text(encoding="utf-8")
-    checksum = hashlib.sha256(text.encode()).hexdigest()
-    psql(TARGET, f"SET ROLE {OWNER};\nBEGIN;\n{text}\nINSERT INTO gold.schema_migration(version,sha256) VALUES('006_query_load','{checksum}');\nCOMMIT;")
+    migrations()
     analyze()
     log(f"done, {psql('postgres', f'''SELECT pg_size_pretty(pg_database_size('{TARGET}'))''')}")
+
+
+def migrations() -> None:
+    """The migrations gold_db does not have yet, recorded as manage.py records them, so its init finds them done after the rename."""
+    for name, version in (("metrics-006.sql", "006_query_load"), ("metrics-007.sql", "007_load_projects")):
+        if psql(TARGET, f"SELECT 1 FROM gold.schema_migration WHERE version='{version}'"):
+            continue
+        text = (HERE / name).read_text(encoding="utf-8")
+        checksum = hashlib.sha256(text.encode()).hexdigest()
+        psql(TARGET, f"SET ROLE {OWNER};\nBEGIN;\n{text}\nINSERT INTO gold.schema_migration(version,sha256) VALUES('{version}','{checksum}');\nCOMMIT;")
 
 
 def analyze() -> None:
@@ -111,11 +119,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--replace", action="store_true")
     parser.add_argument("--analyze", action="store_true")
+    parser.add_argument("--migrations", action="store_true", help="apply what gold_next lacks")
     args = parser.parse_args()
     if not analytics.NATIVE:
         raise SystemExit("Native mode only (HGH_HUB_NATIVE=1)")
     if args.analyze:
         analyze()
+        return 0
+    if args.migrations:
+        migrations()
         return 0
     build(args.replace)
     return 0
