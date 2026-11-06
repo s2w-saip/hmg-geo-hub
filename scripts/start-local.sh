@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# macOS/Linux counterpart of start-gold.ps1 without Docker: API on 127.0.0.1:5555, Next on 127.0.0.1:3333.
+# macOS/Linux counterpart of start-gold.ps1 without Docker: data server on 127.0.0.1:5555, hub server on 127.0.0.1:5556, Next on 127.0.0.1:3333.
+# Next calls only the hub server.
 # HGH_PYTHON selects a Python 3.12 that has back/data_server/requirements.txt installed (default: python3).
 # The HUB data/operations stores (native mode, scripts/start-hub-storage.sh) are started and connected when they exist,
 # and the service week is checked against Gold before the API starts.
@@ -48,8 +49,27 @@ for _ in $(seq 60); do
 done
 [ -n "$ready" ] || { echo "Gold read-only health check failed. See $logs/api.log" >&2; exit 1; }
 
+# The hub server, Next's only door. Restart only the one this script started.
+if [ -f "$logs/hub.pid" ] && kill -0 "$(cat "$logs/hub.pid")" 2>/dev/null; then
+    pid="$(cat "$logs/hub.pid")"
+    kill "$pid"
+    while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
+fi
+if listening 5556; then echo 'Port 5556 is in use by another process.' >&2; exit 1; fi
+(
+    cd "$repo/back"
+    HGH_DATA_SERVER_URL=http://127.0.0.1:5555 nohup "$python" -m uvicorn hub_server.app:app --host 127.0.0.1 --port 5556 >"$logs/hub.log" 2>&1 &
+    echo $! >"$logs/hub.pid"
+)
+ready=
+for _ in $(seq 60); do
+    curl -fs --max-time 2 http://127.0.0.1:5556/healthz >/dev/null && { ready=1; break; }
+    sleep 0.5
+done
+[ -n "$ready" ] || { echo "Hub server health check failed. See $logs/hub.log" >&2; exit 1; }
+
 if ! listening 3333; then
-    (cd "$repo/front" && HGH_LOCAL_READ_ONLY=1 HGH_API_BASE_URL=http://127.0.0.1:5555 NEXT_TELEMETRY_DISABLED=1 \
+    (cd "$repo/front" && HGH_LOCAL_READ_ONLY=1 HGH_API_BASE_URL=http://127.0.0.1:5556 NEXT_TELEMETRY_DISABLED=1 \
         nohup npm run dev >"$logs/front.log" 2>&1 &)
 fi
 # The unfiltered first screens' values: computed when the live snapshot or the definition version moved, else nothing happens. Until it
