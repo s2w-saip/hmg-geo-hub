@@ -18,12 +18,16 @@ export function PageError({ error, retry }: { error: unknown; retry?: () => void
   const title = forbidden ? (en ? "Access unavailable" : "접근할 수 없습니다") : late ? (en ? "Data is not ready" : "데이터를 준비하고 있습니다") : (en ? "Unable to load this page" : "화면을 불러오지 못했습니다");
   return <RnPageFrame header={<RnPageHeader title={title} />}><RnCard className="p-8"><p role="alert" className="text-rn-13 text-rn-muted">{forbidden ? (en ? "Check your account permissions." : "계정의 접근 권한을 확인해 주세요.") : (en ? "Please try again shortly." : "잠시 후 다시 조회해 주세요.")}</p>{retry && !forbidden && <RnButton onClick={retry}>{en ? "Retry" : "다시 조회"}</RnButton>}</RnCard></RnPageFrame>;
 }
-class Boundary extends Component<{ children: ReactNode }, { error: unknown }> {
-  state = { error: null as unknown };
+class Boundary extends Component<{ children: ReactNode; reset: string }, { error: unknown; reset: string }> {
+  state = { error: null as unknown, reset: this.props.reset };
+  static getDerivedStateFromProps(props: { reset: string }, state: { reset: string }) {
+    return props.reset !== state.reset ? { error: null, reset: props.reset } : null;
+  }
   static getDerivedStateFromError(error: unknown) { return { error }; }
   render() { return this.state.error ? <PageError error={this.state.error} retry={() => this.setState({ error: null })} /> : this.props.children; }
 }
 export function PageBoundary({ children }: { children: ReactNode }) {
   const { pathname, search } = useLocation();
-  return <Boundary key={pathname + search}>{children}</Boundary>;
+  // Filters reset a caught error, but must not remount a healthy page and its scroll/panel state.
+  return <Boundary key={pathname} reset={search}>{children}</Boundary>;
 }

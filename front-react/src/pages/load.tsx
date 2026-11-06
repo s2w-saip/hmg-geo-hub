@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useLocale } from "use-intl";
 import { useLocation, useParams } from "react-router-dom";
 import { useBundle, type Read, type ReadControls } from "~/api/bundle";
@@ -11,7 +11,7 @@ import { PageError, PageLoading } from "~/app/states";
 import { surfaceOf, type PageDefinition } from "~/app/pages";
 import { RnEmpty } from "@/components/renewal-ui";
 import { PageHeading } from "./page-heading";
-import { RnFilterRuntime } from "@/app/[locale]/(renewal)/renewal/_components/filter-runtime";
+import { RnBusyScope, RnFilterRuntime } from "@/app/[locale]/(renewal)/renewal/_components/filter-runtime";
 import { RnOverviewFilters, RnFilterSplit, RnOverviewFilterPanel, RnOverviewFilterRail, RnOverviewApplied, type OverviewFilterProps } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { RnPageFrame } from "@/app/[locale]/(renewal)/renewal/_components/filter-split";
 import type { SavedFilterPage } from "@/app/[locale]/(renewal)/renewal/_components/saved-filters";
@@ -34,7 +34,7 @@ export function usePageContext(page: PageDefinition) {
   return { locale, id: id ?? "", search: search.replace(/^\?/, ""), sp, query, surface, user };
 }
 export type PageContext = ReturnType<typeof usePageContext>;
-export interface Values extends ReadControls { value<T>(key: string): T; promise<T>(key: string): Promise<T>; stamp: string }
+export interface Values extends ReadControls { value<T>(key: string): T; promise<T>(key: string): Promise<T>; stamp: string; updating: boolean }
 export function useReads(reads: Record<string, Read>) {
   const bundle = useBundle(reads);
   const preview = useMemo(() => Object.fromEntries(Object.entries(reads).map(([key, read]) => [key, previewRead(read)])), [bundle.key]);
@@ -46,8 +46,14 @@ export function useReads(reads: Record<string, Read>) {
     if (!entry || entry.value !== value) { entry = { value, promise: !CONNECTED && value === undefined ? pendingPreview : Promise.resolve(value) }; cache.set(key, entry); }
     return [key, entry.promise];
   })), [result.data, cache]);
-  const values = useMemo<Values>(() => ({ value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: result.key, states: result.states, retry: result.retry }), [result.data, result.key, promises, result.states, result.retry]);
-  return { ...result, values };
+  const values = useMemo<Values>(() => ({ value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: result.key, updating: false, states: result.states, retry: result.retry }), [result.data, result.key, promises, result.states, result.retry]);
+  const [served, setServed] = useState<{ resource: string; values: Values } | null>(null);
+  // Keep the last complete bundle during a new filter read, never a mix of periods/conditions.
+  // The resource includes account, role and scope: old privileged data cannot cross that boundary.
+  if (!result.pending && !result.error && served?.values !== values) setServed({ resource: result.resource, values });
+  const retaining = result.pending && !result.error && served?.resource === result.resource;
+  const shown = useMemo(() => retaining ? { ...served!.values, updating: true } : values, [retaining, served, values]);
+  return { ...result, pending: result.pending && !retaining, values: shown };
 }
 export function Load({ result, children }: { result: ReturnType<typeof useReads>; children: (values: Values) => ReactNode }) {
   if (result.error) return <PageError error={result.error} retry={result.retry} />;
@@ -75,10 +81,10 @@ export function Frame({ page, ctx, values, filters, savedPage, children, reset }
   page: PageDefinition; ctx: PageContext; values: Values; filters?: OverviewFilterProps;
   savedPage?: SavedFilterPage; children: ReactNode; reset?: readonly string[];
 }) {
-  return <ReadProvider value={values}><PageWeek ctx={ctx} values={values}><RnFilterRuntime reset={reset}>
+  return <ReadProvider value={values}><PageWeek ctx={ctx} values={values}><RnFilterRuntime reset={reset} pending={values.updating}>
     {filters && savedPage ? <RnOverviewFilters props={filters} savedFilters={savedSource(ctx, savedPage)}>
       <RnFilterSplit header={<PageHeading page={page} values={values} ctx={ctx} />} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />} delayInHeader={page.kind === "mention" && ctx.surface === "global"}>
-        <RnOverviewApplied /><div className="flex flex-col gap-4">{children}</div>
+        <RnOverviewApplied /><RnBusyScope className="flex flex-col gap-4">{children}</RnBusyScope>
       </RnFilterSplit>
     </RnOverviewFilters> : <RnPageFrame header={<PageHeading page={page} values={values} ctx={ctx} />}>{children}</RnPageFrame>}
   </RnFilterRuntime></PageWeek></ReadProvider>;

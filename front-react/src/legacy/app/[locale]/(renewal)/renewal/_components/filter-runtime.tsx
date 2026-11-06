@@ -7,9 +7,9 @@ import { RnToastProvider } from "@/components/renewal-ui";
 // Instant-apply runtime of the renewal pages. A pick updates the panel in the same
 // frame (the panel keeps its own optimistic draft); the URL follows after a short
 // debounce so a burst of clicks is ONE navigation (one server round trip), and the
-// navigation runs in a transition so the current numbers stay on screen with a
-// progress line until the new ones arrive. Next's router drops superseded
-// transitions, so a late response never overwrites a newer pick.
+// navigation runs in a transition. The read layer supplies `pending` until the
+// replacement bundle is ready, so current numbers keep their progress line.
+// Query keys and request cancellation keep late responses out of newer picks.
 const COMMIT_DEBOUNCE_MS = 120;
 
 interface Runtime {
@@ -22,7 +22,7 @@ interface Runtime {
 const RuntimeContext = createContext<Runtime>({ busy: false, commit: () => {} });
 
 /** `reset`: URL params a filter change drops (a sub page's own page and cursor, which the new filters invalidate). */
-export function RnFilterRuntime({ children, reset }: { children: ReactNode; reset?: readonly string[] }) {
+export function RnFilterRuntime({ children, reset, pending = false }: { children: ReactNode; reset?: readonly string[]; pending?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -52,7 +52,7 @@ export function RnFilterRuntime({ children, reset }: { children: ReactNode; rese
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
-  const value = useMemo(() => ({ busy: isPending || queued, commit }), [isPending, queued, commit]);
+  const value = useMemo(() => ({ busy: isPending || queued || pending, commit }), [isPending, queued, pending, commit]);
   return (
     <RuntimeContext.Provider value={value}>
       <RnToastProvider>{children}</RnToastProvider>

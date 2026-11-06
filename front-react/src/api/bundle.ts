@@ -21,6 +21,7 @@ export function useBundle(reads: Record<string, Read>) {
   const client = useQueryClient();
   const identity = JSON.stringify([user?.id, user?.role, user?.scope]);
   const entries = Object.entries(reads);
+  const resource = JSON.stringify([identity, entries.map(([name, read]) => [name, read.kind, read.name])]);
   const key = JSON.stringify([identity, entries.map(([name, read]) => [name, read.kind, read.name, queryString(read.query)])]);
   const retry = useCallback(async (names?: readonly string[]) => {
     await Promise.all(entries.filter(([name]) => !names || names.includes(name)).map(([, read]) => client.refetchQueries({
@@ -39,5 +40,5 @@ export function useBundle(reads: Record<string, Read>) {
     pending: queries.some((q, i) => q.isPending && !entries[i][1].optional && !entries[i][1].deferred),
     refreshing: queries.some(q => q.isFetching),
   }) });
-  return { ...result, retry, key };
+  return { ...result, retry, key, resource };
 }

@@ -122,5 +122,7 @@ test("a denied project route does not read the project directory for its sidebar
   const trace = await mockHub(page, url => url.pathname === "/api/hub/session" ? { body: { user: { id: "test-country", login: "test-country", email: null, displayName: null, role: "country", scope: { all: false, countries: ["KR"], brands: ["Kia"] }, mustChangePassword: false } } } : undefined);
   await page.goto("http://127.0.0.1:3335/ko/renewal/projects/11111111-1111-4111-8111-111111111111/member");
   await expect(page.getByRole("heading", { name: "접근할 수 없습니다", exact: true })).toBeVisible();
-  expect(trace.requests).toEqual(["/api/hub/session"]);
+  // Focus may revalidate the session; a denied route must never request feature data.
+  expect(trace.requests).toContain("/api/hub/session");
+  expect(trace.requests.every(path => path === "/api/hub/session")).toBe(true);
 });

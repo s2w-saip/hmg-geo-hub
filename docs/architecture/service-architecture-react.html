@@ -411,15 +411,15 @@ li + li { margin-top: 6px; }
     <div class="table-wrap"><table>
       <thead><tr><th scope="col">영역</th><th scope="col">현재 확인한 구현</th><th scope="col">React 전환 목표</th></tr></thead>
       <tbody>
-        <tr><td>프런트</td><td><code>front/</code>의 Next가 현재 화면과 API 중계를 담당한다. <code>front-react/</code>는 별도 실행하며 기본값은 서버 미연결이다.</td><td>React는 브라우저에서 실행하고, 같은 origin의 <code>/api/*</code>로 Hub를 호출한다. 호스팅·배포 방식은 인프라 단계에서 정한다.</td></tr>
-        <tr><td>이식 범위</td><td>리뉴얼 원본 37개 경로 대응과 UI 사본·화면 로더를 준비했다. 미연결 화면과 가로챈 테스트 응답으로 확인한 범위다.</td><td>같은 응답과 운영 스냅샷으로 원본의 화면·필터·폼·드릴다운·다운로드를 대조한다. 기존 Next 레거시의 유지·종료 범위는 T14.6에서 정한다.</td></tr>
-        <tr><td>인증·브라우저 API</td><td>React에 HttpOnly 쿠키 계약을 소비하는 클라이언트가 있다. 현재 <code>back/bff</code>는 Bearer 인증이며, 새 쿠키 세션 계약은 서버에 맞춰야 한다.</td><td>Hub가 세션 쿠키 발급·갱신·삭제, 쓰기 Origin 확인, 매 요청 계정 재확인을 맡는다. 브라우저에는 로그인 토큰을 전달하거나 저장하지 않는다.</td></tr>
+        <tr><td>프런트</td><td><code>front/</code>의 Next가 현재 화면과 API 중계를 담당한다. React는 별도 실행하며 기본값은 미연결이다. 현재 개발 연결은 React :3334 → Next API :3333 → 데이터 서버 :5555를 사용한다.</td><td>React는 브라우저에서 실행하고, 같은 origin의 <code>/api/*</code>로 Hub를 호출한다. 호스팅·배포 방식은 인프라 단계에서 정한다.</td></tr>
+        <tr><td>이식 범위</td><td>리뉴얼 원본 37개 경로 대응과 UI 사본·화면 로더를 준비했다. 미연결·계약 시험에 이어 실제 계정의 프롬프트·Overview·Kia/KR 필터 조회 응답을 확인했다. 필터 갱신은 프레임을 유지하고 데이터만 교체한다.</td><td>같은 응답과 운영 스냅샷으로 원본의 화면·필터·폼·드릴다운·다운로드를 대조한다. 기존 Next 레거시의 유지·종료 범위는 T14.6에서 정한다.</td></tr>
+        <tr><td>인증·브라우저 API</td><td>React는 기존 Next의 HttpOnly 쿠키 API에 연결했다. Next가 계정을 재확인하고 <code>back/bff</code>에 Bearer 인증으로 요청한다. 독립 Hub로의 계약 이전은 남아 있다.</td><td>Hub가 세션 쿠키 발급·갱신·삭제, 쓰기 Origin 확인, 매 요청 계정 재확인을 맡는다. 브라우저에는 로그인 토큰을 전달하거나 저장하지 않는다.</td></tr>
         <tr><td>서버 분리</td><td><code>back/bff</code>가 로그인·계정·입력 편집·데이터 읽기를 함께 담당한다. <code>back/hub_server</code>와 <code>back/data_server</code>는 아직 없다.</td><td>T13에서 Hub와 내부 데이터 서버로 분리한다. Hub만 <code>operations_db</code>에 접속하고, Hub에는 <code>gold_db</code> 계정을 주지 않는다.</td></tr>
         <tr><td>Gold·필터 조회</td><td>Gold 사전 집계·캐시와, 사전 집계 지연·실패 시 최후 수단으로 직접 집계하는 처리를 구현했다. 현재 맥의 일반 필터 조회에도 Silver 어댑터 경로가 남아 있어 Gold 조회 테이블 경로로 맞출 서버 작업이 있다.</td><td>cron job이 Silver 운영 스냅샷을 Gold 조회 테이블과 사전 집계로 가공한다. 필터 조회는 캐시를 먼저 보고, 없으면 <code>gold_db</code> 조회 테이블에서 계산한다. 사전 집계 지연·실패 시 최후 수단으로 Silver 운영 스냅샷을 직접 집계해 캐시하고, 그것도 실패하면 503 또는 해당 회차 빈칸으로 표시한다.</td></tr>
         <tr><td>GA4</td><td>속성 등록부와 관련 기존 코드가 있다. React의 GA4 분석 화면은 데이터 대기 상태다.</td><td>결과 입력이 있다는 것만 표기한다. 실제 연결 인터페이스 개발·구현은 보류한다.</td></tr>
       </tbody>
     </table></div>
-    <p class="note">그림은 서버 안정화와 T13 이후의 목표다. React 기본값 <code>VITE_HUB_CONNECTED=false</code>에서는 API를 호출하지 않는다. 실제 연결은 Hub가 브라우저 세션·화면 조회 계약을 제공한 뒤 진행한다.</p>
+    <p class="note">그림은 서버 안정화와 T13 이후의 목표다. 기본값 <code>VITE_HUB_CONNECTED=false</code>에서는 API를 호출하지 않는다. 사용자의 데이터 공급 요청으로 현재 개발 환경은 기존 Next API를 통해 연결했다. Next에 세션 확인 GET과 허용된 화면 읽기 중계를 추가했으며, 독립 Hub 연결·운영 전환은 별도로 남아 있다.</p>
   </section>
 
   <section id="responsibility">
@@ -453,6 +453,7 @@ li + li { margin-top: 6px; }
       </tbody>
     </table></div>
     <p class="note">브라우저의 <code>/api/*</code>는 같은 origin의 Hub 계약을 따른다. 쿠키·Origin·상태 코드·파일 응답을 유지한다. 호스팅·프록시 배치는 인프라 단계에서 정한다. 화면·다운로드 응답만 제공하며 별도 지표 API를 추가하지 않는다.</p>
+    <p>현재 개발 연결은 기존 Next :3333이 이 브라우저 계약을 중계한다. 추가한 세션 GET은 쿠키의 실제 계정을 확인하고 사용자 정보만 반환한다. 화면 GET은 React가 사용하는 화면을 허용 목록으로 제한하고 메뉴 권한을 확인하며 <code>ctx.role</code>·<code>ctx.admin</code>은 계정에서 정한다. 지표 계산·DB 연결은 추가하지 않았다. 신규·기존 API 계약 35건, 실제 미로그인 관문과 로그인한 계정의 Overview·필터 조회 200 응답을 확인했다. 모든 화면·원본 대조는 남아 있다. 실행과 관찰한 응답값은 <a href="../handoff/react-standby.md">React 전환 준비</a>에 기록했다.</p>
   </section>
 
   <section id="gate">

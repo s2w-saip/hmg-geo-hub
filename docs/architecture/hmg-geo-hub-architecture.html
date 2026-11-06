@@ -172,18 +172,18 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   </div>
   <h1>HMG-GEO-HUB 아키텍처</h1>
   <p class="lede">로컬 서비스는 화면 서버(Next.js)와 데이터 서버(FastAPI) 두 프로세스, 그리고 DB 네 개로 돌아간다.
-    브라우저는 Next만 부르고, 화면을 위해 DB에 접속하는 것은 데이터 서버뿐이다. GEO 측정값은 서비스 DB의 gold_db에서 읽기만 하고,
+    브라우저의 데이터 요청은 Next를 거치고, 화면을 위해 DB에 접속하는 것은 데이터 서버뿐이다. GEO 측정값은 서비스 DB의 gold_db에서 읽기만 하고,
     서비스가 직접 가진 데이터는 입력 DB(프롬프트 · 측정 설정 · 기준정보 · GA4 속성 · 서비스 기준 주), 운영 DB(계정 · 권한), Gold DB(사전 집계 · 답변 단위 테이블 · GA4 · SEO), 캐시 DB 네 곳에 나눠 둔다. 이와 별도로 외부 API(<code>back/ext</code>)가
     입력 DB의 값을 API 키를 가진 수집 · 분석 호출자에게 읽기 전용으로 준다(<a href="#ext">외부 API</a>).
     이 문서는 지금 구현을 그린다. 허브 서버 분리 뒤의 목표 구조는 <a href="service-architecture-hub-split.html">허브 서버 분리안</a>에 있다. 허브 서버 분리(Next → 허브 서버 → 데이터 서버, T13) 전까지는 데이터 서버(<code>back/bff</code>)가 로그인 · 계정 · 입력 편집도 함께 맡는다.</p>
-  <p class="sub">병행 준비(2026-11-06): <code>front-react/</code>에 독립 실행하는 React SPA를 두었다(개발 :3334, 기본값 서버 미연결). 현재 서비스의 Next를 대체하거나 DB 연결을 추가한 것은 아니다. 서버 안정화 후 브라우저의 같은 origin <code>/api/*</code>를 허브 서버에 연결한다. 전환 목표의 전체 구조·책임 이전·현재와의 차이는 <a href="service-architecture-react.html">React 버전 아키텍처</a>, 실행·연결 설정은 <a href="../handoff/react-standby.md">React 전환 준비</a>에 있다.</p>
+  <p class="sub">병행 구현(2026-11-06): <code>front-react/</code>의 React SPA(개발 :3334, 저장소 기본값 미연결)에 기존 API의 개발 연결을 추가했다. React 브라우저의 같은 origin <code>/api/*</code> → Vite 개발 프록시 → 기존 Next :3333 → 데이터 서버 :5555 순서다. Next는 <code>GET /api/hub/session</code>으로 계정을 재확인하고 <code>GET /api/screens/*</code>에서 허용된 화면·메뉴 권한을 검사해 중계한다. 토큰은 HttpOnly 쿠키와 서버 사이에만 있으며 DB 연결·지표 계산은 추가하지 않는다. Next 교체와 독립 허브 연결은 별도다. 목표 구조·책임 이전은 <a href="service-architecture-react.html">React 버전 아키텍처</a>, 실행·연결 설정은 <a href="../handoff/react-standby.md">React 전환 준비</a>에 있다.</p>
   <p class="ssot"><strong>정본(SSOT)</strong> · 서비스 구조와 서비스 DB ERD는 이 문서 하나에만 둔다. 테이블·컬럼·권한의 최종 근거는
     SQL 마이그레이션이고, 이 문서는 그것을 그림으로 옮긴 정본이다. 구조나 스키마를 바꾸는 변경은 같은 커밋에서 이 문서를 고친다.
     방법은 <a href="#maintain">이 문서 고치는 법</a>.</p>
   <p class="asof">마지막 갱신 2026-11-06(키워드 · 소셜 빈 테이블 18개를 <code>analytics</code>에 추가) · 2026-11-06(사전 집계가 늦으면 최후의 수단으로 직접 집계) · 2026-11-06(DB 이름에서 <code>geohub_</code>를 뺌: <code>input_db</code> · <code>operations_db</code> · <code>gold_db</code> · <code>cache_db</code>) · 2026-11-06(어댑터 ② <code>bff/metrics/silver_obt.py</code> · <code>hub_stores/silver_db.py</code>, 스위치 <code>HGH_METRIC_SOURCE=silver</code>, 맥에서 켬, 사전 집계 · 캐시 신호는 매니페스트) · 2026-11-06(<code>hmg_analytics</code>를 없앰: GA4 속성 · 서비스 기준 주는 입력 DB로, GA4 · SEO 데이터는 Gold DB로. <code>input-003.sql</code> · <code>metrics-004.sql</code>) · 2026-11-06(<code>hmg_metrics</code>를 Gold DB <code>gold_db</code>와 캐시 DB <code>cache_db</code>로 분리: <code>metrics-001~003.sql</code> · <code>cache-001.sql</code>) · 2026-11-06(입력 DB <code>input_db</code> · 지표 DB <code>hmg_metrics</code> 신설, 입력 테이블 이동, 측정 설정 · 기준정보 원본, API 호출자 종류와 OpenAPI: <code>input-001~002.sql</code> · <code>metrics-001.sql</code> · <code>data-014.sql</code>) · 2026-11-05(계정 편집 계정 hmg_account_editor를 쓰는 열로 좁힘: operations-006, 비밀번호 해시를 읽지 못함, 할 일 F14) · 2026-11-05(권역 · 국가 계정은 브랜드 하나: operations-005가 <code>global_role</code> CHECK를 좁힘, 결정 기록 '범위 교차') · 2026-11-03(프로젝트 프롬프트 · 커스텀 태그 편집: HUB 카탈로그가 정본, data-012 · 계정 hmg_project_editor · 데이터 서버 <code>/v1/hub/projects/{id}/prompts</code> · <code>prompt-tags</code> · <code>prompt-fields</code> · 화면 projects/prompts가 HUB 행과 Gold 값을 견줌 · Gold 가져오기가 HUB가 고친 항목의 HUB 키를 지킴) · 2026-11-03(리뉴얼 Project 목록 · 프로젝트 탭, <code>gold/projects</code>의 범위 계정 거부 F20 · 프로젝트 탭 Dashboard: 데이터 서버 화면 projects/filters · as-of · dash-*, 저장한 필터 키 project-* · Mention · Citation: mention/rn-* · citation/*의 ctx.surface=project · Prompt: projects/prompts, Gold 리더 gold/projects/{id}?view=prompts · AI Conversion: conversion/renewal의 ctx.project_id · Setting: projects/settings) · 2026-11-02(서비스 기준 주: Global · Website의 Gold 읽기 상한, data-011 · manage.py sync-service-week · vm.sh service-week · 데이터 서버 화면 shared/service-week · Gold 리더 cycles/week-notes · Website Mention 시장 읽기: 데이터 서버 화면 mention/rn-markets · Gold 리더 mentions/market-gaps · Admin 엔티티 카탈로그: 엔티티 역할, data-010 · 고객 관심 데이터 관리: 시드 키워드 · 커뮤니티 소스, data-009 · Global 인용 자사 판정의 범위 국가 좁힘) · 반영한 스키마: <code>back/analytics/schema.sql</code>·<code>operations.sql</code>,
     <code>back/hub_storage/input-001~003.sql</code>, <code>metrics-001~004.sql</code>, <code>operations-001~005.sql</code></p>
   <dl class="facts">
-    <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span></dd></div>
+    <div><dt>프로세스</dt><dd>Next.js <span class="mono">:3333</span> · FastAPI <span class="mono">:5555</span> · 외부 API <span class="mono">:5560</span> · React 개발 <span class="mono">:3334</span></dd></div>
     <div><dt>DB</dt><dd>입력 DB · 운영 DB · Gold DB · 캐시 DB</dd></div>
     <div><dt>앱이 DB에 쓰는 곳</dt><dd>글로벌 · 프로젝트 프롬프트와 측정 설정 (INSERT만) · 계정별 저장한 필터 · 계정 관리 · GA4 속성 등록부 · 인용 출처 분류(교정 · 시드 · 공식 소셜 · 코드표) · 고객 관심 데이터(시드 키워드 · 커뮤니티 소스) · 엔티티 역할. 외부 API는 읽기만</dd></div>
     <div><dt>로그인</dt><dd>모든 화면 · 관리자·HQ·권역·국가 4역할, 관리자 아닌 계정은 자기 범위만</dd></div>
@@ -199,7 +199,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <h2 id="h-path">요청이 지나가는 길</h2>
   <figure>
     <div class="scroll">
-      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저는 Next.js(3333)만 부르고, Next 서버가 데이터 서버(5555)를 HTTP로 부른다. 데이터 서버는 모듈별로 운영 DB, 입력 DB, gold_db에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리, GA4 속성 등록부와 인용 출처 교정뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다. Global · Website의 Gold 읽기는 입력 DB에 기록된 서비스 기준 주(catalog.service_week)의 마지막 날까지만 한다.">
+      <svg viewBox="0 0 1200 556" role="img" aria-label="브라우저의 데이터 요청은 Next.js(3333)를 거친다. React 개발 앱(3334)의 같은 origin API도 개발 프록시를 통해 Next로 전달한다. Next 서버가 데이터 서버(5555)를 HTTP로 부른다. 데이터 서버는 모듈별로 운영 DB, 입력 DB, gold_db에 연결하며, DB 쓰기는 글로벌 프롬프트 편집의 INSERT, 계정별 저장한 필터, 관리자의 계정 관리, GA4 속성 등록부와 인용 출처 교정뿐이다. 화면과 데이터 읽기는 로그인한 계정의 범위 안에서만 한다. Global · Website의 Gold 읽기는 입력 DB에 기록된 서비스 기준 주(catalog.service_week)의 마지막 날까지만 한다.">
         <defs>
           <marker id="f1a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker>
           <marker id="f1w" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ahw" d="M0,0L10,5L0,10z"/></marker>
@@ -209,6 +209,8 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <rect class="box" x="16" y="110" width="100" height="390" rx="8"/>
         <text class="b" x="66" y="300" text-anchor="middle">브라우저</text>
         <text class="m mu" x="66" y="320" text-anchor="middle">127.0.0.1</text>
+        <text class="m mu sm" x="66" y="366" text-anchor="middle">React :3334</text>
+        <text class="mu sm" x="66" y="384" text-anchor="middle">개발 API 프록시</text>
 
         <!-- Next.js -->
         <rect class="frame" x="166" y="24" width="280" height="516" rx="10"/>
@@ -226,9 +228,9 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
         <text class="mu" x="214" y="258">페이지마다 로그인 확인</text>
 
         <rect class="box" x="200" y="310" width="228" height="202" rx="6"/>
-        <text class="b" x="214" y="334">/api/* 라우트 핸들러</text>
+        <text class="b" x="214" y="334">/api/* · screens/* 중계</text>
         <text class="m" x="214" y="356">hub/session · hub/password</text>
-        <text class="mu" x="214" y="372">로그인 · 로그아웃 · 비밀번호 변경</text>
+        <text class="mu" x="214" y="372">로그인 · 세션 확인 · 비밀번호 변경</text>
         <text class="m" x="214" y="394">hub/accounts·ga4-…·source-…</text>
         <text class="mu" x="214" y="410">계정 · GA4 연동 · 출처 교정 (관리자)</text>
         <text class="m" x="214" y="432">hub/global-prompts</text>
