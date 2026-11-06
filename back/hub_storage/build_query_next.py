@@ -67,7 +67,12 @@ def create(database: str, locale: str) -> None:
     psql("postgres", f"CREATE DATABASE {database} OWNER {OWNER} TEMPLATE template0 ENCODING 'UTF8' {locale}")
     psql("postgres", f"""REVOKE ALL ON DATABASE {database} FROM PUBLIC;
 ALTER DATABASE {database} SET "TimeZone" TO 'UTC';
-ALTER DATABASE {database} SET "DateStyle" TO 'ISO, MDY';""")
+ALTER DATABASE {database} SET "DateStyle" TO 'ISO, MDY';
+ALTER DATABASE {database} SET default_text_search_config TO 'pg_catalog.english';
+ALTER DATABASE {database} SET "IntervalStyle" TO 'postgres';
+ALTER DATABASE {database} SET lc_monetary TO 'en_US.UTF-8';
+ALTER DATABASE {database} SET lc_numeric TO 'en_US.UTF-8';
+ALTER DATABASE {database} SET lc_time TO 'en_US.UTF-8';""")
 
 
 def loader_role() -> None:

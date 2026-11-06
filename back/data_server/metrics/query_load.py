@@ -638,11 +638,12 @@ class Loader:
 
 
 async def refresh_entity_totals(gold: Any) -> None:
-    """Admin › 엔티티: the entities' numbers over every answer (legacy rd.refresh_entity_mention_total), and the names each was seen under, by month."""
+    """Admin › 엔티티: the numbers over every answer of the brands with a display name (legacy rd.entity_mention_total_expected), and the names each entity was seen under, by month."""
     async with gold.transaction():
         await gold.execute("DELETE FROM gold.entity_mention_total")
         await gold.execute("""INSERT INTO gold.entity_mention_total(entity_id,answers,mentions,updated_at)
-            SELECT entity_id,count(DISTINCT answer_key),coalesce(sum(mention_count),0),now() FROM gold.answer_mention_raw WHERE entity_id IS NOT NULL GROUP BY 1""")
+            SELECT entity_id,count(DISTINCT answer_key),coalesce(sum(mention_count),0),now() FROM gold.answer_mention_raw
+            WHERE entity_id IS NOT NULL AND entity_type='Brand' AND display_name IS NOT NULL GROUP BY 1""")
         await gold.execute("DELETE FROM gold.entity_mention_surface")
         await gold.execute("""INSERT INTO gold.entity_mention_surface(entity_id,run_month,surface,brand_rollup_entity_id,display_name)
             SELECT DISTINCT m.entity_id,date_trunc('month',j.measured_at)::date,t.surface,m.brand_rollup_entity_id,m.display_name

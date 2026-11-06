@@ -1,6 +1,7 @@
 """The query tables' load job (metrics/query_load.py): what it decides on its own. The rows themselves are checked against gold_db, by column, on real rounds (진행 기록)."""
 from __future__ import annotations
 
+import asyncio
 import unittest
 from datetime import date
 
@@ -115,6 +116,33 @@ class Digest(unittest.TestCase):
 
     def test_a_change_the_stored_judgments_rest_on_does(self):
         self.assertNotEqual(q.inputs_digest(self.inputs(["p1", "p2"])), q.inputs_digest(self.inputs(["p1", "p2"], group=1)))
+
+
+class EntityTotals(unittest.TestCase):
+    """Admin › 엔티티 lists the entities with totals: legacy counts brands with a display name there, not every product and feature."""
+
+    def test_only_a_named_brand_gets_a_total(self):
+        class Conn:
+            sql: list[str] = []
+
+            def transaction(self):
+                conn = self
+
+                class T:
+                    async def __aenter__(self):
+                        return conn
+
+                    async def __aexit__(self, *_):
+                        return False
+                return T()
+
+            async def execute(self, sql, *_):
+                self.sql.append(sql)
+
+        asyncio.run(q.refresh_entity_totals(Conn()))
+        insert = next(s for s in Conn.sql if "INSERT INTO gold.entity_mention_total" in s)
+        self.assertIn("entity_type='Brand'", insert)
+        self.assertIn("display_name IS NOT NULL", insert)
 
 
 class Small(unittest.TestCase):
