@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아키텍처 구현 대조</title>
+<style>
+:root {
+  --bg: #F3F5F7; --panel: #FFFFFF; --soft: #E7ECF1; --fg: #17202B; --muted: #586474; --line: #B9C3CF; --edge: #3E4A59;
+  --db: #0B706B; --db-bg: #E2F2EF; --write: #BF3A22; --new: #3F4FC4; --new-bg: #E9EBFB; --data: #8135A8; --data-bg: #F4EAF9;
+  --sans: "Pretendard", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
+    --db: #4FBFB6; --db-bg: #122A29; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245; --data: #D29BEF; --data-bg: #2A1B35;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
+  --db: #4FBFB6; --db-bg: #122A29; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245; --data: #D29BEF; --data-bg: #2A1B35;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+figure { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; }
+figcaption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+svg { display: block; width: 100%; height: 100%; }
+
+text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
+.c { text-anchor: middle; }
+.r { text-anchor: end; }
+.title { font-size: 22px; font-weight: 700; }
+.b { font-weight: 700; font-size: 14px; }
+.bs { font-weight: 700; font-size: 13px; }
+.h { font-weight: 700; font-size: 16px; }
+.sm { font-size: 12px; fill: var(--muted); }
+.m { font-family: var(--mono); font-size: 12px; fill: var(--muted); }
+.ms { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.mb { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.port { font-family: var(--mono); font-size: 12px; fill: var(--muted); font-weight: 400; }
+.lb { font-size: 12px; fill: var(--muted); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.lbw { fill: var(--write); font-weight: 600; }
+.lbn { fill: var(--new); font-weight: 600; }
+.d { font-size: 12px; }
+.rw { font-weight: 700; fill: var(--fg); }
+.rwn { font-weight: 700; fill: var(--write); }
+.sep { fill: none; stroke: var(--line); stroke-width: 1; }
+.lane { font-size: 13px; font-weight: 700; fill: var(--muted); text-anchor: middle; }
+
+.boundary { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.chip { fill: var(--soft); stroke: none; }
+.proc { fill: var(--panel); stroke: var(--line); }
+.mini { fill: var(--soft); stroke: var(--line); }
+.db { fill: var(--db-bg); stroke: var(--db); stroke-width: 1.4; }
+.key { fill: var(--panel); stroke: var(--fg); stroke-width: 1.8; }
+.new { fill: var(--new-bg); stroke: var(--new); stroke-width: 2; }
+.data { fill: var(--data-bg); stroke: var(--data); stroke-width: 2; }
+.ext { fill: none; stroke: var(--muted); }
+
+.e, .w, .n { fill: none; stroke-linecap: butt; }
+.e { stroke: var(--edge); stroke-width: 1.6; }
+.w { stroke: var(--write); stroke-width: 1.9; }
+.n { stroke: var(--new); stroke-width: 2; }
+.ah-e { fill: var(--edge); } .ah-w { fill: var(--write); } .ah-n { fill: var(--new); }
+
+/* 구현 대조: 지금 없는 것. tspan에는 opacity가 먹지 않아 fill-opacity를 쓴다 */
+.todo { opacity: .5; }
+.tt { fill-opacity: .5; }
+
+.notes { max-width: 1500px; margin: 0 auto; padding: 32px 24px 64px; font-size: 14px; line-height: 1.55; }
+.notes h2 { font-size: 18px; margin: 32px 0 10px; }
+.notes ul { margin: 0; padding-left: 20px; }
+.notes li { margin: 3px 0; }
+.notes table { width: 100%; border-collapse: collapse; background: var(--panel); }
+.notes th, .notes td { text-align: left; vertical-align: top; padding: 7px 10px; border: 1px solid var(--line); }
+.notes th { background: var(--soft); font-weight: 700; white-space: nowrap; }
+.notes code { font-family: var(--mono); font-size: 12.5px; }
+.notes .task { white-space: nowrap; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<figure>
+  <figcaption>허브 서버 분리안 그림에 2026-11-06 구현 상태를 겹친 사본이다. 지금 있는 것은 그대로, 아직 안 된 것은 투명도 50%로 그렸다. 판정 근거는 그림 아래 표에 있다.</figcaption>
+  <svg viewBox="0 0 1920 915" role="img" aria-label="허브 서버 분리안 그림의 구현 대조 사본. 지금 있는 것은 그대로, 아직 안 된 것은 투명도 50%로 그렸다. 안 된 것은 허브 서버 프로세스와 프록시, 호출 경계, Silver 실제 연결과 cron 가공, GA4 수집, 수집 · 분석 호출자 연결이다. 판정 근거는 그림 아래 표에 있다.">
+    <defs>
+      <marker id="ae" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah-e" d="M0,0L10,5L0,10z"/></marker>
+      <marker id="aw" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ah-w" d="M0,0L10,5L0,10z"/></marker>
+      <marker id="an" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path class="ah-n" d="M0,0L10,5L0,10z"/></marker>
+    </defs>
+
+    <!-- 제목 -->
+    <text class="title" x="500" y="33">서비스 아키텍처 (허브 서버 분리안) · 구현 대조 2026-11-06</text>
+    <g class="todo"><text class="sm" x="500" y="53">호출 흐름: Next.js → 허브 서버 → 데이터 서버 (단방향)</text></g>
+
+    <!-- 서비스 영역과 레인 -->
+    <rect class="boundary" x="16" y="66" width="1888" height="746" rx="14"/>
+    <text class="b r" x="1890" y="800" style="fill:var(--muted)">서비스 영역</text>
+    <rect class="chip" x="24" y="76" width="72" height="60" rx="6"/><text class="lane" x="60" y="111">프런트엔드</text>
+    <rect class="chip" x="24" y="168" width="72" height="338" rx="6"/><text class="lane" x="60" y="342">백엔드</text>
+    <rect class="chip" x="24" y="544" width="72" height="158" rx="6"/><text class="lane" x="60" y="628">DB</text>
+    <rect class="chip" x="24" y="734" width="72" height="70" rx="6"/><text class="lane" x="60" y="774">배치</text>
+
+    <!-- 외부 시스템: 호출자 -->
+    <rect class="ext" x="110" y="6" width="76" height="44" rx="6"/>
+    <text class="bs c" x="148" y="25">수집 서버</text>
+    <text class="sm c" x="148" y="42">앤써</text>
+    <rect class="ext" x="194" y="6" width="76" height="44" rx="6"/>
+    <text class="bs c" x="232" y="25">분석 모델</text>
+    <text class="sm c" x="232" y="42">분석팀</text>
+    <rect class="ext" x="300" y="6" width="170" height="44" rx="6"/>
+    <text class="b c" x="385" y="25">브라우저</text>
+    <text class="sm c" x="385" y="42">서비스 사용자 · 관리자</text>
+
+    <!-- 프런트엔드: Next.js -->
+    <rect class="proc" x="290" y="76" width="1600" height="60" rx="8"/>
+    <text class="b" x="304" y="101">Next.js 웹 서버</text>
+    <text class="m" x="304" y="121">front/ :3333</text>
+    <rect class="mini" x="424" y="84" width="124" height="44" rx="5"/>
+    <text class="bs c" x="486" y="102">쓰기 프록시</text>
+    <text class="ms c" x="486" y="119">/api/hub/*</text>
+    <rect class="mini" x="554" y="84" width="124" height="44" rx="5"/>
+    <text class="bs c" x="616" y="102">GET 프록시</text>
+    <text class="ms c" x="616" y="119">/api/* (hub 제외)</text>
+    <rect class="mini" x="684" y="84" width="260" height="44" rx="5"/>
+    <text class="mb c" x="814" y="102" style="font-size:12px">middleware</text>
+    <text class="sm c" x="814" y="119">세션 쿠키 확인 · 쓰기는 /api/hub/*만 허용</text>
+    <path class="e" d="M944,106H968" marker-end="url(#ae)"/>
+    <rect class="mini" x="968" y="84" width="299" height="44" rx="5"/>
+    <text class="bs c" x="1117" y="102">메뉴 · URL 접근 제어</text>
+    <text class="ms c" x="1117" y="119">route-policy</text>
+    <rect class="mini" x="1275" y="84" width="299" height="44" rx="5"/>
+    <text class="bs c" x="1424" y="102">리뉴얼 화면</text>
+    <text class="ms c" x="1424" y="119">/renewal/*</text>
+    <rect class="mini" x="1582" y="84" width="299" height="44" rx="5"/>
+    <text class="bs c" x="1731" y="102">레거시 화면</text>
+    <text class="ms c" x="1731" y="119">(dash)</text>
+
+    <!-- 백엔드: 프롬프트·기준정보 API -->
+    <rect class="proc" x="110" y="178" width="160" height="92" rx="8"/>
+    <text class="bs c" x="190" y="206">프롬프트·기준정보 API</text>
+    <text class="m c" x="190" y="229">back/ext :5560</text>
+    <text class="sm c" x="190" y="251">읽기 전용 · API 키 인증</text>
+
+    <!-- 백엔드: 허브 서버 -->
+    <g class="todo"><rect class="new" x="290" y="168" width="340" height="338" rx="10"/></g>
+    <g class="todo"><text x="304" y="192"><tspan class="h" style="fill:var(--new)">허브 서버</tspan><tspan class="m" dx="10">back/hub_server · 서비스 진입점</tspan></text></g>
+    <rect class="proc" x="302" y="202" width="316" height="46" rx="5"/>
+    <text class="bs c" x="460" y="220">인증 · 계정 검증</text>
+    <text class="sm c" x="460" y="238">로그인 토큰 발급 · 요청별 계정 재확인</text>
+    <g class="todo"><rect class="proc" x="302" y="254" width="316" height="62" rx="5" style="stroke:var(--new);stroke-width:1.6"/></g>
+    <g class="todo"><text class="bs c" x="460" y="272" style="fill:var(--new)">데이터 서버 프록시</text></g>
+    <g class="todo"><text class="sm c" x="460" y="290">GET 요청만 전달 · 응답 그대로 반환</text></g>
+    <g class="todo"><text class="sm c" x="460" y="306">화면 · 지표 · 입력 데이터 목록 (gold_db 값 포함)</text></g>
+    <rect class="proc" x="302" y="322" width="316" height="46" rx="5"/>
+    <text class="bs c" x="460" y="340">사용자 데이터 관리</text>
+    <text class="sm c" x="460" y="358">계정 · 접근 권한 · 저장 필터</text>
+    <rect class="proc" x="302" y="374" width="316" height="62" rx="5"/>
+    <text class="bs c" x="460" y="392">입력 데이터 관리</text>
+    <text class="sm c" x="460" y="410">프롬프트 · 커스텀 태그 · 측정 설정</text>
+    <text class="sm c" x="460" y="426">인용 출처 분류 · 고객 관심 · 엔티티 역할</text>
+    <rect class="proc" x="302" y="442" width="316" height="52" rx="5"/>
+    <text class="bs c" x="460" y="463">GA4 속성 등록</text>
+    <text class="ms c" x="460" y="481">catalog.ga4_registry</text>
+
+    <!-- 백엔드: 데이터 서버 -->
+    <rect class="data" x="720" y="168" width="1170" height="338" rx="10"/>
+    <text x="736" y="192"><tspan class="h" style="fill:var(--data)">데이터 서버</tspan><tspan class="m" dx="12"><tspan class="tt">back/data_server · 허브 서버 전용 내부 서버</tspan> · 지표 계산 · <tspan class="tt">요청 처리 중 DB 쓰기는 cache_db만</tspan></tspan></text>
+
+    <!-- 데이터 서버: 요청 처리 -->
+    <rect class="proc" x="734" y="202" width="164" height="86" rx="6"/>
+    <text class="b c" x="816" y="232">권한 범위 적용</text>
+    <text class="ms c" x="816" y="250">access.py</text>
+    <g class="todo"><text class="sm c" x="816" y="270">내부 토큰 서명 검증</text></g>
+    <rect class="proc" x="916" y="202" width="164" height="86" rx="6"/>
+    <text class="b c" x="998" y="238">화면 응답 조합</text>
+    <text class="ms c" x="998" y="258">screens/ → api.get</text>
+    <rect class="proc" x="1098" y="202" width="778" height="86" rx="6"/>
+    <text x="1112" y="222"><tspan class="b">데이터 소스 라우팅</tspan><tspan class="ms" dx="10">api.get · metrics/serving.py</tspan></text>
+    <path class="sep" d="M1334,234V282"/>
+    <path class="sep" d="M1624,234V282"/>
+    <text class="bs" x="1112" y="244">초기 화면</text>
+    <text class="sm" x="1112" y="262">gold_db의 사전 집계 값 조회</text>
+    <text class="bs" x="1346" y="244">필터 조회</text>
+    <text class="sm" x="1346" y="262">캐시 조회 → 미스 시 <tspan class="tt">gold_db 조회용</tspan></text>
+    <text class="sm" x="1346" y="278"><tspan class="tt">테이블에서 집계</tspan> 후 캐시 저장</text>
+    <text class="bs" x="1636" y="244">사전 집계 지연 · 실패 (폴백)</text>
+    <text class="sm" x="1636" y="262">조회 시점에 직접 집계 후</text>
+    <text class="sm" x="1636" y="278">캐시 저장</text>
+
+    <!-- 데이터 서버: 지표 계산 -->
+    <rect class="key" x="1156" y="304" width="212" height="58" rx="6"/>
+    <text class="c" x="1262" y="327"><tspan class="b">지표 정의 · 계산</tspan><tspan class="ms" dx="8">metrics/</tspan></text>
+    <text class="ms c" x="1262" y="347">catalog · formulas · compute</text>
+    <rect class="proc" x="1392" y="304" width="278" height="58" rx="6"/>
+    <text class="c" x="1531" y="321"><tspan class="bs">사전 집계 레이어</tspan><tspan class="ms" dx="8">gold_rows</tspan></text>
+    <text class="sm c" x="1531" y="338"><tspan class="rw">읽기</tspan> metric_row · metric_call</text>
+    <text class="sm c" x="1531" y="354"><tspan class="rwn">쓰기</tspan> 롤업 잡 실행 시에만</text>
+
+    <!-- 데이터 서버: 데이터 접근 -->
+    <rect class="proc" x="734" y="304" width="362" height="190" rx="6"/>
+    <text class="b c" x="915" y="336">입력 데이터 조회</text>
+    <text class="sm c" x="915" y="362">프롬프트 · 측정 설정 · 기준정보</text>
+    <text class="sm c" x="915" y="382">입력 데이터 목록 (gold_db 값 포함)</text>
+    <text class="sm c" x="915" y="402">GA4 이벤트 목록</text>
+    <text class="sm c" x="915" y="422">입력 데이터 저장 전 검증</text>
+    <text class="sm c" x="915" y="456"><tspan class="rw">읽기</tspan> input_db · gold_db</text>
+    <g class="todo"><text class="sm c" x="915" y="476"><tspan class="rw">쓰기</tspan> 없음</text></g>
+
+    <rect class="proc" x="1134" y="378" width="250" height="116" rx="6"/>
+    <text class="b c" x="1259" y="398">gold_db 어댑터</text>
+    <text class="ms c" x="1259" y="414">gold_current · gold_reader</text>
+    <text class="sm c" x="1259" y="436"><tspan class="rw">읽기</tspan> 조회용 테이블 · 드릴다운 · 답변 원문</text>
+    <text class="sm c" x="1259" y="454">입력 데이터의 소유 URL · 제외 역할</text>
+    <text class="sm c" x="1259" y="478"><tspan class="rw">쓰기</tspan> 없음</text>
+
+    <rect class="proc" x="1426" y="378" width="244" height="116" rx="6"/>
+    <text class="b c" x="1548" y="398">Silver 어댑터</text>
+    <text class="ms c" x="1548" y="414">silver_obt</text>
+    <text class="sm c" x="1548" y="436"><tspan class="rw">읽기</tspan> Silver OBT · 매니페스트 · 입력 데이터</text>
+    <g class="todo"><text class="sm c" x="1548" y="454">사전 집계 지연 · 실패 시에만 집계</text></g>
+    <text class="sm c" x="1548" y="478"><tspan class="rw">쓰기</tspan> 없음</text>
+
+    <rect class="proc" x="1686" y="378" width="190" height="116" rx="6"/>
+    <text class="b c" x="1781" y="398">캐시 조회 · 저장</text>
+    <text class="ms c" x="1781" y="414">cache_db</text>
+    <text class="sm c" x="1781" y="442"><tspan class="rw">읽기</tspan> 조건별 조회 결과</text>
+    <text class="sm c" x="1781" y="466"><tspan class="rwn">쓰기</tspan> 필터 조회 · 폴백 결과</text>
+
+    <!-- 데이터 서버 안 흐름 -->
+    <path class="e" d="M898,245H916" marker-end="url(#ae)"/>
+    <path class="e" d="M1080,245H1098" marker-end="url(#ae)"/>
+    <path class="e" d="M998,288V304" marker-end="url(#ae)"/>
+    <path class="e" d="M1262,288V304" marker-end="url(#ae)"/>
+    <path class="e" d="M1368,333H1392" marker-end="url(#ae)"/>
+    <path class="e" d="M1145,288V378" marker-end="url(#ae)"/>
+    <path class="e" d="M1262,362V378" marker-end="url(#ae)"/>
+    <path class="e" d="M1548,362V378" marker-end="url(#ae)"/>
+    <path class="e" d="M1781,288V378" marker-end="url(#ae)"/>
+
+    <!-- 허브 서버 → 데이터 서버 -->
+    <g class="todo"><path class="n" d="M618,270H734" marker-end="url(#an)"/></g>
+    <g class="todo"><text class="lb lbn c" x="675" y="262">GET 프록시</text></g>
+    <g class="todo"><text class="lb lbn c" x="675" y="287">내부 토큰</text></g>
+    <g class="todo"><text class="lb lbn c" x="675" y="302">계정 범위 전달</text></g>
+    <g class="todo"><path class="n" d="M618,405H734" marker-end="url(#an)"/></g>
+    <g class="todo"><text class="lb lbn c" x="675" y="397">저장 전 검증</text></g>
+    <g class="todo"><text class="lb lbn c" x="675" y="421">읽기 전용</text></g>
+
+    <!-- 위쪽 호출 -->
+    <g class="todo"><path class="e" d="M148,50V178" marker-end="url(#ae)"/></g>
+    <g class="todo"><path class="e" d="M232,50V178" marker-end="url(#ae)"/></g>
+    <g class="todo"><text class="lb c" x="190" y="120">GET · API 키</text></g>
+    <path class="e" d="M385,50V76" marker-end="url(#ae)"/>
+    <text class="lb" x="393" y="62">HTTP · 세션 쿠키</text>
+    <g class="todo"><path class="w" d="M486,128V168" marker-end="url(#aw)"/></g>
+    <g class="todo"><text class="lb lbw r" x="478" y="158">쓰기 요청 (허브 서버에서 종료)</text></g>
+    <g class="todo"><path class="n" d="M616,128V168" marker-end="url(#an)"/></g>
+    <g class="todo"><text class="lb lbn" x="624" y="158">읽기 요청</text></g>
+    <g class="todo"><text class="lb c" x="551" y="158">로그인 토큰</text></g>
+
+    <!-- DB -->
+    <path class="db" d="M110,556V690A145,12 0 0 0 400,690V556"/><ellipse class="db" cx="255" cy="556" rx="145" ry="12"/>
+    <text class="c" x="255" y="590"><tspan class="mb">operations_db</tspan><tspan class="port" dx="8">:55437</tspan></text>
+    <text class="b c" x="255" y="614">사용자 데이터</text>
+    <text class="c" x="255" y="636">계정 · 접근 권한 · 저장 필터</text>
+    <g class="todo"><text class="sm c" x="255" y="656" style="font-weight:600;fill:var(--new)">허브 서버 전용</text></g>
+    <text class="m c" x="255" y="676">system.*</text>
+
+    <path class="db" d="M420,556V690A210,12 0 0 0 840,690V556"/><ellipse class="db" cx="630" cy="556" rx="210" ry="12"/>
+    <text class="c" x="630" y="590"><tspan class="mb">input_db</tspan><tspan class="port" dx="8">:55438</tspan></text>
+    <text class="b c" x="630" y="614">입력 데이터</text>
+    <text class="c" x="630" y="636">프롬프트 · 커스텀 태그 · 측정 설정 · 기준정보</text>
+    <text class="sm c" x="630" y="656">입력 데이터 외: GA4 속성 · 서비스 기준 주</text>
+    <text class="m c" x="630" y="676">catalog.* · ext.* 뷰</text>
+
+    <path class="db" d="M862,556V690A334,12 0 0 0 1530,690V556"/><ellipse class="db" cx="1196" cy="556" rx="334" ry="12"/>
+    <text class="c" x="1196" y="584"><tspan class="mb">gold_db</tspan><tspan class="port" dx="6">:55439</tspan><tspan class="sm tt" dx="14" style="font-weight:600;fill:var(--new)">허브 서버 미접속</tspan></text>
+
+    <rect class="proc" x="872" y="592" width="120" height="96" rx="5"/>
+    <text class="bs" x="880" y="608">플랫폼 데이터</text>
+    <g class="todo"><text class="sm" x="880" y="624">GA4 · SEO</text></g>
+    <g class="todo"><text class="sm" x="880" y="639">키워드 · 소셜</text></g>
+    <text class="ms" x="880" y="654">analytics.*</text>
+    <text class="ms" x="880" y="668">ref.*</text>
+    <text class="ms" x="880" y="682">ops.*</text>
+
+    <rect class="proc" x="1000" y="592" width="520" height="96" rx="5"/>
+    <text class="bs" x="1010" y="608">Silver OBT 가공 결과</text>
+    <text class="sm" x="1010" y="624">초기 화면 (사전 집계)</text>
+    <text class="ms" x="1010" y="640">metric_row</text><text class="d" x="1132" y="640">지표 값</text>
+    <text class="ms" x="1010" y="654">first_screen_read</text><text class="d" x="1132" y="654">목록</text>
+    <text class="ms" x="1010" y="668">metric_call</text><text class="d" x="1132" y="668">계산 이력</text>
+    <text class="ms" x="1010" y="682">rollup_run</text><text class="d" x="1132" y="682">실행 이력</text>
+    <path class="sep" d="M1190,614V684"/>
+    <g class="todo"><text class="sm" x="1198" y="624">필터 조회용</text></g>
+    <text class="ms" x="1198" y="640">answer_*fact</text><text class="d" x="1294" y="640">답변 · 언급</text>
+    <text class="ms" x="1198" y="654">citation_fact</text><text class="d" x="1294" y="654">인용</text>
+    <text class="ms" x="1198" y="668">acr_*</text><text class="d" x="1294" y="668">ACR</text>
+    <path class="sep" d="M1364,614V684"/>
+    <text class="sm" x="1372" y="624">표시 · 필터</text>
+    <text class="ms" x="1372" y="640">answer_body</text><text class="d" x="1454" y="640">답변 원문</text>
+    <text class="ms" x="1372" y="654">dim_*</text><text class="d" x="1454" y="654">차원</text>
+
+    <path class="db" d="M1600,556V690A140,12 0 0 0 1880,690V556"/><ellipse class="db" cx="1740" cy="556" rx="140" ry="12"/>
+    <text class="c" x="1740" y="590"><tspan class="mb">cache_db</tspan><tspan class="port" dx="8">:55439</tspan></text>
+    <text class="b c" x="1740" y="614">캐시 DB</text>
+    <text class="c" x="1740" y="636">필터 조회 결과</text>
+    <text class="m c" x="1740" y="664">cache.query_result</text>
+
+    <!-- 백엔드 → DB -->
+    <path class="e" d="M190,270V534H470V548" marker-end="url(#ae)"/>
+    <text class="lb" x="198" y="400">ext.* 뷰 읽기</text>
+    <path class="w" d="M340,506V546" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="348" y="526">사용자 데이터 읽기 · 쓰기</text>
+    <path class="w" d="M540,506V545" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="548" y="526">입력 데이터 읽기 · 쓰기</text>
+
+    <path class="e" d="M790,494V548" marker-end="url(#ae)"/>
+    <text class="lb" x="798" y="526">입력 데이터 읽기</text>
+    <path class="e" d="M1000,494V546" marker-end="url(#ae)"/>
+    <text class="lb" x="1008" y="526">목록의 gold_db 값</text>
+    <path class="e" d="M1115,288V544" marker-end="url(#ae)"/>
+    <text class="lb" x="1123" y="520">초기 화면 목록</text>
+    <text class="lb" x="1123" y="535">GA4 결과</text>
+    <path class="e" d="M1290,494V544" marker-end="url(#ae)"/>
+    <g class="todo"><text class="lb" x="1298" y="520">필터 집계</text></g>
+    <text class="lb" x="1298" y="535">드릴다운 · 원문</text>
+    <path class="e" d="M1405,362V546" marker-end="url(#ae)"/>
+    <text class="lb" x="1413" y="526">지표 행 읽기</text>
+    <g class="todo"><path class="e" d="M1565,494V825" marker-end="url(#ae)"/></g>
+    <g class="todo"><text class="lb" x="1573" y="520">폴백 시에만</text></g>
+    <g class="todo"><text class="lb" x="1573" y="535">운영 스냅샷만</text></g>
+    <path class="e" d="M1765,494V544" marker-end="url(#ae)"/>
+    <text class="lb r" x="1757" y="526">읽기</text>
+    <path class="w" d="M1797,494V545" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="1805" y="526">쓰기</text>
+
+    <!-- 배치: 데이터 서버 cron job -->
+    <rect class="data" x="110" y="734" width="1430" height="70" rx="10"/>
+    <text class="h" x="124" y="765" style="fill:var(--data)">데이터 서버 <tspan class="tt">cron job</tspan></text>
+    <text class="sm" x="124" y="785">잡별 독립 프로세스</text>
+
+    <rect class="proc" x="424" y="742" width="200" height="54" rx="6"/>
+    <text class="mb c" x="524" y="759">sync-service-week</text>
+    <text class="sm c" x="524" y="775"><tspan class="ms">gold_db</tspan> 읽기</text>
+    <text class="sm c" x="524" y="790">서비스 기준 주 판정</text>
+
+    <rect class="proc" x="634" y="742" width="216" height="54" rx="6"/>
+    <text class="mb c" x="742" y="759">sync-gold-catalog</text>
+    <text class="sm c" x="742" y="775"><tspan class="ms">gold_db</tspan> 읽기</text>
+    <text class="sm c" x="742" y="790">프롬프트 · 프로젝트 정의 · 키 동기화</text>
+
+    <rect class="proc" x="862" y="742" width="190" height="54" rx="6"/>
+    <text class="mb c" x="957" y="759" style="font-size:12px">ga4_collect.py</text>
+    <g class="todo"><text class="sm c" x="957" y="775">GA4 결과 수집</text></g>
+    <g class="todo"><text class="sm c" x="957" y="790"><tspan class="ms">input_db</tspan> 속성 읽기 · 상태 쓰기</text></g>
+
+    <rect class="proc" x="1064" y="742" width="466" height="54" rx="6"/>
+    <text class="mb c" x="1297" y="763">manage.py rollup</text>
+    <text class="sm c" x="1297" y="782"><tspan class="tt">Silver 가공 ·</tspan> 사전 집계 저장 · 이전 캐시 삭제</text>
+
+    <!-- 배치 → DB -->
+    <path class="w" d="M524,742V702" marker-end="url(#aw)"/>
+    <text class="lb lbw r" x="516" y="722">서비스 기준 주</text>
+    <path class="w" d="M742,742V702" marker-end="url(#aw)"/>
+    <text class="lb lbw r" x="734" y="722">프롬프트 · 프로젝트 정의 · gold_db 키</text>
+    <g class="todo"><path class="w" d="M957,742V700" marker-end="url(#aw)"/></g>
+    <g class="todo"><text class="lb lbw" x="965" y="722">GA4 결과 저장</text></g>
+    <path class="w" d="M1120,742V703" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="1128" y="722"><tspan class="tt">가공 결과 ·</tspan> 사전 집계 저장</text>
+    <path class="e" d="M1400,742V701" marker-end="url(#ae)"/>
+    <text class="lb" x="1408" y="722">조회용 테이블 읽기</text>
+    <path class="w" d="M1530,769H1740V704" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="1590" y="760">이전 캐시 삭제</text>
+
+    <!-- 외부 시스템: 데이터 소스 -->
+    <g class="todo"><path class="e" d="M957,796V826" marker-end="url(#ae)"/></g>
+    <rect class="ext" x="887" y="826" width="140" height="50" rx="6"/>
+    <text class="b c" x="957" y="848">GA4 Data API</text>
+    <text class="sm c" x="957" y="866">Google</text>
+
+    <g class="todo"><path class="e" d="M1480,796V826" marker-end="url(#ae)"/></g>
+    <g class="todo"><text class="lb r" x="1472" y="826">Silver OBT 읽기 · 운영 스냅샷 · 매니페스트</text></g>
+    <g class="todo"><path class="ext" d="M1420,832V878A145,7 0 0 0 1710,878V832"/><ellipse class="ext" cx="1565" cy="832" rx="145" ry="7"/></g>
+    <g class="todo"><text class="b c" x="1565" y="858">파이프라인 Silver OBT</text></g>
+    <g class="todo"><text class="sm c" x="1565" y="875">원천 데이터 · 운영 스냅샷 · 매니페스트</text></g>
+
+    <!-- 범례 -->
+    <g>
+      <path class="e" d="M26,838H62" marker-end="url(#ae)"/><text class="sm" x="70" y="842">요청 · 읽기</text>
+      <path class="n" d="M150,838H186" marker-end="url(#an)"/><text class="sm" x="194" y="842">허브 서버 경유</text>
+      <path class="w" d="M292,838H328" marker-end="url(#aw)"/><text class="sm" x="336" y="842">쓰기</text>
+      <g class="todo"><path class="e" d="M392,838H428" marker-end="url(#ae)"/></g><text class="sm" x="436" y="842">투명도 50%: 안 된 것</text>
+      <path class="db" d="M26,860V872A11,4 0 0 0 48,872V860"/><ellipse class="db" cx="37" cy="860" rx="11" ry="4"/><text class="sm" x="56" y="871">DB</text>
+      <rect class="new" x="86" y="858" width="26" height="18" rx="3"/><text class="sm" x="118" y="871">허브 서버</text>
+      <rect class="data" x="182" y="858" width="26" height="18" rx="3"/><text class="sm" x="214" y="871">데이터 서버 · cron job</text>
+      <rect class="ext" x="348" y="858" width="26" height="18" rx="3"/><text class="sm" x="380" y="871">외부 시스템</text>
+      <rect class="key" x="462" y="858" width="26" height="18" rx="3"/><text class="sm" x="494" y="871">지표 정의 · 계산의 단일 지점</text>
+    </g>
+  </svg>
+</figure>
+<section class="notes">
+  <h2>판정 기준 (맥 로컬 실측, VM · Docker 제외)</h2>
+  <ul>
+    <li>코드가 있고 실제로 돌거나 연결되는 것은 그대로, 없거나 실행된 적 없는 것은 50%다. 테이블이 있어도 0행이면 데이터 줄은 50%다.</li>
+    <li>허브 서버 몫의 기능과 DB 연결은 지금 <code>back/bff</code>가 함께 맡으므로 그대로 뒀다. 프로세스 틀 · 프록시 · 호출 경계만 50%다. 옮기면 되는 것과 새로 만들 것을 구분하기 위해서다.</li>
+    <li>외부 시스템 박스는 그대로 두고 연결만 판정했다. Silver만 접속 정보를 받은 적이 없어 박스까지 50%다.</li>
+    <li>집계: 박스 40개 중 37개 있음(이 중 12개는 문구 일부가 50%). 화살표 36개 중 26개 연결(이 중 2개는 라벨 일부가 50%).</li>
+  </ul>
+
+  <h2>50%로 표시한 것</h2>
+  <table>
+    <thead><tr><th>항목</th><th>지금 상태와 근거</th><th>태스크</th></tr></thead>
+    <tbody>
+      <tr><td>허브 서버 틀 · 제목, 호출 흐름 줄</td><td><code>back/hub_server</code> 폴더가 없다. Next가 부르는 서버 프로세스는 <code>:5555</code>의 <code>bff.app</code> 하나다.</td><td class="task">T13.2</td></tr>
+      <tr><td>데이터 서버 프록시, Next → 허브 서버 화살표 2개 · 로그인 토큰</td><td>프록시 코드가 없다. Next가 <code>HGH_API_BASE_URL=:5555</code>로 <code>back/bff</code>를 직접 호출한다.</td><td class="task">T13.2</td></tr>
+      <tr><td>허브 서버 → 데이터 서버 화살표 2개</td><td>같은 프로세스 안의 함수 호출이다. HTTP 경계가 없다.</td><td class="task">T13.3 · 13.4</td></tr>
+      <tr><td>내부 토큰 서명 검증</td><td><code>access.py</code>는 있으나 요청 계정 범위를 같은 프로세스의 <code>hub_auth.Principal</code>에서 받는다. 내부 토큰은 없다.</td><td class="task">T13.3</td></tr>
+      <tr><td><code>back/data_server</code> · 허브 서버 전용 내부 서버 · 요청 처리 중 쓰기는 cache_db만</td><td>폴더는 <code>back/bff</code>다. <code>:5555</code>를 Next가 직접 부른다. 편집 계정 9개로 <code>input_db</code> · <code>operations_db</code>에 쓴다.</td><td class="task">T13.3 · 13.6</td></tr>
+      <tr><td>입력 데이터 조회의 '쓰기 없음'</td><td><code>hub_stores</code>의 같은 모듈이 읽고 쓴다.</td><td class="task">T13.4</td></tr>
+      <tr><td><code>operations_db</code> '허브 서버 전용'</td><td><code>back/bff</code>와 <code>sync-gold-catalog</code>가 접속한다.</td><td class="task">T13.3 · 13.7</td></tr>
+      <tr><td><code>gold_db</code> '허브 서버 미접속'</td><td>입력 편집 모듈(<code>entity_roles</code> · <code>interest</code> · <code>source_overrides</code> · <code>source_lists</code>)이 같은 프로세스에서 <code>gold_db</code>를 읽는다.</td><td class="task">T13.4</td></tr>
+      <tr><td>필터 조회의 'gold_db 조회용 테이블에서 집계', '필터 집계' 라벨, '필터 조회용' 라벨</td><td>맥은 <code>HGH_METRIC_SOURCE=silver</code>라 <code>gold_rows.metric_source</code>가 가상 OBT에서 센다. <code>gold_db</code>에서 세는 것은 <code>LEFT_ON_GOLD</code> 호출 7종과 언급 브랜드 · 커스텀 필드 · 출처로 좁힌 조회뿐이다.</td><td class="task">T9.7</td></tr>
+      <tr><td>Silver 어댑터의 '사전 집계 지연 · 실패 시에만 집계'</td><td>필터 조회와 rollup이 모두 OBT에서 센다.</td><td class="task">T9.7</td></tr>
+      <tr><td>rollup의 'Silver 가공', '가공 결과' 라벨</td><td><code>answer_*fact</code> · <code>citation_fact</code> · <code>acr_*</code>에 쓰는 코드가 <code>back/bff</code> · <code>back/hub_storage</code> · <code>back/analytics</code>에 없다.</td><td class="task">T9.7</td></tr>
+      <tr><td>파이프라인 Silver OBT와 화살표 2개</td><td>접속 정보가 없다. 지금은 아키텍처 밖의 가상 OBT <code>geohub_silver_db</code>(:55439)를 읽는다. 어댑터는 그대로 두고 연결만 바꾸면 된다.</td><td class="task">T9.1</td></tr>
+      <tr><td>수집 · 분석 → API 화살표 2개</td><td>API 클라이언트 3개가 모두 맥 점검용이고 <code>disabled</code>다. 실제 호출자가 없다.</td><td class="task">T2.5 · 8.3</td></tr>
+      <tr><td>GA4 결과 수집 · 속성 읽기와 상태 쓰기, GA4 Data API 화살표, 'GA4 결과 저장' 화살표</td><td><code>ga4_collect.py</code> 코드는 있다. GA4 자격 증명 설정이 없고 <code>catalog.ga4_collect_status</code> · <code>analytics.ga4_row</code>가 0행이라 실행된 적이 없다.</td><td class="task">구현 안 함 (사용자 결정)</td></tr>
+      <tr><td>플랫폼 데이터의 'GA4 · SEO', '키워드 · 소셜'</td><td><code>analytics</code> 테이블 27개가 모두 0행이다(<code>ref</code> 4개 · <code>ops</code> 3개도 세어 보니 0행). 키워드 · 소셜 값은 <code>gold.kw_*</code> · <code>gold.ctx_*</code>에 있고 화면도 그쪽을 읽는다.</td><td class="task">T2.4 · 7.7</td></tr>
+      <tr><td>cron job</td><td>맥에 crontab · launchd 등록이 없다. 잡은 <code>start-local.sh</code> · <code>start-hub-storage.sh</code>와 수동으로만 돈다. 줄은 <code>vm.sh</code> 주석에 있다.</td><td class="task">VM 반영 때</td></tr>
+    </tbody>
+  </table>
+
+  <h2>그대로 뒀지만 그림과 다른 점</h2>
+  <ul>
+    <li><code>answer_*fact</code> · <code>citation_fact</code> · <code>acr_*</code> · <code>answer_body</code> · <code>dim_*</code>는 있고 읽히지만, Silver 가공 결과가 아니라 이전 Gold 복원본이다(<code>copy_gold.py</code>). T9.7 · T12.1에서 교체한다.</li>
+    <li>사전 집계 행(<code>metric_row</code> 52.9만 · <code>first_screen_read</code> 1,454 · 정의 버전 <code>2026-11-06.8</code> · 세 표면 모두 <code>done</code>)은 가상 OBT에서 센 값이다(<code>LEFT_ON_GOLD</code> 7종은 <code>gold_db</code>).</li>
+    <li>입력 데이터 관리의 측정 설정은 저장되지만 입력 화면은 Project뿐이다. Website · Global 화면은 T6.3이다.</li>
+    <li><code>back/ext</code>는 <code>:5560</code>에서 띄워 확인했다(<code>/ext/healthz</code> ok, 키 없으면 401, POST 405). <code>start-local.sh</code>는 이 서버를 띄우지 않는다.</li>
+    <li>middleware의 '세션 쿠키 확인 · 쓰기는 /api/hub/*만'은 <code>HGH_LOCAL_READ_ONLY=1</code>일 때의 동작이다. 그 밖의 경로로 Supabase 로그인 코드가 남아 있다.</li>
+    <li>잡 코드는 <code>back/hub_storage/manage.py</code> · <code>back/analytics/ga4_collect.py</code>에 있다. 데이터 서버 폴더 밖이다.</li>
+  </ul>
+
+  <h2>그림에 없는 지금 연결</h2>
+  <table>
+    <thead><tr><th>연결</th><th>내용</th><th>태스크</th></tr></thead>
+    <tbody>
+      <tr><td>Next.js → <code>back/bff</code> :5555</td><td>화면 · 지표 · 쓰기 요청이 모두 허브 서버 없이 직접 간다.</td><td class="task">T13.2</td></tr>
+      <tr><td><code>back/bff</code> → <code>operations_db</code> · <code>input_db</code> 쓰기</td><td>편집 계정 9개다. <code>operations_db</code> 2개(계정 · 저장 필터), <code>input_db</code> 7개(프롬프트 · 엔티티 역할 · GA4 등록부 · 고객 관심 · 측정 설정 · 프로젝트 · 출처 분류).</td><td class="task">T13.3</td></tr>
+      <tr><td><code>sync-gold-catalog</code> → <code>operations_db</code></td><td><code>system.project_reference</code>에 쓴다.</td><td class="task">T13.7</td></tr>
+      <tr><td><code>back/bff</code> → 가상 OBT</td><td><code>geohub_silver_db</code>의 <code>silver_contract</code> · <code>ops.snapshot_manifest</code>를 읽는다. 실제 Silver 접속 정보가 오면 사라진다.</td><td class="task">T9.1</td></tr>
+      <tr><td>키워드 · 소셜 화면 → <code>gold.kw_*</code> · <code>gold.ctx_*</code></td><td>그림의 자리는 <code>analytics.*</code>인데 그쪽은 빈 테이블이다.</td><td class="task">T2.4 · 7.7</td></tr>
+    </tbody>
+  </table>
+</section>
+</body>
+</html>
