@@ -12,9 +12,9 @@ from unittest import mock
 try:
     from fastapi import HTTPException
 
-    from data_server.hub_stores import hub_auth
+    from data_server.hub_stores import operations_db
     from data_server.hub_stores import source_overrides as so
-    from data_server.tests.test_hub_accounts import PASSWORD, Conn, Tables
+    from data_server.tests.signed_in import Conn, Tables, sign_in
     from data_server.tests.test_hub_editing import SECRET, T0, Ctx, Pool, call, run
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_source_overrides)") from exc
@@ -185,9 +185,8 @@ class Routes(unittest.TestCase):
                 raise so.invalid("The category is one of Gold's source categories", "category")
             return next((r for r in self.gold if so.key_of_gold(r["skey"]) == key), None)
 
-        hub_auth.limiter.failures.clear()
-        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
-                  mock.patch.object(hub_auth.operations_db, "connection", accounts),
+        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+                  mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(so.input_db, "connection", data),
                   mock.patch.object(so, "actors", actors),
                   mock.patch.object(so, "gold_list", gold_list),
@@ -198,7 +197,7 @@ class Routes(unittest.TestCase):
         self.token = self.sign_in("admin@hub")
 
     def sign_in(self, login):
-        status, body = run(call("POST", "/v1/auth/login", {"login": login, "password": PASSWORD}))
+        status, body = sign_in(self.t, login)
         self.assertEqual(status, 200, body)
         return body["data"]["token"]
 

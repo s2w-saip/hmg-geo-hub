@@ -16,8 +16,8 @@ try:
     from fastapi import HTTPException
 
     from data_server.hub_stores import entity_roles as er
-    from data_server.hub_stores import hub_auth
-    from data_server.tests.test_hub_accounts import PASSWORD, Conn, Tables
+    from data_server.hub_stores import operations_db
+    from data_server.tests.signed_in import Conn, Tables, sign_in
     from data_server.tests.test_hub_editing import SECRET, call, run
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_entity_roles)") from exc
@@ -101,21 +101,20 @@ class Routes(unittest.TestCase):
         async def no_gold(key):
             return None
 
-        hub_auth.limiter.failures.clear()
-        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
-                  mock.patch.object(hub_auth.operations_db, "connection", accounts),
+        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+                  mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(er, "reading", unreachable),
                   mock.patch.object(er, "gold_entity", no_gold),
                   mock.patch.object(er, "_pool", None)):
             p.start()
             self.addCleanup(p.stop)
-        status, body = run(call("POST", "/v1/auth/login", {"login": "admin@hub", "password": PASSWORD}))
+        status, body = sign_in(self.t, "admin@hub")
         self.assertEqual(status, 200, body)
         self.token = body["data"]["token"]
 
     def test_the_roles_are_the_administrators(self):
         self.t.add("hq", "hq", ["Kia"])
-        status, body = run(call("POST", "/v1/auth/login", {"login": "hq", "password": PASSWORD}))
+        status, body = sign_in(self.t, "hq")
         hq = body["data"]["token"]
         for method, path, body in (("GET", "/v1/hub/entity-roles", None), ("GET", f"/v1/hub/entity-roles/history?entity={ID}", None),
                                    ("GET", f"/v1/hub/entity-roles/mentions?entity={ID}", None),

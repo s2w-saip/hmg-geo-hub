@@ -26,10 +26,11 @@ from uuid import UUID, uuid4
 
 import asyncpg
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 from data_server.hub_stores import input_db, operations_db
 from data_server.hub_stores.hub_auth import Principal
+from shared.errors import parse, refused
 
 log = logging.getLogger("hgh.hub")
 
@@ -121,19 +122,6 @@ class PromptWrite(PromptFields):
 class VersionRef(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expectedVersion: int = Field(ge=1)
-
-
-def refused(status: int, code: str, message: str, details: dict | None = None) -> HTTPException:
-    return HTTPException(status, {"code": code, "message": message, **({"details": details} if details else {})})
-
-
-def parse(model: type[BaseModel], body, what: str = "prompt") -> BaseModel:
-    """A request body as `model`, or 422 in the error envelope (not FastAPI's default validation shape)."""
-    try:
-        return model.model_validate(body)
-    except ValidationError as e:
-        fields = sorted({".".join(str(p) for p in err["loc"]) for err in e.errors()})
-        raise refused(422, "invalid_value", f"Invalid {what} fields", {"fields": fields}) from None
 
 
 def clean(value: str | None) -> str | None:

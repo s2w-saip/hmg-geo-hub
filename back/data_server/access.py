@@ -18,7 +18,7 @@ sites (lib/geo-catalog/pseudo-country.ts scopeParent: SA -> SA-Dammam · SA-Jedd
 website reads did; site hubs (worldwide · EU · MIDDLEEAST · CPO · CN-BJ) are no country of a region, so only an
 account without countries (hq) reads them. The dedicated-site rules of the original (an account holding worldwide ·
 CPO · HYUNDAI-N) have no account here: the Admin screen gives countries of the account's RHQ regions only
-(hub_stores/accounts.py scope_of). The project surface stays refused, and so do the project identities and prompts
+(hub_server/accounts.py scope_of). The project surface stays refused, and so do the project identities and prompts
 (gold/projects, read without a surface param; F20, 2026-11-03)."""
 from __future__ import annotations
 

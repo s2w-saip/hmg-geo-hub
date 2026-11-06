@@ -26,6 +26,7 @@ import manage as analytics
 OPS_SECRET = ROOT / '.env.operations-db.local'
 DATA_SECRET = ROOT / '.env.data-access.local'
 EDIT_SECRET = ROOT / '.env.hub-edit-db.local'      # editor role password + login token secret
+INTERNAL_SECRET = ROOT / '.env.internal-token.local'   # the key of the hub server's token to the data server; both servers read this file
 EXT_SECRET = ROOT / '.env.ext-api-db.local'        # external API role password
 FILTER_SECRET = ROOT / '.env.saved-filter-db.local'  # saved filter role password (operations DB)
 ACCOUNT_SECRET = ROOT / '.env.account-db.local'    # account editor role password (operations DB)
@@ -79,7 +80,7 @@ CATALOG_LOCK = 617427413  # every catalog writer (sync_catalog.py, the HUB edito
 def sanitize(message):
     for path in (OPS_SECRET, DATA_SECRET, EDIT_SECRET, EXT_SECRET, FILTER_SECRET, ACCOUNT_SECRET, GA4_REGISTRY_SECRET,
                  SOURCE_OVERRIDE_SECRET, INTEREST_SECRET, ENTITY_ROLE_SECRET, SERVICE_WEEK_SECRET, PROJECT_EDITOR_SECRET,
-                 INPUT_SECRET, METRICS_SECRET, analytics.SECRET):
+                 INPUT_SECRET, METRICS_SECRET, INTERNAL_SECRET, analytics.SECRET):
         if path.exists():
             for key, value in analytics.env_file(path).items():
                 if ('PASSWORD' in key or 'SECRET' in key) and value:
@@ -707,7 +708,13 @@ WHERE (is_identity='YES' OR column_default LIKE 'nextval%') AND table_schema IN 
     print('Old data DB: stopped and removed; its dump is in .local/analytics-backups')
 
 
+def internal_token():
+    """The hub server's key for its token to the data server: made once, kept after that."""
+    create_secret(INTERNAL_SECRET, {'HGH_INTERNAL_TOKEN_SECRET': None})
+
+
 def write_env_files():
+    internal_token()
     """The connections the API and the external API get. The editors and the external API reach the input store."""
     env = analytics.env_file
     def url(role, password, store):
@@ -832,7 +839,7 @@ def set_admin():
     """Register the top-level administrator, or reset its password (its open sessions end). An account of another
     role becomes an administrator; the password is the one typed here, so no change is asked at sign-in."""
     sys.path.insert(0, str(ROOT / 'back'))
-    from data_server.hub_stores.passwords import hash_password
+    from hub_server.passwords import hash_password
     login = input('Login ID: ').strip()
     if not re.fullmatch(r'[A-Za-z0-9._@-]{3,200}', login):
         raise ValueError('Login ID: 3-200 characters of letters, digits and . _ @ -')
@@ -1286,6 +1293,7 @@ COMMANDS = {
     'import-interest-keywords': import_interest_keywords,
     'import-entity-roles': import_entity_roles,
     'sync-service-week': service_week,
+    'internal-token': lambda a: internal_token(),
     'rollup': rollup,
 }
 

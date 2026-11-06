@@ -29,11 +29,12 @@ import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from data_server.hub_stores import hub_auth, operations_db
-from data_server.hub_stores.catalog_editor import refused
-from data_server.hub_stores.hub_auth import Principal
-from data_server.hub_stores.passwords import hash_password
-from data_server.screens._query import RHQ_REGION_COUNTRIES
+from hub_server import auth as hub_auth
+from hub_server import operations_db
+from hub_server.passwords import hash_password
+from shared.account import Principal
+from shared.errors import refused
+from shared.regions import RHQ_REGION_COUNTRIES
 
 log = logging.getLogger("hgh.accounts")
 

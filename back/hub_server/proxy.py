@@ -1,5 +1,6 @@
-"""The way to the data server: a request goes on as it came and its answer comes back as it is. No reading of either: same status, same
-headers a client acts on, same bytes, the query string untouched (a repeated key, an encoded value). The data server decides the answer's shape."""
+"""The way to the data server: a request goes on as it came, with the internal token in place of the login token, and its answer comes back as it
+is. No reading of either: same status, same headers a client acts on, same bytes, the query string untouched (a repeated key, an encoded value).
+The data server decides the answer's shape."""
 from __future__ import annotations
 
 import logging
@@ -14,7 +15,7 @@ log = logging.getLogger("hgh.hub")
 
 # Hop-by-hop headers (RFC 9110 7.6.1) end at each connection. host and content-length are set for the next hop; server and date name that hop.
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "proxy-connection", "te", "trailer", "transfer-encoding", "upgrade"}
-NOT_SENT = HOP | {"host", "content-length"}
+NOT_SENT = HOP | {"host", "content-length", "authorization"}
 NOT_RETURNED = HOP | {"server", "date"}
 # The data server bounds its own reads; this only ends a request whose answer never comes. Next's longest wait is a download's.
 TIMEOUT = httpx.Timeout(connect=5, read=300, write=30, pool=5)
@@ -58,8 +59,10 @@ def failure(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status, headers={"Cache-Control": "no-store"})
 
 
-async def forward(request: Request) -> Response:
+async def forward(request: Request, internal: str) -> Response:
+    """The request on to the data server, the account in `internal`: the login token stops here."""
     headers = [(k, v) for k, v in request.headers.raw if k.decode("latin-1").lower() not in NOT_SENT]
+    headers.append((b"authorization", f"Bearer {internal}".encode()))
     body = await request.body()
     # httpx.Request, not client.build_request: the client's default headers would be added to the request.
     outgoing = httpx.Request(request.method, _target(request), headers=headers, content=body or None)

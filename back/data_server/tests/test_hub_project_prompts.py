@@ -14,9 +14,9 @@ try:
     import asyncpg
     from fastapi import HTTPException
 
-    from data_server.hub_stores import hub_auth
+    from data_server.hub_stores import operations_db
     from data_server.hub_stores import project_prompts as pp
-    from data_server.tests.test_hub_accounts import PASSWORD, Conn, Tables
+    from data_server.tests.signed_in import Conn, Tables, sign_in
     from data_server.tests.test_hub_editing import SECRET, call, run
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_hub_project_prompts)") from exc
@@ -101,14 +101,13 @@ class Routes(unittest.TestCase):
             raise AssertionError("the store is not read for a refused request")
             yield
 
-        hub_auth.limiter.failures.clear()
-        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
-                  mock.patch.object(hub_auth.operations_db, "connection", accounts),
+        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+                  mock.patch.object(operations_db, "connection", accounts),
                   mock.patch.object(pp, "reading", unreachable),
                   mock.patch.object(pp, "_pool", None)):
             p.start()
             self.addCleanup(p.stop)
-        status, body = run(call("POST", "/v1/auth/login", {"login": "admin@hub", "password": PASSWORD}))
+        status, body = sign_in(self.t, "admin@hub")
         self.assertEqual(status, 200, body)
         self.token = body["data"]["token"]
 
@@ -121,7 +120,7 @@ class Routes(unittest.TestCase):
 
     def test_the_prompts_are_the_administrators(self):
         self.t.add("hq", "hq", ["Kia"])
-        status, body = run(call("POST", "/v1/auth/login", {"login": "hq", "password": PASSWORD}))
+        status, body = sign_in(self.t, "hq")
         hq = body["data"]["token"]
         for method, path, body in (("GET", f"/v1/hub/projects/{PID}/prompts/{PROMPT}/history", None), *self.WRITES):
             self.assertEqual(run(call(method, path, body))[0], 401, (method, path))

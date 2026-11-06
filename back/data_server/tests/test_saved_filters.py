@@ -11,9 +11,9 @@ from uuid import UUID, uuid4
 try:
     import asyncpg
 
-    from data_server.hub_stores import hub_auth
     from data_server.hub_stores import saved_filters as sf
-    from data_server.tests.test_hub_editing import SECRET, T0, Ctx, Pool, call, run
+    from data_server.tests.signed_in import SECRET, token_for
+    from data_server.tests.test_hub_editing import T0, Ctx, Pool, call, run
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_saved_filters)") from exc
 
@@ -88,8 +88,6 @@ class Conn:
         if sql is sf.OWN_SQL:
             r = self.s.own(*args)
             return {"page": r["page"], "position": r["position"]} if r else None
-        if sql.startswith("SELECT a.user_id") and "a.user_id=$1" in sql:   # hub_auth.principal
-            return dict(self.s.accounts[args[0]]) if args[0] in self.s.accounts else None
         raise AssertionError(sql)
 
     async def fetchval(self, sql, *args):
@@ -117,7 +115,7 @@ class Routes(unittest.TestCase):
         async def reader():
             yield Conn(self.store)
 
-        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
                   mock.patch.object(sf.operations_db, "connection", reader),
                   mock.patch.object(sf, "_pool", Pool(Conn(self.store)))):
             p.start()
@@ -125,7 +123,7 @@ class Routes(unittest.TestCase):
 
     def token(self, user=None):
         user = user or self.me
-        return hub_auth.issue(SECRET.encode(), user, hub_auth.credential_version(T0), time.time())[0]
+        return token_for(user, self.store.accounts[user]["role"])
 
     def save(self, name, query="brand=Kia", page="overview", user=None, **kw):
         status, body = run(call("POST", "/v1/hub/saved-filters", {"page": page, "name": name, "query": query, **kw}, self.token(user)))

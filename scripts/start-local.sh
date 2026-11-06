@@ -23,7 +23,8 @@ if [ -f "$repo/.local/pg/operations/PG_VERSION" ]; then
         echo 'Service week check failed (above). The API starts anyway with the last recorded week; with none recorded its Gold screens answer 503.' >&2
         echo "  Retry after manage.py init has applied 011: HGH_HUB_NATIVE=1 $python -X utf8 back/hub_storage/manage.py sync-service-week" >&2
     fi
-    for f in .env.analytics.local .env.operations.local .env.input.local .env.metrics.local .env.hub-edit.local .env.silver.local; do
+    (cd "$repo" && HGH_HUB_NATIVE=1 "$python" -X utf8 back/hub_storage/manage.py internal-token)
+    for f in .env.analytics.local .env.operations.local .env.input.local .env.metrics.local .env.hub-edit.local .env.silver.local .env.internal-token.local; do
         [ -f "$repo/$f" ] && hub_env+=("$repo/$f")
     done
 fi
@@ -38,6 +39,7 @@ if listening 5555; then echo 'Port 5555 is in use by another process.' >&2; exit
 (
     cd "$repo/back"
     set -a; . "$secret"; for f in ${hub_env[@]+"${hub_env[@]}"}; do . "$f"; done; set +a
+    unset HGH_AUTH_SECRET HGH_ACCOUNT_EDITOR_DB_URL   # the hub server's: login and accounts
     nohup "$python" -m uvicorn data_server.app:app --host 127.0.0.1 --port 5555 >"$logs/api.log" 2>&1 &
     echo $! >"$logs/api.pid"
 )
@@ -58,6 +60,7 @@ fi
 if listening 5556; then echo 'Port 5556 is in use by another process.' >&2; exit 1; fi
 (
     cd "$repo/back"
+    set -a; for f in .env.operations.local .env.hub-edit.local .env.internal-token.local; do [ -f "$repo/$f" ] && . "$repo/$f"; done; set +a
     HGH_DATA_SERVER_URL=http://127.0.0.1:5555 nohup "$python" -m uvicorn hub_server.app:app --host 127.0.0.1 --port 5556 >"$logs/hub.log" 2>&1 &
     echo $! >"$logs/hub.pid"
 )

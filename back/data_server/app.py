@@ -1,8 +1,7 @@
-"""Local BFF/API over gold_db, the Silver OBT and the separate input and operations stores. Every route but /healthz and the
-login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and data reads run inside its scope
-(data_server/access.py). Read-only, except what the HUB writes: every account changes its own password
-(/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also
-manages the accounts (/v1/hub/accounts), edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
+"""The data server: screens and metrics over gold_db, the Silver OBT and the input store. It sits behind the hub server, which signs in the
+account and sends it here in an internal token (hub_stores/hub_auth.py): every route but /healthz refuses a request without one, and
+screens and data reads run inside the token's scope (data_server/access.py). Read-only, except what the hub server has not taken over yet:
+every account keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
 registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides), the customer-interest
 inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources), the entity roles (/v1/hub/entity-roles) and the project
 prompts with their tags (/v1/hub/projects/{id}/prompts, /v1/hub/projects/{id}/prompt-tags, /v1/hub/projects/{id}/prompt-fields)."""
@@ -20,7 +19,7 @@ from fastapi.responses import JSONResponse
 
 from data_server import access, api, screens
 from data_server.gold_reader.db import close_pool, connection, open_pool
-from data_server.hub_stores import (silver_db, accounts, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, metrics_db, hub_auth, hub_catalog, input_db, measurement, interest,
+from data_server.hub_stores import (silver_db, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, metrics_db, hub_auth, hub_catalog, input_db, measurement, interest,
                              operations_db, project_prompts, saved_filters, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
@@ -38,7 +37,6 @@ async def lifespan(app: FastAPI):
     await operations_db.open_pool()
     await catalog_editor.open_pool()
     await saved_filters.open_pool()
-    await accounts.open_pool()
     await ga4_registry.open_pool()
     await source_overrides.open_pool()
     await interest.open_pool()
@@ -57,7 +55,6 @@ async def lifespan(app: FastAPI):
         await operations_db.close_pool()
         await catalog_editor.close_pool()
         await saved_filters.close_pool()
-        await accounts.close_pool()
         await ga4_registry.close_pool()
         await source_overrides.close_pool()
         await interest.close_pool()
@@ -124,7 +121,7 @@ async def healthz():
             "operations": await operations_db.health(), "input": await input_db.health(), "cache": await cache_db.health()}
 
 
-# ─── HUB login, accounts, Global prompt editing and saved filters ─────────────────────────────────────
+# ─── Global prompt editing and saved filters ───────────────────────────────────────────────────────────
 # Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
 
 def hub_json(data, status: int = 200, database: str = "input_db") -> JSONResponse:
@@ -138,67 +135,6 @@ async def json_body(request: Request):
         return await request.json()
     except (json.JSONDecodeError, UnicodeDecodeError):
         raise HTTPException(422, "Request body must be JSON") from None
-
-
-@app.post("/v1/auth/login")
-async def auth_login(request: Request):
-    body = await json_body(request)
-    if not isinstance(body, dict) or not isinstance(body.get("login"), str) or not isinstance(body.get("password"), str):
-        raise HTTPException(422, "login and password are required")
-    session = await hub_auth.login(body["login"], body["password"])
-    await accounts.signed_in(UUID(session["user"]["id"]))
-    return hub_json(session)
-
-
-@app.get("/v1/auth/me")
-async def auth_me(request: Request):
-    # An account that has to replace an issued password is still itself here (its pages then ask for the new one).
-    who = await hub_auth.principal(request.headers.get("authorization"), password_change=True)
-    return hub_json({"user": who.view()})
-
-
-@app.post("/v1/auth/password")
-async def auth_password(request: Request):
-    body = catalog_editor.parse(accounts.PasswordChange, await json_body(request), "password")
-    return hub_json(await accounts.change_password(request.headers.get("authorization"), body), database="operations_db")
-
-
-# Admin › 사용자 관리 (hub_stores/accounts.py): the top-level administrator only.
-@app.get("/v1/hub/accounts")
-async def account_list(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await accounts.listing(actor), database="operations_db")
-
-
-@app.post("/v1/hub/accounts")
-async def account_create(request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(accounts.AccountCreate, await json_body(request), "account")
-    return hub_json(await accounts.create(body, actor), 201, database="operations_db")
-
-
-@app.get("/v1/hub/accounts/{user_id}")
-async def account(user_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    return hub_json(await accounts.detail(user_id, actor), database="operations_db")
-
-
-@app.put("/v1/hub/accounts/{user_id}")
-async def account_update(user_id: UUID, request: Request):
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    body = catalog_editor.parse(accounts.AccountUpdate, await json_body(request), "account")
-    return hub_json(await accounts.update(user_id, body, actor), database="operations_db")
-
-
-@app.post("/v1/hub/accounts/{user_id}/{action}")
-async def account_action(user_id: UUID, action: str, request: Request):
-    if action not in ("disable", "enable", "reset-password"):
-        raise HTTPException(404, "Unknown action")
-    actor = await hub_auth.admin(request.headers.get("authorization"))
-    if action == "reset-password":
-        return hub_json(await accounts.reset_password(user_id, actor), database="operations_db")
-    return hub_json(await accounts.set_status(user_id, "active" if action == "enable" else "disabled", actor),
-                    database="operations_db")
 
 
 # Admin › GA4 연동 (hub_stores/ga4_registry.py): the top-level administrator only.
