@@ -13,9 +13,19 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from hub_server import accounts, input_db, operations_db, proxy, saved_filters
+from hub_server import accounts, browser, input_db, operations_db, proxy, saved_filters
 from hub_server import auth as hub_auth
-from hub_server.inputs import catalog_editor, entity_roles, ga4_registry, hub_catalog, interest, measurement, project_prompts, source_lists, source_overrides
+from hub_server.inputs import (
+    catalog_editor,
+    entity_roles,
+    ga4_registry,
+    hub_catalog,
+    interest,
+    measurement,
+    project_prompts,
+    source_lists,
+    source_overrides,
+)
 from hub_server.inputs import projects as project_add
 from shared import internal_token
 from shared.errors import parse
@@ -534,6 +544,15 @@ async def catalog(kind: str, request: Request, limit: int = Query(100, ge=1, le=
 
 
 # ─── Everything else ────────────────────────────────────────────────────────────────────────────────────
+
+app.include_router(browser.router)
+
+
+@app.get("/v1/hub/{path:path}")
+async def hub_unknown(path: str):
+    """A read of none of the routes above: the data server's /v1/hub answers only the lists above and this server's own checks (data_checks.py). Other methods stay the proxy's 405."""
+    raise HTTPException(404, "Not found")
+
 
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def to_data_server(path: str, request: Request):

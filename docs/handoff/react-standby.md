@@ -51,7 +51,7 @@ npm run dev
 - `GET /api/hub/session`: 기존 HttpOnly 쿠키로 실제 계정을 재확인해 `{user}`만 반환한다. 토큰은 응답에 넣지 않는다.
 - `GET /api/screens/{name}`: React가 사용하는 화면만 허용하고 메뉴 권한을 확인한다. `ctx.role`·`ctx.admin`은 로그인한 계정에서 정하며, 반복 필터는 보존한다. 완성된 뷰모델은 기존 데이터 서버가 계산한다.
 
-현재 맥의 연결은 **React :3334 → Vite의 같은 origin `/api/*` 프록시 → 기존 Next :3333 → 허브 서버 :5556 → 데이터 서버 :5555**다(2026-11-07, T13 1c 프록시). Next의 기존 로그인·입력·드릴다운·다운로드 API를 재사용한다. T13의 독립 허브 서버가 구현됐다는 뜻은 아니며, 그 서버가 준비되면 프록시 대상만 바꿔 같은 브라우저 계약을 검증한다. 새 경로는 기존 로컬 모드에서만 열리고, 운영 전환·배포는 하지 않는다.
+현재 맥의 연결은 **React :3334 → Vite의 같은 origin `/api/*` 프록시 → 기존 Next :3333 → 허브 서버 :5556 → 데이터 서버 :5555**다(2026-11-07, T13 1c 프록시). Next의 기존 로그인·입력·드릴다운·다운로드 API를 재사용한다. 허브 서버가 같은 브라우저 계약을 직접 제공하게 됐으므로(2026-11-07, T14.5.2) 프록시 대상만 `http://127.0.0.1:5556`으로 바꾸면 Next 없이 붙는다. 아래 '허브 계약 구현' 참고. 새 경로는 기존 로컬 모드에서만 열리고, 운영 전환·배포는 하지 않는다.
 
 `front-react/.env.local`(git 제외):
 
@@ -80,6 +80,22 @@ HUB_PROXY_TARGET=http://127.0.0.1:3333
 3. `VITE_HUB_CONNECTED=true`로 바꾸고 개발 서버를 다시 시작한다. 정적 빌드는 이 값을 빌드할 때 반영한다.
 4. 먼저 로그인·로그아웃·비밀번호 변경과 Admin 계정 읽기/편집, Global Mention을 실서버로 확인한다. 테스트 응답을 가로채는 e2e와 구분한다.
 5. 아래 남은 검증을 끝낸 뒤에만 실제 프런트 전환을 검토한다. VM 반영과 기존 Next 종료는 사용자 지시 뒤에 한다.
+
+### 허브 계약 구현 (2026-11-07, T14.5.2)
+
+`back/hub_server/browser.py`가 아래 계약을 제공한다. `front-react/`는 고치지 않았다. React를 임시 포트 :3336에서 환경 변수로 `HUB_PROXY_TARGET=http://127.0.0.1:5556`을 주어 Next 없이 띄우고 확인했다: 로그인(HttpOnly · SameSite=Strict 쿠키, 응답에 토큰 없음), 15개 화면에서 실패한 `/api` 호출 0건, 필터 URL의 Overview, 로그아웃(쿠키 삭제). 같은 호출 82개를 Next와 허브에 보내 비교했더니 상태 코드는 모두 같고 본문 차이는 6건이다: 거부 화면의 `message`가 코드와 같은 값이라 뺀 4건, 알 수 없는 프로젝트 하위 경로의 `message` 1건, 없는 경로에 Next는 HTML 404 · 허브는 JSON 404인 1건. 저장 필터 추가 · 삭제와 Origin 거부도 확인했다.
+
+Next와 다르게 둔 것: 세션 없는 `/api/*`는 모두 `{error:{code:'unauthorized',message}}` 401 하나다(브라우저가 지금 받는 Next 미들웨어의 답과 같다). 화면 · 데이터 읽기 실패는 코드만 준다(`hghErrorResponse`와 같다). 메뉴 권한은 계정 역할 4개 표다(Global · Website 전부, Project · 프로젝트 화면은 관리자). `citations` · `mention-compare`에서 브라우저가 보낸 `ctx.*`를 지운다(Next는 일부 남겼다). 레거시 프로젝트 멤버십 게이트는 옮기지 않았다(멤버 데이터가 0행이고 Project는 관리자 전용).
+
+`front-react/`에 필요한 변경(이 작업에서는 하지 않음, `npm run check:source`가 보이는 목록):
+
+| 항목 | 할 일 |
+|---|---|
+| Admin › 측정 설정 새 페이지 | `renewal/admin/standards/measurement`를 옮기고 `source-routes.json`에 추가. 읽기 `GET /api/hub/measurements`(`{data:{items,options,editing}}`), 만들기 `POST /api/hub/projects`, 저장 필터 페이지 `measurement-settings` |
+| 사이드바 | `rn-sidebar.tsx`의 `renewalAdminTree`, `renewal-pages.ts`, `route-policy.ts`, 메시지 `nav.renewalAdminMeasurement` · `hubMeasurement` |
+| 첫 회차 전 프로젝트 | `[id]/not-found.tsx`(메시지 `renewal.projects.noData`), `project-model.ts`의 `projectLabel` · `name`, `project-list.tsx`, `rn-project-tab.tsx` |
+| 측정 설정 폼 | `project-measurement.tsx`의 안내 문구와 export(`Field` · `Choices` · `MEASUREMENT_INPUT`) |
+| 연결 | `.env.local`의 `HUB_PROXY_TARGET`을 허브 서버로. 전환 시점은 T14.5.3 뒤 사용자가 정한다 |
 
 ### 허브가 제공할 브라우저 계약
 

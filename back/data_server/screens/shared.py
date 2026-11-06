@@ -28,6 +28,12 @@ async def filter_dates(q) -> dict:
     return await load_filter_dates(q.get("surface", "global"), q.get("project_id"), q.get("family"))
 
 
+@screen("filters/options")
+async def browser_panel_options(q) -> dict:
+    """The filter panel's options as the browser's /api/filters/options answers them."""
+    return {"options": await panel_options(q)}
+
+
 @screen("shared/panel-options")
 async def panel_options(q) -> dict:
     """The filter panel's option props (PanelFilterOptions) for the page URL.

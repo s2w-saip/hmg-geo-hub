@@ -196,6 +196,22 @@ async def screen(path: str, request: Request):
     return EncodedJSON(built, headers={"Cache-Control": "no-store"})
 
 
+#: the screens whose answer says its own status (screens/mention_drilldown.py, overview market evidence): {status, body}
+DRILLS = frozenset(("mention/drill-answer", "mention/drill-brand-citations", "mention/drill-brand-prompts", "mention/drill-signal-prompts", "mention/drill-missing-prompts",
+                    "overview/market-evidence"))
+
+
+@app.get("/v1/drill/{path:path}")
+async def drill(path: str, request: Request):
+    """A drilldown as the browser's route answers it: the screen's body with the screen's status. The hub server forwards it as it is."""
+    if path not in DRILLS:
+        raise HTTPException(404, f"Unknown drilldown: {path}")
+    who = await hub_auth.principal(request.headers.get("authorization"))
+    with access.scoped(who.scope()):
+        reply = await screens.build(path, request.query_params)
+    return EncodedJSON(reply["body"], status_code=reply["status"], headers={"Cache-Control": "no-store"})
+
+
 @app.api_route("/v1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def read(path: str, request: Request):
     if request.method != "GET":

@@ -64,7 +64,7 @@ D-26의 '12개'(목록 8 · GA4 이벤트 1 · 저장 3)는 코드와 실행 기
 
 React가 부르지 않아 Next에 남는 것: `website/prompts/export`, `context-map`, `cron/*`, `internal/summary`, `keyword/*`, `qa/*`. 레거시 `hghGet` · `hghPost`를 쓰는 파일은 클라이언트 포함 13개다. `front/lib/hgh/client.ts:99`가 `HGH_API_BASE_URL`을 직접 읽으므로 프록시는 `/v1/*` 전체를 넘겨야 한다. 로컬 모드의 쓰기는 `client.ts:647`이 네트워크 전에 막는다.
 
-허브 서버가 2b에서 새로 가져야 하는 판정: 메뉴 권한(`front/lib/auth/route-policy.ts` 557줄의 표. 계정 역할 4개만 쓰므로 화면 묶음 → 역할 표로 줄어든다), `ctx.*` 허용 목록, 파라미터 검증. 데이터 범위 좁히기는 지금처럼 데이터 서버(`access.clamp`)가 한다.
+2b에서 구현했다(`back/hub_server/browser.py`, 결과는 `docs/handoff/react-standby.md` '허브 계약 구현'). 충돌 2건은 데이터 서버로 옮겼다: `{options}`는 화면 `filters/options`, 드릴다운의 상태 코드는 `/v1/drill/*`. 허브 서버가 새로 가진 판정: 메뉴 권한(`front/lib/auth/route-policy.ts` 557줄의 표. 계정 역할 4개만 쓰므로 화면 묶음 → 역할 표로 줄어든다), `ctx.*` 허용 목록, 파라미터 검증. 데이터 범위 좁히기는 지금처럼 데이터 서버(`access.clamp`)가 한다.
 
 ## 4. 정한 것 (`CLAUDE.md` 4절)
 
