@@ -54,7 +54,7 @@ function Overview({ page }: { page: PageDefinition }) {
   const geo = showsGeoMap({ id: ctx.user.id, email: ctx.user.email ?? ctx.user.login, role: ctx.user.role, scope: ctx.user.scope, operator: "none", menuGroups: null });
   const global = ctx.surface === "global";
   const prefix = ctx.surface === "project" ? "projects/dash-" : "website/";
-  const result = useReads({ ...commonReads(ctx, savedPage), ...filterReads(ctx, "overview"), ...(global ? {
+  const result = useReads({ ...commonReads(ctx), ...filterReads(ctx, "overview"), asof: screenRead(ctx.surface === "project" ? "projects/as-of" : "overview/as-of", ctx.query, true), ...(global ? {
     cards: screenRead("overview/cards", ctx.query), trend: screenRead("overview/card-trend", ctx.query), matrix: screenRead("overview/brand-matrix", ctx.query),
     ...(geo ? { geo: screenRead("overview/geo", { ...ctx.query, "ctx.locale": ctx.locale, "ctx.view": "renewal" }) } : {}),
   } : {
@@ -86,20 +86,20 @@ function Mention({ page }: { page: PageDefinition }) {
   const ctx = usePageContext(page);
   const global = ctx.surface === "global";
   const savedPage: SavedFilterPage = global ? "mention" : ctx.surface === "website" ? "website-mention" : "project-mention";
-  const result = useReads({ ...commonReads(ctx, savedPage), ...filterReads(ctx, "mention"), head: screenRead("mention/rn-page", ctx.query),
+  const result = useReads({ ...commonReads(ctx), ...filterReads(ctx, "mention"), head: screenRead("mention/rn-page", ctx.query), asof: screenRead("mention/rn-asof", ctx.query, true),
     ...Object.fromEntries(Object.entries(mentionSections).map(([key, name]) => [key, screenRead(`mention/${name}`, ctx.query)])),
     ...(global ? { engineExtra: screenRead("mention/rn-engine-extra", ctx.query), presence: screenRead("mention/rn-presence-split", ctx.query) } : {
       ...Object.fromEntries(kpis.map(kpi => [`tab-${kpi}`, screenRead("mention/rn-tab-value", { ...ctx.query, "ctx.kpi": kpi })])),
       summary: screenRead("mention/rn-summary", ctx.query), tabDeltas: screenRead("mention/rn-tab-deltas", ctx.query),
     }),
-    ...(ctx.surface === "website" ? { siteCards: screenRead("mention/view-cards", ctx.query), markets: screenRead("mention/rn-markets", ctx.query), weekly: screenRead("mention/view-weekly", ctx.query), siteCompare: screenRead("mention/view-compare", ctx.query), asof: screenRead("mention/rn-asof", ctx.query) } : {}),
+    ...(ctx.surface === "website" ? { siteCards: screenRead("mention/view-cards", ctx.query), markets: screenRead("mention/rn-markets", ctx.query), weekly: screenRead("mention/view-weekly", ctx.query), siteCompare: screenRead("mention/view-compare", ctx.query) } : {}),
   });
   return <Load result={result}>{v => {
     const head = v.value<RnPageVM>("head");
     const reads = Object.fromEntries(Object.keys(mentionSections).map(key => [key, v.promise(key)])) as Pick<RnMentionInput, keyof typeof mentionSections>;
     const input: RnMentionInput = { ...reads, kpi: resolveKpiTab(ctx.sp.kpi), view: resolveMentionView(ctx.sp.view, global ? { kpi: ctx.sp.kpi } : undefined), ownLabel: head.ownLabel, period: head.period, filtered: Object.keys(ctx.sp).some(k => !["tab", "view", "kpi"].includes(k)), global, brandsFirst: global,
       ...(global ? { engineExtra: v.promise("engineExtra"), presence: v.promise("presence") } : { summary: v.promise("summary"), tabDeltas: v.promise("tabDeltas"), tabValue: Object.fromEntries(kpis.map(k => [k, v.promise(`tab-${k}`)])) as NonNullable<RnMentionInput["tabValue"]> }),
-      ...(ctx.surface === "website" ? { body: <RnWebsiteMentionBody reads={{ cards: v.promise("siteCards"), markets: v.promise("markets"), weekly: v.promise("weekly"), compare: v.promise("siteCompare") }} period={!!head.period} pageAsOf={Promise.resolve(v.value<{ asOf: string | null }>("asof").asOf)} admin={ctx.user.scope.all} /> } : {}),
+      ...(ctx.surface === "website" ? { body: <RnWebsiteMentionBody reads={{ cards: v.promise("siteCards"), markets: v.promise("markets"), weekly: v.promise("weekly"), compare: v.promise("siteCompare") }} period={!!head.period} pageAsOf={Promise.resolve(v.value<{ asOf: string | null } | null>("asof")?.asOf ?? null)} admin={ctx.user.scope.all} /> } : {}),
     };
     return <Frame page={page} ctx={ctx} values={v} filters={filters(ctx, v, "mention")} savedPage={savedPage}><RnMentionPageProvider input={input}><Suspense fallback={<PageLoading />}><RnMentionBody /></Suspense></RnMentionPageProvider></Frame>;
   }}</Load>;
@@ -109,7 +109,10 @@ function Citation({ page }: { page: PageDefinition }) {
   const sub = page.kind !== "citation";
   const savedPage: SavedFilterPage = ctx.surface === "global" ? "citation" : ctx.surface === "website" ? "website-citation" : "project-citation";
   const name = page.kind === "citation-prompts" ? "citation/prompts" : page.kind === "citation-tone" ? "citation/tone-urls" : `citation/${ctx.surface === "global" ? "standard" : ctx.surface}`;
-  const result = useReads({ ...commonReads(ctx, savedPage), ...filterReads(ctx, "citation"), body: screenRead(name, { ...ctx.query, ...(!sub ? { "ctx.variant": "renewal" } : {}) }) });
+  const result = useReads({ ...commonReads(ctx), ...filterReads(ctx, "citation"), body: screenRead(name, { ...ctx.query, ...(!sub ? { "ctx.variant": "renewal" } : {}) }),
+    ...(!sub && parseTimeRange(ctx.sp.time) ? { header: screenRead("citation/renewal-header", ctx.query, true) } : {}),
+    ...(!sub && ctx.surface !== "global" ? { asof: screenRead("citation/as-of", ctx.query, true) } : {}),
+  });
   return <Load result={result}>{v => {
     if (page.kind === "citation-prompts") return <Frame page={page} ctx={ctx} values={v} reset={["page", "cursor"]}><RnCitationPromptsView {...v.value<CitationPromptsScreen>("body")} /></Frame>;
     if (page.kind === "citation-tone") return <Frame page={page} ctx={ctx} values={v} reset={["page", "cursor", "q"]}><RnCitationToneUrlsView {...v.value<CitationToneUrlsScreen>("body")} /></Frame>;
@@ -121,6 +124,6 @@ function Citation({ page }: { page: PageDefinition }) {
 }
 function Acr({ page }: { page: PageDefinition }) {
   const ctx = usePageContext(page);
-  const result = useReads({ ...commonReads(ctx, "acr"), body: screenRead("acr/renewal", ctx.sp) });
+  const result = useReads({ ...commonReads(ctx), body: screenRead("acr/renewal", ctx.sp), header: screenRead("acr/renewal-header", ctx.sp, true) });
   return <Load result={result}>{v => { const read = v.value<RnAcrScreen>("body"); return <Frame page={page} ctx={ctx} values={v} filters={{ ...read.props, scope: ctx.user.scope }} savedPage="acr"><RnAcrBody input={read.body} /></Frame>; }}</Load>;
 }

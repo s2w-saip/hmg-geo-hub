@@ -8,8 +8,10 @@ import { HghApiError } from "@/lib/hgh/errors";
 
 export function safeNext(raw: string | null, locale: string): string {
   const fallback = `/${locale}/renewal/dashboard`;
-  if (!raw || /[\\\u0000-\u0020]/.test(raw) || /%(?:2f|5c|00)/i.test(raw)) return fallback;
-  const parsed = new URL(raw, "https://hub.invalid");
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || /[\\\u0000-\u0020]/.test(raw) || /%(?:2f|5c|00)/i.test(raw)) return fallback;
+  let parsed: URL;
+  try { parsed = new URL(raw, "https://hub.invalid"); }
+  catch { return fallback; }
   if (parsed.origin !== "https://hub.invalid" || !(parsed.pathname === `/${locale}/renewal` || parsed.pathname.startsWith(`/${locale}/renewal/`))) return fallback;
   return raw;
 }

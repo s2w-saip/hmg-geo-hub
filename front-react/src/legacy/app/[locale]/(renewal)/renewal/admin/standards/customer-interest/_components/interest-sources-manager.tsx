@@ -1,3 +1,4 @@
+import { useServedState } from "@/hooks/use-served-state";
 import { replaceUiHistory } from "~/app/navigation";
 "use client";
 
@@ -92,7 +93,7 @@ function Manager({ initial, tabs, savedFilters }: { initial: InterestSourceListi
   const goldCategory = useGoldCategory();
   const fromUrl = useMemo(() => queryToSourceFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [listing, setListing] = useState(initial);
+  const [listing, setListing] = useServedState(initial);
   const [filters, setFilters] = useState<SourceFilter>(fromUrl.filters);
   const [search, setSearch] = useState(fromUrl.search);
   const [sort, setSort] = useState(DEFAULT_SOURCE_SORT);

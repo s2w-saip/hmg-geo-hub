@@ -19,7 +19,7 @@ import { RnButton, RnCard, RnEmpty, RnIconButton, RnNote, RnSearchField, RnSelec
 import { ENGINE_LABEL, shownTimeRange } from "@/components/dash/dimension-filter-panel";
 import { parseTimeRange, splitFilterValues } from "@/components/dash/filter-encoding";
 import { ServiceWeekAfterWeek } from "@/components/service-week/no-round";
-import { ServiceWeekShownEnd, useServiceWeekContext, useServiceWeekEnd } from "@/components/service-week/provider";
+import { ServiceWeekShownEnd, useServiceWeekContext, useServiceWeekEnd, useServiceWeekRead } from "@/components/service-week/provider";
 import { periodAfterWeek } from "@/lib/service-week";
 import { languageName } from "@/lib/geo-catalog/language-name";
 import { downloadXlsx } from "@/lib/export/xlsx";
@@ -82,6 +82,7 @@ export function RnWebsitePrompts({
   const toggleFilter = useRnFilterToggle();
   const maxDay = useServiceWeekEnd();
   const weekCtx = useServiceWeekContext();
+  const serviceRead = useServiceWeekRead();
 
   const [search, setSearch] = useState(() => sp.get("q") ?? "");
   const [sort, setSort] = useState<Sort>({ key: initial.sort, asc: initial.dir === "asc" });
@@ -116,7 +117,7 @@ export function RnWebsitePrompts({
 
   // ── reads: debounced, the latest wins; none when the answer on screen is this query's (the first render's,
   // or a read's — a pick cleared back to the first query reads again, its answer is no longer on screen) ──
-  const pageKey = JSON.stringify({ q: search.trim(), sort, size, page, drill, retry });
+  const pageKey = JSON.stringify({ q: search.trim(), sort, size, page, drill, retry, serviceRead });
   const shownPage = useRef(pageKey);
   useEffect(() => {
     if (pageKey === shownPage.current) return;
@@ -145,7 +146,7 @@ export function RnWebsitePrompts({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageKey, read]);
   // the insights count the listed prompts: only the search changes them here (the panel re-renders the page)
-  const insightsKey = JSON.stringify({ q: search.trim(), retry });
+  const insightsKey = JSON.stringify({ q: search.trim(), retry, serviceRead });
   const shownInsights = useRef(insightsKey);
   useEffect(() => {
     if (insightsKey === shownInsights.current) return;

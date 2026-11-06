@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import type { PageDefinition } from "~/app/pages";
-import { commonReads, hubRead, Load, savedSource, usePageContext, useReads } from "./load";
+import { PageWeek, screenRead, hubRead, Load, savedSource, usePageContext, useReads, type Values } from "./load";
 import { HubAccountsManager } from "@/app/[locale]/(renewal)/renewal/admin/_components/hub-accounts-manager";
 import type { HubAccountList } from "@/app/[locale]/(renewal)/renewal/admin/_components/hub-accounts-api";
 import { HubPromptsManager } from "@/app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompts-manager";
@@ -31,12 +31,14 @@ export default function AdminPage({ page }: { page: PageDefinition }) {
   const initialSearch = listSearch({ filters, search, sort: DEFAULT_SORT.key, asc: DEFAULT_SORT.asc, page: 1, pageSize: DEFAULT_PAGE_SIZE });
   const needsSaved = page.kind !== "sources" || (source !== "social" && source !== "codes");
   const result = useReads({
-    ...(needsSaved ? { saved: hubRead("saved-filters", { page: savedPage }) } : {}),
+    ...(page.kind === "sources" && source !== "codes" ? { week: screenRead("shared/service-week", {}, true) } : {}),
     list: hubRead(endpoint, page.kind === "hub-prompts" ? Object.fromEntries(new URLSearchParams(initialSearch)) : {}),
     ...(page.kind === "hub-prompts" ? { options: hubRead("global-prompts/options") } : {}),
   });
-  return <Load result={result}>{v => {
-    const savedFilters = needsSaved ? savedSource(ctx, v, savedPage) : { page: savedPage, userId: ctx.user.id, initial: null };
+  return <Load result={result}>{v => <PageWeek ctx={ctx} values={v}>{renderBody(v)}</PageWeek>}</Load>;
+
+  function renderBody(v: Values) {
+    const savedFilters = needsSaved ? savedSource(ctx, savedPage) : { page: savedPage, userId: ctx.user.id, initial: null };
     if (page.kind === "accounts") { const data = v.value<HubAccountList>("list"); return <HubAccountsManager key={v.stamp} initial={data.items} roles={data.roles} savedFilters={savedFilters} />; }
     if (page.kind === "hub-prompts") return <HubPromptsManager key={v.stamp} initial={v.value<HubPromptPage>("list")} initialSearch={initialSearch} options={v.value<HubOptions>("options")} loginHref={`/${ctx.locale}/login`} savedFilters={savedFilters} />;
     if (page.kind === "ga4") return <Ga4RegistryManager key={v.stamp} initial={v.value<{ items: Initial<typeof Ga4RegistryManager> }>("list").items} savedFilters={savedFilters} />;
@@ -47,5 +49,5 @@ export default function AdminPage({ page }: { page: PageDefinition }) {
     if (source === "social") return <SourceSocialsManager key={v.stamp} initial={v.value<Initial<typeof SourceSocialsManager>>("list")} tabs={tabs} />;
     if (source === "codes") return <SourceCodesManager key={v.stamp} initial={v.value<Initial<typeof SourceCodesManager>>("list")} tabs={tabs} />;
     return <SourceOverridesManager key={v.stamp} initial={v.value<Initial<typeof SourceOverridesManager>>("list")} tabs={tabs} savedFilters={savedFilters} />;
-  }}</Load>;
+  }
 }

@@ -1,3 +1,4 @@
+import { useServedState } from "@/hooks/use-served-state";
 import { replaceUiHistory } from "~/app/navigation";
 "use client";
 
@@ -105,7 +106,7 @@ function Manager({ initial, savedFilters }: Ga4RegistryManagerProps) {
   const tip = useRnTruncTip();
   const fromUrl = useMemo(() => queryToFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [items, setItems] = useState(initial);
+  const [items, setItems] = useServedState(initial);
   const [filters, setFilters] = useState<Ga4Filter>(fromUrl.filters);
   const [search, setSearch] = useState(fromUrl.search);
   const [sort, setSort] = useState(DEFAULT_SORT);

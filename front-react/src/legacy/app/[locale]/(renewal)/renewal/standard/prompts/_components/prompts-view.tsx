@@ -1,4 +1,5 @@
 import { replaceUiHistory } from "~/app/navigation";
+import { useServiceWeekRead } from "@/components/service-week/provider";
 "use client";
 
 // Renewal Global prompts — the original /standard/prompts list with the renewal layout:
@@ -169,6 +170,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
   const collation = collationOf(typeof Intl !== "undefined" ? Intl.Collator().resolvedOptions().locale : "en");
   const query = readQuery({ filters, search, sort: sort.key, asc: sort.asc, page, pageSize, collation, marketCodes, marketLabel });
   const readKey = JSON.stringify(query);
+  const serviceRead = useServiceWeekRead();
   const firstRead = useRef(true);
   useEffect(() => {
     if (firstRead.current) {
@@ -195,7 +197,7 @@ function PromptsView({ remote, scopeAll, scopeRole, scopeBrands, scopeRegions, s
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readKey, load]);
+  }, [readKey, load, serviceRead]);
 
   // URL mirrors the picks (shareable, restorable); shallow — no server round trip.
   useEffect(() => {

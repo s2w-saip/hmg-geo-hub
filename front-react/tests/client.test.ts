@@ -47,9 +47,13 @@ describe("browser-to-HUB contract", () => {
   });
   it("keeps login redirects inside the selected locale’s renewal pages", () => {
     expect(safeNext("/ko/renewal/website?engine=chatgpt", "ko")).toBe("/ko/renewal/website?engine=chatgpt");
-    for (const path of ["https://example.org", "//example.org", "/en/renewal/admin", "/ko/renewal-evil", "/ko/renewal/../../login", "/ko/renewal/..%2f..%2flogin"]) {
+    for (const path of ["https://example.org", "https://hub.invalid/ko/renewal/admin", "//example.org", "/en/renewal/admin", "/ko/renewal-evil", "/ko/renewal/../../login", "/ko/renewal/..%2f..%2flogin"]) {
       expect(safeNext(path, "ko")).toBe("/ko/renewal/dashboard");
     }
+  });
+  it("falls back when the login return URL cannot be parsed", () => {
+    for (const path of ["http://[", "http://[::invalid]", "https://example.org:invalid"])
+      expect(safeNext(path, "ko")).toBe("/ko/renewal/dashboard");
   });
   it("preserves the router’s history index when UI state changes the URL", () => {
     const state = { idx: 3, key: "existing-route", usr: null };

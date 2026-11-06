@@ -6,11 +6,12 @@ import type { Query } from "~/api/client";
 import { useSession } from "~/app/session";
 import { PageError, PageLoading } from "~/app/states";
 import { surfaceOf, type PageDefinition } from "~/app/pages";
-import { RnPageHeader, RnEmpty } from "@/components/renewal-ui";
+import { RnEmpty } from "@/components/renewal-ui";
+import { PageHeading } from "./page-heading";
 import { RnFilterRuntime } from "@/app/[locale]/(renewal)/renewal/_components/filter-runtime";
 import { RnOverviewFilters, RnFilterSplit, RnOverviewFilterPanel, RnOverviewFilterRail, RnOverviewApplied, type OverviewFilterProps } from "@/app/[locale]/(renewal)/renewal/_components/overview-filters";
 import { RnPageFrame } from "@/app/[locale]/(renewal)/renewal/_components/filter-split";
-import type { SavedFilter, SavedFilterPage } from "@/app/[locale]/(renewal)/renewal/_components/saved-filters";
+import type { SavedFilterPage } from "@/app/[locale]/(renewal)/renewal/_components/saved-filters";
 import { RnServiceWeekProvider } from "@/components/service-week/provider";
 import type { ServiceWeekView } from "@/lib/service-week";
 
@@ -34,8 +35,8 @@ export function useReads(reads: Record<string, Read>) {
   const result = useBundle(reads);
   const values = useMemo<Values>(() => {
     const promises = Object.fromEntries(Object.entries(result.data).map(([key, value]) => [key, Promise.resolve(value)]));
-    return { value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: JSON.stringify(result.data) };
-  }, [result.data]);
+    return { value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: result.key };
+  }, [result.data, result.key]);
   return { ...result, values };
 }
 export function Load({ result, children }: { result: ReturnType<typeof useReads>; children: (values: Values) => ReactNode }) {
@@ -43,33 +44,33 @@ export function Load({ result, children }: { result: ReturnType<typeof useReads>
   if (result.pending) return <PageLoading />;
   return <>{children(result.values)}</>;
 }
-export const screenRead = (name: string, query: Query = {}): Read => ({ name, query });
+export const screenRead = (name: string, query: Query = {}, optional = false): Read => ({ name, query, optional });
 export const hubRead = (name: string, query: Query = {}): Read => ({ name, query, kind: "hub" });
-export function commonReads(ctx: PageContext, savedPage?: SavedFilterPage): Record<string, Read> {
+export function commonReads(ctx: PageContext): Record<string, Read> {
   return {
-    ...(ctx.surface !== "project" ? { week: screenRead("shared/service-week") } : {}),
-    ...(savedPage ? { saved: hubRead("saved-filters", { page: savedPage }) } : {}),
+    ...(ctx.surface !== "project" ? { week: screenRead("shared/service-week", {}, true) } : {}),
   };
 }
-export function Header({ page }: { page: PageDefinition }) {
-  const en = useLocale() === "en";
-  return <RnPageHeader title={page.title[en ? 1 : 0]} meta={<span>{page.group}</span>} />;
+export function savedSource(ctx: PageContext, page: SavedFilterPage) {
+  // The existing saved-filter hook loads and retries its own list without blocking screen data.
+  return { page, userId: ctx.user.id, initial: null };
 }
-export function savedSource(ctx: PageContext, values: Values, page: SavedFilterPage) {
-  return { page, userId: ctx.user.id, initial: values.value<{ items: SavedFilter[] }>("saved").items };
+export function PageWeek({ ctx, values, children }: { ctx: PageContext; values: Values; children: ReactNode }) {
+  const value = ctx.surface === "project" ? null : values.value<ServiceWeekView | null | undefined>("week");
+  const week = useMemo(() => Promise.resolve(value ?? null), [value]);
+  return <RnServiceWeekProvider week={week} notes>{children}</RnServiceWeekProvider>;
 }
 export function Frame({ page, ctx, values, filters, savedPage, children, reset }: {
   page: PageDefinition; ctx: PageContext; values: Values; filters?: OverviewFilterProps;
   savedPage?: SavedFilterPage; children: ReactNode; reset?: readonly string[];
 }) {
-  const week = useMemo(() => ctx.surface === "project" ? Promise.resolve(null) : values.promise<ServiceWeekView>("week"), [values, ctx.surface]);
-  return <RnServiceWeekProvider week={week} notes><RnFilterRuntime reset={reset}>
-    {filters && savedPage ? <RnOverviewFilters props={filters} savedFilters={savedSource(ctx, values, savedPage)}>
-      <RnFilterSplit header={<Header page={page} />} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />}>
+  return <PageWeek ctx={ctx} values={values}><RnFilterRuntime reset={reset}>
+    {filters && savedPage ? <RnOverviewFilters props={filters} savedFilters={savedSource(ctx, savedPage)}>
+      <RnFilterSplit header={<PageHeading page={page} values={values} ctx={ctx} />} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />} delayInHeader={page.kind === "mention" && ctx.surface === "global"}>
         <RnOverviewApplied /><div className="flex flex-col gap-4">{children}</div>
       </RnFilterSplit>
-    </RnOverviewFilters> : <RnPageFrame header={<Header page={page} />}>{children}</RnPageFrame>}
-  </RnFilterRuntime></RnServiceWeekProvider>;
+    </RnOverviewFilters> : <RnPageFrame header={<PageHeading page={page} values={values} ctx={ctx} />}>{children}</RnPageFrame>}
+  </RnFilterRuntime></PageWeek>;
 }
 export function NoMeasurement() {
   const en = useLocale() === "en";

@@ -1,3 +1,4 @@
+import { useServedState } from "@/hooks/use-served-state";
 "use client";
 
 // Admin › 인용 출처 분류 › 코드표 (2026-10-30): the HUB owns the source code table (admin-todo decision 코드표): the 13
@@ -33,7 +34,7 @@ function Manager({ initial, tabs }: { initial: CodeListing; tabs?: ReactNode }) 
   const toast = useRnToast();
   const tip = useRnTruncTip();
   const errorText = useListError();
-  const [listing, setListing] = useState(initial);
+  const [listing, setListing] = useServedState(initial);
   const [saving, setSaving] = useState(false);
   const [sheet, setSheet] = useState<{ kind: CodeKind; code: string } | null>(null);
 

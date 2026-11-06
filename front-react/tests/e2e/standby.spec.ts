@@ -1,6 +1,33 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 const routes = JSON.parse(readFileSync(new URL("../../src/app/source-routes.json", import.meta.url), "utf8")) as { path: string }[];
+// Independent acceptance expectations: an arbitrary heading or fallback page is not a migrated route.
+const screens: [string[], string, string][] = [
+  [["dashboard", "website"], "Overview", "overview"],
+  [["standard/prompts"], "프롬프트", "prompts"],
+  [["website/prompts"], "프롬프트", "website-prompts"],
+  [["standard/answer-analysis/mention", "website/answer-analysis/mention", "projects/:id/analysis/mention"], "언급 분석", "mention"],
+  [["standard/answer-analysis/citation", "website/answer-analysis/citation", "projects/:id/analysis/citation"], "인용 분석", "citation"],
+  [["standard/answer-analysis/citation/prompts", "website/answer-analysis/citation/prompts", "projects/:id/analysis/citation/prompts"], "인용 프롬프트", "citation-prompts"],
+  [["standard/answer-analysis/citation/tone-urls", "website/answer-analysis/citation/tone-urls", "projects/:id/analysis/citation/tone-urls"], "감정별 인용 URL", "citation-tone"],
+  [["standard/ai-funnel/acr"], "AI 추천 전환율", "acr"],
+  [["standard/ai-funnel/conversion", "website/ai-funnel/conversion", "projects/:id/ai-funnel/conversion"], "AI 전환", "waiting"],
+  [["standard/ai-funnel/visibility"], "AI 가시성", "waiting"],
+  [["projects"], "프로젝트", "projects"],
+  [["projects/:id"], "Dashboard", "overview"],
+  [["projects/:id/prompt"], "프롬프트", "project-prompts"],
+  [["projects/:id/setting"], "프로젝트 설정", "project-setting"],
+  [["projects/:id/member"], "멤버", "member"],
+  [["projects/:id/intent/google-keyword"], "키워드", "waiting"],
+  [["projects/:id/intent/social-scraping"], "소셜 분석", "waiting"],
+  [["admin"], "사용자 관리", "accounts"],
+  [["admin/standards/prompts"], "Global 프롬프트 관리", "hub-prompts"],
+  [["admin/standards/citation-sources"], "인용 출처 분류", "sources"],
+  [["admin/standards/customer-interest"], "고객 관심 데이터", "interest"],
+  [["admin/standards/entities"], "엔티티 카탈로그", "entities"],
+  [["admin/ga4"], "GA4 속성 등록", "ga4"],
+  [["admin/keyword-tools"], "키워드 도구", "waiting"],
+];
 
 test("all original renewal routes open without API calls or browser errors", async ({ page }) => {
   const errors: string[] = [];
@@ -10,11 +37,25 @@ test("all original renewal routes open without API calls or browser errors", asy
   for (const route of routes) {
     const path = route.path.replace(":locale", "ko").replace(":id", "preview").replace("*", "not-built");
     await page.goto(path);
-    await expect(page.locator("h1")).toBeVisible();
+    const routeName = route.path.replace("/:locale/renewal/", "");
+    if (routeName.includes("*")) {
+      await expect(page.locator("h1")).toHaveText("준비되지 않은 화면입니다");
+      await expect(page.locator("[data-page-kind]")).toHaveCount(0);
+    } else {
+      const expected = screens.find(([paths]) => paths.includes(routeName));
+      expect(expected, `No acceptance expectation for ${route.path}`).toBeDefined();
+      await expect(page.locator("h1")).toHaveText(expected![1]);
+      await expect(page.locator("[data-page-kind]")).toHaveAttribute("data-page-kind", expected![2]);
+    }
     await expect(page.locator(".rn-connection-indicator")).toContainText("서버 연결 전");
   }
   expect(api).toEqual([]);
   expect(errors).toEqual([]);
+});
+test("an unregistered route is explicitly unavailable", async ({ page }) => {
+  await page.goto("/ko/renewal/route-that-does-not-exist");
+  await expect(page.locator("h1")).toHaveText("준비되지 않은 화면입니다");
+  await expect(page.locator("[data-page-kind]")).toHaveCount(0);
 });
 test("navigation, filter collapse, locale switch, and direct URL refresh work", async ({ page }) => {
   await page.goto("/ko/renewal/dashboard");
@@ -107,7 +148,7 @@ test("the migrated Mention view consumes its promised screen responses in a brow
     return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("http://127.0.0.1:3335/ko/renewal/standard/answer-analysis/mention");
-  await expect(page.getByRole("heading", { name: "언급 분석", exact: true })).toBeVisible();
+  await expect(page.locator("h1")).toContainText("언급 분석");
   await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });

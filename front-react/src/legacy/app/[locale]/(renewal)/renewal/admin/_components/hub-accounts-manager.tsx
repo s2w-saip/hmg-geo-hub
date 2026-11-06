@@ -1,3 +1,4 @@
+import { useServedState } from "@/hooks/use-served-state";
 import { replaceUiHistory } from "~/app/navigation";
 "use client";
 
@@ -125,7 +126,7 @@ function Manager({ initial, roles, savedFilters }: HubAccountsManagerProps) {
   const tip = useRnTruncTip();
   const fromUrl = useMemo(() => queryToFilter(sp), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [items, setItems] = useState(initial);
+  const [items, setItems] = useServedState(initial);
   const [filters, setFilters] = useState<AccountFilter>(fromUrl.filters);
   const [search, setSearch] = useState(fromUrl.search);
   const [sort, setSort] = useState(DEFAULT_SORT);

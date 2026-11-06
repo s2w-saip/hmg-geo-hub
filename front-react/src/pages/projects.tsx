@@ -14,7 +14,7 @@ export default function ProjectsPage({ page }: { page: PageDefinition }) {
   const prompts = page.kind === "project-prompts";
   const range = parseTimeRange(ctx.sp.time);
   const lens = [...splitFilterValues(ctx.sp.geography).map(c => countryName(c, ctx.locale)), ...splitFilterValues(ctx.sp.engine).map(e => aiEngineLabel(e.toLowerCase())), ...(range ? [`${range.from ?? "…"} ~ ${range.to ?? "…"}`] : [])];
-  const result = useReads({ ...commonReads(ctx, prompts ? "project-prompt" : undefined),
+  const result = useReads({ ...commonReads(ctx),
     ...(page.kind !== "member" ? { body: screenRead(page.kind === "projects" ? "projects/list" : prompts ? "projects/prompts" : "projects/settings", ctx.query) } : {}),
     ...(prompts ? { filters: screenRead("projects/filters", ctx.query) } : {}),
   });
