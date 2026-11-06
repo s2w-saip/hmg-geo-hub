@@ -1,5 +1,5 @@
--- The virtual Silver (2026-11-06): the pipeline's silver.answer_analysis (the OBT) and silver.acr_rollup, column by column, in the service's own
--- database, so the BFF can read and count from an OBT before the real one has mentions and sentiment. Only the data is virtual: it comes from
+-- The virtual Silver (2026-11-06): a stand-in for the pipeline's Silver OBT database until its connection details reach us. It is outside the
+-- service's architecture: not a service database, not in its stores or backups. Same tables and columns, so only the connection changes. The data comes from
 -- the copy of the old upstream database (back/hub_storage/silver-load.sql), nothing is estimated, and a value it does not hold stays NULL.
 -- Tables, columns and their comments are read from the pipeline's schema (Medallion Explorer, db1.silver and db1.other). Values the old database
 -- has and the contract does not go in ext, under the column's module prefix with v_gold in the name (K7): remove them when the real OBT arrives.
