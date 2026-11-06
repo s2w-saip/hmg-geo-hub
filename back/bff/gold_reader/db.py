@@ -1,4 +1,4 @@
-"""External Gold business data. No seed, mirror, migration, or write connection."""
+"""geohub_gold_db's business data. No seed, mirror, migration, or write connection."""
 from __future__ import annotations
 
 import os
@@ -20,7 +20,9 @@ async def open_pool() -> None:
         statement_cache_size=0,
         server_settings={"application_name": "hmg-geo-hub-gold", "default_transaction_read_only": "on",
                          "work_mem": os.environ.get("HGH_GOLD_WORK_MEM", "32MB"),
-                         "statement_timeout": os.environ.get("HGH_GOLD_STATEMENT_TIMEOUT_MS", "15000"), "idle_in_transaction_session_timeout": "30000",
+                         "statement_timeout": os.environ.get("HGH_GOLD_STATEMENT_TIMEOUT_MS", "15000"),
+                         # a rollup holds this transaction while the OBT counts a call on its own connection
+                         "idle_in_transaction_session_timeout": os.environ.get("HGH_GOLD_IDLE_TX_TIMEOUT_MS", "30000"),
                          # Our sessions only: compiling each 1-3 s read cost up to 1.2 s and saved less than
                          # that (citations/domains 2.25 -> 1.85 s without it). No memory settings: Gold is not ours.
                          "jit": "off"},

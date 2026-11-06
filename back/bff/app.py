@@ -1,4 +1,4 @@
-"""Local BFF/API over external Gold and separate HUB data/operations stores. Every route but /healthz and the
+"""Local BFF/API over geohub_gold_db, the Silver OBT and the separate input and operations stores. Every route but /healthz and the
 login needs a signed-in HUB account (hub_stores/hub_auth.py), and screens and data reads run inside its scope
 (bff/access.py). Read-only, except what the HUB writes: every account changes its own password
 (/v1/auth/password) and keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also

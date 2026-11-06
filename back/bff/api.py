@@ -1,7 +1,7 @@
 """The /v1 read routes as plain functions, so screen builders can compose them in-process.
 
 The one channel the screens read through: analytics/* comes from the HUB's GA4/SEO store
-(hub_stores), every other path from the metric layer over the external Gold DB (bff.metrics.serving, gold_reader). get() reads inside the signed-in
+(hub_stores), every other path from the metric layer over geohub_gold_db and the Silver OBT (bff.metrics.serving, gold_reader). get() reads inside the signed-in
 account's scope (bff/access.py); the /v1 route clamps its query the same way before read()."""
 from __future__ import annotations
 

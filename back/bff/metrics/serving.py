@@ -24,7 +24,7 @@ from starlette.datastructures import QueryParams
 from bff.gold_reader.context import CALENDAR_SQL, SURFACES
 from bff.gold_reader.db import connection
 from bff.hub_stores import cache_db, metrics_db, service_week
-from bff.metrics import gold_rows
+from bff.metrics import gold_rows, silver_obt
 from bff.metrics.catalog import DEFINITION_VERSION
 from bff.metrics.gold_judged import read_inputs
 
@@ -56,8 +56,8 @@ def keeps_values(path: str) -> bool:
 
 
 async def current_snapshot(surface: str) -> str:
-    """The live snapshot of a surface, read now. Until Silver's pointer (T9): Gold's live release, its visible rounds and the service
-    week the reads stop at (a read of the same query answers differently under another of them)."""
+    """The live snapshot of a surface, read now: Gold's live release, its visible rounds and the service week the reads stop at (a read
+    of the same query answers differently under another of them), and on the OBT the manifest's operating snapshots (T9.3)."""
     today = datetime.now(ZoneInfo("Asia/Seoul")).date()
     # read as the capped reads read it: no week is the 503 they answer too, and the id never depends on whether it was read yet
     capped = await service_week.current_or_503() if surface != "project" else None
@@ -71,8 +71,10 @@ async def current_snapshot(surface: str) -> str:
             CALENDAR_SQL, SURFACES[surface], None, today, release["release_id"], capped.end if capped is not None else None)]
     # what a kept read depends on from the input store (the registered URLs, the excluded roles): a change is a new key, so it applies at once
     inputs = (await read_inputs()).inputs_digest
-    digest = hashlib.sha256(f"{','.join(rounds)}:{inputs}".encode()).hexdigest()[:12]
-    return f"gold-release:{release['release_id']}:{release['version']}:{digest}:{capped.seq if capped is not None else '-'}"
+    on_obt = silver_obt.enabled()
+    public = f":{sorted((await silver_obt.public_snapshots(surface)).items())}" if on_obt else ""
+    digest = hashlib.sha256(f"{','.join(rounds)}:{inputs}{public}".encode()).hexdigest()[:12]
+    return f"{'silver' if on_obt else 'gold-release'}:{release['release_id']}:{release['version']}:{digest}:{capped.seq if capped is not None else '-'}"
 
 
 async def snapshot_of(surface: str) -> str:
@@ -111,7 +113,7 @@ class Recording:
             text = await run()
         except Exception as error:
             self.failed += 1
-            await self.keep(surface_of(path, q), path, str(q), None, f"{type(error).__name__}: {getattr(error, 'detail', error)}"[:300])
+            await self.keep(surface_of(path, q), path, str(q), None, f"{type(error).__name__}: {getattr(error, 'detail', None) or error}"[:300])
             raise
         await self.keep(surface_of(path, q), path, str(q), text, None)
         return text
@@ -130,7 +132,7 @@ async def read(path: str, q: QueryParams, run: Callable[[], Awaitable[str]]) -> 
     active = _recording.get()
     if active is not None:
         return await active.read(path, q, run)
-    if not keeps_values(path) or os.environ.get("HGH_METRIC_SOURCE", "").strip().lower() == "silver":  # values on the OBT are not kept yet (T9.3)
+    if not keeps_values(path):
         return await run()
     try:
         snapshot = await snapshot_of(surface_of(path, q))

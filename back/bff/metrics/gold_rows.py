@@ -24,7 +24,7 @@ from fastapi import HTTPException
 
 from bff.gold_reader.context import Context, values
 from bff.hub_stores import metrics_db
-from bff.metrics import compute
+from bff.metrics import compute, silver_obt
 from bff.metrics.catalog import CITATION_MONITORING, DEFINITION_VERSION, MONITORING, REPRESENTATIVE, URL_MEASURED
 from bff.metrics.gold_current import GoldCurrentSource
 
@@ -70,10 +70,13 @@ def scope_of(ctx: Context) -> str | None:
 
 
 def round_snapshot(ctx: Context, day: date) -> str:
-    """A round's snapshot until Silver's pointer (T9): the Gold builds that publish it. A new build of one round moves that round only."""
-    builds = sorted(b for b, d in ctx.build_dates.items() if d == day)
+    """A round's snapshot: on the OBT its operating snapshots in the manifest (T9.3), otherwise the Gold builds that publish it. A new
+    snapshot or build of one round moves that round only."""
     # website's 자사 URL counts depend on what the sites registered: a change makes every round of it late until the rollup counts it again
     registered = ctx.populations.registered_digest if ctx.sf == 2 else ""
+    if ctx.public_snapshots is not None:
+        return "silver:" + hashlib.sha256(f"{ctx.public_snapshots.get(day, '')}:{registered}".encode()).hexdigest()[:16]
+    builds = sorted(b for b, d in ctx.build_dates.items() if d == day)
     return "gold-builds:" + hashlib.sha256(f"{','.join(map(str, builds))}:{registered}".encode()).hexdigest()[:16]
 
 
@@ -139,6 +142,11 @@ class GoldRowsSource:
         return (state is not None and state["error"] is None and state["definition_version"] == DEFINITION_VERSION
                 and state["snapshot_id"] == round_snapshot(self.ctx, day))
 
+    async def _read_manifest(self) -> None:
+        """On the OBT a round's snapshot is the manifest's."""
+        if silver_obt.enabled():
+            self.ctx.public_snapshots = await silver_obt.public_snapshots(self.surface)
+
     async def _answer(self, name: str, method: Callable, args: tuple, kwargs: dict) -> Any:
         rounds = list(self.ctx.selected_dates)
         by_round = _by_round(name, args, kwargs)
@@ -146,6 +154,7 @@ class GoldRowsSource:
             _mark_live()
             await self.ctx.load_catalog()
             return await method(*args, **kwargs)
+        await self._read_manifest()
         call = call_key(name, args, kwargs)
         states = await metrics_db.call_states(self.surface, _project(self.ctx), call, self.scope)
         if not states:   # never computed for this scope, or the store cannot be read
@@ -222,6 +231,7 @@ class RecordingSource(GoldRowsSource):
         await self.ctx.load_catalog()
         if not rounds or (len(rounds) > 1 and not by_round):
             return await method(*args, **kwargs)
+        await self._read_manifest()
         recorder = _recorder.get()
         project, call = _project(self.ctx), call_key(name, args, kwargs)
         async with recorder.call_lock((self.surface, project, call, self.scope)):
@@ -240,7 +250,7 @@ class RecordingSource(GoldRowsSource):
         except Exception as error:
             recorder.failed += 1
             for day in stale:
-                await recorder.write(self.surface, project, call, self.scope, day, round_snapshot(self.ctx, day), [], f"{type(error).__name__}: {getattr(error, 'detail', error)}"[:300])
+                await recorder.write(self.surface, project, call, self.scope, day, round_snapshot(self.ctx, day), [], f"{type(error).__name__}: {getattr(error, 'detail', None) or error}"[:300])
             raise
         group = kwargs.get("group") or next((a for a in args if isinstance(a, (list, tuple))), ())
         rows = result if isinstance(result, list) else [{SCALAR: result}]
@@ -296,13 +306,9 @@ def stop_recording(token: Token) -> None:
 
 
 def metric_source(ctx: Context) -> Any:
-    """The data source of a /v1 read: Gold's rows for what a first screen reads, the snapshot for a filtered read. HGH_METRIC_SOURCE=silver: every read is counted on the OBT
-    (adapter ②); the rows and the cache come with the manifest's signals (T9.3)."""
-    from bff.metrics import silver_obt  # it reads through gold_current during the move
-    if silver_obt.enabled():
-        _mark_live()
-        return silver_obt.ObtForContext(ctx)
-    live = GoldCurrentSource(ctx)
+    """The data source of a /v1 read: Gold's rows for what a first screen reads, the snapshot for a filtered read. HGH_METRIC_SOURCE=silver: the snapshot is the OBT's
+    (adapter ②), so the rollup counts its rows there and a filtered read is counted there."""
+    live = silver_obt.ObtForContext(ctx) if silver_obt.enabled() else GoldCurrentSource(ctx)
     scope = scope_of(ctx)
     if scope is None:
         _mark_live()

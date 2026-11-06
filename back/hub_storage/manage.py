@@ -132,7 +132,7 @@ def api_python(script, api_env=False):
     """Run a helper script where the API runs: inside its container, or this Python in native mode (BFF env; with `api_env` the API's
     stores too and the back folder as the working directory, for a script that imports bff)."""
     if analytics.NATIVE:
-        files = ['.env.gold.local', *(['.env.analytics.local', '.env.operations.local', '.env.input.local', '.env.metrics.local', '.env.hub-edit.local'] if api_env else [])]
+        files = ['.env.gold.local', *(['.env.analytics.local', '.env.operations.local', '.env.input.local', '.env.metrics.local', '.env.hub-edit.local', '.env.silver.local'] if api_env else [])]
         env = dict(os.environ)
         for name in files:
             if (ROOT / name).exists():

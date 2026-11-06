@@ -15,6 +15,9 @@ import time
 os.environ["HGH_SCREEN_READ_TIMEOUT_MS"] = "600000"
 os.environ["HGH_GOLD_STATEMENT_TIMEOUT_MS"] = "600000"
 os.environ["HGH_GOLD_COMMAND_TIMEOUT_S"] = "620"
+os.environ["HGH_GOLD_IDLE_TX_TIMEOUT_MS"] = "660000"
+os.environ["HGH_SILVER_STATEMENT_TIMEOUT_MS"] = "600000"
+os.environ["HGH_SILVER_COMMAND_TIMEOUT_S"] = "620"
 
 import asyncpg  # noqa: E402
 from starlette.datastructures import QueryParams  # noqa: E402
@@ -48,7 +51,7 @@ async def _build(name: str, q: dict[str, str], problems: list[str]) -> None:
     try:
         await screens.build(name, QueryParams(q))
     except Exception as error:  # noqa: BLE001 - one screen part, recorded; the others are still computed
-        problems.append(f"{name} {q}: {type(error).__name__}: {getattr(error, 'detail', error)}"[:300])
+        problems.append(f"{name} {q}: {type(error).__name__}: {getattr(error, 'detail', None) or error}"[:300])
 
 
 def _keeper(writer: asyncpg.Connection, snapshots: dict[str, str], lock: asyncio.Lock):

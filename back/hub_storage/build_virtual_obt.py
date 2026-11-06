@@ -34,6 +34,13 @@ analytics = hub["analytics"]
 TOOLS = Path(sys.executable).parent
 
 
+def manifest_status(ext: str) -> str:
+    """A cycle the source store did not serve (not servable, hidden from every read, not visible yet) is no operating snapshot: readers see public ones only."""
+    v = json.loads(ext)["v_gold"]
+    served = v.get("servable") and (v.get("hidden_scope") or 0) != 1 and (not v.get("view_date") or v["view_date"] <= datetime.now().date().isoformat())
+    return "public" if served else "ready"
+
+
 def log(message: str) -> None:
     print(f"{datetime.now():%H:%M:%S} {message}", flush=True)
 
@@ -62,7 +69,7 @@ def reader_password() -> str:
     password = secrets.token_urlsafe(32)
     port = hub["port_of"]("metrics")
     analytics.secure_write(SECRET, "# The virtual OBT, read only: operating snapshots and the manifest. Never commit.\n"
-                                   f"HGH_SILVER_DB_URL=postgresql://{READER}:{password}@127.0.0.1:{port}/{TARGET}\n")
+                                   f"HGH_SILVER_DB_URL=postgresql://{READER}:{password}@127.0.0.1:{port}/{TARGET}\nHGH_METRIC_SOURCE=silver\n")
     return password
 
 
@@ -120,10 +127,10 @@ def load() -> None:
     rows = [line.split("\x1f") for line in manifest.stdout.splitlines() if line]
     answers = dict(psql(TARGET, "SELECT run_key,count(*) FROM silver.answer_analysis GROUP BY 1"))
     cells = dict(psql(TARGET, "SELECT run_key,count(*) FROM silver.acr_rollup GROUP BY 1"))
-    values = ",\n".join(f"('{run}','{cycle}',{analytics.literal(day) if day else 'NULL'},{answers.get(run, 0)},{cells.get(run, 0)},{analytics.literal(rule)},'silver.v1','public',{analytics.literal(ext)}::jsonb)"
+    values = ",\n".join(f"('{run}','{cycle}',{analytics.literal(day) if day else 'NULL'},{answers.get(run, 0)},{cells.get(run, 0)},{analytics.literal(rule)},'silver.v1','{manifest_status(ext)}',{analytics.literal(ext)}::jsonb)"
                         for cycle, day, ext, run, rule in rows)
     psql(TARGET, f"INSERT INTO ops.snapshot_manifest(snapshot_id,cycle_id,round_date,row_count,acr_row_count,rule_version,contract_version,status,ext) VALUES\n{values};")
-    log(f"ops.snapshot_manifest: {len(rows):,} public snapshots")
+    log(f"ops.snapshot_manifest: {len(rows):,} snapshots")
     done = subprocess.run([tool("vacuumdb"), *parts(TARGET), "--analyze-only", "--jobs=4"], capture_output=True, text=True)
     if done.returncode:
         raise RuntimeError(f"analyze failed: {done.stderr[:400]}")

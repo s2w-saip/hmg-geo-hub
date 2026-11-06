@@ -37,8 +37,8 @@ class GoldLiveReads(unittest.TestCase):
 
     def test_reader_is_read_only(self):
         health = self.read("/healthz")
-        self.assertEqual(health["database"], "gold")
-        self.assertEqual(health["role"], "geo_readonly")
+        self.assertEqual(health["database"], "geohub_gold_db")
+        self.assertEqual(health["role"], "hmg_metrics_reader")
         self.assertEqual(health["read_only"], "on")
 
     def test_write_methods_are_rejected(self):
@@ -52,7 +52,7 @@ class GoldLiveReads(unittest.TestCase):
         for tab in ("volume", "serp", "suggestions"):
             payload = self.read(f"/v1/gold/keywords?tab={tab}&limit=2")
             self.assertEqual(payload["data"]["tab"], tab)
-            self.assertEqual(payload["meta"]["gold"]["database"], "gold")
+            self.assertEqual(payload["meta"]["gold"]["database"], "geohub_gold_db")
             self.assertGreater(payload["meta"]["page"]["total"], 0)
         social = self.read("/v1/gold/social?limit=2")
         self.assertTrue(social["data"]["snapshot"]["is_active"])
@@ -143,7 +143,7 @@ class GoldLiveReads(unittest.TestCase):
                     schema = {"components": {"schemas": CONTRACT["schemas"]}, **route["response"]}
                     errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda e: str(e.path))
                     self.assertFalse(errors, "\n".join(f"{list(e.path)}: {e.message[:250]}" for e in errors[:8]))
-                    self.assertEqual(payload["meta"]["gold"]["database"], "gold")
+                    self.assertEqual(payload["meta"]["gold"]["database"], "geohub_gold_db")
                     self.assertGreater(payload["meta"]["gold"]["release_id"], 0)
 
 

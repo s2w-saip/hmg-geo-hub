@@ -119,6 +119,8 @@ class Context:
         self.catalog_prompts: list[int] | None = None
         # the rounds of this read whose pre-computed values are late (metrics.gold_rows): a trend shows them as gaps
         self.late_rounds: set[date] = set()
+        # on the OBT, each round's operating snapshots in the manifest (metrics.gold_rows reads them); None off it
+        self.public_snapshots: dict[date, str] | None = None
         # what the judgments leave out of this read's builds (metrics.gold_judged); the ACR answers no population takes leave every fact read
         self.populations = Populations()
         self.older_acr: list[int] = []
@@ -249,7 +251,7 @@ class Context:
                 "cycles": [d.isoformat() for d in sorted(self.selected_dates)],
                 "generation": self.release["version"], "ignored_filters": [], "dropped_filters": {},
                 "suppressed": suppressed or {}, "source": {"url_rates": "live", "reason": "not_website" if self.sf != 2 else "no_publication"},
-                "gold": {"database": "gold", "release_id": self.release["release_id"],
+                "gold": {"database": "geohub_gold_db", "release_id": self.release["release_id"],
                     "rule_signature": self.release["rule_signature"], "read_mode": self.mode}}
         if page is not None:
             meta["page"] = page

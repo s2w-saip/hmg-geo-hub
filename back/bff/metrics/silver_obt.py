@@ -11,19 +11,22 @@ The judgments are bff.metrics.judgments, on the columns of OBT_COLUMNS. What the
  - 대표 답변 = formulas.representative, in SQL.
  - 당사 = the brand's own_bit in the brand reference, or the entity's 'own' role on the roster.
  - 시장 = country; on website the site's country, as country there is where the answer was measured from.
+ - 한국어 프롬프트 = Hangul in its text (equal to the store's flag on all 28,750 prompts, 2026-11-06).
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import time
-from collections.abc import Sequence
+import re
+from collections.abc import Mapping, Sequence
 from copy import copy
 from dataclasses import replace
 from datetime import date
 from typing import Any, NamedTuple
 
-from bff.gold_reader.context import values
+from bff.gold_reader.context import SQL, values
 from bff.hub_stores import input_db, silver_db
 from bff.metrics import judgments as j
 from bff.metrics.catalog import CITATION_MONITORING, MONITORING, REPRESENTATIVE, SENTIMENTS, TYPES
@@ -39,6 +42,7 @@ CELL_GROUPS = {"round": "cell.round_date", "engine": "cell.engine", "country": "
 OFFICIAL_HMG = "officialHmg"
 STANCE_CODES = "WHEN 'positive' THEN 1 WHEN 'neutral' THEN 2 WHEN 'mixed' THEN 3 WHEN 'negative' THEN 4"  # the readers' codes
 SURFACE = {"global": 1, "website": 2, "project": 3}
+HANGUL = re.compile("[가-힣]")
 
 
 class Binder:
@@ -94,9 +98,17 @@ class Inputs(NamedTuple):
     excluded_entities: list[str]
 
 
+def with_past_catalogs(inputs: Inputs, rows: Sequence[Mapping[str, Any]]) -> Inputs:
+    """A prompt later taken out of the standard catalog still counts in the rounds it was measured in. The service's definitions hold today's catalog; geohub_gold_db holds what
+    it was, for the prompts where the two differ (115 on global, 2026-11-06)."""
+    past = {r["id"]: r for r in rows}
+    return inputs._replace(in_root=[past[p]["in_root_catalog_all"] if p in past else v for p, v in zip(inputs.prompt_ids, inputs.in_root)],
+                           brand_group=[(past[p]["cat_mask_all"] or 0) if p in past else v for p, v in zip(inputs.prompt_ids, inputs.brand_group)])
+
+
 async def read_inputs(conn: Any) -> Inputs:
     """conn = geohub_bm_db."""
-    rows = await conn.fetch("SELECT prompt_id::text AS id,definition::text AS d FROM catalog.current_prompt")
+    rows = await conn.fetch("SELECT prompt_id::text AS id,text,definition::text AS d FROM catalog.current_prompt")
     columns: tuple[list, ...] = ([], [], [], [], [], [], [], [], [])
     for r in rows:
         d = json.loads(r["d"])
@@ -107,7 +119,7 @@ async def read_inputs(conn: Any) -> Inputs:
             if (entry.get("brand_presence") or "").lower() == "branded":
                 branded.append((r["id"], entry.get("brand_bit") or 0))
         columns[2].extend(branded)
-        values = (r["id"], d.get("funnel"), None, bool(d.get("in_root_catalog")), (d.get("language") or "").lower() == "ko", ",".join(d.get("regions") or []),
+        values = (r["id"], d.get("funnel"), None, bool(d.get("in_root_catalog")), HANGUL.search(r["text"] or "") is not None, ",".join(d.get("regions") or []),
                   d.get("kind") == "acr", bool(d.get("web_reg")), group)
         for index, (column, value) in enumerate(zip(columns, values)):
             if index != 2:
@@ -596,19 +608,37 @@ LEFT_ON_GOLD = frozenset({"domain_rows", "source_counts", "rival_citations", "ap
 GOLD_KEYS = {"round_date": "round", "engine_key": "engine", "geo_key": "country", "prompt_key": "prompt"}
 _CACHE_SECONDS = 5
 _cached: tuple[float, Inputs] | None = None
+_public: dict[str, tuple[float, dict[date, str]]] = {}
 
 
 def enabled() -> bool:
-    """HGH_METRIC_SOURCE=silver: the base counts come from the OBT. Off by default until the values are checked KPI by KPI (T9.4)."""
+    """HGH_METRIC_SOURCE=silver: the base counts come from the OBT. Set beside HGH_SILVER_DB_URL in .env.silver.local; a machine without them counts on geohub_gold_db."""
     return os.environ.get("HGH_METRIC_SOURCE", "").strip().lower() == "silver"
 
 
-async def current_inputs() -> Inputs:
+async def public_snapshots(surface: str) -> dict[date, str]:
+    """The manifest's operating snapshots of a surface, by round: what a kept value's snapshot id is made of (T9.3). Read at most every few seconds."""
+    kept = _public.get(surface)
+    now = time.monotonic()
+    if kept is None or now - kept[0] >= _CACHE_SECONDS:
+        async with silver_db.connection() as conn:
+            rows = await conn.fetch("""SELECT m.round_date,string_agg(m.snapshot_id::text,',' ORDER BY m.snapshot_id::text) AS ids
+                FROM ops.snapshot_manifest m JOIN ops.cycle k USING(cycle_id) WHERE m.status='public' AND k.surface=$1 GROUP BY 1""", surface)
+        kept = _public[surface] = (now, {r["round_date"]: r["ids"] for r in rows})
+    return kept[1]
+
+
+async def current_inputs(gold: Any) -> Inputs:
+    """gold = the read's connection to geohub_gold_db."""
     global _cached
     now = time.monotonic()
     if _cached is None or now - _cached[0] >= _CACHE_SECONDS:
         async with input_db.connection() as conn:
-            _cached = (now, await read_inputs(conn))
+            inputs = await read_inputs(conn)
+        # on the read's own connection: asking the pool for another while every read holds one waits for ever
+        past = await gold.fetch("""SELECT prompt_id::text AS id,in_root_catalog_all,cat_mask_all FROM gold.dim_prompt
+            WHERE surface=1 AND (cat_mask_all,in_root_catalog_all) IS DISTINCT FROM (cat_mask,in_root_catalog)""")
+        _cached = (now, with_past_catalogs(inputs, past))
     return _cached[1]
 
 
@@ -633,12 +663,17 @@ class ObtForContext:
     async def _scope(self) -> Scope:
         ctx = self.ctx
         conn = ctx.conn
+        await ctx.load_catalog()
         project = []
         if ctx.project_key is not None:
             project = [await conn.fetchval("SELECT coalesce(scope_project_id,project_id)::text FROM gold.dim_project WHERE project_key=$1", ctx.project_key)]
         prompts = None
         if ctx.catalog_prompts is not None:
             prompts = tuple(r["id"] for r in await conn.fetch("SELECT prompt_id::text AS id FROM gold.dim_prompt WHERE prompt_key=ANY($1::int[])", list(ctx.catalog_prompts)))
+        elif ctx.sf == 3:  # a project's taxonomy picks are on its prompts, not on the standard catalog
+            b = SQL()
+            if picks := ctx.taxon_where(b, "p"):
+                prompts = tuple(r["id"] for r in await conn.fetch(f"SELECT p.prompt_id::text AS id FROM gold.dim_prompt p WHERE p.project_key={b.bind(ctx.project_key, 'smallint')} AND {' AND '.join(picks)}", *b.args))
         return Scope(ctx.surface, tuple(ctx.selected_dates), ctx.bits, tuple(project), tuple(values(ctx.q, "country")), tuple(values(ctx.q, "lang")), tuple(values(ctx.q, "engine")),
                      prompts, bool(values(ctx.q, "brand")))
 
@@ -679,9 +714,16 @@ class ObtForContext:
             if kwargs.get("brand_keys"):
                 wanted = [str(k) for k in kwargs["brand_keys"]]
                 kwargs["brand_keys"] = [r["name"] for r in await self.ctx.conn.fetch("SELECT name FROM gold.dim_brand WHERE brand_key::text=ANY($1::text[])", wanted)] or wanted
-            inputs = await current_inputs()
+            inputs = await current_inputs(self.ctx.conn)
             scope = await self._scope()
-            async with silver_db.connection() as conn:
-                out = await getattr(SilverObtSource(conn, scope, inputs), name)(*args, **kwargs)
+            group = kwargs.get("group") or next((a for a in args if isinstance(a, tuple)), ())
+            # a call by round is counted round by round, side by side up to the pool's size: a round's query does not grow with the others
+            parts = [(day,) for day in scope.rounds] if "round" in group and len(scope.rounds) > 1 else [scope.rounds]
+
+            async def count(rounds: tuple) -> Any:
+                async with silver_db.connection() as conn:
+                    return await getattr(SilverObtSource(conn, scope._replace(rounds=rounds), inputs), name)(*args, **kwargs)
+            counted = await asyncio.gather(*(count(rounds) for rounds in parts))
+            out = counted[0] if len(counted) == 1 else [row for rows in counted for row in rows]
             return await self._keys(out) if isinstance(out, list) else out
         return call
