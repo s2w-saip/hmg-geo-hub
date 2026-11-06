@@ -26,3 +26,14 @@ SSOT `shared/glossary.md`에 넣을 내용이다. SSOT 문서의 BFF(`.md` 24곳
 | `shared/project-architecture.html` | 198 | 그림의 지표 API 상자와 연결선 삭제 |
 | `shared/project-architecture.html` | 284, 334 | `.md`와 같게 |
 | `service/README.md` | 14 | '화면 조립' |
+
+# 수정 초안: 필터 조회의 위치 (2026-11-06)
+
+필터를 건 조회는 `gold_db`의 조회용 테이블에서 센다. 이 테이블은 서비스가 Silver 운영 스냅샷을 가공해 저장한다. 원천은 그대로 Silver OBT 하나다. 줄 번호는 지금 SSOT 기준이다.
+
+| 파일 | 줄 | 고칠 내용 |
+|---|---|---|
+| `shared/project-architecture.md` | 46 | Gold가 담는 것에 조회용 테이블을 더한다 |
+| `shared/project-architecture.md` | 78 | '필터를 건 조회는 BFF가 Gold의 조회용 테이블에서 전체를 센다' |
+| `shared/glossary.md` | 25 | 조회 시점 집계의 '운영 스냅샷에서'를 'Gold의 조회용 테이블에서'로 |
+| `service/cache-db.md` | 3, 37 | 다시 만들고 세는 곳을 Gold의 조회용 테이블로 |
