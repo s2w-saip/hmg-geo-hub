@@ -5149,6 +5149,9 @@
       }
     },
     "shell": {
+      "logoutFailed": "Sign-out failed. Please retry.",
+      "preview": "Page preview",
+      "disconnected": "Server disconnected",
       "brand": "HMG GEO",
       "brandSub": "AI answer monitoring",
       "sideLabel": "Side menu",
@@ -7671,6 +7674,8 @@
     "body": "This screen is not implemented yet."
   },
   "accountGate": {
+    "preview": "Page preview",
+    "previewNote": "Measurements will appear after connection.",
     "sample": "Sample screen",
     "note": "Every value below is sample data, not a measurement.",
     "ga4": {

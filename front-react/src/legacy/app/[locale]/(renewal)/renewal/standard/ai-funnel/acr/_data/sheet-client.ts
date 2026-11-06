@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Browser read of one 분포 sheet of the renewal ACR page: GET /api/standard/acr/sheet, a thin proxy to the
 // screen acr/renewal-sheet, with the page's URL params (the filters the view was built from).
 import type { AcrDistSheet } from "./screen-types";

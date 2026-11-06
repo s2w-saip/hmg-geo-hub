@@ -4,15 +4,15 @@ const routes = JSON.parse(readFileSync(new URL("../../src/app/source-routes.json
 // Independent acceptance expectations: an arbitrary heading or fallback page is not a migrated route.
 const screens: [string[], string, string][] = [
   [["dashboard", "website"], "Overview", "overview"],
-  [["standard/prompts"], "프롬프트", "prompts"],
+  [["standard/prompts"], "글로벌 프롬프트", "prompts"],
   [["website/prompts"], "프롬프트", "website-prompts"],
-  [["standard/answer-analysis/mention", "website/answer-analysis/mention", "projects/:id/analysis/mention"], "언급 분석", "mention"],
-  [["standard/answer-analysis/citation", "website/answer-analysis/citation", "projects/:id/analysis/citation"], "인용 분석", "citation"],
+  [["standard/answer-analysis/mention", "website/answer-analysis/mention", "projects/:id/analysis/mention"], "언급 분석베타", "mention"],
+  [["standard/answer-analysis/citation", "website/answer-analysis/citation", "projects/:id/analysis/citation"], "인용 분석베타", "citation"],
   [["standard/answer-analysis/citation/prompts", "website/answer-analysis/citation/prompts", "projects/:id/analysis/citation/prompts"], "인용 프롬프트", "citation-prompts"],
   [["standard/answer-analysis/citation/tone-urls", "website/answer-analysis/citation/tone-urls", "projects/:id/analysis/citation/tone-urls"], "감정별 인용 URL", "citation-tone"],
-  [["standard/ai-funnel/acr"], "AI 추천 전환율", "acr"],
-  [["standard/ai-funnel/conversion", "website/ai-funnel/conversion", "projects/:id/ai-funnel/conversion"], "AI 전환", "waiting"],
-  [["standard/ai-funnel/visibility"], "AI 가시성", "waiting"],
+  [["standard/ai-funnel/acr"], "AI 추천 전환율베타", "acr"],
+  [["standard/ai-funnel/conversion", "website/ai-funnel/conversion", "projects/:id/ai-funnel/conversion"], "AI 유입 전환베타", "waiting"],
+  [["standard/ai-funnel/visibility"], "AI 가시성베타", "waiting"],
   [["projects"], "프로젝트", "projects"],
   [["projects/:id"], "Dashboard", "overview"],
   [["projects/:id/prompt"], "프롬프트", "project-prompts"],
@@ -21,18 +21,20 @@ const screens: [string[], string, string][] = [
   [["projects/:id/intent/google-keyword"], "키워드", "waiting"],
   [["projects/:id/intent/social-scraping"], "소셜 분석", "waiting"],
   [["admin"], "사용자 관리", "accounts"],
-  [["admin/standards/prompts"], "Global 프롬프트 관리", "hub-prompts"],
+  [["admin/standards/prompts"], "글로벌 프롬프트 관리", "hub-prompts"],
   [["admin/standards/citation-sources"], "인용 출처 분류", "sources"],
-  [["admin/standards/customer-interest"], "고객 관심 데이터", "interest"],
+  [["admin/standards/customer-interest"], "고객 관심 데이터 관리", "interest"],
   [["admin/standards/entities"], "엔티티 카탈로그", "entities"],
-  [["admin/ga4"], "GA4 속성 등록", "ga4"],
+  [["admin/ga4"], "GA4 연동", "ga4"],
   [["admin/keyword-tools"], "키워드 도구", "waiting"],
 ];
 
 test("all original renewal routes open without API calls or browser errors", async ({ page }) => {
   const errors: string[] = [];
   const api: string[] = [];
+  test.setTimeout(120_000);
   page.on("pageerror", e => errors.push(e.message));
+  page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   page.on("request", r => { if (new URL(r.url()).pathname.startsWith("/api/")) api.push(r.url()); });
   for (const route of routes) {
     const path = route.path.replace(":locale", "ko").replace(":id", "preview").replace("*", "not-built");
@@ -59,20 +61,21 @@ test("an unregistered route is explicitly unavailable", async ({ page }) => {
 });
 test("navigation, filter collapse, locale switch, and direct URL refresh work", async ({ page }) => {
   await page.goto("/ko/renewal/dashboard");
-  await page.getByRole("button", { name: "필터 패널 접기·펼치기" }).click();
-  await expect(page.locator(".rn-standby-filters")).toHaveClass(/is-collapsed/);
-  await page.getByRole("link", { name: "언급 분석", exact: true }).first().click();
+  await expect(page.locator("[data-rn-split]")).toBeVisible();
+  await page.keyboard.press("[");
+  await expect(page.locator("[data-rn-split]")).toHaveAttribute("data-rn-split", "closed");
+  await page.locator('[data-rn-nav="/renewal/standard/answer-analysis/mention"]').click();
   await expect(page).toHaveURL(/standard\/answer-analysis\/mention/);
-  await page.getByRole("link", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await expect(page).toHaveURL(/\/en\/renewal\/standard\/answer-analysis\/mention/);
-  await expect(page.locator("h1")).toHaveText("Mention analysis");
+  await expect(page.locator("h1")).toHaveText("Mention analysisBeta");
   await page.reload();
-  await expect(page.locator("h1")).toHaveText("Mention analysis");
+  await expect(page.locator("h1")).toHaveText("Mention analysisBeta");
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
 });
-test("standby has no measured numbers and cannot submit a login", async ({ page }) => {
+test("the original overview UI has no measured values and preview cannot submit a login", async ({ page }) => {
   await page.goto("/ko/renewal/dashboard");
-  await expect(page.getByLabel("주요 지표 자리").getByLabel("조회 전")).toHaveCount(5);
+  await expect(page.getByLabel("KPI 5종").getByText("데이터 없음", { exact: true })).toHaveCount(5);
   await page.screenshot({ path: "test-results/standby-overview.png" });
   await page.goto("/ko/login");
   await expect(page.getByRole("button", { name: "로그인", exact: true })).toBeDisabled();

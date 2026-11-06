@@ -1887,6 +1887,58 @@
       "source": "public/fonts/PretendardVariable.woff2",
       "sha256": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4",
       "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/rn-sidebar.tsx",
+      "sha256": "e42ef4dcd171f1cf1fa02f3ff7bed3c54a47a6876cf33506fb4990c584de7e27"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/rn-project-tab.tsx",
+      "sha256": "8df1d20a8346153168e39a2d5912060f2d3884edc66866e3665d4538ae55d6e9"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/nav-pending.tsx",
+      "sha256": "d44b7674b6552211773a2a04a9200b6bc4bb03ad489f2eabee74a911966bc0f8"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/beta-toast.tsx",
+      "sha256": "9ce56cc7ebeb79518c38acbe8c331bf4c45bb710a1fc2a7abb4bff6f63b2e15a"
+    },
+    {
+      "source": "app/[locale]/(renewal)/layout.tsx",
+      "sha256": "5fc48ef5c24e65c6f9f8a08512350ff47c614b1e057c5c5a9d1a05bfa65a61cb"
+    },
+    {
+      "source": "components/dash/sidebar.tsx",
+      "sha256": "065b825fc5c298c4e5074e0216f8467ab048791191b00039824f2ddd0bb32c07"
+    },
+    {
+      "source": "components/dash/beta-notice.tsx",
+      "sha256": "50e02861077c41379b6b900d2a755c56fd8da4f39f22e712c59a5f04be7b286b"
+    },
+    {
+      "source": "components/dash/notice-dialog.tsx",
+      "sha256": "9971eb289b514c67fc79c6eb77e271a6f3365589502d10cef02e949982823ea6"
+    },
+    {
+      "source": "components/dash/filter-carry.ts",
+      "sha256": "6e5a4abf191cf335626e5050c3febd3edaaebb0952d02af0b3e98d48be077eec"
+    },
+    {
+      "source": "lib/hub/next-path.ts",
+      "sha256": "48626c8cc69599fa1e2b50e78b2efe6e95b39532914083cae09853f6d7522b9b"
+    },
+    {
+      "source": "lib/viz/toast-style.ts",
+      "sha256": "35f689e082ce3d3bf061b7dc6852d19cd82e5358fbecefe9453d53e5fdae4880"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/account-gate.tsx",
+      "sha256": "785ed545dfb46c38135da3d86da220b680e50da65397d4f1f3be2b157e9355da"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/layout.tsx",
+      "sha256": "6a0e4697b5d938ee53f49261443ec5d01e729c5a8b5323ee748234c634d9f37f"
     }
   ]
 }

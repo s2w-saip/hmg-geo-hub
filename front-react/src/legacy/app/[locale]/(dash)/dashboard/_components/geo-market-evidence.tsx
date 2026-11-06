@@ -1,5 +1,7 @@
 "use client";
 
+import { browserFetch as fetch } from "~/api/browser-fetch";
+
 // The renewal Overview's 근거 drawer (2026-11-05, D-12 step 3, the mockup in f9c0fcd · design-rules
 // '숫자를 누르면'): a KPI cell of the 시장별 현황 table opens the answers behind its value. The sample line is the row's
 // own counts (num / den = the value); the tabs are the KPI's split of the market's representative answers — the

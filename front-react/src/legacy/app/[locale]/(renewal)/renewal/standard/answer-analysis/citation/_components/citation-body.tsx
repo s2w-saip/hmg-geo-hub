@@ -1,5 +1,7 @@
 "use client";
 
+import { CONNECTED } from "~/api/client";
+import { emptyCitations } from "~/api/preview-models";
 import { Suspense, use, useCallback, useMemo, useState, type ReactNode } from "react";
 import Link from "~/app/link";
 import { useTranslations } from "use-intl";
@@ -46,7 +48,7 @@ import { numTxt, pctTxt, deltaTxt, slotLabel } from "../../mention/_components/m
 import { DomainBumpCard, DomainDrawer, DomainTableCard } from "./citation-domains";
 import { ReachCard, WebsitePromptsCard } from "./citation-website";
 
-export function RnCitationBody({ input }: { input: RnCitationInput }) {
+export function RnCitationBody({ input, preview = false }: { input: RnCitationInput; preview?: boolean }) {
   return (
     <Suspense
       fallback={
@@ -55,20 +57,21 @@ export function RnCitationBody({ input }: { input: RnCitationInput }) {
         </RnCard>
       }
     >
-      <CitationShell input={input} />
+      <CitationShell input={input} preview={preview} />
     </Suspense>
   );
 }
 
 // The citation aggregate decides the page state (the original StatusBlock's rule: null = no data or
 // a budget delay, told apart by dataDegraded).
-function CitationShell({ input }: { input: RnCitationInput }) {
+function CitationShell({ input, preview }: { input: RnCitationInput; preview: boolean }) {
   const live = use(input.data);
   const degraded = use(input.dataDegraded);
   const t = useTranslations("renewal.citation.states");
   const tA = useTranslations("answerAnalysis");
   const dg = useDegradedText();
   const reset = useRnFilterReset();
+  if (!live && preview) return <RnHighlightProvider><Measured input={input} live={emptyCitations} /></RnHighlightProvider>;
   if (!live) {
     if (degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={dg.all} />;
     return (
@@ -585,7 +588,7 @@ function HeroShare({ kind }: { kind: "hmg" | "dealer" }) {
       {tile.value == null ? (
         <>
           <span className={HERO_VALUE}>—</span>
-          <span className="text-rn-12 break-keep text-rn-on-dark/72">{t(`${kind}.excluded`)}</span>
+          {CONNECTED && <span className="text-rn-12 break-keep text-rn-on-dark/72">{t(`${kind}.excluded`)}</span>}
         </>
       ) : (
         <>
@@ -624,7 +627,7 @@ function HeroPrompts() {
       <div className={HERO_CELL} data-rn-tile="prompts" aria-disabled="true">
         {head}
         <span className={HERO_VALUE}>—</span>
-        <span className="text-rn-12 break-keep text-rn-on-dark/72">{reason}</span>
+        {CONNECTED && <span className="text-rn-12 break-keep text-rn-on-dark/72">{reason}</span>}
       </div>
     );
   }

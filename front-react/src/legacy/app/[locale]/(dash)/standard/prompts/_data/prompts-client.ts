@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Browser reads of the Global prompts lists (original and renewal page): GET /api/standard/prompts/*,
 // thin proxies to the screens catalog/prompts-* (GET, so the local read-only mode allows them).
 import type { HistoryQuery, PromptsExport, PromptsHistory, PromptsPage, PromptsQuery, PromptsTimeline } from "./screen-types";

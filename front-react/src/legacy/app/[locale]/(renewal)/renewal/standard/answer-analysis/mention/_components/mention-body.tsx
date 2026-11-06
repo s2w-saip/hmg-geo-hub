@@ -35,7 +35,7 @@ import { GlobalMentionBody, GlobalTabsFallback } from "./mention-global";
 import { asked } from "./mention-input";
 
 /** The page body; the reads and the view (KPI tab or 브랜드 상세) come from RnMentionPageProvider (mention-tabs). */
-export function RnMentionBody() {
+export function RnMentionBody({ preview = false }: { preview?: boolean } = {}) {
   const { input, kpi, view } = useMentionPage();
   return (
     <Suspense
@@ -49,20 +49,20 @@ export function RnMentionBody() {
         </div>
       }
     >
-      <MentionShell />
+      <MentionShell preview={preview} />
     </Suspense>
   );
 }
 
 // The body aggregate decides the page state (원본 MentionsData 와 같은 판정).
-function MentionShell() {
+function MentionShell({ preview }: { preview: boolean }) {
   const { input } = useMentionPage();
   const shell = use(input.shell);
   const t = useTranslations("renewal.mention.states");
   const tA = useTranslations("answerAnalysis");
   const dg = useDegradedText();
   const reset = useRnFilterReset();
-  if (!shell.measured) {
+  if (!shell.measured && !preview) {
     if (shell.degraded) return <StateCard icon={<CircleSlash className="size-5" aria-hidden />} title={dg.all} />;
     return (
       <EmptyRead>

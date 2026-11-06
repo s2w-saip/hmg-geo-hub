@@ -19,6 +19,7 @@ export async function mockHub(page: Page, override?: (url: URL, request: Request
       if (path === "/api/hub/session") body = { user: { id: "test-admin", login: "test-admin", email: null, displayName: null, role: "admin", scope: { all: true }, mustChangePassword: false } };
       else if (path === "/api/hub/saved-filters") body = { data: { items: [] } };
       else if (path === "/api/hub/accounts") body = { data: { items: [], roles: ["hq", "region", "country"] } };
+      else if (path === "/api/screens/projects/list") body = { items: [] };
       else if (path.endsWith("/service-week")) body = week;
       else if (path === "/api/screens/overview/filters") body = { catalogRows: [], geographyOptions: [], languageOptions: [], engineOptions: [], optionMatrix: [], selectableDates: [], collectionStartDay: null, latestAnchorDay: null };
       else if (path === "/api/screens/overview/cards") body = { state: "empty" };

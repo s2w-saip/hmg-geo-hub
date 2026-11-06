@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Project › Prompt (2026-11-03): the browser's writes for a project's prompts and tags through /api/hub/projects/<pid>/…
 // (back/bff/hub_stores/project_prompts.py). The HUB owns them (admin-todo decision '프로젝트 프롬프트 적재'); a change reaches
 // the numbers after the pipeline reads it and Gold is rebuilt.

@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Admin › GA4 연동 (2026-10-29): the shapes the BFF answers (back/bff/hub_stores/ga4_registry.py) and the browser's
 // calls through /api/hub/ga4-properties (app/api/hub/ga4-properties/[[...rest]]/route.ts).
 

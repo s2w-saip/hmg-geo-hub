@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Browser reads of the renewal Website › Prompts body (search, order, page, page size, the list's picks,
 // export): GET /api/website/prompts/{page|rows|insights}, thin proxies to the screens website/prompts-* (GET, so
 // the local read-only mode allows them; a server action is a POST). `query` is the page URL's search (filters,

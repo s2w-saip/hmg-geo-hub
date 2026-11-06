@@ -1,3 +1,4 @@
+import { CONNECTED } from "~/api/client";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "use-intl";
 import { aiEngineLabel } from "@/lib/scope/engines";
@@ -53,7 +54,7 @@ export function RnProjectGeneral({ view }: { view: ProjectSettingsView }) {
   const settings = view.measurement;
   return (
     <div className="flex flex-col gap-4" data-rn-project-setting="">
-      {settings && view.identity.projectId ? <RnProjectMeasurement projectId={view.identity.projectId} view={settings} /> : <RnNote>{t("measurement.unavailable")}</RnNote>}
+      {settings && (view.identity.projectId || !CONNECTED) ? <RnProjectMeasurement projectId={view.identity.projectId ?? ""} view={settings} /> : <RnNote>{t("measurement.unavailable")}</RnNote>}
       <RnCard aria-label={t("general.title")}>
         <RnCardHeader title={t("general.title")} hint={t("general.hint")} />
         <Rows>

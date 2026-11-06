@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Admin › 인용 출처 분류 › 시드 · 공식 소셜 · 코드표 (2026-10-30): the shapes the BFF answers
 // (back/bff/hub_stores/source_lists.py) and the browser's calls through /api/hub/source-seeds · source-socials ·
 // source-codes. The HUB owns these lists (admin-todo decisions G · 코드표); Gold's own values come along for the

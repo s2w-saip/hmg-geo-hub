@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Admin › 사용자 관리 (2026-10-29): the shapes the BFF answers (back/bff/hub_stores/accounts.py) and the browser's
 // calls through /api/hub/accounts (app/api/hub/accounts/[[...rest]]/route.ts).
 

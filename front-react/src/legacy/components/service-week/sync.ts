@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 import { isServiceWeekView, weekEndOf, type ServiceWeekView } from "@/lib/service-week";
 
 // Keeps the shells' service week current (provider.tsx). A layout renders once and stays across soft navigations, so

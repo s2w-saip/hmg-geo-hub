@@ -1,5 +1,7 @@
 "use client";
 
+import { browserFetch as fetch } from "~/api/browser-fetch";
+
 import { Suspense, use, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "use-intl";
 import { usePathname, useSearchParams } from "~/app/navigation";

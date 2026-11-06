@@ -5,6 +5,8 @@ import { useBundle, type Read, type ReadControls } from "~/api/bundle";
 import { ReadProvider } from "~/components/read-section";
 import type { Query } from "~/api/client";
 import { useSession } from "~/app/session";
+import { CONNECTED } from "~/api/client";
+import { pendingPreview, previewRead, previewViewer } from "~/api/preview";
 import { PageError, PageLoading } from "~/app/states";
 import { surfaceOf, type PageDefinition } from "~/app/pages";
 import { RnEmpty } from "@/components/renewal-ui";
@@ -20,7 +22,8 @@ export function usePageContext(page: PageDefinition) {
   const locale = useLocale();
   const { id } = useParams();
   const { search } = useLocation();
-  const { user } = useSession();
+  const { user: session } = useSession();
+  const user = CONNECTED ? session : previewViewer;
   if (!user) throw new Error("A connected page requires an authenticated HUB session");
   const sp = useMemo(() => {
     const params = new URLSearchParams(search);
@@ -33,12 +36,14 @@ export function usePageContext(page: PageDefinition) {
 export type PageContext = ReturnType<typeof usePageContext>;
 export interface Values extends ReadControls { value<T>(key: string): T; promise<T>(key: string): Promise<T>; stamp: string }
 export function useReads(reads: Record<string, Read>) {
-  const result = useBundle(reads);
+  const bundle = useBundle(reads);
+  const preview = useMemo(() => Object.fromEntries(Object.entries(reads).map(([key, read]) => [key, previewRead(read)])), [bundle.key]);
+  const result = CONNECTED ? bundle : { ...bundle, data: preview, pending: false, error: null };
   const cache = useMemo(() => new Map<string, { value: unknown; promise: Promise<unknown> }>(), [result.key]);
   // A late section must not replace promises already consumed by other sections.
   const promises = useMemo(() => Object.fromEntries(Object.entries(result.data).map(([key, value]) => {
     let entry = cache.get(key);
-    if (!entry || entry.value !== value) { entry = { value, promise: Promise.resolve(value) }; cache.set(key, entry); }
+    if (!entry || entry.value !== value) { entry = { value, promise: !CONNECTED && value === undefined ? pendingPreview : Promise.resolve(value) }; cache.set(key, entry); }
     return [key, entry.promise];
   })), [result.data, cache]);
   const values = useMemo<Values>(() => ({ value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: result.key, states: result.states, retry: result.retry }), [result.data, result.key, promises, result.states, result.retry]);
@@ -59,7 +64,7 @@ export function commonReads(ctx: PageContext): Record<string, Read> {
 }
 export function savedSource(ctx: PageContext, page: SavedFilterPage) {
   // The existing saved-filter hook loads and retries its own list without blocking screen data.
-  return { page, userId: ctx.user.id, initial: null };
+  return { page, userId: ctx.user.id, initial: CONNECTED ? null : [] };
 }
 export function PageWeek({ ctx, values, children }: { ctx: PageContext; values: Values; children: ReactNode }) {
   const value = ctx.surface === "project" ? null : values.value<ServiceWeekView | null | undefined>("week");

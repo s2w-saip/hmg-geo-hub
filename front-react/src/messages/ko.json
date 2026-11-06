@@ -5149,6 +5149,9 @@
       }
     },
     "shell": {
+      "logoutFailed": "로그아웃하지 못했습니다. 다시 시도해 주세요.",
+      "preview": "화면 미리보기",
+      "disconnected": "서버 연결 전",
       "brand": "HMG GEO",
       "brandSub": "AI 답변 모니터링",
       "sideLabel": "사이드 메뉴",
@@ -7668,6 +7671,8 @@
     "body": "아직 구현되지 않은 화면입니다."
   },
   "accountGate": {
+    "preview": "화면 미리보기",
+    "previewNote": "측정값은 연결 후 표시됩니다.",
     "sample": "샘플 화면",
     "note": "아래 값은 모두 샘플이며 실제 측정값이 아닙니다.",
     "ga4": {

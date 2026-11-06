@@ -36,12 +36,12 @@ import { AcrCardActions, AcrProvider, CONTEXT_COLOR, OWN_COLOR, compareColor, de
 import { AcrBattle, AcrDistribution, AcrModels } from "./acr-detail";
 import { AcrConversion, AcrDuels } from "./acr-funnel";
 
-export function RnAcrBody({ input }: { input: RnAcrInput }) {
+export function RnAcrBody({ input, preview = false }: { input: RnAcrInput; preview?: boolean }) {
   const t = useTranslations("renewal.acr");
   const tLive = useTranslations("aiFunnelView.acrLive");
   const reset = useRnFilterReset();
   const { view } = input;
-  if (!input.measured || !view) {
+  if ((!input.measured && !preview) || !view) {
     // a snapshot of a week with no Global round says so, with no filter advice (review r1-19, service-week/no-round.tsx),
     // as does a period that starts after the week (review r3-12)
     return (

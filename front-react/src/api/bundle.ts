@@ -3,6 +3,7 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "~/app/session";
 import { hub, queryString, screen, type Query } from "./client";
 import { isHghApiError } from "@/lib/hgh/errors";
+import { CONNECTED } from "./client";
 
 export interface Read { name: string; query?: Query; kind?: "screen" | "hub"; optional?: boolean; deferred?: boolean }
 export interface ReadState { pending: boolean; refreshing: boolean; error: Error | null }
@@ -29,7 +30,7 @@ export function useBundle(reads: Record<string, Read>) {
   const result = useQueries({ queries: entries.map(([, read]) => ({
     queryKey: [read.kind ?? "screen", identity, read.name, queryString(read.query)],
     queryFn: ({ signal }: { signal: AbortSignal }) => (read.kind === "hub" ? hub : screen)<unknown>(read.name, read.query ?? {}, signal),
-    enabled: !!user,
+    enabled: CONNECTED && !!user,
   })), combine: queries => ({
     // combine structurally shares unchanged responses, keeping React's consumed promises stable.
     data: Object.fromEntries(entries.map(([name, read], i) => [name, read.optional && queries[i].error ? null : queries[i].data])),

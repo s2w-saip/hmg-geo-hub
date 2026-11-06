@@ -29,18 +29,17 @@ function PageRoute({ page }: { page: PageDefinition }) {
   const { id } = useParams();
   useEffect(() => { document.title = `${page.title[locale === "en" ? 1 : 0]} · HMG GEO`; }, [page, locale]);
   let content: ReactNode;
-  if (!CONNECTED) content = <StandbyPage page={page} />;
-  else if (loading) content = <PageLoading />;
+  if (CONNECTED && loading) content = <PageLoading />;
   else if (error) content = <PageError error={error} retry={reload} />;
-  else if (!user) return <Navigate replace to={`/${locale}/login?next=${encodeURIComponent(pathname + search)}`} />;
-  else if (user.mustChangePassword) return <Navigate replace to={`/${locale}/change-password?next=${encodeURIComponent(pathname + search)}`} />;
-  else if (!canAccessRoute(user.role, pathname) || (id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) content = <PageError error={new HghApiError(403, "forbidden")} />;
+  else if (CONNECTED && !user) return <Navigate replace to={`/${locale}/login?next=${encodeURIComponent(pathname + search)}`} />;
+  else if (CONNECTED && user?.mustChangePassword) return <Navigate replace to={`/${locale}/change-password?next=${encodeURIComponent(pathname + search)}`} />;
+  else if (CONNECTED && (!user || !canAccessRoute(user.role, pathname) || (id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))) content = <PageError error={new HghApiError(403, "forbidden")} />;
   else if (page.kind === "waiting") content = <StandbyPage page={page} />;
   else if (page.group === "Admin") content = <Admin page={page} />;
   else if (page.kind === "prompts" || page.kind === "website-prompts") content = <Catalog page={page} />;
   else if (["projects", "project-prompts", "project-setting", "member"].includes(page.kind)) content = <Projects page={page} />;
   else content = <Analytics page={page} />;
-  return <Shell><PageBoundary><Suspense fallback={<PageLoading />}>{content}</Suspense></PageBoundary></Shell>;
+  return <Shell><PageBoundary><div data-page-kind={page.kind}><Suspense fallback={<PageLoading />}>{content}</Suspense></div></PageBoundary></Shell>;
 }
 function UnknownPage() {
   const locale = useLocale();

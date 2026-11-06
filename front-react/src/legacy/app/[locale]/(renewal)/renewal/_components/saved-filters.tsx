@@ -1,5 +1,7 @@
 "use client";
 
+import { browserFetch as fetch } from "~/api/browser-fetch";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { Bookmark, MoreHorizontal } from "lucide-react";

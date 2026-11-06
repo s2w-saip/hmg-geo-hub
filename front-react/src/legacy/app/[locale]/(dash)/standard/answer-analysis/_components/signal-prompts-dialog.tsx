@@ -1,5 +1,7 @@
 "use client";
 
+import { browserFetch as fetch } from "~/api/browser-fetch";
+
 import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 import { usePathname, useSearchParams } from "~/app/navigation";

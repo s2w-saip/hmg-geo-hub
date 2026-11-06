@@ -1,3 +1,5 @@
+
+import { browserFetch as fetch } from "~/api/browser-fetch";
 // Global prompt editing (2026-10-27): the shapes the BFF answers (back/bff/hub_stores/catalog_editor.py)
 // and the browser's calls through /api/hub/global-prompts (app/api/hub/global-prompts/[[...rest]]/route.ts).
 

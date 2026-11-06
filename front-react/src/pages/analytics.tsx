@@ -25,6 +25,8 @@ import { showsGeoMap } from "@/lib/auth/scope-policy";
 import type { PageDefinition } from "~/app/pages";
 import type { Read } from "~/api/bundle";
 import { HghApiError } from "@/lib/hgh/errors";
+import { CONNECTED } from "~/api/client";
+import { pendingPreview, previewTiles } from "~/api/preview";
 import { PageLoading } from "~/app/states";
 import { commonReads, Frame, Load, NoMeasurement, screenRead, sectionRead, usePageContext, useReads, type PageContext, type Values } from "./load";
 
@@ -69,16 +71,18 @@ function Overview({ page }: { page: PageDefinition }) {
 function GlobalOverview({ values: v, ctx, geo }: { values: Values; ctx: PageContext; geo: boolean }) {
   const view = v.value<CardsView>("cards");
   if (view.state === "degraded") throw new HghApiError(503, "source_unavailable");
-  if (view.state !== "ok") return <NoMeasurement />;
-  return <RnOverviewBody cards={view.cards} compareTitle={view.compareTitle} deferred={{ trend: v.promise("trend"), matrix: v.promise("matrix") }} geo={geo ? v.promise<OverviewGeoView>("geo") : null} qs={ctx.search} />;
+  if (view.state !== "ok" && CONNECTED) return <NoMeasurement />;
+  return <RnOverviewBody cards={view.state === "ok" ? view.cards : []} compareTitle={view.state === "ok" ? view.compareTitle : null} deferred={{ trend: v.promise("trend"), matrix: v.promise("matrix") }} geo={geo ? v.promise<OverviewGeoView>("geo") : null} qs={ctx.search} />;
 }
 function OtherOverview({ values: v, ctx, geo }: { values: Values; ctx: PageContext; geo: boolean }) {
   const summary = v.value<WebsiteSummaryView>("summary");
   const deferred = v.value<WebsiteSummaryView>("deferred");
   if (summary.state === "degraded" || deferred.state === "degraded") throw new HghApiError(503, "source_unavailable");
-  if (summary.state !== "ok" || deferred.state !== "ok") return <NoMeasurement />;
-  if (ctx.surface === "project") return <RnProjectDashboardBody id={ctx.id} tiles={summary.tiles} reads={{ deferred: Promise.resolve(deferred.tiles), engines: v.promise("engines"), trend: v.promise("trend"), composition: v.promise("composition"), status: v.promise("status") }} qs={ctx.search} />;
-  return <RnWebsiteOverviewBody tiles={summary.tiles} reads={{ deferred: Promise.resolve(deferred.tiles), engines: v.promise("engines"), trend: v.promise("trend"), composition: v.promise("composition"), brands: v.promise("brands"), geo: geo ? v.promise("geo") : null }} qs={ctx.search} isAdmin={ctx.user.role === "admin"} />;
+  if (CONNECTED && (summary.state !== "ok" || deferred.state !== "ok")) return <NoMeasurement />;
+  const tiles = summary.state === "ok" ? summary.tiles : previewTiles;
+  const later = deferred.state === "ok" ? deferred.tiles : previewTiles;
+  if (ctx.surface === "project") return <RnProjectDashboardBody id={ctx.id} tiles={tiles} reads={{ deferred: Promise.resolve(later), engines: v.promise("engines"), trend: v.promise("trend"), composition: v.promise("composition"), status: v.promise("status") }} qs={ctx.search} />;
+  return <RnWebsiteOverviewBody tiles={tiles} reads={{ deferred: Promise.resolve(later), engines: v.promise("engines"), trend: v.promise("trend"), composition: v.promise("composition"), brands: v.promise("brands"), geo: geo ? v.promise("geo") : null }} qs={ctx.search} isAdmin={ctx.user.role === "admin"} />;
 }
 const mentionSections = { shell: "rn-shell", compare: "rn-compare", rateValue: "rn-rate-value", rateHero: "rn-rate-hero", rateEngines: "rn-rate-engines", rateTypes: "rn-rate-types", favorHero: "rn-favor-hero", favorDist: "rn-favor-dist", favorMatrix: "rn-favor-matrix", rank: "rn-rank", bump: "rn-bump", ranking: "rn-ranking" } as const;
 const kpis: KpiTab[] = ["exposure", "sov", "favorability", "first-rank"];
@@ -101,7 +105,7 @@ function Mention({ page }: { page: PageDefinition }) {
       ...(global ? { engineExtra: v.promise("engineExtra"), presence: v.promise("presence") } : { summary: v.promise("summary"), tabDeltas: v.promise("tabDeltas"), tabValue: Object.fromEntries(kpis.map(k => [k, v.promise(`tab-${k}`)])) as NonNullable<RnMentionInput["tabValue"]> }),
       ...(ctx.surface === "website" ? { body: <RnWebsiteMentionBody reads={{ cards: v.promise("siteCards"), markets: v.promise("markets"), weekly: v.promise("weekly"), compare: v.promise("siteCompare") }} period={!!head.period} pageAsOf={Promise.resolve(v.value<{ asOf: string | null } | null>("asof")?.asOf ?? null)} admin={ctx.user.scope.all} /> } : {}),
     };
-    return <Frame page={page} ctx={ctx} values={v} filters={filters(ctx, v, "mention")} savedPage={savedPage}><RnMentionPageProvider input={input}><Suspense fallback={<PageLoading />}><RnMentionBody /></Suspense></RnMentionPageProvider></Frame>;
+    return <Frame page={page} ctx={ctx} values={v} filters={filters(ctx, v, "mention")} savedPage={savedPage}><RnMentionPageProvider input={input}><Suspense fallback={<PageLoading />}><RnMentionBody preview={!CONNECTED} /></Suspense></RnMentionPageProvider></Frame>;
   }}</Load>;
 }
 function Citation({ page }: { page: PageDefinition }) {
@@ -118,12 +122,12 @@ function Citation({ page }: { page: PageDefinition }) {
     if (page.kind === "citation-tone") return <Frame page={page} ctx={ctx} values={v} reset={["page", "cursor", "q"]}><RnCitationToneUrlsView {...v.value<CitationToneUrlsScreen>("body")} /></Frame>;
     const body = v.value<StandardCitationScreen<RnCitationVm> | RnWebsiteCitationScreen>("body");
     const time = parseTimeRange(ctx.sp.time);
-    const input: RnCitationInput = { api: true, period: time ? { from: time.from ?? null, to: time.to ?? null } : null, filtered: Object.keys(ctx.sp).some(k => !["tab", "page"].includes(k)), data: Promise.resolve(body.live), dataDegraded: Promise.resolve(body.dataDegraded), sectionDegraded: Promise.resolve(body.sectionDegraded), prevCategories: Promise.resolve(body.prevCategories), toneSummary: Promise.resolve(body.toneSummary), tableSource: Promise.resolve(body.tableSource), periodView: Promise.resolve(body.periodView), rn: Promise.resolve(body.rn ?? null), global: ctx.surface === "global", ...("reach" in body ? { website: Promise.resolve({ own: body.own, reach: body.reach }) } : {}) };
-    return <Frame page={page} ctx={ctx} values={v} filters={filters(ctx, v, "citation")} savedPage={savedPage}><Suspense fallback={<PageLoading />}><RnCitationBody input={input} /></Suspense></Frame>;
+    const input: RnCitationInput = { api: true, period: time ? { from: time.from ?? null, to: time.to ?? null } : null, filtered: Object.keys(ctx.sp).some(k => !["tab", "page"].includes(k)), data: Promise.resolve(body.live), dataDegraded: Promise.resolve(body.dataDegraded), sectionDegraded: Promise.resolve(body.sectionDegraded), prevCategories: Promise.resolve(body.prevCategories), toneSummary: CONNECTED ? Promise.resolve(body.toneSummary) : pendingPreview, tableSource: Promise.resolve(body.tableSource), periodView: Promise.resolve(body.periodView), rn: Promise.resolve(body.rn ?? null), global: ctx.surface === "global", ...("reach" in body ? { website: Promise.resolve({ own: body.own, reach: body.reach }) } : {}) };
+    return <Frame page={page} ctx={ctx} values={v} filters={filters(ctx, v, "citation")} savedPage={savedPage}><Suspense fallback={<PageLoading />}><RnCitationBody input={input} preview={!CONNECTED} /></Suspense></Frame>;
   }}</Load>;
 }
 function Acr({ page }: { page: PageDefinition }) {
   const ctx = usePageContext(page);
   const result = useReads({ ...commonReads(ctx), body: screenRead("acr/renewal", ctx.sp), header: screenRead("acr/renewal-header", ctx.sp, true) });
-  return <Load result={result}>{v => { const read = v.value<RnAcrScreen>("body"); return <Frame page={page} ctx={ctx} values={v} filters={{ ...read.props, scope: ctx.user.scope }} savedPage="acr"><RnAcrBody input={read.body} /></Frame>; }}</Load>;
+  return <Load result={result}>{v => { const read = v.value<RnAcrScreen>("body"); return <Frame page={page} ctx={ctx} values={v} filters={{ ...read.props, scope: ctx.user.scope }} savedPage="acr"><RnAcrBody input={read.body} preview={!CONNECTED} /></Frame>; }}</Load>;
 }

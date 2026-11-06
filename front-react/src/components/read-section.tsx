@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useLocale } from "use-intl";
 import type { ReadControls } from "~/api/bundle";
 import { RnButton, RnSkeleton } from "@/components/renewal-ui";
+import { CONNECTED } from "~/api/client";
 
 const Reads = createContext<ReadControls | null>(null);
 export const ReadProvider = Reads.Provider;
@@ -12,7 +13,7 @@ export function ReadSection({ names, label, children, loading, quiet = false }: 
 }) {
   const reads = useContext(Reads);
   const en = useLocale() === "en";
-  if (!reads) return <>{children}</>;
+  if (!reads || !CONNECTED) return <>{children}</>;
   const states = names.map(name => {
     const state = reads.states[name];
     if (!state) throw new Error(`Missing section read: ${name}`);
