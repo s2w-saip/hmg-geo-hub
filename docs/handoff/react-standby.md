@@ -2,6 +2,8 @@
 
 2026-11-06 사용자 요청에 따라 Next 대체용 `front-react/`를 별도 프로젝트로 준비했다. 서버 안정화와 병행하는 사전 준비이며, 운영 프런트 교체는 아니다. 현재 Next `front/`와 백엔드 구현·DB·VM은 변경하지 않았다.
 
+React 전환 구조의 기준은 [React 버전 아키텍처](../architecture/service-architecture-react.html)다. 사용자가 제공한 `service-architecture-gold-node.html`을 바탕으로 브라우저 SPA·정적 호스팅·Hub 중계를 그렸으며, 현재 구현과 목표, 책임 이전, 연결 계약과 검증에서 확인한 7건의 보완 조건을 함께 적었다. 이 문서는 실행·연결 설정의 기준으로 유지한다.
+
 ## 준비한 범위
 
 | 항목 | 상태 |

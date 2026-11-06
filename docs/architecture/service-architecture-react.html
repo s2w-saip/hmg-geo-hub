@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>서비스 아키텍처 · React 전환안</title>
+<style>
+:root {
+  --bg: #F3F5F7; --panel: #FFFFFF; --soft: #E7ECF1; --fg: #17202B; --muted: #586474; --line: #B9C3CF; --edge: #3E4A59;
+  --hub: #0B706B; --hub-bg: #E2F2EF; --gold: #94620A; --gold-bg: #FAF1DF; --write: #BF3A22; --new: #3F4FC4; --new-bg: #E9EBFB;
+  --sans: "Pretendard", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
+    --hub: #4FBFB6; --hub-bg: #122A29; --gold: #E0A64B; --gold-bg: #2A2418; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1217; --panel: #161C23; --soft: #1C232C; --fg: #E2E7ED; --muted: #97A2B0; --line: #3B4551; --edge: #AEB8C4;
+  --hub: #4FBFB6; --hub-bg: #122A29; --gold: #E0A64B; --gold-bg: #2A2418; --write: #F07B63; --new: #A3AEFF; --new-bg: #1D2245;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+figure { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; }
+figcaption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+svg { display: block; width: 100%; height: 100%; }
+
+text { fill: var(--fg); font-family: var(--sans); font-size: 13px; }
+.c { text-anchor: middle; }
+.r { text-anchor: end; }
+.title { font-size: 22px; font-weight: 700; }
+.b { font-weight: 700; font-size: 14px; }
+.h { font-weight: 700; font-size: 16px; }
+.sm { font-size: 12px; fill: var(--muted); }
+.m { font-family: var(--mono); font-size: 12px; fill: var(--muted); }
+.ms { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.mb { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.port { font-family: var(--mono); font-size: 12px; fill: var(--muted); font-weight: 400; }
+.lb { font-size: 12px; fill: var(--muted); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+.lbw { fill: var(--write); font-weight: 600; }
+.lbn { fill: var(--new); font-weight: 600; }
+.d { font-size: 12px; }
+.sep { fill: none; stroke: var(--line); stroke-width: 1; }
+
+.boundary { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.cont { fill: var(--soft); stroke: var(--line); }
+.proc { fill: var(--panel); stroke: var(--line); }
+.mini { fill: var(--soft); stroke: var(--line); }
+.hub { fill: var(--hub-bg); stroke: var(--hub); stroke-width: 1.4; }
+.key { fill: var(--panel); stroke: var(--fg); stroke-width: 1.8; }
+.new { fill: var(--new-bg); stroke: var(--new); stroke-width: 2; }
+.ext { fill: none; stroke: var(--muted); }
+
+.e, .w, .n { fill: none; stroke-linecap: butt; }
+.e { stroke: var(--edge); stroke-width: 1.6; }
+.w { stroke: var(--write); stroke-width: 1.9; }
+.n { stroke: var(--new); stroke-width: 2; }
+.ah-e { fill: var(--edge); } .ah-w { fill: var(--write); } .ah-n { fill: var(--new); }
+
+body { height: auto; line-height: 1.65; }
+.doc-header, .doc-content { max-width: 1808px; margin: 0 auto; padding: 28px 24px; }
+.doc-header { border-bottom: 1px solid var(--line); }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 28px; line-height: 1.35; }
+h2 { font-size: 21px; line-height: 1.4; margin-bottom: 12px; }
+h3 { font-size: 16px; margin-bottom: 8px; }
+a { color: var(--hub); text-underline-offset: 3px; }
+code { font-family: var(--mono); font-size: .9em; background: var(--soft); border-radius: 4px; padding: 2px 5px; overflow-wrap: anywhere; }
+.doc-header p { max-width: 110ch; margin-top: 10px; }
+.status { display: inline-block; font-size: 12px; font-weight: 700; color: var(--new); background: var(--new-bg); border: 1px solid var(--new); padding: 2px 9px; border-radius: 5px; margin-bottom: 10px; }
+nav { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 16px; font-size: 14px; }
+figure { height: auto; display: block; max-width: 1840px; margin: 0 auto; }
+figure > svg { width: 100%; height: auto; aspect-ratio: 1840 / 1000; }
+figcaption { position: static; width: auto; height: auto; overflow: visible; clip-path: none; margin: 0 24px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 14px; }
+.doc-content { display: grid; gap: 36px; padding-bottom: 64px; }
+section { scroll-margin-top: 24px; }
+section > p { max-width: 110ch; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--panel); }
+th, td { text-align: left; vertical-align: top; padding: 12px 14px; border: 1px solid var(--line); }
+th { background: var(--soft); font-weight: 700; }
+td:first-child { width: 18%; font-weight: 600; }
+.note { padding: 14px 18px; border-left: 3px solid var(--new); background: var(--new-bg); border-radius: 4px; margin-top: 14px; font-size: 14px; }
+ul, ol { padding-left: 22px; margin: 10px 0 0; }
+li + li { margin-top: 6px; }
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+.meta { color: var(--muted); font-size: 13px; }
+:focus-visible { outline: 2px solid var(--new); outline-offset: 3px; }
+@media print { @page { size: A3 landscape; margin: 12mm; } nav { display: none; } .doc-header, .doc-content { padding: 18px 0; } figure { break-inside: avoid; } tr, .card { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header class="doc-header">
+  <span class="status">React 전환 목표 · 현재 서버 미연결</span>
+  <h1>서비스 아키텍처 · React 전환안</h1>
+  <p>브라우저의 React SPA가 같은 origin의 API를 호출하고, Hub가 인증·계정·입력 편집과 내부 데이터 서버 중계를 맡는다. 기존 Next 리뉴얼의 UI와 동작을 기준으로 전환한다.</p>
+  <p class="meta">확인일 2026-11-06 · 현재 구현과 전환 목표를 구분한 준비 문서 · T13 서버 분리 이후 연결</p>
+  <nav aria-label="문서 목차"><a href="#diagram">전체 구조</a><a href="#status">현재와 목표</a><a href="#responsibility">책임 이전</a><a href="#contract">Hub 계약</a><a href="#gate">전환 조건</a><a href="#basis">기준 문서</a></nav>
+</header>
+<figure id="diagram">
+  <svg viewBox="0 0 1840 1000" role="img" aria-labelledby="diagram-title diagram-desc">
+    <title id="diagram-title">React SPA와 Hub·데이터 서버 분리 후의 서비스 아키텍처</title>
+    <desc id="diagram-desc">React는 브라우저에서 실행한다. 정적 호스팅과 동일 origin API 프록시를 통해 Hub만 호출한다. Hub는 인증과 입력 편집을 맡고 데이터 서버에 읽기와 저장 전 확인을 요청한다. Hub만 operations_db에 접근하며 gold_db에는 접근하지 않는다. 데이터 서버는 Gold 조회 테이블과 사전 집계를 읽고 필터 결과를 cache_db에 저장한다. 데이터 서버 cron job이 Silver 운영 스냅샷을 가공해 Gold에 저장한다. 서버 분리와 브라우저 계약은 아직 연결 전 목표다.</desc>
+<defs>
+      <marker id="ae" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path class="ah-e" d="M0,0L10,5L0,10z"/></marker>
+      <marker id="aw" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path class="ah-w" d="M0,0L10,5L0,10z"/></marker>
+      <marker id="an" viewBox="0 0 10 10" refX="9.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path class="ah-n" d="M0,0L10,5L0,10z"/></marker>
+    </defs>
+    <text class="title" x="24" y="34">React 전환 목표</text>
+    <text class="sm" x="296" y="34">브라우저의 React SPA → 동일 origin /api/* → Hub → 내부 데이터 서버</text>
+    <text class="sm" x="296" y="55">React는 화면을 표시하고, Hub는 인증·편집을 처리하며, 데이터 서버가 지표를 정의·계산한다.</text>
+    <g transform="translate(0 116)">
+
+    <rect class="boundary" x="16" y="72" width="1808" height="728" rx="14"/>
+    <text class="b r" x="1806" y="790" style="fill:var(--muted)">서비스 경계 · 전환 목표</text>
+
+    <rect class="ext" x="24" y="12" width="82" height="46" rx="6"/>
+    <text class="b c" x="65" y="32">수집 서버</text><text class="sm c" x="65" y="49">앤써</text>
+    <rect class="ext" x="112" y="12" width="82" height="46" rx="6"/>
+    <text class="b c" x="153" y="32">분석 모델</text><text class="sm c" x="153" y="49">분석팀</text>
+
+    <!-- React는 브라우저에서 실행한다. 서비스 안에 React 애플리케이션 서버를 추가하지 않는다. -->
+    <rect class="new" x="296" y="-42" width="1504" height="96" rx="10"/>
+    <text class="b" x="312" y="-16">브라우저 · React SPA</text>
+    <text class="m" x="312" y="5">front-react/ · React 19</text>
+    <text class="sm" x="312" y="27">서비스 사용자 · 관리자</text>
+    <rect class="proc" x="508" y="-32" width="300" height="72" rx="6"/>
+    <text class="b c" x="658" y="-11">공용 UI · 화면</text>
+    <text class="sm c" x="658" y="9">Global · Website · Project · Admin</text>
+    <text class="sm c" x="658" y="27">리뉴얼 컴포넌트 재사용</text>
+    <rect class="proc" x="824" y="-32" width="300" height="72" rx="6"/>
+    <text class="b c" x="974" y="-11">URL · 다국어</text>
+    <text class="m c" x="974" y="9">React Router · use-intl</text>
+    <text class="m c" x="974" y="27">/ko|en/renewal/*</text>
+    <rect class="proc" x="1140" y="-32" width="300" height="72" rx="6"/>
+    <text class="b c" x="1290" y="-11">조회 상태 · 화면 로더</text>
+    <text class="m c" x="1290" y="9">TanStack Query · src/pages/*</text>
+    <text class="sm c" x="1290" y="27">지표 계산은 데이터 서버</text>
+    <rect class="proc" x="1456" y="-32" width="332" height="72" rx="6"/>
+    <text class="b c" x="1622" y="-11">인증 상태 · 메뉴 안내</text>
+    <text class="m c" x="1622" y="9">HttpOnly 쿠키 · /api/hub/session</text>
+    <text class="sm c" x="1622" y="27">권한 확정은 Hub · 데이터 서버</text>
+
+    <!-- 동일 origin에서 정적 파일을 제공하고 API 요청만 Hub에 전달한다. -->
+    <rect class="proc" x="296" y="88" width="1504" height="60" rx="8"/>
+    <text class="b" x="312" y="113">정적 호스팅</text>
+    <text class="m" x="312" y="133">front-react/dist</text>
+    <rect class="mini" x="452" y="96" width="360" height="44" rx="5"/>
+    <text class="b c" x="632" y="114">화면 경로 → index.html · JS · CSS</text>
+    <text class="sm c" x="632" y="131">개발 Vite :3334 · 배포 정적 서버</text>
+    <rect class="mini" x="828" y="96" width="520" height="44" rx="5"/>
+    <text class="b c" x="1088" y="114">동일 origin /api/* → 허브 서버</text>
+    <text class="sm c" x="1088" y="131">쿠키 · 상태 · 파일 헤더 전달 · Origin 보존</text>
+    <rect class="mini" x="1364" y="96" width="426" height="44" rx="5"/>
+    <text class="b c" x="1577" y="114">운영 구성은 연결 단계에서 확정</text>
+    <text class="sm c" x="1577" y="131">Vite 개발 프록시 ≠ 운영 API 프록시</text>
+    <!-- 앱 층: 프롬프트·기준정보 API -->
+    <rect class="proc" x="40" y="178" width="150" height="88" rx="8"/>
+    <text class="c" x="115" y="206" style="font-weight:700;font-size:12.5px">프롬프트·기준정보 API</text>
+    <text class="m c" x="115" y="228">back/ext :5560</text>
+    <text class="sm c" x="115" y="248">읽기 전용 · API 키 인증</text>
+
+    <!-- 앱 층: 허브 서버 -->
+    <rect class="new" x="206" y="178" width="330" height="280" rx="10"/>
+    <text x="220" y="203"><tspan class="h" style="fill:var(--new)">허브 서버</tspan><tspan class="m" dx="10">back/hub_server (계획)</tspan></text>
+    <rect class="proc" x="218" y="212" width="306" height="28" rx="5"/>
+    <text class="c" x="371" y="231" style="font-weight:700">세션 쿠키 · Origin 확인 · 계정 재확인</text>
+    <rect class="proc" x="218" y="246" width="306" height="56" rx="5" style="stroke:var(--new);stroke-width:1.6"/>
+    <text class="c" x="371" y="263" style="font-weight:700;fill:var(--new)">데이터 서버 프록시</text>
+    <text class="sm c" x="371" y="279">읽기 요청만 · 응답은 그대로 전달</text>
+    <text class="sm c" x="371" y="295">화면 · 입력 데이터 목록 (Gold 값 포함)</text>
+    <rect class="proc" x="218" y="308" width="306" height="42" rx="5"/>
+    <text class="c" x="371" y="325" style="font-weight:700">사용자 데이터 관리</text>
+    <text class="sm c" x="371" y="341">계정 · 접근 권한 · 저장 필터</text>
+    <rect class="proc" x="218" y="356" width="306" height="56" rx="5"/>
+    <text class="c" x="371" y="373" style="font-weight:700">입력 데이터 편집</text>
+    <text class="sm c" x="371" y="389">프롬프트 · 커스텀 태그 · 측정 설정</text>
+    <text class="sm c" x="371" y="405">인용 출처 분류 · 고객 관심 · 엔티티 역할</text>
+    <rect class="proc" x="218" y="418" width="306" height="28" rx="5"/>
+    <text class="c" x="371" y="437" style="font-weight:700">GA4 속성 등록</text>
+
+    <!-- 앱 층: 데이터 서버 -->
+    <rect class="cont" x="632" y="178" width="1168" height="280" rx="10"/>
+    <text x="648" y="203"><tspan class="h">데이터 서버</tspan></text>
+    <text class="m" x="748" y="203">back/data_server (계획) · 내부 전용 · 지표 계산 · 요청 처리 중 DB 쓰기는 캐시 DB만</text>
+
+    <rect class="proc" x="644" y="212" width="202" height="50" rx="6"/>
+    <text class="b c" x="745" y="233">계정 범위 적용</text>
+    <text class="m c" x="745" y="251">서명된 토큰 확인 · access.py</text>
+
+    <rect class="proc" x="644" y="278" width="202" height="50" rx="6"/>
+    <text class="b c" x="745" y="299">화면 조립</text>
+    <text class="m c" x="745" y="317">screens/ → api.get</text>
+
+    <rect class="proc" x="644" y="352" width="202" height="94" rx="6"/>
+    <text class="b c" x="745" y="370">입력 데이터 읽기</text>
+    <text class="sm c" x="745" y="388">프롬프트 · 측정 설정 · 기준정보</text>
+    <text class="sm c" x="745" y="404">입력 데이터 목록 (Gold 값 포함)</text>
+    <text class="sm c" x="745" y="420">GA4 이벤트 목록</text>
+    <text class="sm c" x="745" y="436">입력 데이터 저장 전 확인</text>
+
+    <rect class="proc" x="862" y="212" width="428" height="234" rx="6"/>
+    <text class="b c" x="1076" y="248">읽기 출처 분기</text>
+    <text class="m c" x="1076" y="268">api.get · metrics/serving.py</text>
+    <text class="c" x="1076" y="316">첫 화면 → 저장된 Gold 값</text>
+    <text class="c" x="1076" y="340">필터 조회 → 캐시 DB, 없으면 Gold 조회 테이블에서 세기</text>
+    <text class="c" x="1076" y="364" style="font-weight:700">사전 집계 지연·실패 → 최후 수단으로 직접 집계</text>
+    <text class="sm c" x="1076" y="386">결과는 캐시 DB · 집계도 실패하면 503 / 해당 회차 빈칸</text>
+
+    <rect class="key" x="1306" y="212" width="482" height="74" rx="6"/>
+    <text class="b c" x="1547" y="241">지표 정의 · 계산</text>
+    <text class="m c" x="1547" y="263">gold_reader/ → metrics/ catalog · formulas · compute</text>
+
+    <rect class="proc" x="1306" y="322" width="110" height="124" rx="6"/>
+    <text class="b c" x="1361" y="362">어댑터 ③</text>
+    <text class="m c" x="1361" y="384">gold_rows</text>
+    <text class="sm c" x="1361" y="406">Gold 지표 읽기</text>
+
+    <rect class="proc" x="1426" y="322" width="164" height="124" rx="6"/>
+    <text class="b c" x="1508" y="356">어댑터 ①</text>
+    <text class="m c" x="1508" y="378">gold_current</text>
+    <text class="m c" x="1508" y="396">gold_reader SQL</text>
+    <text class="sm c" x="1508" y="418">Gold 조회 테이블에서 세기</text>
+
+    <rect class="proc" x="1600" y="322" width="188" height="124" rx="6"/>
+    <text class="b c" x="1694" y="362">목록 · 원문 조회</text>
+    <text class="m c" x="1694" y="384">gold_reader</text>
+    <text class="sm c" x="1694" y="406">Gold 조회 테이블 읽기</text>
+
+    <!-- 앱 층 안 흐름 -->
+    <path class="e" d="M700,262V278" marker-end="url(#ae)"/>
+    <path class="e" d="M700,328V352" marker-end="url(#ae)"/>
+    <path class="e" d="M846,303H862" marker-end="url(#ae)"/>
+    <path class="e" d="M1290,249H1306" marker-end="url(#ae)"/>
+    <path class="e" d="M1370,286V322" marker-end="url(#ae)"/>
+    <path class="e" d="M1560,286V322" marker-end="url(#ae)"/>
+    <path class="e" d="M1698,286V322" marker-end="url(#ae)"/>
+
+    <!-- 허브 서버 → 데이터 서버 -->
+    <path class="n" d="M524,281H590V237H644" marker-end="url(#an)"/>
+    <text class="lb lbn c" x="584" y="214">프록시 · 읽기만</text>
+    <text class="lb lbn c" x="584" y="230">서명된 계정 범위</text>
+    <path class="n" d="M524,385H644" marker-end="url(#an)"/>
+    <text class="lb lbn c" x="584" y="377">저장 전 확인</text>
+    <text class="lb lbn c" x="584" y="401">읽기만</text>
+
+    <!-- 같은 origin의 API 프록시 → Hub. 사용자 인증은 Hub에서 확정한다. -->
+    <path class="e" d="M65,58V178" marker-end="url(#ae)"/>
+    <path class="e" d="M153,58V178" marker-end="url(#ae)"/>
+    <text class="lb c" x="109" y="125">GET · API 키</text>
+    <path class="e" d="M390,54V88" marker-end="url(#ae)"/>
+    <text class="lb" x="398" y="81">정적 파일</text>
+    <path class="n" d="M1200,54V96" marker-end="url(#an)"/>
+    <text class="lb lbn" x="1208" y="81">fetch /api/*</text>
+    <path class="n" d="M1088,140V163H390V178" marker-end="url(#an)"/>
+    <text class="lb lbn c" x="748" y="158">읽기 · 쓰기 · 세션 쿠키 · Hub에서 인증</text>
+
+    <!-- 데이터 층: 입력 데이터 DB · 사용자 데이터 DB -->
+
+    <path class="hub" d="M52,514V658A190,12 0 0 0 432,658V514"/><ellipse class="hub" cx="242" cy="514" rx="190" ry="12"/>
+    <text class="c" x="242" y="552"><tspan class="mb">input_db</tspan><tspan class="port" dx="8">:55438</tspan></text>
+    <text class="b c" x="242" y="578">입력 데이터</text>
+    <text class="c" x="242" y="600">프롬프트 · 커스텀 태그 · 측정 설정 · 기준정보</text>
+    <text class="sm c" x="242" y="620">입력 데이터 외: GA4 속성 · 서비스 기준 주</text>
+    <text class="m c" x="242" y="642">catalog.* · ext.* 뷰</text>
+
+    <path class="hub" d="M448,514V658A193,12 0 0 0 834,658V514"/><ellipse class="hub" cx="641" cy="514" rx="193" ry="12"/>
+    <text class="c" x="641" y="552"><tspan class="mb">operations_db</tspan><tspan class="port" dx="8">:55437</tspan></text>
+    <text class="b c" x="641" y="580">사용자 데이터</text>
+    <text class="c" x="641" y="604">계정 · 접근 권한 · 저장 필터</text>
+    <text class="sm c" x="641" y="626" style="font-weight:600;fill:var(--new)">서버 중에는 허브 서버만 접속</text>
+    <text class="m c" x="641" y="646">system.*</text>
+
+    <!-- 데이터 층: 캐시 · Gold -->
+    <path class="hub" d="M862,514V658A99,12 0 0 0 1060,658V514"/><ellipse class="hub" cx="961" cy="514" rx="99" ry="12"/>
+    <text class="c" x="961" y="552"><tspan class="mb">cache_db</tspan></text>
+    <text class="port c" x="961" y="570">:55439</text>
+    <text class="b c" x="961" y="594">캐시 DB</text>
+    <text class="c" x="961" y="614">필터 조회 결과</text>
+    <text class="m c" x="961" y="638">cache.query_result</text>
+
+    <path class="hub" d="M1076,514V658A304,12 0 0 0 1684,658V514"/><ellipse class="hub" cx="1380" cy="514" rx="304" ry="12"/>
+    <text class="c" x="1380" y="546"><tspan class="mb">gold_db</tspan><tspan class="port" dx="6">:55439</tspan><tspan class="sm" dx="14" style="font-weight:600;fill:var(--new)">허브 서버 접속 없음</tspan></text>
+
+    <rect class="proc" x="1086" y="556" width="92" height="98" rx="5"/>
+    <text class="b" x="1094" y="573">GA4 · SEO</text>
+    <text class="sm" x="1094" y="588">플랫폼 데이터</text>
+    <text class="ms" x="1094" y="604">analytics.*</text>
+    <text class="ms" x="1094" y="618">ref.*</text>
+    <text class="ms" x="1094" y="632">ops.*</text>
+
+    <rect class="proc" x="1186" y="556" width="490" height="98" rx="5"/>
+    <text class="b" x="1194" y="573">Gold 사전 집계 · 조회용 테이블<tspan class="sm" dx="10" style="font-weight:400">Silver 운영 스냅샷 가공</tspan></text>
+    <text class="sm" x="1194" y="588">첫 화면</text>
+    <text class="ms" x="1194" y="604">metric_row</text><text class="d" x="1314" y="604">첫 화면 지표</text>
+    <text class="ms" x="1194" y="618">first_screen_read</text><text class="d" x="1314" y="618">첫 화면 목록</text>
+    <text class="ms" x="1194" y="632">metric_call</text><text class="d" x="1314" y="632">계산 기록</text>
+    <text class="ms" x="1194" y="646">rollup_run</text><text class="d" x="1314" y="646">실행 기록</text>
+    <path class="sep" d="M1386,580V650"/>
+    <text class="sm" x="1394" y="588">조회용 · 답변 단위</text>
+    <text class="ms" x="1394" y="604">answer_*fact</text><text class="d" x="1487" y="604">답변 · 언급</text>
+    <text class="ms" x="1394" y="618">citation_fact</text><text class="d" x="1487" y="618">인용</text>
+    <text class="ms" x="1394" y="632">acr_*</text><text class="d" x="1487" y="632">ACR</text>
+    <path class="sep" d="M1546,580V650"/>
+    <text class="sm" x="1554" y="588">표시 · 필터</text>
+    <text class="ms" x="1554" y="604">answer_body</text><text class="d" x="1634" y="604">원문</text>
+    <text class="ms" x="1554" y="618">dim_*</text><text class="d" x="1634" y="618">차원</text>
+    <text class="ms" x="1554" y="632">kw_*</text><text class="d" x="1634" y="632">키워드</text>
+    <text class="ms" x="1554" y="646">ctx_*</text><text class="d" x="1634" y="646">소셜</text>
+
+    <!-- 앱 층 → 데이터 층 -->
+    <path class="e" d="M115,266V505" marker-end="url(#ae)"/>
+    <text class="lb" x="121" y="400">ext.* 뷰 읽기</text>
+
+    <path class="w" d="M270,458V502" marker-end="url(#aw)"/>
+    <path class="w" d="M510,458V505" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="278" y="486">입력 데이터 읽기 · 쓰기</text>
+    <text class="lb lbw" x="518" y="492">사용자 데이터 읽기 · 쓰기</text>
+
+    <path class="e" d="M700,446V474H420V508" marker-end="url(#ae)"/>
+    <text class="lb" x="560" y="470">입력 데이터 읽기만</text>
+
+    <path class="e" d="M820,446V465H1100V509" marker-end="url(#ae)"/>
+    <text class="lb" x="826" y="479">입력 데이터 목록</text>
+    <text class="lb" x="826" y="494">Gold 값 읽기</text>
+
+    <path class="e" d="M941,446V502" marker-end="url(#ae)"/>
+    <text class="lb c" x="961" y="486">조회</text>
+    <path class="w" d="M981,446V502" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="987" y="486">저장</text>
+
+    <text class="lb" x="1142" y="478">GA4 결과 입력은 대기</text>
+    <path class="e" d="M1250,446V503" marker-end="url(#ae)"/>
+    <text class="lb" x="1256" y="478">첫 화면 목록 읽기</text>
+    <path class="e" d="M1370,446V502" marker-end="url(#ae)"/>
+    <text class="lb" x="1376" y="478">첫 화면 지표 읽기</text>
+    <path class="e" d="M1560,446V504" marker-end="url(#ae)"/>
+    <text class="lb" x="1566" y="470">지표 세기</text>
+    <text class="lb" x="1566" y="485">드릴다운 목록</text>
+    <text class="lb" x="1566" y="500">답변 원문</text>
+
+    <path class="e" d="M1644,446V502" marker-end="url(#ae)"/>
+    <text class="lb" x="1706" y="560">Silver는 cron이 가공</text>
+    <text class="lb" x="1706" y="578">운영 스냅샷만</text>
+
+    <!-- 배치 층 -->
+    <rect class="cont" x="130" y="708" width="1310" height="76" rx="10"/>
+    <text class="b" x="142" y="742" style="font-size:12.5px">데이터 서버</text>
+    <text class="m" x="142" y="762">cron job</text>
+
+    <rect class="proc" x="212" y="718" width="188" height="56" rx="6"/>
+    <text class="mb c" x="306" y="741">sync-service-week</text>
+    <text class="sm c" x="306" y="760">서비스 기준 주 판정</text>
+
+    <rect class="proc" x="412" y="718" width="434" height="56" rx="6"/>
+    <text class="mb c" x="629" y="741">sync-gold-catalog</text>
+    <text class="sm c" x="629" y="760">프롬프트 · 프로젝트의 Gold 키 가져오기</text>
+
+    <rect class="proc" x="1066" y="718" width="140" height="56" rx="6"/>
+    <text class="b c" x="1136" y="741" style="font-size:12px">GA4 결과 입력</text>
+    <text class="sm c" x="1136" y="760">데이터 대기 · 연결 보류</text>
+
+    <rect class="proc" x="1214" y="718" width="216" height="56" rx="6"/>
+    <text class="b c" x="1322" y="735">조회 테이블 가공 · rollup</text>
+    <text class="sm c" x="1322" y="752">Silver → 조회 테이블 → 사전 집계</text>
+    <text class="sm c" x="1322" y="767">manage.py rollup · 이전 캐시 정리</text>
+
+    <!-- 배치 층 → 데이터 층 -->
+    <path class="w" d="M306,718V670" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="312" y="698">서비스 기준 주</text>
+    <path class="w" d="M424,718V662" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="430" y="698">프롬프트 · 프로젝트 정의와 Gold 키</text>
+
+    <path class="w" d="M1310,718V670" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="1316" y="698">조회 테이블 · 사전 집계 저장</text>
+    <path class="e" d="M1322,774V842H1596" marker-end="url(#ae)"/>
+    <text class="lb" x="1330" y="836">Silver OBT 읽기 · 운영 스냅샷 · 매니페스트</text>
+    <path class="w" d="M1222,718V694H1000V670" marker-end="url(#aw)"/>
+    <text class="lb lbw" x="1006" y="688">이전 캐시 행 삭제</text>
+
+    <path class="e" d="M1440,746H1480V670" marker-end="url(#ae)"/>
+    <text class="lb" x="1488" y="716">rollup · sync-service-week</text>
+    <text class="lb" x="1488" y="733">sync-gold-catalog가 읽음</text>
+
+    <!-- 아래 · 서비스 밖 -->
+    <rect class="ext" x="1066" y="816" width="140" height="50" rx="6"/>
+    <text class="b c" x="1136" y="838">GA4 결과 (미연결)</text>
+    <text class="sm c" x="1136" y="856">연결 인터페이스 개발 보류</text>
+
+    <path class="ext" d="M1596,818V860A102,6 0 0 0 1800,860V818"/><ellipse class="ext" cx="1698" cy="818" rx="102" ry="6"/>
+    <text class="b c" x="1698" y="841">파이프라인 Silver OBT</text>
+    <text class="sm c" x="1698" y="856">원천 데이터 · 운영 스냅샷 · 매니페스트</text>
+
+    <!-- 범례 -->
+    <g>
+      <path class="e" d="M26,822H62" marker-end="url(#ae)"/><text class="sm" x="70" y="826">요청 · 읽기</text>
+      <path class="n" d="M146,822H182" marker-end="url(#an)"/><text class="sm" x="190" y="826">허브 서버를 거치는 경로</text>
+      <path class="w" d="M350,822H386" marker-end="url(#aw)"/><text class="sm" x="394" y="826">쓰기</text>
+      
+      <path class="hub" d="M26,842V854A11,4 0 0 0 48,854V842"/><ellipse class="hub" cx="37" cy="842" rx="11" ry="4"/><text class="sm" x="56" y="853">서비스 DB</text>
+      <rect class="new" x="126" y="840" width="26" height="18" rx="3"/><text class="sm" x="158" y="853">허브 서버</text>
+      <rect class="ext" x="222" y="840" width="26" height="18" rx="3"/><text class="sm" x="254" y="853">서비스 밖</text>
+      <rect class="key" x="322" y="840" width="26" height="18" rx="3"/><text class="sm" x="354" y="853">지표를 정의 · 계산하는 유일한 곳</text>
+    </g>
+
+    </g>
+  </svg>
+  <figcaption>목표 호출 경로: 브라우저 → 동일 origin API 프록시 → Hub → 내부 데이터 서버. 초기 화면 지표는 Gold 사전 집계, 필터 조회는 캐시 또는 Gold 조회 테이블을 쓴다. DB·데이터 책임은 최신 서버 설계를 따르며, React 전환으로 브라우저에 옮기지 않는다.</figcaption>
+</figure>
+<main class="doc-content">
+
+  <section id="status">
+    <h2>현재 구현과 전환 목표</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">영역</th><th scope="col">현재 확인한 구현</th><th scope="col">React 전환 목표</th></tr></thead>
+      <tbody>
+        <tr><td>프런트</td><td><code>front/</code>의 Next가 현재 화면과 API 중계를 담당한다. <code>front-react/</code>는 별도 실행하며 기본값은 서버 미연결이다.</td><td>React는 브라우저에서 실행한다. 빌드한 <code>dist/</code>를 정적 제공하고, 같은 origin의 <code>/api/*</code>만 Hub로 보낸다.</td></tr>
+        <tr><td>이식 범위</td><td>리뉴얼 원본 37개 경로 대응과 UI 사본·화면 로더를 준비했다. 미연결 화면과 가로챈 테스트 응답으로 확인한 범위다.</td><td>같은 응답과 운영 스냅샷으로 원본의 화면·필터·폼·드릴다운·다운로드를 대조한다. 기존 Next 레거시의 유지·종료 범위는 T14.6에서 정한다.</td></tr>
+        <tr><td>인증·브라우저 API</td><td>React에 HttpOnly 쿠키 계약을 소비하는 클라이언트가 있다. 현재 <code>back/bff</code>는 Bearer 인증이며, 새 쿠키 세션 계약은 서버에 맞춰야 한다.</td><td>Hub가 세션 쿠키 발급·갱신·삭제, 쓰기 Origin 확인, 매 요청 계정 재확인을 맡는다. 브라우저에는 로그인 토큰을 전달하거나 저장하지 않는다.</td></tr>
+        <tr><td>서버 분리</td><td><code>back/bff</code>가 로그인·계정·입력 편집·데이터 읽기를 함께 담당한다. <code>back/hub_server</code>와 <code>back/data_server</code>는 아직 없다.</td><td>T13에서 Hub와 내부 데이터 서버로 분리한다. Hub만 <code>operations_db</code>에 접속하고, Hub에는 <code>gold_db</code> 계정을 주지 않는다.</td></tr>
+        <tr><td>Gold·필터 조회</td><td>Gold 사전 집계·캐시와, 사전 집계 지연·실패 시 최후 수단으로 직접 집계하는 처리를 구현했다. 현재 맥의 필터 조회에는 Silver 어댑터 경로가 남아 있어 Gold 조회 테이블 경로로 맞출 서버 작업이 있다.</td><td>cron job이 Silver 운영 스냅샷을 Gold 조회 테이블과 사전 집계로 가공한다. 필터 조회는 캐시를 먼저 보고, 없으면 <code>gold_db</code> 조회 테이블에서 계산한다. 사전 집계 지연·실패 시 최후 수단으로 직접 집계해 캐시하고, 그것도 실패하면 503 또는 해당 회차 빈칸으로 표시한다.</td></tr>
+        <tr><td>GA4</td><td>속성 등록부와 관련 기존 코드가 있다. React의 GA4 분석 화면은 데이터 대기 상태다.</td><td>결과 입력이 있다는 것만 표기한다. 실제 연결 인터페이스 개발·구현은 보류한다.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">그림은 서버 안정화와 T13 이후의 목표다. React 기본값 <code>VITE_HUB_CONNECTED=false</code>에서는 API를 호출하지 않는다. 개발 프록시 주소를 현재 BFF로 바꾸는 것만으로 새 인증·중계 계약이 갖춰지지 않는다.</p>
+  </section>
+
+  <section id="responsibility">
+    <h2>Next에서 옮겨지는 책임</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">기존 Next 책임</th><th scope="col">React 버전의 담당</th><th scope="col">연결 기준</th></tr></thead>
+      <tbody>
+        <tr><td>화면·라우팅·다국어</td><td>React UI, React Router, <code>use-intl</code></td><td>기존 리뉴얼 컴포넌트를 재사용한다. 필터·탭·검색·언어·직접 URL·뒤로 가기를 원본과 대조한다.</td></tr>
+        <tr><td>서버 페이지의 데이터 읽기</td><td><code>src/pages/*</code>의 로더와 TanStack Query</td><td>완성된 화면 응답을 Hub에서 받는다. 최초 로딩·재조회·부분 실패를 구분하고, 브라우저 조회 캐시는 화면 상태 관리에만 쓴다.</td></tr>
+        <tr><td>쿠키·middleware 인증</td><td>Hub의 브라우저 세션 API</td><td>React는 세션 상태와 메뉴 접근을 안내한다. 인증·권한·계정 재확인의 정본은 서버다.</td></tr>
+        <tr><td>Route Handler의 API 중계</td><td>동일 origin API 프록시와 Hub</td><td>기존 지연 조회·편집·다운로드 <code>/api/*</code>를 Hub가 인수한다. 상태 코드·반복 쿼리·충돌·파일 응답을 보존한다.</td></tr>
+        <tr><td>정적 자산·페이지 진입</td><td>정적 호스팅 / 리버스 프록시</td><td>화면의 직접 URL은 <code>index.html</code>로 제공한다. API 요청은 Hub로 전달하고 API 오류를 HTML 200으로 바꾸지 않는다.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="columns" style="margin-top:24px">
+      <div class="card"><h3>데이터 책임</h3><p>지표 계산·모수·자사 판정·대표 답변·기간·Δ는 데이터 서버의 <code>metrics/</code> 한 곳에서 처리한다. React는 서버 응답을 표시한다. 첫 화면 Gold와 필터 결과를 저장하는 서버의 <code>cache_db</code>는 브라우저의 TanStack Query 캐시와 별개다.</p></div>
+      <div class="card"><h3>DB 접근</h3><p>Hub는 <code>input_db</code>·<code>operations_db</code>를 읽고 쓴다. 데이터 서버는 입력 기준정보와 Gold를 읽고 조회 결과를 <code>cache_db</code>에 쓴다. Gold 조회 테이블·사전 집계의 쓰기는 배치 계정으로 분리한다. cron job은 운영 DB에 쓰지 않으며, 프로젝트 참조 행은 Hub가 멤버를 저장할 때 등록한다(T13.7). Silver에는 쓰지 않는다.</p></div>
+    </div>
+  </section>
+
+  <section id="contract">
+    <h2>브라우저 → Hub 계약</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">요청</th><th scope="col">Hub 동작</th><th scope="col">프런트 수신</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /api/hub/session</code></td><td>세션·계정 확인</td><td><code>{user}</code> 또는 401. 사용자 ID·역할·범위·초기 비밀번호 변경 여부를 받는다.</td></tr>
+        <tr><td><code>POST /api/hub/session</code><br><code>DELETE /api/hub/session</code></td><td>로그인·로그아웃, HttpOnly 쿠키 발급·삭제</td><td>로그인은 <code>{user}</code>, 로그아웃은 204. 실패한 로그아웃을 성공으로 처리하지 않는다.</td></tr>
+        <tr><td><code>POST /api/hub/password</code></td><td>현재 비밀번호 확인·변경·세션 갱신</td><td><code>{current,new}</code> → <code>{user}</code>와 갱신 쿠키.</td></tr>
+        <tr><td><code>GET /api/screens/{name}</code></td><td>계정 범위를 확정하고 내부 데이터 서버의 화면 읽기로 중계</td><td>기존 <code>/v1/screens/{name}</code> 화면 응답. 반복 쿼리와 <code>ctx.*</code>를 보존하되 클라이언트 값을 권한 근거로 신뢰하지 않는다.</td></tr>
+        <tr><td>기존 <code>/api/hub/*</code> 읽기·쓰기</td><td>계정·저장 필터·입력 편집. Gold 값이 필요한 목록·저장 전 확인은 내부 데이터 서버에 요청</td><td>기존 <code>{data,meta}</code> 봉투, 충돌 상태, <code>expectedVersion</code>을 유지한다.</td></tr>
+        <tr><td>기존 지연 조회·다운로드 <code>/api/*</code></td><td>Next Route Handler가 맡던 읽기·파일 중계 인수</td><td>JSON·CSV·XLSX의 콘텐츠 형식과 파일 헤더를 유지한다. 브라우저는 내부 데이터 서버 주소를 호출하지 않는다.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">정적 배포와 API는 브라우저에서 같은 origin을 쓴다. 개발은 Vite의 <code>HUB_PROXY_TARGET</code>, 운영은 배포 환경의 리버스 프록시가 이 경로를 연결한다. Vite 환경변수는 운영 프록시 설정을 만들지 않는다. 화면·다운로드 응답만 제공하며 별도 지표 API를 추가하지 않는다.</p>
+  </section>
+
+  <section id="gate">
+    <h2>연결·전환 완료 조건</h2>
+    <ol>
+      <li>T13에서 Hub 인증·쿠키·Origin·내부 호출 범위와 브라우저 API 계약을 맞춘다. 데이터 서버·DB를 브라우저에 노출하지 않는다.</li>
+      <li>기존 Next 리뉴얼과 같은 API 응답으로 모든 화면·폼·표·차트·드릴다운·다운로드·저장 필터·URL 복원을 대조한다.</li>
+      <li>동일 운영 스냅샷·지표 정의 버전으로 실데이터를 검증한다. 두 프런트의 숫자 일치와 데이터 서버 지표 정합성을 각각 확인한다.</li>
+      <li>아래 검증에서 발견한 7건을 보완하고 재현 사례로 확인한다. 전체 기능 검증과 성능 측정은 서버 연결 뒤 진행한다.</li>
+      <li>T14.5의 실서버 검증 후 T14.6에서 전환 범위·운영 프록시·기존 Next 유지 범위를 확정한다. 실제 운영 전환·배포는 별도 사용자 지시로 진행한다.</li>
+    </ol>
+    <div class="table-wrap" style="margin-top:18px"><table>
+      <thead><tr><th scope="col">현재 검증에서 확인한 항목</th><th scope="col">완료 기준</th></tr></thead>
+      <tbody>
+        <tr><td>① 재조회 시 편집 폼 소실</td><td>탭 복귀·백그라운드 재조회가 미저장 계정 폼을 닫거나 입력을 지우지 않는다.</td></tr>
+        <tr><td>② 저장 필터 실패의 전파</td><td>저장 필터만 실패할 때 성공한 분석 화면을 전체 오류로 바꾸지 않고 부분 실패로 표시한다.</td></tr>
+        <tr><td>③ 잘못된 로그인 복귀 URL</td><td>파싱할 수 없는 <code>next</code> 값에도 로그인 화면을 유지하고 안전한 기본 경로로 복귀한다.</td></tr>
+        <tr><td>④ 원본 신규 파일 추적</td><td><code>check:source</code>가 기존 매니페스트 파일의 변경 외에 새 페이지 추가도 감지한다.</td></tr>
+        <tr><td>⑤ 경로 테스트의 판정</td><td>각 경로의 실제 화면·핵심 동작을 확인하고, 미등록 경로의 안내 화면을 정상 화면으로 통과시키지 않는다.</td></tr>
+        <tr><td>⑥ Global 프롬프트의 기준 주</td><td>기준 주 Provider를 연결해 주차 표시와 기존 동기화 동작을 복원한다.</td></tr>
+        <tr><td>⑦ 분석 화면 헤더</td><td>언급 분석에서 선택 기간·측정 기준일을 원본과 대조해 표시하고, 기준 주와 구별한다.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="meta" style="margin-top:12px">기존 자동 시험 결과: 단위 9건·브라우저 8건 통과(2026-11-06 React 준비 작업 기준). 추가 검증으로 위 7건을 확인했다. 실서버 연결·전체 기능 동등성·속도 개선을 증명한 결과는 아니다.</p>
+  </section>
+
+  <section id="basis">
+    <h2>기준과 문서 관계</h2>
+    <p>사용자가 제공한 <code>service-architecture-gold-node.html</code>의 허브 서버 분리안을 React 전환용으로 옮겼다. 프런트 구조를 React SPA와 정적 호스팅으로 바꾸고, 최신 결정에 맞춰 필터 조회의 Gold 조회 테이블·cron 가공 경로, 사전 집계 지연·실패 시 최후 집계, cron의 운영 DB 쓰기 제외, 별도 지표 API 제외, GA4 연결 보류를 반영했다. 이 문서는 React 전환 구조의 기준이며, <a href="hmg-geo-hub-architecture.html">현재 구현 아키텍처</a>와 함께 본다.</p>
+    <p style="margin-top:10px">실행·연결 설정은 <a href="../handoff/react-standby.md">React 전환 준비</a>, 서버 작업 순서는 <a href="../handoff/architecture-rebuild.md">아키텍처 대공사 T13·T14</a>를 따른다. SSOT <code>shared/project-architecture.md</code>와 <code>service/cache-db.md</code>를 대조했고, <code>CLAUDE.md</code> 및 대공사 결정 기록의 최신 사용자 확정 사항을 적용했다. 최후 집계는 기존 SSOT의 ‘미준비 값은 보여 주지 않음’에 대한 2026-11-06 사용자 변경 결정과 구현(<code>445e8f3</code>)을 따른다.</p>
+  </section>
+
+</main>
+</body>
+</html>
