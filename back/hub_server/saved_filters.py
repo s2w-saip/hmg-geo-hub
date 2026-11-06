@@ -18,9 +18,9 @@ import asyncpg
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from data_server.hub_stores import operations_db
-from data_server.hub_stores.catalog_editor import refused
-from data_server.hub_stores.hub_auth import Principal
+from hub_server import operations_db
+from shared.account import Principal
+from shared.errors import refused
 
 # The renewal screens with a saved filter list (front: the `page` each gives its filter panel). A Website page
 # keeps its own list (2026-10-30): its filters are the site axes, not the Global ones. The admin list screens too

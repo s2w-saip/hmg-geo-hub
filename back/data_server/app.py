@@ -1,7 +1,7 @@
 """The data server: screens and metrics over gold_db, the Silver OBT and the input store. It sits behind the hub server, which signs in the
 account and sends it here in an internal token (hub_stores/hub_auth.py): every route but /healthz refuses a request without one, and
 screens and data reads run inside the token's scope (data_server/access.py). Read-only, except what the hub server has not taken over yet:
-every account keeps its own saved filters (/v1/hub/saved-filters); the top-level administrator also edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
+the top-level administrator edits Global prompts (/v1/hub/global-prompts), keeps the GA4 property
 registry (/v1/hub/ga4-properties), the source category corrections (/v1/hub/source-overrides), the customer-interest
 inputs (/v1/hub/interest-keywords, /v1/hub/interest-sources), the entity roles (/v1/hub/entity-roles) and the project
 prompts with their tags (/v1/hub/projects/{id}/prompts, /v1/hub/projects/{id}/prompt-tags, /v1/hub/projects/{id}/prompt-fields)."""
@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 from data_server import access, api, screens
 from data_server.gold_reader.db import close_pool, connection, open_pool
 from data_server.hub_stores import (silver_db, analytics_db, cache_db, catalog_editor, entity_roles, ga4_registry, metrics_db, hub_auth, hub_catalog, input_db, measurement, interest,
-                             operations_db, project_prompts, saved_filters, source_lists, source_overrides)
+                             operations_db, project_prompts, source_lists, source_overrides)
 
 log = logging.getLogger("hgh.gold")
 
@@ -36,7 +36,6 @@ async def lifespan(app: FastAPI):
     await measurement.open_pool()
     await operations_db.open_pool()
     await catalog_editor.open_pool()
-    await saved_filters.open_pool()
     await ga4_registry.open_pool()
     await source_overrides.open_pool()
     await interest.open_pool()
@@ -54,7 +53,6 @@ async def lifespan(app: FastAPI):
         await measurement.close_pool()
         await operations_db.close_pool()
         await catalog_editor.close_pool()
-        await saved_filters.close_pool()
         await ga4_registry.close_pool()
         await source_overrides.close_pool()
         await interest.close_pool()
@@ -121,7 +119,7 @@ async def healthz():
             "operations": await operations_db.health(), "input": await input_db.health(), "cache": await cache_db.health()}
 
 
-# ─── Global prompt editing and saved filters ───────────────────────────────────────────────────────────
+# ─── Input editing ──────────────────────────────────────────────────────────────────────────────────────
 # Registered before /v1/hub/{kind} and the read-only catch-all so these paths reach their own handlers.
 
 def hub_json(data, status: int = 200, database: str = "input_db") -> JSONResponse:
@@ -493,40 +491,6 @@ async def global_prompt_status(prompt_id: UUID, action: str, request: Request):
     actor = await hub_auth.admin(request.headers.get("authorization"))
     body = catalog_editor.parse(catalog_editor.VersionRef, await json_body(request))
     return hub_json(await catalog_editor.set_status(prompt_id, body, "archived" if action == "archive" else "active", actor))
-
-
-# The signed-in account's own saved filters of a renewal page (hub_stores/saved_filters.py).
-@app.get("/v1/hub/saved-filters")
-async def saved_filter_list(request: Request):
-    actor = await hub_auth.principal(request.headers.get("authorization"))
-    return hub_json(await saved_filters.listing(request.query_params.get("page"), actor), database="operations_db")
-
-
-@app.post("/v1/hub/saved-filters")
-async def saved_filter_create(request: Request):
-    actor = await hub_auth.principal(request.headers.get("authorization"))
-    body = catalog_editor.parse(saved_filters.FilterCreate, await json_body(request), "saved filter")
-    return hub_json(await saved_filters.create(body, actor), 201, database="operations_db")
-
-
-@app.post("/v1/hub/saved-filters/import")
-async def saved_filter_import(request: Request):
-    actor = await hub_auth.principal(request.headers.get("authorization"))
-    body = catalog_editor.parse(saved_filters.FilterImport, await json_body(request), "saved filter")
-    return hub_json(await saved_filters.import_items(body, actor), database="operations_db")
-
-
-@app.patch("/v1/hub/saved-filters/{filter_id}")
-async def saved_filter_change(filter_id: UUID, request: Request):
-    actor = await hub_auth.principal(request.headers.get("authorization"))
-    body = catalog_editor.parse(saved_filters.FilterChange, await json_body(request), "saved filter")
-    return hub_json(await saved_filters.change(filter_id, body, actor), database="operations_db")
-
-
-@app.delete("/v1/hub/saved-filters/{filter_id}")
-async def saved_filter_delete(filter_id: UUID, request: Request):
-    actor = await hub_auth.principal(request.headers.get("authorization"))
-    return hub_json(await saved_filters.remove(filter_id, actor), database="operations_db")
 
 
 @app.get("/v1/hub/{kind}")

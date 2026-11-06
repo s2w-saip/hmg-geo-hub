@@ -117,7 +117,7 @@ class Proxy(unittest.IsolatedAsyncioTestCase):
         self.use(data_server)
         for method in ("POST", "PUT", "PATCH", "DELETE"):
             async with hub() as c:
-                reply = await c.request(method, "/v1/hub/saved-filters/x", content=b'{"name": "\xed\x95\x9c"}',
+                reply = await c.request(method, "/v1/hub/global-prompts/x", content=b'{"name": "\xed\x95\x9c"}',
                                         headers={"Authorization": "Bearer t", "Content-Type": "application/json"})
             self.assertEqual(reply.status_code, 201)
             self.assertEqual(seen, {"method": method, "body": b'{"name": "\xed\x95\x9c"}', "kind": "application/json"})

@@ -10,12 +10,14 @@ from uuid import UUID, uuid4
 
 try:
     import asyncpg
+    from fastapi.responses import JSONResponse
 
-    from data_server.hub_stores import saved_filters as sf
-    from data_server.tests.signed_in import SECRET, token_for
-    from data_server.tests.test_hub_editing import T0, Ctx, Pool, call, run
+    from hub_server import auth as hub_auth
+    from hub_server import proxy
+    from hub_server import saved_filters as sf
+    from hub_server.tests.util import SECRET, T0, Ctx, Pool, call, run
 except ModuleNotFoundError as exc:
-    raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_saved_filters)") from exc
+    raise unittest.SkipTest("Needs the hub server's requirements (hub_server.tests.test_saved_filters)") from exc
 
 
 # ═══ fakes ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -88,6 +90,8 @@ class Conn:
         if sql is sf.OWN_SQL:
             r = self.s.own(*args)
             return {"page": r["page"], "position": r["position"]} if r else None
+        if sql.startswith("SELECT a.user_id") and "a.user_id=$1" in sql:   # hub_auth.principal
+            return dict(self.s.accounts[args[0]]) if args[0] in self.s.accounts else None
         raise AssertionError(sql)
 
     async def fetchval(self, sql, *args):
@@ -115,7 +119,7 @@ class Routes(unittest.TestCase):
         async def reader():
             yield Conn(self.store)
 
-        for p in (mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": SECRET}),
+        for p in (mock.patch.dict(os.environ, {"HGH_AUTH_SECRET": SECRET}),
                   mock.patch.object(sf.operations_db, "connection", reader),
                   mock.patch.object(sf, "_pool", Pool(Conn(self.store)))):
             p.start()
@@ -123,7 +127,7 @@ class Routes(unittest.TestCase):
 
     def token(self, user=None):
         user = user or self.me
-        return token_for(user, self.store.accounts[user]["role"])
+        return hub_auth.issue(SECRET.encode(), user, hub_auth.credential_version(T0), time.time())[0]
 
     def save(self, name, query="brand=Kia", page="overview", user=None, **kw):
         status, body = run(call("POST", "/v1/hub/saved-filters", {"page": page, "name": name, "query": query, **kw}, self.token(user)))
@@ -280,8 +284,12 @@ class Routes(unittest.TestCase):
             self.assertEqual((status, body["error"]["code"]), (503, "source_unavailable"))
 
     def test_routes_keep_their_neighbours(self):
-        status, body = run(call("PUT", f"/v1/hub/saved-filters/{uuid4()}", {"name": "x"}, self.token()))
+        # A method the hub server does not answer goes on to the data server, which refuses it as before.
+        with mock.patch.object(proxy, "forward", mock.AsyncMock(return_value=JSONResponse({}, status_code=405))) as forward, \
+                mock.patch.dict(os.environ, {"HGH_INTERNAL_TOKEN_SECRET": "i" * 40}):
+            status, body = run(call("PUT", f"/v1/hub/saved-filters/{uuid4()}", {"name": "x"}, self.token()))
         self.assertEqual(status, 405)
+        forward.assert_awaited_once()
         status, body = run(call("PATCH", "/v1/hub/saved-filters/not-a-uuid", {"name": "x"}, self.token()))
         self.assertEqual(status, 422)
         self.assertEqual(UUID(self.save("A")["item"]["id"]).version, 4)

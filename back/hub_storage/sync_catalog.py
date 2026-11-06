@@ -527,7 +527,7 @@ async def finish(data, run_id, result, reason=None, **columns):
 
 
 async def main(config):
-    source = data = operations = g = None
+    source = data = g = None
     run_id = uuid.uuid4()
     try:
         data = await asyncpg.connect(config['data'], command_timeout=120)
@@ -550,18 +550,10 @@ async def main(config):
         except Exception as error:
             await finish(data, run_id, 'failed', type(error).__name__)
             raise
-        # Data transaction commits first. A retry repairs an interrupted operations registration.
-        # Only IDs actually present in the data catalog may be registered; no cross-DB integer keys.
-        registered = await data.fetch('SELECT project_id FROM catalog.project')
-        operations = await asyncpg.connect(config['operations'])
-        async with operations.transaction():
-            await operations.executemany('INSERT INTO system.project_reference(project_id) VALUES($1) ON CONFLICT DO NOTHING',
-                                         [(r['project_id'],) for r in registered])
-        counts['operations_project_references'] = len(registered)
         await finish(data, run_id, 'ok', gold_versions=g['versions'], gold_release=g['release'], counts=counts,
                      removal_candidates=candidates)
         print(encoded({'source': 'gold', 'run_id': run_id, 'release': g['release'], **counts}))
     finally:
-        for conn in (source, data, operations):
+        for conn in (source, data):
             if conn is not None:
                 await conn.close()

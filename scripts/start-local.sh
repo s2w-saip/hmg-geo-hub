@@ -39,7 +39,7 @@ if listening 5555; then echo 'Port 5555 is in use by another process.' >&2; exit
 (
     cd "$repo/back"
     set -a; . "$secret"; for f in ${hub_env[@]+"${hub_env[@]}"}; do . "$f"; done; set +a
-    unset HGH_AUTH_SECRET HGH_ACCOUNT_EDITOR_DB_URL   # the hub server's: login and accounts
+    unset HGH_AUTH_SECRET HGH_ACCOUNT_EDITOR_DB_URL HGH_SAVED_FILTER_EDITOR_DB_URL   # the hub server's: login, accounts, saved filters
     nohup "$python" -m uvicorn data_server.app:app --host 127.0.0.1 --port 5555 >"$logs/api.log" 2>&1 &
     echo $! >"$logs/api.pid"
 )

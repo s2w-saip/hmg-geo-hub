@@ -760,10 +760,9 @@ def status():
 
 def sync(args):
     """Import actual Gold catalog definitions only, using transient writer connections."""
-    values, data = analytics.env_file(OPS_SECRET), analytics.env_file(DATA_SECRET)
+    data = analytics.env_file(DATA_SECRET)
     config = {
         'data': f"postgresql://hmg_catalog_writer:{data['CATALOG_WRITER_PASSWORD']}@{service_host('input')}/input_db",
-        'operations': f"postgresql://hmg_operations_writer:{values['OPERATIONS_WRITER_PASSWORD']}@{service_host('operations')}/{OPS_DB}",
         'allow_removals': args.allow_removals, 'expect_mass_change': args.expect_mass_change,
     }
     # Secrets travel over stdin, never argv, image layers, logs or the frontend.

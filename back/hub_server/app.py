@@ -1,6 +1,5 @@
-"""The hub server (T13): Next's only door. It signs accounts in and checks them again on every request, keeps the accounts, and passes every other
-/v1 request to the data server with the account in a short-lived internal token. Saved filters move here in step 1e and input editing in 1f; from
-then on the proxy carries reads only. It holds no metric logic: every screen stops when it stops."""
+"""The hub server (T13): Next's only door. It signs accounts in and checks them again on every request, keeps the accounts and each account's saved filters, and passes every
+other /v1 request to the data server with the account in a short-lived internal token. Input editing moves here in step 1f; from then on the proxy carries reads only. It holds no metric logic: every screen stops when it stops."""
 from __future__ import annotations
 
 import json
@@ -14,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from hub_server import accounts, operations_db, proxy
+from hub_server import accounts, operations_db, proxy, saved_filters
 from hub_server import auth as hub_auth
 from shared import internal_token
 from shared.errors import parse
@@ -26,11 +25,13 @@ log = logging.getLogger("hgh.hub")
 async def lifespan(app: FastAPI):
     await operations_db.open_pool()
     await accounts.open_pool()
+    await saved_filters.open_pool()
     await proxy.open_client()
     try:
         yield
     finally:
         await proxy.close_client()
+        await saved_filters.close_pool()
         await accounts.close_pool()
         await operations_db.close_pool()
 
@@ -142,6 +143,40 @@ async def account_action(user_id: UUID, action: str, request: Request):
     if action == "reset-password":
         return hub_json(await accounts.reset_password(user_id, actor))
     return hub_json(await accounts.set_status(user_id, "active" if action == "enable" else "disabled", actor))
+
+
+# The signed-in account's own saved filters of a renewal page (saved_filters.py).
+@app.get("/v1/hub/saved-filters")
+async def saved_filter_list(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await saved_filters.listing(request.query_params.get("page"), actor))
+
+
+@app.post("/v1/hub/saved-filters")
+async def saved_filter_create(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = parse(saved_filters.FilterCreate, await json_body(request), "saved filter")
+    return hub_json(await saved_filters.create(body, actor), 201)
+
+
+@app.post("/v1/hub/saved-filters/import")
+async def saved_filter_import(request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = parse(saved_filters.FilterImport, await json_body(request), "saved filter")
+    return hub_json(await saved_filters.import_items(body, actor))
+
+
+@app.patch("/v1/hub/saved-filters/{filter_id}")
+async def saved_filter_change(filter_id: UUID, request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    body = parse(saved_filters.FilterChange, await json_body(request), "saved filter")
+    return hub_json(await saved_filters.change(filter_id, body, actor))
+
+
+@app.delete("/v1/hub/saved-filters/{filter_id}")
+async def saved_filter_delete(filter_id: UUID, request: Request):
+    actor = await hub_auth.principal(request.headers.get("authorization"))
+    return hub_json(await saved_filters.remove(filter_id, actor))
 
 
 # ─── Everything else ────────────────────────────────────────────────────────────────────────────────────
