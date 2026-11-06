@@ -11,6 +11,8 @@ import { RnButton, RnCard, RnCardHeader, RnNote, RnSelect, RnToastProvider, cx, 
 import { countryName } from "@/lib/geo-catalog/country-name";
 import { languageName } from "@/lib/geo-catalog/language-name";
 import { aiEngineLabel } from "@/lib/scope/engines";
+import { request } from "~/api/client";
+import { HghApiError } from "@/lib/hgh/errors";
 
 export interface MeasurementTarget {
   kind: "brand" | "model";
@@ -116,24 +118,31 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
   const router = useRouter();
   const toast = useRnToast();
   const { item, options } = view;
-  const initial = useMemo(
-    () => ({
-      brands: item.brands,
-      countries: item.countries.join(", "),
-      engines: item.engines,
-      cadence: item.cadence ?? "",
-      acrRepeats: item.acrRepeats === null ? "" : String(item.acrRepeats),
-      ownedUrls: item.ownedUrls.join("\n"),
-      trackedUrls: item.trackedUrls.join("\n"),
-      trackedBrands: item.trackedTargets.filter((x) => x.kind === "brand").map((x) => x.name).join("\n"),
-      trackedModels: item.trackedTargets.filter((x) => x.kind === "model").map(modelLine).join("\n"),
-    }),
-    [item],
-  );
+  const toForm = (value: Measurement) => ({
+      brands: value.brands,
+      countries: value.countries.join(", "),
+      engines: value.engines,
+      cadence: value.cadence ?? "",
+      acrRepeats: value.acrRepeats === null ? "" : String(value.acrRepeats),
+      ownedUrls: value.ownedUrls.join("\n"),
+      trackedUrls: value.trackedUrls.join("\n"),
+      trackedBrands: value.trackedTargets.filter((x) => x.kind === "brand").map((x) => x.name).join("\n"),
+      trackedModels: value.trackedTargets.filter((x) => x.kind === "model").map(modelLine).join("\n"),
+    });
+  const initial = useMemo(() => toForm(item), [item]);
+  const [base, setBase] = useState(item);
+  const [seen, setSeen] = useState(item);
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  const dirty = JSON.stringify(form) !== JSON.stringify(toForm(base));
+  // A fresh read can replace an untouched draft. An edited draft keeps the version it started with.
+  if (seen !== item) {
+    setSeen(item);
+    if (!dirty && !saving && !reloading && item.version >= base.version) { setBase(item); setForm(initial); }
+  }
+  const changedElsewhere = item.version > base.version;
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((f) => ({ ...f, [key]: value }));
   const toggle = (key: "brands" | "engines", value: string) =>
     setForm((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
@@ -143,42 +152,57 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
   const badRepeats = repeats !== null && !(Number.isInteger(repeats) && repeats >= 1 && repeats <= 100);
 
   async function save() {
+    if (!view.editing || saving || reloading) return;
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/hub/projects/${projectId}/measurement`, {
+      const res = await request<{ data: { item: Measurement; changed: boolean } }>(`/api/hub/projects/${projectId}/measurement`, {
         method: "POST",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expectedVersion: item.version,
+        body: {
+          expectedVersion: base.version,
           brands: form.brands,
           countries: typedCountries,
           engines: form.engines,
           cadence: form.cadence || null,
           acrRepeats: repeats,
-          webUnits: item.webUnits,
+          webUnits: base.webUnits,
           ownedUrls: lines(form.ownedUrls),
           trackedUrls: lines(form.trackedUrls),
           trackedTargets: [...lines(form.trackedBrands).map((name) => ({ kind: "brand" as const, name })), ...modelsOf(form.trackedModels)],
-        }),
+        },
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
-        const code = body?.error?.code;
-        setError(t(code === "version_conflict" ? "errors.conflict" : code === "unknown_code" ? "errors.unknown" : code === "invalid_value" ? "errors.invalid" : "errors.failed"));
-        return;
-      }
+      const saved = res?.data?.item;
+      if (!saved || !Number.isInteger(saved.version) || !Array.isArray(saved.countries)) throw new Error("Invalid measurement response");
+      const next = toForm(saved);
+      setBase(saved);
+      setForm(next);
       toast(t("saved"));
       router.refresh();
-    } catch {
-      setError(t("errors.failed"));
+    } catch (e) {
+      const code = e instanceof HghApiError ? e.code : "failed";
+      setError(t(code === "version_conflict" ? "errors.conflict" : code === "unknown_code" ? "errors.unknown" : code === "invalid_value" ? "errors.invalid" : "errors.failed"));
     } finally {
       setSaving(false);
     }
   }
 
-  const disabled = !view.editing || saving;
+  async function reload() {
+    if (saving || reloading) return;
+    setReloading(true);
+    try {
+      const res = await request<{ data: MeasurementView }>(`/api/hub/projects/${projectId}/measurement`);
+      const latest = res?.data?.item;
+      if (!latest || !Number.isInteger(latest.version) || !Array.isArray(latest.countries)) throw new Error("Invalid measurement response");
+      const next = toForm(latest);
+      setBase(latest);
+      setForm(next);
+      setError(null);
+      router.refresh();
+    } catch { setError(t("errors.failed")); }
+    finally { setReloading(false); }
+  }
+
+  const disabled = !view.editing || saving || reloading;
   return (
     <RnCard aria-label={t("title")} data-rn-project-measurement="">
       <RnCardHeader title={t("title")} hint={t("hint")} />
@@ -230,8 +254,10 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
           <textarea aria-label={t("trackedModels")} rows={3} value={form.trackedModels} disabled={disabled} onChange={(e) => set("trackedModels", e.target.value)} className={cx(INPUT, "w-full py-1.5")} />
         </Field>
       </dl>
+      {changedElsewhere ? <p role="status" className="m-0 px-6 pb-3 text-rn-12 text-rn-muted">{t("changedElsewhere")}</p> : null}
       <div className="flex items-center justify-end gap-3 border-t border-rn-line px-6 py-3">
-        {error ? <span role="alert" className="mr-auto text-rn-12 font-semibold text-rn-danger-ink">{error}</span> : <span className="mr-auto text-rn-12 text-rn-muted">{item.version ? t("version", { version: item.version, origin: t(`origin.${item.origin ?? "hub"}`) }) : t("noVersion")}</span>}
+        {error ? <span role="alert" className="mr-auto text-rn-12 font-semibold text-rn-danger-ink">{error}</span> : <span className="mr-auto text-rn-12 text-rn-muted">{base.version ? t("version", { version: base.version, origin: t(`origin.${base.origin ?? "hub"}`) }) : t("noVersion")}</span>}
+        {error || changedElsewhere ? <RnButton disabled={saving || reloading} onClick={() => void reload()}>{t("reload")}</RnButton> : null}
         <RnButton variant="primary" disabled={disabled || !dirty || badRepeats || unknownCountries.length > 0} onClick={() => void save()}>
           {saving ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
           {t("save")}

@@ -13,6 +13,7 @@ import { GlobalTrendGrid } from "./mention-global-trends";
 import { GlobalCompareTrends } from "./mention-global-compare";
 import { GlobalBrandBoard } from "./mention-global-board";
 import { GlobalEngines, GlobalSentiment, GlobalTypesOwn } from "./mention-global-own";
+import { ReadSection } from "~/components/read-section";
 
 // Global Mention (2026-11-05 개편, docs/handoff/global-mention-redesign.md; the user picked the tab version of the mockup):
 // a bar that stays on top with the tabs 당사 지표 | 경쟁 비교 — the compare brands and their legend live on the comparison
@@ -39,14 +40,14 @@ export function GlobalMentionBody() {
     <>
       <TabBar tab={tab} onTab={setTab}>
         {tab === "cmp" ? (
-          <Suspense fallback={null}>
+          <ReadSection names={["compare"]} label={t("compare.label")} loading={null}><Suspense fallback={null}>
             <span className="border-l border-rn-line pl-4">
               <CompareLegend />
             </span>
             <span className="ml-auto">
               <ComparePicker />
             </span>
-          </Suspense>
+          </Suspense></ReadSection>
         ) : ownSum.length > 1 ? (
           <span className="ml-auto text-rn-12 text-rn-muted">{t("hero.ownSum", { brands: ownSum.join("+") })}</span>
         ) : null}
@@ -107,24 +108,24 @@ function OwnTab() {
   return (
     <div data-rn-gpane="own" className="flex flex-col gap-4">
       <div id="sec-g-trends">
-        <GlobalTrendGrid />
+        <ReadSection names={["rateValue", "rateHero", "favorHero", "rank", "presence", "compare"]} label={t("g.tabOwn")} loading={<CardSkeleton height={280} />}><GlobalTrendGrid /></ReadSection>
       </div>
       <div className="grid grid-cols-1 gap-4 @min-[1100px]/rncontent:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <RnCard id="sec-g-engines" aria-label={t("g.enginesTitle")}>
-          <Suspense fallback={<CardSkeleton height={280} />}>
+          <ReadSection names={["rateEngines", "engineExtra"]} label={t("g.enginesTitle")} loading={<CardSkeleton height={280} />}><Suspense fallback={<CardSkeleton height={280} />}>
             <GlobalEngines />
-          </Suspense>
+          </Suspense></ReadSection>
         </RnCard>
         <RnCard id="sec-g-sent" aria-label={t("g.sentTitle")}>
-          <Suspense fallback={<CardSkeleton height={280} />}>
+          <ReadSection names={["favorDist"]} label={t("g.sentTitle")} loading={<CardSkeleton height={280} />}><Suspense fallback={<CardSkeleton height={280} />}>
             <GlobalSentiment />
-          </Suspense>
+          </Suspense></ReadSection>
         </RnCard>
       </div>
       <RnCard id="sec-g-types" aria-label={t("g.typesTitle")}>
-        <Suspense fallback={<CardSkeleton height={340} />}>
+        <ReadSection names={["rateTypes", "favorMatrix"]} label={t("g.typesTitle")} loading={<CardSkeleton height={340} />}><Suspense fallback={<CardSkeleton height={340} />}>
           <GlobalTypesOwn />
-        </Suspense>
+        </Suspense></ReadSection>
       </RnCard>
     </div>
   );
@@ -135,20 +136,20 @@ function CompareTab() {
   return (
     <div data-rn-gpane="cmp" className="flex flex-col gap-4">
       <RnCard id="sec-g-cmp" aria-label={t("g.cmpTitle")}>
-        <Suspense fallback={<CardSkeleton height={380} />}>
+        <ReadSection names={["compare", "rateHero", "rank"]} label={t("g.cmpTitle")} loading={<CardSkeleton height={380} />}><Suspense fallback={<CardSkeleton height={380} />}>
           <GlobalCompareTrends />
-        </Suspense>
+        </Suspense></ReadSection>
       </RnCard>
       <RnCard id="sec-g-board" aria-label={t("g.boardTitle")}>
-        <Suspense fallback={<CardSkeleton height={460} />}>
+        <ReadSection names={["compare", "ranking", "rateHero", "bump", "rank", "rateValue", "favorHero"]} label={t("g.boardTitle")} loading={<CardSkeleton height={460} />}><Suspense fallback={<CardSkeleton height={460} />}>
           <GlobalBrandBoard />
-        </Suspense>
+        </Suspense></ReadSection>
       </RnCard>
       {/* the share inside each mention type beside the compare brands: the original share tab's card as is */}
       <RnCard id="sec-g-typecmp" aria-label={t("type.titleSov")}>
-        <Suspense fallback={<CardSkeleton height={360} />}>
+        <ReadSection names={["compare", "rateTypes"]} label={t("type.titleSov")} loading={<CardSkeleton height={360} />}><Suspense fallback={<CardSkeleton height={360} />}>
           <Types metric="sov" />
-        </Suspense>
+        </Suspense></ReadSection>
       </RnCard>
     </div>
   );

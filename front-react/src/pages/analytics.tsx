@@ -26,7 +26,7 @@ import type { PageDefinition } from "~/app/pages";
 import type { Read } from "~/api/bundle";
 import { HghApiError } from "@/lib/hgh/errors";
 import { PageLoading } from "~/app/states";
-import { commonReads, Frame, Load, NoMeasurement, screenRead, usePageContext, useReads, type PageContext, type Values } from "./load";
+import { commonReads, Frame, Load, NoMeasurement, screenRead, sectionRead, usePageContext, useReads, type PageContext, type Values } from "./load";
 
 function filterReads(ctx: PageContext, family: "overview" | "mention" | "citation"): Record<string, Read> {
   if (ctx.surface === "project") return { filters: screenRead("projects/filters", { ...ctx.query, "ctx.family": family === "citation" ? "citations" : "mentions" }) };
@@ -55,8 +55,8 @@ function Overview({ page }: { page: PageDefinition }) {
   const global = ctx.surface === "global";
   const prefix = ctx.surface === "project" ? "projects/dash-" : "website/";
   const result = useReads({ ...commonReads(ctx), ...filterReads(ctx, "overview"), asof: screenRead(ctx.surface === "project" ? "projects/as-of" : "overview/as-of", ctx.query, true), ...(global ? {
-    cards: screenRead("overview/cards", ctx.query), trend: screenRead("overview/card-trend", ctx.query), matrix: screenRead("overview/brand-matrix", ctx.query),
-    ...(geo ? { geo: screenRead("overview/geo", { ...ctx.query, "ctx.locale": ctx.locale, "ctx.view": "renewal" }) } : {}),
+    cards: screenRead("overview/cards", ctx.query), trend: sectionRead("overview/card-trend", ctx.query), matrix: sectionRead("overview/brand-matrix", ctx.query),
+    ...(geo ? { geo: sectionRead("overview/geo", { ...ctx.query, "ctx.locale": ctx.locale, "ctx.view": "renewal" }) } : {}),
   } : {
     summary: screenRead(prefix + "summary", ctx.query), deferred: screenRead(prefix + "summary-deferred", ctx.query),
     engines: screenRead(prefix + "engines", ctx.query), trend: screenRead(prefix + "trend", ctx.query), composition: screenRead(prefix + "composition", ctx.query),
@@ -87,8 +87,8 @@ function Mention({ page }: { page: PageDefinition }) {
   const global = ctx.surface === "global";
   const savedPage: SavedFilterPage = global ? "mention" : ctx.surface === "website" ? "website-mention" : "project-mention";
   const result = useReads({ ...commonReads(ctx), ...filterReads(ctx, "mention"), head: screenRead("mention/rn-page", ctx.query), asof: screenRead("mention/rn-asof", ctx.query, true),
-    ...Object.fromEntries(Object.entries(mentionSections).map(([key, name]) => [key, screenRead(`mention/${name}`, ctx.query)])),
-    ...(global ? { engineExtra: screenRead("mention/rn-engine-extra", ctx.query), presence: screenRead("mention/rn-presence-split", ctx.query) } : {
+    ...Object.fromEntries(Object.entries(mentionSections).map(([key, name]) => [key, (global && key !== "shell" ? sectionRead : screenRead)(`mention/${name}`, ctx.query)])),
+    ...(global ? { engineExtra: sectionRead("mention/rn-engine-extra", ctx.query), presence: sectionRead("mention/rn-presence-split", ctx.query) } : {
       ...Object.fromEntries(kpis.map(kpi => [`tab-${kpi}`, screenRead("mention/rn-tab-value", { ...ctx.query, "ctx.kpi": kpi })])),
       summary: screenRead("mention/rn-summary", ctx.query), tabDeltas: screenRead("mention/rn-tab-deltas", ctx.query),
     }),

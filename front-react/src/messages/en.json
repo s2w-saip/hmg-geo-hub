@@ -6584,6 +6584,8 @@
           "trackedModelsHint": "One per line; write ‘Brand / Model’ to name the brand.",
           "save": "Save",
           "saved": "Measurement settings saved",
+          "reload": "Load latest settings",
+          "changedElsewhere": "The server settings changed. Your edits are kept. Loading the latest settings replaces your edits with the new settings.",
           "version": "Version {version} · {origin}",
           "noVersion": "No saved settings",
           "origin": {

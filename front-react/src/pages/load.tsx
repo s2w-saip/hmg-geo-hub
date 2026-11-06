@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from "react";
 import { useLocale } from "use-intl";
 import { useLocation, useParams } from "react-router-dom";
-import { useBundle, type Read } from "~/api/bundle";
+import { useBundle, type Read, type ReadControls } from "~/api/bundle";
+import { ReadProvider } from "~/components/read-section";
 import type { Query } from "~/api/client";
 import { useSession } from "~/app/session";
 import { PageError, PageLoading } from "~/app/states";
@@ -30,13 +31,17 @@ export function usePageContext(page: PageDefinition) {
   return { locale, id: id ?? "", search: search.replace(/^\?/, ""), sp, query, surface, user };
 }
 export type PageContext = ReturnType<typeof usePageContext>;
-export interface Values { value<T>(key: string): T; promise<T>(key: string): Promise<T>; stamp: string }
+export interface Values extends ReadControls { value<T>(key: string): T; promise<T>(key: string): Promise<T>; stamp: string }
 export function useReads(reads: Record<string, Read>) {
   const result = useBundle(reads);
-  const values = useMemo<Values>(() => {
-    const promises = Object.fromEntries(Object.entries(result.data).map(([key, value]) => [key, Promise.resolve(value)]));
-    return { value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: result.key };
-  }, [result.data, result.key]);
+  const cache = useMemo(() => new Map<string, { value: unknown; promise: Promise<unknown> }>(), [result.key]);
+  // A late section must not replace promises already consumed by other sections.
+  const promises = useMemo(() => Object.fromEntries(Object.entries(result.data).map(([key, value]) => {
+    let entry = cache.get(key);
+    if (!entry || entry.value !== value) { entry = { value, promise: Promise.resolve(value) }; cache.set(key, entry); }
+    return [key, entry.promise];
+  })), [result.data, cache]);
+  const values = useMemo<Values>(() => ({ value: <T,>(key: string) => result.data[key] as T, promise: <T,>(key: string) => promises[key] as Promise<T>, stamp: result.key, states: result.states, retry: result.retry }), [result.data, result.key, promises, result.states, result.retry]);
   return { ...result, values };
 }
 export function Load({ result, children }: { result: ReturnType<typeof useReads>; children: (values: Values) => ReactNode }) {
@@ -45,6 +50,7 @@ export function Load({ result, children }: { result: ReturnType<typeof useReads>
   return <>{children(result.values)}</>;
 }
 export const screenRead = (name: string, query: Query = {}, optional = false): Read => ({ name, query, optional });
+export const sectionRead = (name: string, query: Query = {}): Read => ({ name, query, deferred: true });
 export const hubRead = (name: string, query: Query = {}): Read => ({ name, query, kind: "hub" });
 export function commonReads(ctx: PageContext): Record<string, Read> {
   return {
@@ -64,13 +70,13 @@ export function Frame({ page, ctx, values, filters, savedPage, children, reset }
   page: PageDefinition; ctx: PageContext; values: Values; filters?: OverviewFilterProps;
   savedPage?: SavedFilterPage; children: ReactNode; reset?: readonly string[];
 }) {
-  return <PageWeek ctx={ctx} values={values}><RnFilterRuntime reset={reset}>
+  return <ReadProvider value={values}><PageWeek ctx={ctx} values={values}><RnFilterRuntime reset={reset}>
     {filters && savedPage ? <RnOverviewFilters props={filters} savedFilters={savedSource(ctx, savedPage)}>
       <RnFilterSplit header={<PageHeading page={page} values={values} ctx={ctx} />} panel={<RnOverviewFilterPanel />} rail={<RnOverviewFilterRail />} delayInHeader={page.kind === "mention" && ctx.surface === "global"}>
         <RnOverviewApplied /><div className="flex flex-col gap-4">{children}</div>
       </RnFilterSplit>
     </RnOverviewFilters> : <RnPageFrame header={<PageHeading page={page} values={values} ctx={ctx} />}>{children}</RnPageFrame>}
-  </RnFilterRuntime></PageWeek>;
+  </RnFilterRuntime></PageWeek></ReadProvider>;
 }
 export function NoMeasurement() {
   const en = useLocale() === "en";

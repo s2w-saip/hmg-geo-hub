@@ -50,6 +50,7 @@ import { periodChipText } from "@/lib/period-chip-text";
 import { GeoOverview } from "@/app/[locale]/(dash)/dashboard/_components/geo-overview";
 import { marketViewOf } from "@/app/[locale]/(dash)/dashboard/_components/geo-market-table";
 import { SUPPORT } from "@/lib/support-contact";
+import { ReadSection } from "~/components/read-section";
 
 /** overview/brand-matrix with the old labels of the parts that failed transiently (absent = none failed). */
 export type RnBrandMatrixView = BrandMatrixView & { degraded?: string[] };
@@ -94,17 +95,19 @@ export function RnOverviewBody({
   qs: string;
 }) {
   const compare = useCompare(cards, compareTitle);
+  const en = useLocale() === "en";
   return (
     <>
+      <ReadSection names={["trend"]} label={en ? "Metric trends" : "지표 추이"} loading={null}>{null}</ReadSection>
       <KpiRow cards={cards} compare={compare} deferred={deferred} qs={qs} />
       {/* brand comparison before the (long) market table so it is not buried */}
-      <Suspense fallback={<CardSkeleton rows={5} />}>
+      <ReadSection names={["matrix"]} label={en ? "Brand comparison" : "브랜드 비교"} loading={<CardSkeleton rows={5} />}><Suspense fallback={<CardSkeleton rows={5} />}>
         <BrandMatrix matrix={deferred.matrix} compare={compare} />
-      </Suspense>
+      </Suspense></ReadSection>
       {geo ? (
-        <Suspense fallback={<CardSkeleton rows={8} />}>
+        <ReadSection names={["geo"]} label={en ? "Markets" : "시장별 현황"} loading={<CardSkeleton rows={8} />}><Suspense fallback={<CardSkeleton rows={8} />}>
           <MarketMatrix geo={geo} qs={qs} />
-        </Suspense>
+        </Suspense></ReadSection>
       ) : null}
     </>
   );
@@ -186,14 +189,16 @@ function KpiRow({
                 </span>
               </span>
               <KpiValue k={key} value={card?.value ?? null} />
-              <span className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5">
-                <DeltaCell k={key} card={card} pending={pending} trend={deferred.trend} perCard={compare.perCard} />
-              </span>
+              <div className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5">
+                <ReadSection names={["trend"]} label={locale === "en" ? "Metric trends" : "지표 추이"} quiet loading={<span className="inline-block h-3 w-12 animate-pulse rounded bg-rn-inset" />}>
+                  <DeltaCell k={key} card={card} pending={pending} trend={deferred.trend} perCard={compare.perCard} />
+                </ReadSection>
+              </div>
               <div className="mt-0.5 min-h-[46px]">
                 {pending ? null : (
-                  <Suspense fallback={<RnSkeleton className="h-[30px] w-full" />}>
+                  <ReadSection names={["trend"]} label={locale === "en" ? "Metric trends" : "지표 추이"} quiet loading={<RnSkeleton className="h-[30px] w-full" />}><Suspense fallback={<RnSkeleton className="h-[30px] w-full" />}>
                     <SparkCell k={key} trend={deferred.trend} />
-                  </Suspense>
+                  </Suspense></ReadSection>
                 )}
               </div>
               {/* The whole card opens its analysis page (2026-10-28, in place of a 상세 link) in a new tab,

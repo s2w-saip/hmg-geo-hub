@@ -6581,6 +6581,8 @@
           "trackedModelsHint": "한 줄에 하나씩, 브랜드와 함께 쓰려면 ‘브랜드 / 모델’로 입력합니다.",
           "save": "저장",
           "saved": "측정 설정을 저장했습니다",
+          "reload": "최신 설정 불러오기",
+          "changedElsewhere": "서버의 설정이 바뀌었습니다. 현재 입력은 유지됩니다. 최신 설정을 불러오면 현재 입력을 새 설정으로 바꿉니다.",
           "version": "버전 {version} · {origin}",
           "noVersion": "저장된 설정이 없습니다",
           "origin": {

@@ -428,7 +428,7 @@ li + li { margin-top: 6px; }
       <thead><tr><th scope="col">기존 Next 책임</th><th scope="col">React 버전의 담당</th><th scope="col">연결 기준</th></tr></thead>
       <tbody>
         <tr><td>화면·라우팅·다국어</td><td>React UI, React Router, <code>use-intl</code></td><td>기존 리뉴얼 컴포넌트를 재사용한다. 필터·탭·검색·언어·직접 URL·뒤로 가기를 원본과 대조한다.</td></tr>
-        <tr><td>서버 페이지의 데이터 읽기</td><td><code>src/pages/*</code>의 로더와 TanStack Query</td><td>완성된 화면 응답을 Hub에서 받는다. 최초 로딩·재조회·부분 실패를 구분하고, 브라우저 조회 캐시는 화면 상태 관리에만 쓴다.</td></tr>
+        <tr><td>서버 페이지의 데이터 읽기</td><td><code>src/pages/*</code>의 로더와 TanStack Query</td><td>완성된 화면 응답을 Hub에서 받는다. Global Overview·Global 언급 분석은 필수 읽기와 섹션별 읽기를 나눴다. 실패한 섹션만 재시도하고 권한 오류는 페이지를 차단한다. 브라우저 조회 캐시는 화면 상태 관리에만 쓴다.</td></tr>
         <tr><td>쿠키·middleware 인증</td><td>Hub의 브라우저 세션 API</td><td>React는 세션 상태와 메뉴 접근을 안내한다. 인증·권한·계정 재확인의 정본은 서버다.</td></tr>
         <tr><td>Route Handler의 API 중계</td><td>Hub</td><td>기존 지연 조회·편집·다운로드 <code>/api/*</code>를 Hub가 인수한다. 상태 코드·반복 쿼리·충돌·파일 응답을 보존한다.</td></tr>
       </tbody>
@@ -477,6 +477,16 @@ li + li { margin-top: 6px; }
       </tbody>
     </table></div>
     <p class="meta" style="margin-top:12px">2026-11-06 1차 구현: 타입 검사·프로덕션 빌드, 단위 12건·브라우저 17건 통과. 위 회귀 시험은 테스트 응답을 사용했다. 실서버 연결·전체 기능 동등성·속도 개선 검증은 T14.5에 남아 있다.</p>
+    <h3 style="margin-top:24px">2차 구현 확인 범위</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th scope="col">영역</th><th scope="col">구현·계약 시험</th><th scope="col">남은 범위</th></tr></thead>
+      <tbody>
+        <tr><td>Global Overview</td><td>카드와 섹션의 로딩을 분리했다. 비교 표 실패 후 해당 읽기만 재시도해도 성공한 카드는 유지한다.</td><td>실데이터·실제 요청 시간 대조</td></tr>
+        <tr><td>Global 언급 분석</td><td>기본 상태·탭과 카드 묶음을 분리했다. 감정 분포 실패가 다른 영역을 막지 않고, 해당 섹션을 재시도할 수 있다. 401·403은 전체 접근을 차단한다.</td><td>전체 지표·드릴다운 실데이터 대조</td></tr>
+        <tr><td>Project 측정 설정</td><td>초안의 원래 버전으로 저장하고 충돌·실패 시 입력을 보존한다. 최신 설정을 명시적으로 불러온 뒤 새 버전으로 저장한다. 미편집 갱신·읽기 전용·잘못된 성공 응답·세션 만료도 확인했다.</td><td>실제 Hub의 쿠키·Origin·저장 결과 대조</td></tr>
+      </tbody>
+    </table></div>
+    <p class="meta" style="margin-top:12px">2026-11-06 2차 구현: 단위 12건·브라우저 28건·타입 검사·프로덕션 빌드·원본 기준선 검사 통과. 추가 11건은 테스트 응답을 사용했다. Website·Project 분석과 인용·ACR의 섹션별 처리는 후속 구현 범위다.</p>
   </section>
 
   <section id="basis">
