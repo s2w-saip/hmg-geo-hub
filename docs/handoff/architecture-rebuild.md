@@ -215,13 +215,13 @@ P1 · P2는 Silver 없이 `gold_db`의 답변 단위 테이블로 짓고, P3에�
 
 | ID | 정할 것 | 영향 받는 태스크 |
 |---|---|---|
-| T12.1 실행 | `gold_db`의 안 읽는 테이블 17개(276 MB)와 `gold_before_t97`(41 GB) 삭제. **추천: 지금 지우지 않는다(2026-11-07 재검토).** T9.1 실제 Silver 대조, '분석팀 리뷰 필요' 중 대표 답변 결정, VM 반영이 끝난 뒤 지우고 덤프는 다른 곳에 남긴다. 근거: 지워도 화면은 그대로다(화면 94개 · 클릭 160회 · 폼 · 다운로드 · 필터 · 기간 동안 17개 스캔 0, 서버 코드 읽기 0, 뷰 · FK 의존 0). 잃는 것은 값이 아니라 수단이다: ① 이전 Gold가 다른 코드로 계산한 값(`kpi_cell` 등 약 1억 400만 행)은 우리 코드와 무관한 유일한 대조 기준이고, 적재와 어댑터가 같은 코드를 쓸 때 잡히지 않은 결함을 이 값으로 찾았다 ② 가상 OBT를 다시 만들 원본이다(`silver-load.sql`이 `answer_citation_raw` · `answer_registry` · `acr_cell_job`을 읽는다) ③ 운영 기록(`publication`의 검증 결과, `pin_reason`, `report_value`)은 다른 곳에 없다(`pin_reason`만 가상 OBT `ext`에 있다). 얻는 것은 디스크 41 GB이고 남은 디스크는 759 GB다. 되돌리기: 덤프 `.local/gold-copy/gold-20261106T033018Z.dump`가 86개 테이블 1억 8,265만 행 모두 md5까지 일치하고(2026-11-07), 2026-11-06에 복원 2회 성공 기록이 있다. 다만 파일 하나이고 다른 곳의 사본은 확인하지 못했다(Time Machine 대상이지만 백업 디스크를 읽지 못했다). `first_screen_read` · `metric_row` 등 5개는 덤프에 없고 다시 계산할 수 있다. 별도 위험: `build_virtual_obt.py --replace`는 대상을 먼저 비우는데 `SOURCE`가 아직 `gold_db`다(`answer_citation_raw` 0행). 지금 돌리면 가상 OBT의 인용 URL이 사라진다. 고치지 않았다. 답이 없으면: 그대로 둔다 | T12.1 |
+| T12.1 실행 | `gold_db`의 안 읽는 테이블 17개(276 MB)와 `gold_before_t97`(41 GB) 삭제. **추천: 지금 지우지 않는다(2026-11-07 재검토).** T9.1 실제 Silver 대조, '분석팀 리뷰 필요' 중 대표 답변 결정, VM 반영이 끝난 뒤 지우고 덤프는 다른 곳에 남긴다. 근거: 지워도 화면은 그대로다(화면 94개 · 클릭 160회 · 폼 · 다운로드 · 필터 · 기간 동안 17개 스캔 0, 서버 코드 읽기 0, 뷰 · FK 의존 0). 잃는 것은 값이 아니라 수단이다: ① 이전 Gold가 다른 코드로 계산한 값(`kpi_cell` 등 약 1억 400만 행)은 우리 코드와 무관한 유일한 대조 기준이고, 코드를 공유하는 대조로는 잡히지 않은 T9.8의 ACR 결함을 확인할 때 이 값을 썼다 ② 가상 OBT를 다시 만들 원본이다(`silver-load.sql`이 `answer_citation_raw` · `answer_registry` · `acr_cell_job`을 읽는다) ③ 운영 기록(`publication`의 검증 결과, `pin_reason`, `report_value`)은 다른 곳에 없다(`pin_reason`만 가상 OBT `ext`에 있다). 얻는 것은 디스크 41 GB이고 남은 디스크는 759 GB다. 되돌리기: 덤프 `.local/gold-copy/gold-20261106T033018Z.dump`가 86개 테이블 1억 8,265만 행 모두 md5까지 일치하고(2026-11-07), 2026-11-06에 복원 2회 성공 기록이 있다. 다만 파일 하나이고 다른 곳의 사본은 확인하지 못했다(Time Machine 대상이지만 백업 디스크를 읽지 못했다). `first_screen_read` · `metric_row` 등 5개는 덤프에 없고 다시 계산할 수 있다. 별도 위험: `build_virtual_obt.py --replace`는 대상을 먼저 비우는데 `SOURCE`가 아직 `gold_db`다(`answer_citation_raw` 0행). 지금 돌리면 가상 OBT의 인용 URL이 사라진다. 고치지 않았다. 답이 없으면: 그대로 둔다 | T12.1 |
 
 ## 보류
 
 - Admin 키워드 도구(DataForSEO · OpenRouter 계정 대기), 분석 엔진 · 리포트 관리 · 측정 크레딧(명세 대기): 2.6 답 뒤 다시 본다.
 - AI 가시성(메뉴 숨김) · 전환 변화 분해: 크롤 · 검색 · GA4 값이 `gold_db`와 Silver OBT에 없다. 값이 들어오면 다시 본다(D-11 닫음, 2026-11-06).
-- 레거시 Admin 12개 · `/ko/projects/new` · `/ko/raw-data-qa` 3개는 2026-10-27부터 열리지 않는다. 레거시 화면은 고치지 않고 리뉴얼 Admin이 같은 일을 한다(`docs/handoff/next-service-check.md`).
+- 레거시 Admin 11개 · `/ko/projects/new` · `/ko/raw-data-qa` 3개는 2026-10-27부터 열리지 않는다. 레거시 화면은 고치지 않고 리뉴얼 Admin이 같은 일을 한다(`docs/handoff/next-service-check.md`).
 - Mention · Citation · ACR은 읽기 하나가 실패하면 본문 전체가 오류 + 다시 시도다(T14.5.3). 정상 조건에서는 실패가 없어 그대로 뒀다.
 - D-3 남은 3건(Project Mention '{rank}위', Website Overview 첫 요약 '나빠진 것만', AI Conversion 'coverage' 발견 늘 warn): 대공사 뒤 한 건씩 본다(사용자 2026-11-06).
 - Silver OBT에 없는 값(키워드 · 소셜 · SEO와 크롤): Silver 연결 때 정한다(D-24, 사용자 2026-11-06).
