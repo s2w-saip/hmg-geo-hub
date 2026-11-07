@@ -32,6 +32,11 @@ export interface ServiceWeekSyncDeps {
   onView: (view: ServiceWeekView, sites: string) => void;
   /** re-reads the page body (router.refresh) */
   refresh: () => void;
+  /**
+   * What a moved week does instead of `refresh`, where given. The renewal shell loads the page again: router.refresh left a mounted page on the old answer while the new one
+   * streamed, numbers on the week before under a chip on the new week until the next read (seen with a filter, whose reads are counted, 2026-11-07). A week moves once a week.
+   */
+  moved?: () => void;
 }
 
 export interface ServiceWeekSync {
@@ -73,7 +78,9 @@ export function createServiceWeekSync(deps: ServiceWeekSyncDeps): ServiceWeekSyn
     const moved = known !== null && weekEndOf(known) !== weekEndOf(view);
     known = view;
     deps.onView(view, sites);
-    if (moved) refresh(weekEndOf(view));
+    if (!moved) return;
+    if (deps.moved) deps.moved();
+    else refresh(weekEndOf(view));
   };
   return {
     async adopt(view, sites) {

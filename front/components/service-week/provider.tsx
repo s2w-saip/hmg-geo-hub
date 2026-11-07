@@ -89,6 +89,7 @@ export function RnServiceWeekProvider({
         setNotesFor(picks);
       },
       refresh: () => routerRef.current.refresh(),
+      moved: notes ? () => window.location.reload() : undefined,
     }),
   );
 

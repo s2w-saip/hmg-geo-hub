@@ -70,6 +70,7 @@ let doc: ReturnType<typeof fakeDocument>;
 let answer: ServiceWeekView;
 const fetchMock = vi.fn(async (_url: string) => new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } }));
 const refresh = vi.fn();
+const reload = vi.fn();
 const urls = () => fetchMock.mock.calls.map((c) => c[0]);
 /** the provider's value as its children read it */
 let ctxNow: ServiceWeekContextValue | null = null;
@@ -156,6 +157,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockClear();
   refresh.mockClear();
+  reload.mockClear();
+  (doc.defaultView as unknown as { location: unknown }).location = { reload };
   nav.refresh = refresh;
   ctxNow = null;
   ends = {};
@@ -184,6 +187,32 @@ describe("RnServiceWeekProvider: once the layout's read is known (review r1-16)"
     expect(urls()).toEqual(["/api/service-week"]);
     expect(refresh).not.toHaveBeenCalled();
     expect(ctxNow?.latest?.checkedAt).toBe("2026-11-02T13:10:00Z");
+  });
+
+  it("in the renewal shell a moved week loads the page again; the URL and its filters stay, nothing else re-reads", async () => {
+    answer = view("2026-10-11");
+    await mount(view("2026-10-11"), PAGE, true);
+    expect(reload).not.toHaveBeenCalled();
+    answer = view("2026-10-18");
+    await turn("visible");
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("the (dash) shell keeps its refresh", async () => {
+    answer = view("2026-10-11");
+    await mount(view("2026-10-11"), PAGE);
+    answer = view("2026-10-18");
+    await turn("visible");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("a week just moved to, read by the page load the move brought, does not load it again", async () => {
+    answer = view("2026-10-18");
+    await mount(view("2026-10-18", { justMoved: true }), PAGE, true);
+    expect(reload).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("a week the BFF had just moved to when the layout read it re-reads the page once", async () => {
