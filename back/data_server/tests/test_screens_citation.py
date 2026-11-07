@@ -1,8 +1,11 @@
 """Citation screens: the rules the goldens do not pin by themselves (errors, degrade classification,
 URL parsing edges, route validation, the request shapes) — data_server.screens.citation / citation_model."""
 import asyncio
+import io
 import unittest
+import zipfile
 from unittest import mock
+from xml.etree import ElementTree
 
 try:
     from fastapi import HTTPException
@@ -15,6 +18,14 @@ except ModuleNotFoundError as exc:
 
 def run(coro):
     return asyncio.run(coro)
+
+
+def sheet_rows(data):
+    """The cells of the only sheet of an .xlsx file, as the file holds them."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        root = ElementTree.fromstring(z.read("xl/worksheets/sheet1.xml"))
+    ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    return [[c.find(f"{ns}is/{ns}t").text if c.get("t") == "inlineStr" else float(c.find(f"{ns}v").text) for c in row] for row in root.iter(f"{ns}row")]
 
 
 META = {"as_of": "2026-09-21", "suppressed": {}, "page": {"limit": 100, "total": 3, "next_cursor": "100"}}
@@ -271,14 +282,48 @@ class Routes(unittest.TestCase):
         self.assertEqual(C._route_target({}), ("global", None))
         self.assertEqual(C._route_target({"surface": "website", "project_id": "p"}), ("website", None))
 
-    def test_export_relays_the_gold_404(self):
-        get, calls = router({"citations/domains/export": HTTPException(404, "Source not present in Gold")})
-        with mock.patch("data_server.api.get", get), self.assertRaises(HTTPException) as err:
-            run(C.domains_export(QueryParams("ctx.surface=global&q=+kia+&sort=share&dir=asc&locale=en&max_rows=0100&competitor=b~a")))
-        self.assertEqual(err.exception.status_code, 404)
+    def test_export_is_a_workbook_of_the_tables_rows(self):
+        """Regression: Website and Project answered 404 here, so their Excel button only showed a failure."""
+        get, calls = router()
+        with mock.patch("data_server.api.get", get):
+            res = run(C.domains_export(QueryParams("ctx.surface=global&q=+kia+&sort=share&dir=asc&locale=en&max_rows=0100&competitor=b~a")))
+        self.assertEqual(res.media_type, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.assertRegex(res.headers["content-disposition"], r'^attachment; filename="citation-sources-\d{8}\.xlsx"')
         path, params = calls[0]
-        self.assertEqual([path, params["q"], params["sort"], params["dir"], params["locale"], params["format"], params["max_rows"], params["competitor"]],
-                         ["citations/domains/export", "kia", "share", "asc", "en", "xlsx", 100, ["a", "b"]])
+        self.assertEqual([path, params["q"], params["sort"], params["dir"], params["limit"], params["competitor"]],
+                         ["citations/domains", "kia", "share", "asc", 100, ["a", "b"]])
+        self.assertNotIn("x-export-truncated", res.headers)
+        rows = sheet_rows(res.body)
+        self.assertEqual(rows[0], ["#", "Domain", "Category", "Citations", "Share %", "Prompts", "Coverage Rate"])
+        self.assertEqual(rows[1], [1.0, "hyundai.com", "Official (HMG)", 5.0, 50.0, 2.0, 25.0])
+
+    def test_export_korean_labels_and_every_page_up_to_the_cap(self):
+        first = domains_body()
+        first["meta"] = {"page": {"limit": 1000, "total": 2, "next_cursor": "1000"}}
+        second = domains_body()
+        second["data"]["items"] = [dict(second["data"]["items"][0], skey="kia.com", rank=None, match_rank=None, category={"slug": "unknown-slug", "name": "새 분류"})]
+        second["meta"] = {"page": {"limit": 1000, "total": 2, "next_cursor": None}}
+        answers = iter([first, second])
+        calls = []
+
+        async def get(path, params=None):
+            calls.append(dict(params or {}))
+            return next(answers)
+        with mock.patch("data_server.api.get", get):
+            res = run(C.domains_export(QueryParams("ctx.surface=website&locale=ko")))
+        rows = sheet_rows(res.body)
+        self.assertEqual(rows[0][:3], ["#", "도메인", "카테고리"])
+        self.assertEqual(rows[1][:3], [1.0, "hyundai.com", "공식 (HMG)"])
+        self.assertEqual(rows[2][:3], [2.0, "kia.com", "새 분류"])
+        self.assertEqual([c.get("cursor") for c in calls], [None, "1000"])
+
+    def test_export_says_when_the_cap_cut_it(self):
+        full = domains_body()
+        full["meta"] = {"page": {"limit": 1000, "total": 9000, "next_cursor": "1000"}}
+        with mock.patch.object(C, "EXPORT_MAX_ROWS", 1), mock.patch("data_server.api.get", mock.AsyncMock(return_value=full)):
+            res = run(C.domains_export(QueryParams("ctx.surface=website")))
+        self.assertEqual(res.headers["x-export-truncated"], "true")
+        self.assertEqual(len(sheet_rows(res.body)), 2)
 
     def test_domains_page_numbering_and_offset(self):
         body = domains_body()

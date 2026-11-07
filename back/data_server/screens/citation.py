@@ -34,7 +34,7 @@ from fastapi import HTTPException
 from data_server import api
 from data_server.access import reader_scope
 from data_server.hub_stores import service_week
-from data_server.screens import screen, split_context
+from data_server.screens import _xlsx, screen, split_context
 from data_server.screens import citation_model as M
 from data_server.screens._compare import fetch_period_compare_api, period_shape, prev_period_filters
 from data_server.screens._convert import as_of_date, delta1
@@ -58,6 +58,17 @@ PROJECT_CITATION_GROUPS = (*PROJECT_GROUPS, "source")
 NON_FILTER_KEYS = frozenset({"tab", "tone", "q", "page", "by", "cursor", "sort", "dir", "limit", "locale", "surface", "projectId",
                              "domainCategory"})
 _CURSOR = re.compile(r"[A-Za-z0-9_-]{1,8192}")
+EXPORT_MAX_ROWS = 5000
+EXPORT_PAGE = 1000      # the reader's longest page
+EXPORT_LABELS = {"ko": ("#", "도메인", "카테고리", "인용 수", "점유율", "프롬프트", "커버리지"), "en": ("#", "Domain", "Category", "Citations", "Share %", "Prompts", "Coverage Rate")}
+EXPORT_CATEGORIES = {
+    "ko": {"officialHmg": "공식 (HMG)", "officialCompetitor": "공식 (경쟁사)", "dealerMarketplace": "딜러·마켓플레이스", "automotiveMedia": "자동차 미디어", "newsMedia": "뉴스·미디어",
+           "communityForums": "커뮤니티·포럼", "socialVideo": "소셜·영상", "blogsReviews": "블로그·리뷰", "wikiReference": "위키·백과", "governmentPublic": "정부·공공",
+           "awardCertification": "권위(수상·인증)", "academicResearch": "학술·연구", "other": "기타"},
+    "en": {"officialHmg": "Official (HMG)", "officialCompetitor": "Official (Competitor)", "dealerMarketplace": "Dealer & Marketplace", "automotiveMedia": "Automotive Media",
+           "newsMedia": "News & Media", "communityForums": "Community & Forums", "socialVideo": "Social & Video", "blogsReviews": "Blogs & Reviews", "wikiReference": "Wiki & Reference",
+           "governmentPublic": "Government & Public", "awardCertification": "Award & Certification", "academicResearch": "Academic & Research", "other": "Other"},
+}
 
 
 # ── small JS-semantics helpers ──────────────────────────────────────────────
@@ -882,17 +893,35 @@ async def domain_detail(q) -> dict:
     return out
 
 
+def export_category(category: dict | None, locale: str) -> str:
+    """A category in the file: its name in the file's language; a slug the list does not know keeps the name it came with."""
+    return (EXPORT_CATEGORIES[locale].get(category.get("slug")) or category.get("name") or "") if category else ""
+
+
 @screen("citation/domains-export")
-async def domains_export(q) -> dict:
-    """GET /api/citations/domains/export: the BG-22 export read as the route relayed it (Gold has no
-    export: the read answers 404, which the route returns)."""
+async def domains_export(q) -> Any:
+    """GET /api/citations/domains/export: the legacy Website and Project pages' Excel button (Global builds its file in the browser). The table's rows under the same
+    filters, search, sort and pick, in the file's 7 columns (BG-22, the removed back/app/features/analytics/citations/domains at git d77f278), up to EXPORT_MAX_ROWS."""
     ctx, sp = split_context(q)
     surface, pid = _route_target(ctx)
     filters, actx, competitor = route_context(sp, surface, pid, ctx.get("role"))
-    lst = M.domains_params({"q": js_trim(first(sp.get("q")) or ""), "sort": first(sp.get("sort")) or "citations",
-                            "dir": first(sp.get("dir")) or None, "competitor": competitor})
-    extra = {**lst, "locale": first(sp.get("locale")) or "ko", "format": "xlsx"}
-    max_rows = first(sp.get("max_rows"))
-    if max_rows and max_rows.isdigit() and int(max_rows) > 0:
-        extra["max_rows"] = int(max_rows)
-    return await api.get("citations/domains/export", with_params(common_of(filters, actx), extra))
+    locale = first(sp.get("locale")) if first(sp.get("locale")) in EXPORT_LABELS else "ko"
+    raw_max = first(sp.get("max_rows"))
+    asked = int(raw_max) if raw_max and raw_max.isdigit() and int(raw_max) > 0 else None
+    cap = min(asked or EXPORT_MAX_ROWS, EXPORT_MAX_ROWS)
+    lst = M.domains_params({"q": js_trim(first(sp.get("q")) or ""), "sort": first(sp.get("sort")) or "citations", "dir": first(sp.get("dir")) or None, "competitor": competitor})
+    common = with_params(common_of(filters, actx), lst)
+    items: list[dict] = []
+    cursor, total = None, 0
+    while len(items) < cap:
+        res = await api.get("citations/domains", {**common, "limit": min(EXPORT_PAGE, cap - len(items)), **({"cursor": cursor} if cursor else {})})
+        items.extend(res["data"]["items"])
+        info = page_info(res.get("meta"))
+        cursor, total = info["nextCursor"], info["total"] or len(items)
+        if not cursor or not res["data"]["items"]:
+            break
+    items = items[:cap]
+    numbered = M.numbered_rows([M.to_citation_domain(r) for r in items], "rank" if surface == "global" else "matchRank")
+    rows = [[v["no"], v["domain"], export_category(r.get("category"), locale), v["citations"], v["share"], v["prompts"], v["coverageRate"]] for r, v in zip(items, numbered)]
+    truncated = total > cap and (asked is None or asked >= EXPORT_MAX_ROWS)
+    return _xlsx.attachment(_xlsx.workbook("citation-sources", EXPORT_LABELS[locale], rows), f"citation-sources-{kst_today().replace('-', '')}.xlsx", truncated=truncated)

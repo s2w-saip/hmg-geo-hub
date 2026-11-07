@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { hghErrorResponse } from "@/lib/hgh/errors";
 import { DOMAIN_SORTS } from "@/lib/hgh/citation-route";
-import { screenGet } from "@/lib/screen";
+import { screenRelay } from "@/lib/screen";
 import { openCitationRoute, routeFail } from "../../_lib/route";
 
 // BFF: the citation domain table as a file (unit U7, BG-22).
@@ -9,10 +9,9 @@ import { openCitationRoute, routeFail } from "../../_lib/route";
 //   GET /api/citations/domains/export?<the screen's filter params>[&surface=website]
 //       [&projectId=<uuid>][&q=<text>][&sort=...][&dir=asc|desc][&locale=ko|en][&max_rows=1..5000]
 //
-// A thin proxy to the screen citation/domains-export (the export read with the table's search,
-// sort and competitor pick). The Gold source has no export: the read answers 404, which this route
-// returns as before (the client shows its export failure notice). Gates and source:
-// ../../_lib/route.ts.
+// Relays the file of the screen citation/domains-export (the table's rows with its search, sort and
+// competitor pick). A failed read keeps its status, which the client shows as its export failure
+// notice. Gates and source: ../../_lib/route.ts.
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -32,10 +31,7 @@ export async function GET(req: NextRequest) {
   const opened = await openCitationRoute(q);
   if (opened instanceof Response) return opened;
   try {
-    const body = await screenGet<unknown>("citation/domains-export", opened.query);
-    return NextResponse.json(body, {
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment" },
-    });
+    return await screenRelay("citation/domains-export", opened.query);
   } catch (e) {
     return hghErrorResponse(e);
   }

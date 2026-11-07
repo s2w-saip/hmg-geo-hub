@@ -39,13 +39,15 @@ const getExport = (qs: string) => exporter.GET(req("/api/citations/domains/expor
 const apiLog: URL[] = [];
 const ROW = { domain: "a.example", citations: 3, share: 50, prompts: 2, coverageRate: 20, urls: [], promptList: [], isOurs: false, category: null, subcategory: null, skey: "a.example", rank: 4, no: 4 };
 let backend: (url: URL) => Response;
+const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 // The routes are thin proxies to the screens (back/bff/screens/citation.py): the stub answers them.
 const defaultBackend = (url: URL): Response => {
   if (url.pathname === "/v1/screens/citation/domains") return json({ rows: [ROW], nextCursor: "n1", total: 201, views: { "": { idx: [0], maxCit: 3, maxCov: 20 } } });
   if (url.pathname === "/v1/screens/citation/domain-detail")
     return json({ urls: [{ url: "https://www.instagram.com/hyundai/p/1", title: "P", count: 1, aiProvider: "Gemini", promptText: "q", country: null }], promptList: [], promptOrders: { prompt: { asc: [], desc: [] }, citations: { asc: [], desc: [] }, share: { asc: [], desc: [] } } });
-  if (url.pathname === "/v1/screens/citation/domains-export") return json({ error: { code: "not_found", message: "Source not present in Gold" } }, 404);
+  if (url.pathname === "/v1/screens/citation/domains-export")
+    return new Response(new Uint8Array([0x50, 0x4b, 3, 4]), { status: 200, headers: { "content-type": XLSX, "content-disposition": 'attachment; filename="citation-sources-20261107.xlsx"' } });
   if (url.pathname.startsWith("/v1/projects/")) return json({ error: { code: "not_found" } }, 404);
   return json({ error: { code: "not_found" } }, 404);
 };
@@ -185,9 +187,15 @@ describe("api answers (screen proxies)", () => {
     ]);
   });
 
-  it("export: the Gold source has no export (404 from the screen) -> 404 as before; the params reach the screen", async () => {
+  it("export: the screen's file goes out as a file, bytes and name; a failed read keeps its status", async () => {
     const r = await getExport("surface=website&q=kia&sort=coverage&locale=en&max_rows=100");
-    expect([r.status, await code(r)]).toEqual([404, "not_found"]);
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-type")).toBe(XLSX);
+    expect(r.headers.get("content-disposition")).toContain("citation-sources-20261107.xlsx");
+    expect(new Uint8Array(await r.arrayBuffer()).slice(0, 2)).toEqual(new Uint8Array([0x50, 0x4b]));
+    backend = () => json({ error: { code: "not_found", message: "m", details: [] } }, 404);
+    const failed = await getExport("surface=website");
+    expect([failed.status, await code(failed)]).toEqual([404, "not_found"]);
     const q = apiLog[0].searchParams;
     expect([apiLog[0].pathname, q.get("q"), q.get("sort"), q.get("locale"), q.get("max_rows")]).toEqual(["/v1/screens/citation/domains-export", "kia", "coverage", "en", "100"]);
   });

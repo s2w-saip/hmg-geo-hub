@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 import asyncpg
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from data_server import access, api, screens
 from data_server.gold_reader.db import close_pool, connection, open_pool
@@ -193,6 +193,8 @@ async def screen(path: str, request: Request):
     who = await hub_auth.principal(request.headers.get("authorization"))
     with access.scoped(who.scope()):
         built = await screens.build(path, request.query_params)
+    if isinstance(built, Response):     # a download (screens/_xlsx.py) goes out as the file it is
+        return built
     return EncodedJSON(built, headers={"Cache-Control": "no-store"})
 
 

@@ -1,4 +1,4 @@
-"""/website/prompts: filter options, one keyset page of the list, and the export relay
+"""/website/prompts: filter options, one keyset page of the list, and the export file
 (ports of lib/website/prompt-query.ts, lib/hgh/adapters/catalog.ts website list, the page's
 Suspense key and the table's paging labels); /renewal/website/prompts (2026-10-30): one numbered
 page of the same query (narrowed by the list's own picks), every row of it for the browser-built export, and
@@ -12,13 +12,15 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
+import icu
 from fastapi import HTTPException
 
 from data_server import api
 from data_server.access import reader_scope
-from data_server.screens import screen, split_context
+from data_server.screens import _xlsx, screen, split_context
 from data_server.screens._filters import load_filter_dates, load_website_prompt_options, read_standard_filters, standard_filter_key
 from data_server.screens._js import js_parse_int
+from data_server.screens._period import kst_today
 from data_server.screens._query import analysis_query, js_trim, to_api_params
 from data_server.screens.mention_view import fill_trend_gaps
 
@@ -31,6 +33,15 @@ SORT_API = {"prompt": "prompt", "brand": "brand", "country": "country", "lang": 
             "firstMeasuredAt": "first_measured", "rounds": "rounds"}
 DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 CURSOR_RE = re.compile(r"[A-Za-z0-9_-]{1,8192}")
+#: the legacy page's file (messages website.prompts.*, as the removed back/app/features/catalog/prompts/catalog/screen_export.py at git d77f278)
+EXPORT_WORDS = {
+    "ko": {"headers": ("프롬프트", "브랜드", "국가", "언어", "타겟 URL", "측정 횟수", "최근 측정", "측정 엔진"), "not_measured": "측정 없음", "file": "웹사이트-프롬프트", "sheet": "웹사이트 프롬프트"},
+    "en": {"headers": ("Prompt", "Brand", "Country", "Language", "Target URL", "Measurements", "Last measured", "Engines"), "not_measured": "Not measured", "file": "website-prompts", "sheet": "Website Prompts"},
+}
+#: site codes that are no country (front lib/geo-catalog/pseudo-country.ts): the browser's Intl does not know them either
+PSEUDO_COUNTRIES = {"SA-Dammam": {"ko": "사우디 아라비아 - 담맘", "en": "Saudi Arabia - Dammam"}, "SA-Jeddah": {"ko": "사우디 아라비아 - 제다", "en": "Saudi Arabia - Jeddah"},
+                    "SA-Riyadh": {"ko": "사우디 아라비아 - 리야드", "en": "Saudi Arabia - Riyadh"}, "CN-BJ": {"ko": "중국-베이징", "en": "China-Beijing"}}
+REGION_RE = re.compile(r"(?:[A-Z]{2}|[0-9]{3})")
 
 
 def one(v: Any) -> Any:
@@ -144,12 +155,38 @@ async def prompts_list(q) -> dict:
             "nextPage": page + 1}
 
 
+def country_name(code: str | None, locale: str) -> str:
+    """As the page prints a country (front countryName): a site code's own label, else ICU's name (the same as the browser's on every code in Gold), else the code."""
+    if not code:
+        return ""
+    pseudo = PSEUDO_COUNTRIES.get(code.strip())
+    if pseudo:
+        return pseudo[locale]
+    upper = code.strip().upper()
+    return icu.Locale("und", upper).getDisplayCountry(icu.Locale(locale)) if REGION_RE.fullmatch(upper) else code
+
+
+def language_name(code: str | None, locale: str) -> str:
+    """As the page prints a language (front languageName)."""
+    return icu.Locale(code.strip().lower().replace("-", "_")).getDisplayName(icu.Locale(locale)) if code else ""
+
+
+def file_row(r: dict, locale: str) -> list:
+    last = r["lastMeasuredAt"]
+    return [r["promptText"], r["brand"], country_name(r["countryCode"], locale), language_name(r["langCode"], locale), r["targetUrl"], int(r["answers"] or 0),
+            (last.isoformat() if hasattr(last, "isoformat") else last) or EXPORT_WORDS[locale]["not_measured"], ", ".join(r["engines"])]
+
+
 @screen("website/prompts-export")
 async def prompts_export(q) -> Any:
-    """The export relay body: /v1/prompts for the same query + format=xlsx, columns=screen, locale."""
+    """The legacy page's Excel button: every row of the list under the page's filters, in its order, in the page's 8 columns. The route names the file."""
     ctx, sp = split_context(q)
     req = read_query(sp, reader_scope(), is_admin(ctx))
-    return await api.get("prompts", {**list_query(req, reader_scope()), "format": "xlsx", "columns": "screen", "locale": ctx.get("locale", "ko")})
+    locale = ctx["locale"] if ctx.get("locale") in EXPORT_WORDS else "ko"
+    words = EXPORT_WORDS[locale]
+    rows = await all_rows(list_query(req, reader_scope()))
+    day = kst_today()
+    return _xlsx.attachment(_xlsx.workbook(words["sheet"], words["headers"], [file_row(r, locale) for r in rows]), f"{words['file']}-{day}.xlsx", ascii_name=f"website-prompts-{day}.xlsx")
 
 
 async def all_rows(base: dict) -> list[dict]:

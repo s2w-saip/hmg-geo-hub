@@ -2,15 +2,19 @@
 + websitePromptQuery in the front), the keyset page and its labels; the renewal page's numbered page and
 export rows; the Gold reader's website list (search, the engine/period lens, the order)."""
 import asyncio
+import io
 import unittest
+import zipfile
 from datetime import date
 from unittest import mock
+from xml.etree import ElementTree
 
 try:
     from fastapi import HTTPException
     from starlette.datastructures import QueryParams
     from data_server.gold_reader import catalog
     from data_server.gold_reader.context import Context
+    from data_server.screens import _xlsx
     from data_server.screens import website_prompts as wp
 except ModuleNotFoundError as exc:
     raise unittest.SkipTest("Run inside the BFF image (data_server.tests.test_screens_website_prompts)") from exc
@@ -27,6 +31,23 @@ def body(n=50, total=120, next_cursor="50"):
             "meta": {"page": {"total": total, "next_cursor": next_cursor}}}
 
 
+def sheet_rows(data):
+    """The cells of the only sheet of an .xlsx file, as the file holds them."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        root = ElementTree.fromstring(z.read("xl/worksheets/sheet1.xml"))
+    ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    out = []
+    for row in root.iter(f"{ns}row"):
+        cells = []
+        for c in row:
+            if c.get("t") == "inlineStr":
+                cells.append(c.find(f"{ns}is/{ns}t").text or "")
+            else:
+                cells.append(float(c.find(f"{ns}v").text))
+        out.append(cells)
+    return out
+
+
 class Export(unittest.TestCase):
     def export_params(self, qs):
         get = mock.AsyncMock(return_value={"data": {"items": []}, "meta": {}})
@@ -36,14 +57,43 @@ class Export(unittest.TestCase):
         self.assertEqual(path, "prompts")
         return params
 
-    def test_admin_filters_sort_search_and_file_columns(self):
+    def test_admin_filters_sort_search_and_the_whole_list(self):
         p = self.export_params("geography=US&geography=DE&engine=GEMINI&q=%20ev%20&sort=prompt&dir=asc&page=3&cursor=abc"
                                "&ctx.locale=en&ctx.admin=true")
         self.assertEqual(p["country"], ["DE", "US"])
         self.assertEqual(p["engine"], ["gemini"])
         self.assertEqual((p["search"], p["sort"], p["dir"]), ("ev", "prompt", "asc"))
-        self.assertEqual((p["surface"], p["format"], p["columns"], p["locale"]), ("website", "xlsx", "screen", "en"))
-        self.assertTrue({"cursor", "page", "limit"}.isdisjoint(p))
+        self.assertEqual((p["surface"], p["limit"]), ("website", wp.READ_LIMIT))
+        self.assertTrue({"cursor", "page", "format", "columns"}.isdisjoint(p))
+
+    def file_of(self, qs, items):
+        pages = [{"data": {"items": items[:1]}, "meta": {"page": {"next_cursor": "1"}}}, {"data": {"items": items[1:]}, "meta": {}}]
+        with mock.patch("data_server.api.get", mock.AsyncMock(side_effect=pages)):
+            return run(wp.prompts_export(QueryParams(qs)))
+
+    ITEMS = [{"website_prompt_id": "a", "prompt_text": "=SUM(A1) & <b>", "brand_code": "Kia", "country_code": "DE", "lang_code": "de", "target_url": "https://kia.de/x", "domain": "kia.de",
+              "answers": 7, "last_measured": "2026-10-09", "engines": ["chatgpt", "gemini"]},
+             {"website_prompt_id": "b", "prompt_text": "q2", "brand_code": "Genesis", "country_code": "SA-Dammam", "lang_code": "ar", "target_url": "https://g.sa", "domain": "g.sa",
+              "answers": 0, "last_measured": None, "engines": []},
+             {"website_prompt_id": "c", "prompt_text": "q3", "brand_code": "Kia", "country_code": "worldwide", "lang_code": "en", "target_url": "u", "domain": "d",
+              "answers": 1, "last_measured": "2026-09-11", "engines": ["gemini"]}]
+
+    def test_the_file_is_a_workbook_with_the_screens_columns(self):
+        """Regression: the route saved the rows' JSON under an .xlsx name (Excel refused to open it)."""
+        res = self.file_of("ctx.locale=ko&ctx.admin=true", self.ITEMS)
+        self.assertEqual(res.media_type, _xlsx.MEDIA)
+        self.assertEqual(res.body[:2], b"PK")
+        rows = sheet_rows(res.body)
+        self.assertEqual(rows[0], ["프롬프트", "브랜드", "국가", "언어", "타겟 URL", "측정 횟수", "최근 측정", "측정 엔진"])
+        self.assertEqual(rows[1], ["=SUM(A1) & <b>", "Kia", "독일", "독일어", "https://kia.de/x", 7.0, "2026-10-09", "chatgpt, gemini"])
+        self.assertEqual(rows[2], ["q2", "Genesis", "사우디 아라비아 - 담맘", "아랍어", "https://g.sa", 0.0, "측정 없음", ""])
+        self.assertEqual(rows[3][2:4], ["worldwide", "영어"])
+
+    def test_the_english_file(self):
+        rows = sheet_rows(self.file_of("ctx.locale=en&ctx.admin=true", self.ITEMS).body)
+        self.assertEqual(rows[0], ["Prompt", "Brand", "Country", "Language", "Target URL", "Measurements", "Last measured", "Engines"])
+        self.assertEqual(rows[1][2:4], ["Germany", "German"])
+        self.assertEqual(rows[2][6], "Not measured")
 
     def test_bad_sort_falls_back_and_blank_search_is_not_sent(self):
         p = self.export_params("sort=nope&dir=up&q=%20%20")
