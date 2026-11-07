@@ -681,6 +681,13 @@ async def public_snapshots(surface: str) -> dict[date, str]:
     return kept[1]
 
 
+async def tables_hold_public(conn: Any, surface: str) -> bool:
+    """Whether the query tables hold every operating snapshot of the surface: nothing to load, so a count on them answers as one on the OBT would. conn = gold_db."""
+    public = await public_snapshots(surface)
+    held = await loaded_snapshots(conn, surface)
+    return all(held.get(day) == ids for day, ids in public.items())
+
+
 async def current_inputs(gold: Any) -> Inputs:
     """gold = the read's connection to gold_db."""
     global _cached

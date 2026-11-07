@@ -197,6 +197,37 @@ class Rows(unittest.TestCase):
         self.assertEqual(ctx.late_rounds, {D1})
         self.assertFalse(usage["live"])    # a read with a gap is not cached
 
+    def last_resort_source(self, public, held, *, on_obt=False, silver=True):
+        ctx = context()
+        live = Live(ctx)
+        source = gold_rows.GoldRowsSource(live, "bits=7")
+        obt = mock.Mock(name="ObtForContext")
+        with mock.patch("data_server.metrics.gold_rows.silver_db.configured", return_value=silver), \
+                mock.patch("data_server.metrics.silver_obt.enabled", return_value=on_obt), \
+                mock.patch("data_server.metrics.silver_obt.public_snapshots", mock.AsyncMock(return_value=public)), \
+                mock.patch("data_server.metrics.silver_obt.loaded_snapshots", mock.AsyncMock(return_value=held)), \
+                mock.patch("data_server.metrics.silver_obt.ObtForContext", obt):
+            return asyncio.run(source._last_resort_source()), live, obt
+
+    def test_the_last_resort_counts_on_the_tables_when_they_hold_the_operating_snapshots(self):
+        """Regression: a recorded week moved every surface's snapshot id, the first screens counted on the OBT until the rollup ran (20 s a read, Mention's filter dates timed out and the page failed)."""
+        got, live, obt = self.last_resort_source({D2: "a", D3: "b"}, {D1: "old", D2: "a", D3: "b"})
+        self.assertIs(got, live)
+        obt.assert_not_called()
+
+    def test_the_last_resort_counts_on_the_obt_when_the_tables_are_what_is_late(self):
+        for held in ({D2: "a"}, {D2: "a", D3: "older"}):
+            with self.subTest(held=held):
+                got, live, obt = self.last_resort_source({D2: "a", D3: "b"}, held)
+                self.assertIs(got, obt.return_value)
+
+    def test_the_last_resort_stays_on_the_reads_source_where_they_count_on_the_obt_or_there_is_none(self):
+        for kwargs in ({"on_obt": True}, {"silver": False}):
+            with self.subTest(kwargs=kwargs):
+                got, live, obt = self.last_resort_source({D3: "b"}, {}, **kwargs)
+                self.assertIs(got, live)
+                obt.assert_not_called()
+
     def test_the_last_resort_runs_a_few_at_a_time(self):
         async def main():
             running, peak = 0, 0
@@ -293,19 +324,6 @@ class Recording(unittest.TestCase):
         self.record(ctx, writer, [{**self.ROW, "round_date": D3}])
         self.assertEqual(json.loads(writer.rows_[0][1]), {"engine_key": 1})
         self.assertNotIn("round_date", json.loads(writer.rows_[0][2]))
-
-
-class LastResort(unittest.TestCase):
-    def test_it_counts_on_the_obt_when_the_reads_count_on_the_tables(self):
-        from data_server.hub_stores import silver_db
-        from data_server.metrics import gold_rows, silver_obt
-        live = mock.Mock(surface="global", snapshot_id="s")
-        live.ctx = mock.Mock(card=False, surface="global", release={"release_id": 1, "version": 1})
-        source = gold_rows.GoldRowsSource(live, "bits=7")
-        with mock.patch.object(silver_db, "configured", return_value=True), mock.patch.object(silver_obt, "enabled", return_value=False):
-            self.assertIsInstance(source._last_resort_source(), silver_obt.ObtForContext)
-        with mock.patch.object(silver_db, "configured", return_value=False), mock.patch.object(silver_obt, "enabled", return_value=False):
-            self.assertIs(source._last_resort_source(), live)   # no connection to the OBT: where the reads count
 
 
 if __name__ == "__main__":

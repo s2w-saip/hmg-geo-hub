@@ -198,9 +198,15 @@ class GoldRowsSource:
         stored = await metrics_db.metric_rows(self.surface, _project(self.ctx), call, self.scope, ready)
         return _assemble(stored, kwargs, by_round, len(ready) > 1 or bool(counted), counted)
 
-    def _last_resort_source(self) -> Any:
-        """What the last resort counts on: the operating snapshots themselves when the reads count on the query tables (the tables may be what is late). No OBT connection: where the reads count."""
-        return silver_obt.ObtForContext(self.ctx) if not silver_obt.enabled() and silver_db.configured() else self.live
+    async def _last_resort_source(self) -> Any:
+        """What the last resort counts on. The query tables while they hold the surface's operating snapshots: then only the rollup is late (a recorded week, a new definition), and the tables
+        count as a filtered read does. The operating snapshots themselves when the tables are what is late (a re-analysis not loaded yet). Where the reads count on the OBT, or there is no OBT
+        connection, on the reads' own source."""
+        if silver_obt.enabled() or not silver_db.configured():
+            return self.live
+        if await silver_obt.tables_hold_public(self.ctx.conn, self.surface):
+            return self.live
+        return silver_obt.ObtForContext(self.ctx)
 
     async def _count_late(self, method: Callable, args: tuple, kwargs: dict) -> Any:
         """The last resort for a read no row can answer. If it fails too, the value is not shown."""
@@ -208,7 +214,7 @@ class GoldRowsSource:
         try:
             async with last_resort():
                 await self.ctx.load_catalog()
-                answer = await getattr(self._last_resort_source(), self._called, method)(*args, **kwargs)
+                answer = await getattr(await self._last_resort_source(), self._called, method)(*args, **kwargs)
         except Exception as error:  # noqa: BLE001 - whatever stopped the count, the screen part says the value is not ready
             log.warning("The last resort failed: %s %s", self.surface, self.scope, exc_info=True)
             raise HTTPException(503, NOT_READY) from error
@@ -221,7 +227,7 @@ class GoldRowsSource:
         try:
             async with last_resort():
                 await self.ctx.load_catalog()
-                rows = await getattr(self._last_resort_source().for_rounds(late), name)(*args, **kwargs)
+                rows = await getattr((await self._last_resort_source()).for_rounds(late), name)(*args, **kwargs)
         except Exception:  # noqa: BLE001 - the other rounds still answer
             log.warning("The last resort failed: %s %s %s", self.surface, self.scope, late, exc_info=True)
             self.ctx.late_rounds = {*self.ctx.late_rounds, *late}
