@@ -9,10 +9,11 @@ A read never joins answers to per-answer sums: those groups are estimated at one
 Goes with gold_reader once the OBT is read."""
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import time
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, NamedTuple
 
 from data_server.hub_stores import input_db
@@ -57,6 +58,24 @@ class Inputs(NamedTuple):
 _memo: dict[tuple, Populations] = {}
 _inputs: tuple[float, Inputs] | None = None
 _owned: dict[tuple, list[int]] = {}
+_building: dict[tuple, asyncio.Lock] = {}
+
+
+async def _once(memo: dict, key: tuple, count: Callable[[], Awaitable[Any]]) -> Any:
+    """A value kept per key, counted once however many reads ask at the same time: the reads of a page arrive together, and on a cold server each ran the same heavy count, which
+    together passed the statement limit. The others wait on their own connections; if the count fails, the next one tries."""
+    if key in memo:
+        return memo[key]
+    if len(_building) > 64:
+        _building.clear()
+    async with _building.setdefault(key, asyncio.Lock()):
+        if key in memo:
+            return memo[key]
+        value = await count()
+        if len(memo) >= 8:
+            memo.clear()
+        memo[key] = value
+        return value
 
 
 async def read_inputs() -> Inputs:
@@ -144,12 +163,11 @@ async def owned_url_keys(ctx: Any) -> list[int]:
     """(site, URL) of every citation under what the site registered, once per registered list and builds."""
     inputs = await read_inputs()
     key = ("owned", ctx.sf, inputs.registered_digest, tuple(sorted(ctx.builds.get("fact", []))))
-    if key not in _owned:
-        if len(_owned) >= 8:
-            _owned.clear()
+
+    async def count() -> list[int]:
         sites = await _project_keys(ctx)
-        _owned[key] = await _prefix_keys(ctx, [(sites[site], url) for site, urls in inputs.registered.items() if site in sites for url in urls])
-    return _owned[key]
+        return await _prefix_keys(ctx, [(sites[site], url) for site, urls in inputs.registered.items() if site in sites for url in urls])
+    return await _once(_owned, key, count)
 
 
 async def own_url(ctx: Any, b: Any, alias: str = "f") -> str:
@@ -178,9 +196,8 @@ async def target_url_keys(ctx: Any) -> list[int]:
     if not inputs.prompt_targets:
         return []
     key = ("target", tuple(sorted(ctx.builds.get("fact", []))), hash(frozenset(inputs.prompt_targets.items())))
-    if key not in _owned:
-        if len(_owned) >= 8:
-            _owned.clear()
+
+    async def count() -> list[int]:
         prompts = {r["id"]: r["prompt_key"] for r in await ctx.conn.fetch("SELECT prompt_key,prompt_id::text AS id FROM gold.dim_prompt WHERE prompt_id::text=ANY($1::text[])", list(inputs.prompt_targets))}
         pairs = [(prompts[p], url) for p, url in inputs.prompt_targets.items() if p in prompts]
         rows = await ctx.conn.fetch(f"""WITH r AS (SELECT * FROM unnest($1::int[],$2::text[]) AS t(prompt_key,url)),
@@ -188,8 +205,8 @@ async def target_url_keys(ctx: Any) -> list[int]:
             u AS MATERIALIZED (SELECT url_key,{j.normal_url_sql('coalesce(url_norm,url)')} AS n FROM gold.dim_url WHERE regexp_replace(lower(host),'^www\\.','') IN (SELECT host FROM h))
             SELECT DISTINCT f.prompt_key::bigint*4294967296+f.url_key AS k FROM gold.citation_fact f JOIN r USING(prompt_key) JOIN u ON u.url_key=f.url_key AND u.n=r.url
             WHERE f.build_id=ANY($3::bigint[]) AND f.surface=2""", [k for k, _ in pairs], [u for _, u in pairs], ctx.builds.get("fact", []))
-        _owned[key] = [r["k"] for r in rows]
-    return _owned[key]
+        return [r["k"] for r in rows]
+    return await _once(_owned, key, count)
 
 
 async def target_url(ctx: Any, b: Any, alias: str = "f") -> str:
