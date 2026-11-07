@@ -7,7 +7,7 @@ import { ChevronsUpDown, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { RnIconButton, RnSearchField, RnSkeleton, cx } from "@/components/renewal-ui";
 import { countryName } from "@/lib/geo-catalog/country-name";
-import { projectHref, projectMatches, shortId, type ProjectRow } from "../renewal/projects/_components/project-model";
+import { projectHref, projectMatches, projectLabel, type ProjectRow } from "../renewal/projects/_components/project-model";
 
 // The project tab's card (menu option D, 2026-11-03): which project this tab holds, and the switch to another one in
 // the same tab, on the same menu. The sidebar sits in the renewal layout, which Next.js does not re-render when the
@@ -66,7 +66,7 @@ export function RnProjectCard({ id, page, menu }: { id: string; page: string; me
     <div data-rn-project-card={id} className="my-1 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 rounded-[10px] bg-rn-page py-2 pr-1.5 pl-3 shadow-[inset_0_0_0_1px_var(--color-rn-line)]">
       {row ? (
         <span className="flex min-w-0 flex-col leading-[1.35]" title={row.id}>
-          <b className="font-mono text-rn-13 text-rn-ink">{shortId(row.id)}</b>
+          <b className={cx("truncate text-rn-13 text-rn-ink", !row.name && "font-mono")}>{projectLabel(row)}</b>
           <small className="truncate text-rn-11 text-rn-muted">{meta(row)}</small>
         </span>
       ) : (
@@ -182,7 +182,7 @@ function ProjectSwitch({
                 r.id === id && "bg-rn-navy/8",
               )}
             >
-              <b className="font-mono text-rn-13 text-rn-ink">{shortId(r.id)}</b>
+              <b className={cx("truncate text-rn-13 text-rn-ink", !r.name && "font-mono")}>{projectLabel(r)}</b>
               <span className="truncate text-right text-rn-12 text-rn-muted">{meta(r)}</span>
               <span className={cx("col-span-2 truncate text-rn-12", r.first_prompt ? "text-rn-muted" : "text-rn-faint")}>{r.first_prompt ?? tList("noPrompt")}</span>
             </Link>

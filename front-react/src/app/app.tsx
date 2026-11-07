@@ -8,7 +8,6 @@ import { LocaleProvider } from "./i18n";
 import { SessionProvider, useSession } from "./session";
 import { Shell } from "./shell";
 import { PAGES, type PageDefinition } from "./pages";
-import { StandbyPage } from "./standby";
 import { PageBoundary, PageError, PageLoading } from "./states";
 import { AuthPage } from "./auth-pages";
 
@@ -16,6 +15,7 @@ const Analytics = lazy(() => import("~/pages/analytics"));
 const Admin = lazy(() => import("~/pages/admin"));
 const Catalog = lazy(() => import("~/pages/catalog"));
 const Projects = lazy(() => import("~/pages/projects"));
+const Funnel = lazy(() => import("~/pages/funnel"));
 
 function LocaleLayout() {
   const { locale } = useParams();
@@ -34,7 +34,7 @@ function PageRoute({ page }: { page: PageDefinition }) {
   else if (CONNECTED && !user) return <Navigate replace to={`/${locale}/login?next=${encodeURIComponent(pathname + search)}`} />;
   else if (CONNECTED && user?.mustChangePassword) return <Navigate replace to={`/${locale}/change-password?next=${encodeURIComponent(pathname + search)}`} />;
   else if (CONNECTED && (!user || !canAccessRoute(user.role, pathname) || (id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)))) content = <PageError error={new HghApiError(403, "forbidden")} />;
-  else if (page.kind === "waiting") content = <StandbyPage page={page} />;
+  else if (["conversion", "visibility", "keyword-tools", "google-keyword", "social-scraping"].includes(page.kind)) content = <Funnel page={page} />;
   else if (page.group === "Admin") content = <Admin page={page} />;
   else if (page.kind === "prompts" || page.kind === "website-prompts") content = <Catalog page={page} />;
   else if (["projects", "project-prompts", "project-setting", "member"].includes(page.kind)) content = <Projects page={page} />;

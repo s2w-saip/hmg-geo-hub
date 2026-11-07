@@ -166,6 +166,20 @@ class Screens(Door):
             self.read(f"/api/screens/{name}?ctx.surface=website&ctx.project_id={PID}")
             self.assertEqual(dict(self.query())["ctx.surface"], surface, name)
 
+    def test_the_funnel_screens_open_and_a_project_one_needs_its_project(self):
+        for name in ("conversion/renewal", "conversion/renewal-header", "visibility/renewal", "visibility/renewal-header"):
+            self.assertEqual(self.read(f"/api/screens/{name}").status_code, 200, name)
+        self.read(f"/api/screens/conversion/renewal?ctx.surface=project&ctx.project_id={PID}")
+        self.assertEqual((dict(self.query())["ctx.surface"], dict(self.query())["ctx.project_id"]), ("project", PID))
+        self.assertEqual(self.read("/api/screens/conversion/renewal?ctx.surface=project").json()["error"]["code"], "invalid_project_id")
+        self.who = principal("country")
+        self.assertEqual(self.read(f"/api/screens/conversion/renewal?ctx.surface=project&ctx.project_id={PID}").status_code, 403)
+        self.assertEqual(self.read("/api/screens/conversion/renewal").status_code, 200)
+
+    def test_a_page_move_inside_a_list_says_so(self):
+        self.read("/api/screens/citation/tone-urls?ctx.client_nav=1")
+        self.assertEqual(dict(self.query())["ctx.client_nav"], "1")
+
     def test_citation_screens_are_the_renewal_variant(self):
         self.read("/api/screens/citation/standard?ctx.variant=old")
         self.assertEqual(dict(self.query())["ctx.variant"], "renewal")

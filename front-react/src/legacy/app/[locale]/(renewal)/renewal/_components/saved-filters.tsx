@@ -19,7 +19,7 @@ export type SavedFilterPage =
   // Website pages keep their own lists (2026-10-30): their filters are the site axes, not the Global ones.
   | "website-overview" | "website-mention" | "website-citation" | "website-prompts" | "website-conversion" | "website-acr"
   // Admin list screens (2026-11-02): each list keeps its own.
-  | "source-overrides" | "source-seeds" | "interest-keywords" | "interest-sources" | "entity-roles"
+  | "source-overrides" | "source-seeds" | "interest-keywords" | "interest-sources" | "entity-roles" | "measurement-settings"
   // Project tab pages (2026-11-03): the project axes and its custom tags (one list per page, shared by every project).
   | "project-dashboard" | "project-mention" | "project-citation" | "project-prompt" | "project-conversion";
 

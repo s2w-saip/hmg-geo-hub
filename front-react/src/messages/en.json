@@ -113,6 +113,7 @@
     "renewalAdminCitationSources": "Citation Sources",
     "renewalAdminCustomerInterest": "Customer interest config",
     "renewalAdminEntities": "Entity catalog",
+    "renewalAdminMeasurement": "Measurement settings",
     "renewalProjects": "Project list"
   },
   "locale": {
@@ -6321,6 +6322,10 @@
       }
     },
     "projects": {
+      "noData": {
+        "title": "No measured data yet",
+        "body": "This page opens once the first round is loaded. Until then, enter prompts and measurement settings under Prompt and Setting in the menu."
+      },
       "title": "Project list",
       "description": "The prompts and answers measured for each project. A row opens that project in a new tab.",
       "lastMeasured": "Last measured {date}",
@@ -6552,7 +6557,7 @@
         "description": "This project's measurement settings, and what Gold holds of its identity, measured values and custom tags.",
         "measurement": {
           "title": "Measurement settings",
-          "hint": "What collection reads through the prompt and reference API. Saving does not change the numbers on this page.",
+          "hint": "Collection reads these through the prompt and reference API. Saving owned or tracked URLs changes own and target URL citation values.",
           "brands": "Brands to measure",
           "brandNames": {
             "hyundai": "Hyundai",
@@ -7490,6 +7495,63 @@
         "stopped": "Stopped {url}. It leaves the external API list.",
         "resumed": "Resumed {url}. It returns to the external API list."
       }
+    }
+  },
+  "hubMeasurement": {
+    "title": "Measurement settings",
+    "description": "What each project measures, and its owned and tracked URLs. Collection reads these values; owned and tracked URLs decide own and target URL citations.",
+    "login": "Sign in",
+    "loginRequired": "HUB sign-in is required.",
+    "listLabel": "Projects",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Project, country code or URL",
+    "count": "{shown} / {total} · {unregistered} without owned URLs",
+    "countryMore": "{first} +{more}",
+    "empty": "No projects.",
+    "emptyFiltered": "No projects match the filters.",
+    "add": "New project",
+    "added": "Project created",
+    "open": "Open",
+    "loading": "Loading.",
+    "hint": "A project with owned URLs counts every URL of their origins as its own. A Project without any uses the extraction's mark.",
+    "addDomainHint": "Registered as the first owned URL.",
+    "addEnginesHint": "Answers are collected from these engines only. You can change them in this list later.",
+    "axis": {
+      "surface": "Surface",
+      "owned": "Owned URLs",
+      "brand": "Brand"
+    },
+    "surface": {
+      "1": "Global",
+      "2": "Website",
+      "3": "Project"
+    },
+    "owned": {
+      "registered": "Registered",
+      "unregistered": "Not registered"
+    },
+    "column": {
+      "surface": "Surface",
+      "name": "Project",
+      "brands": "Brands",
+      "countries": "Countries",
+      "engines": "AI engines",
+      "cadence": "Cadence",
+      "ownedUrls": "Owned URLs",
+      "trackedUrls": "Tracked URLs",
+      "recordedAt": "Last change",
+      "actions": "Actions"
+    },
+    "error": {
+      "unauthorized": "Your session has expired.",
+      "forbidden": "Top-level administrators only.",
+      "source_unavailable": "The input store could not be read. Try again shortly.",
+      "failed": "The list could not be loaded. If this continues, tell the contact: {contact}"
+    },
+    "addErrors": {
+      "invalid": "Check the values. A domain cannot contain spaces.",
+      "unknown": "A code is not in the reference values.",
+      "failed": "The project could not be created. Try again shortly."
     }
   },
   "hubEntities": {

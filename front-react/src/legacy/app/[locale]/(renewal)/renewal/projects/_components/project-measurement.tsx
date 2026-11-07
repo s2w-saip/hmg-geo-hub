@@ -1,7 +1,7 @@
 "use client";
 
 // Project › Setting (2026-11-06): the measurement settings as a form. They live in the input store (back/bff/hub_stores/measurement.py)
-// and 수집 reads them through the prompt and reference API, so saving changes the source and no number on this page.
+// and 수집 reads them through the prompt and reference API. Owned and tracked URLs also decide own and target URL citations (D-25). Admin › 측정 설정 opens this form too.
 
 import { useRouter } from "~/app/navigation";
 import { useMemo, useState, type ReactNode } from "react";
@@ -44,15 +44,16 @@ export interface MeasurementView {
 }
 
 const CADENCES = ["weekly", "biweekly", "monthly"] as const;
-const INPUT = "rounded-md border border-rn-line-2 bg-rn-surface px-2.5 text-rn-13 text-rn-ink outline-none focus:border-rn-navy focus:ring-3 focus:ring-rn-navy/12";
+export const MEASUREMENT_INPUT = "rounded-md border border-rn-line-2 bg-rn-surface px-2.5 text-rn-13 text-rn-ink outline-none focus:border-rn-navy focus:ring-3 focus:ring-rn-navy/12";
 
 function lines(text: string): string[] {
   return text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 }
 
-/** A list of codes as typed: split on commas or spaces. */
-export function codes(text: string): string[] {
-  return text.split(/[\s,]+/).map((c) => c.trim().toUpperCase()).filter(Boolean);
+/** A list of codes as typed: split on commas or spaces, each as the reference values spell it (worldwide and SA-Dammam are not upper case). */
+export function codes(text: string, known: readonly string[] = []): string[] {
+  const spelled = new Map(known.map((k) => [k.toLowerCase(), k]));
+  return text.split(/[\s,]+/).map((c) => c.trim()).filter(Boolean).map((c) => spelled.get(c.toLowerCase()) ?? c.toUpperCase());
 }
 
 /** One model per line: "Tesla / Model Y", or the model alone. */
@@ -70,7 +71,7 @@ function modelLine(t: MeasurementTarget): string {
   return t.brand ? `${t.brand} / ${t.name}` : t.name;
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <>
       <dt className="border-t border-rn-line py-3 text-rn-12 font-semibold text-rn-muted">{label}</dt>
@@ -82,7 +83,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function Choices({ options, selected, label, disabled, onToggle, labelOf }: { options: string[]; selected: string[]; label: string; disabled: boolean; onToggle: (value: string) => void; labelOf: (value: string) => string }) {
+export function Choices({ options, selected, label, disabled, onToggle, labelOf }: { options: string[]; selected: string[]; label: string; disabled: boolean; onToggle: (value: string) => void; labelOf: (value: string) => string }) {
   return (
     <span role="group" aria-label={label} className="flex flex-wrap gap-1.5">
       {options.map((o) => {
@@ -146,7 +147,7 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((f) => ({ ...f, [key]: value }));
   const toggle = (key: "brands" | "engines", value: string) =>
     setForm((f) => ({ ...f, [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value] }));
-  const typedCountries = codes(form.countries);
+  const typedCountries = codes(form.countries, options.countries);
   const unknownCountries = options.countries.length ? typedCountries.filter((c) => !options.countries.includes(c)) : [];
   const repeats = form.acrRepeats.trim() === "" ? null : Number(form.acrRepeats);
   const badRepeats = repeats !== null && !(Number.isInteger(repeats) && repeats >= 1 && repeats <= 100);
@@ -211,7 +212,7 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
           <Choices options={options.brands} selected={form.brands} label={t("brands")} disabled={disabled} onToggle={(v) => toggle("brands", v)} labelOf={(v) => t.has(`brandNames.${v}`) ? t(`brandNames.${v}`) : v} />
         </Field>
         <Field label={t("countries")} hint={unknownCountries.length ? t("unknownCountries", { codes: unknownCountries.join(", ") }) : t("countriesHint")}>
-          <input aria-label={t("countries")} value={form.countries} disabled={disabled} onChange={(e) => set("countries", e.target.value)} className={cx(INPUT, "h-[30px] w-full")} placeholder="KR, US" />
+          <input aria-label={t("countries")} value={form.countries} disabled={disabled} onChange={(e) => set("countries", e.target.value)} className={cx(MEASUREMENT_INPUT, "h-[30px] w-full")} placeholder="KR, US" />
           {typedCountries.length ? <span className="text-rn-12 text-rn-ink-2">{typedCountries.map((c) => countryName(c, locale)).join(", ")}</span> : null}
         </Field>
         <Field label={t("engines")}>
@@ -228,7 +229,7 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
           />
         </Field>
         <Field label={t("acrRepeats")} hint={badRepeats ? t("acrRepeatsBad") : t("acrRepeatsHint")}>
-          <input aria-label={t("acrRepeats")} inputMode="numeric" value={form.acrRepeats} disabled={disabled} onChange={(e) => set("acrRepeats", e.target.value)} className={cx(INPUT, "h-[30px] w-24 tabular-nums")} />
+          <input aria-label={t("acrRepeats")} inputMode="numeric" value={form.acrRepeats} disabled={disabled} onChange={(e) => set("acrRepeats", e.target.value)} className={cx(MEASUREMENT_INPUT, "h-[30px] w-24 tabular-nums")} />
         </Field>
         {item.webUnits.length ? (
           <Field label={t("webUnits")} hint={t("webUnitsHint")}>
@@ -242,16 +243,16 @@ function MeasurementForm({ projectId, view }: { projectId: string; view: Measure
           </Field>
         ) : null}
         <Field label={t("ownedUrls")} hint={t("urlsHint")}>
-          <textarea aria-label={t("ownedUrls")} rows={3} value={form.ownedUrls} disabled={disabled} onChange={(e) => set("ownedUrls", e.target.value)} className={cx(INPUT, "w-full py-1.5")} />
+          <textarea aria-label={t("ownedUrls")} rows={3} value={form.ownedUrls} disabled={disabled} onChange={(e) => set("ownedUrls", e.target.value)} className={cx(MEASUREMENT_INPUT, "w-full py-1.5")} />
         </Field>
         <Field label={t("trackedUrls")} hint={t("urlsHint")}>
-          <textarea aria-label={t("trackedUrls")} rows={3} value={form.trackedUrls} disabled={disabled} onChange={(e) => set("trackedUrls", e.target.value)} className={cx(INPUT, "w-full py-1.5")} />
+          <textarea aria-label={t("trackedUrls")} rows={3} value={form.trackedUrls} disabled={disabled} onChange={(e) => set("trackedUrls", e.target.value)} className={cx(MEASUREMENT_INPUT, "w-full py-1.5")} />
         </Field>
         <Field label={t("trackedBrands")} hint={t("trackedBrandsHint")}>
-          <textarea aria-label={t("trackedBrands")} rows={3} value={form.trackedBrands} disabled={disabled} onChange={(e) => set("trackedBrands", e.target.value)} className={cx(INPUT, "w-full py-1.5")} />
+          <textarea aria-label={t("trackedBrands")} rows={3} value={form.trackedBrands} disabled={disabled} onChange={(e) => set("trackedBrands", e.target.value)} className={cx(MEASUREMENT_INPUT, "w-full py-1.5")} />
         </Field>
         <Field label={t("trackedModels")} hint={t("trackedModelsHint")}>
-          <textarea aria-label={t("trackedModels")} rows={3} value={form.trackedModels} disabled={disabled} onChange={(e) => set("trackedModels", e.target.value)} className={cx(INPUT, "w-full py-1.5")} />
+          <textarea aria-label={t("trackedModels")} rows={3} value={form.trackedModels} disabled={disabled} onChange={(e) => set("trackedModels", e.target.value)} className={cx(MEASUREMENT_INPUT, "w-full py-1.5")} />
         </Field>
       </dl>
       {changedElsewhere ? <p role="status" className="m-0 px-6 pb-3 text-rn-12 text-rn-muted">{t("changedElsewhere")}</p> : null}

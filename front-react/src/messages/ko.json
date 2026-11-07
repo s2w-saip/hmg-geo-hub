@@ -113,6 +113,7 @@
     "renewalAdminCitationSources": "인용 출처 분류",
     "renewalAdminCustomerInterest": "고객 관심 데이터 관리",
     "renewalAdminEntities": "엔티티 카탈로그",
+    "renewalAdminMeasurement": "측정 설정",
     "renewalProjects": "Project list"
   },
   "locale": {
@@ -6321,6 +6322,10 @@
       }
     },
     "projects": {
+      "noData": {
+        "title": "아직 측정 데이터가 없습니다",
+        "body": "첫 회차가 적재되면 이 화면이 열립니다. 그 전에는 왼쪽 메뉴의 Prompt와 Setting에서 프롬프트와 측정 설정을 입력할 수 있습니다."
+      },
       "title": "Project list",
       "description": "프로젝트마다 측정한 프롬프트와 답변입니다. 행을 누르면 그 프로젝트가 새 탭에서 열립니다.",
       "lastMeasured": "마지막 측정 {date}",
@@ -6549,7 +6554,7 @@
         "description": "이 프로젝트의 측정 설정과, Gold에 있는 식별 정보 · 측정 값 · 커스텀 태그입니다.",
         "measurement": {
           "title": "측정 설정",
-          "hint": "수집이 프롬프트·기준정보 API로 읽는 값입니다. 저장해도 이 화면의 숫자는 바뀌지 않습니다.",
+          "hint": "수집이 프롬프트·기준정보 API로 읽는 값입니다. 소유 · 추적 URL을 저장하면 자사 · 타겟 URL 인용 값이 바뀝니다.",
           "brands": "측정 브랜드",
           "brandNames": {
             "hyundai": "현대",
@@ -7487,6 +7492,63 @@
         "stopped": "{url} 소스를 중지했습니다. 외부 API 목록에서 빠집니다.",
         "resumed": "{url} 소스를 다시 활성화했습니다. 외부 API 목록에 다시 들어갑니다."
       }
+    }
+  },
+  "hubMeasurement": {
+    "title": "측정 설정",
+    "description": "프로젝트마다 무엇을 측정할지와 소유 · 추적 URL을 관리합니다. 수집이 이 값을 읽고, 소유 · 추적 URL은 자사 · 타겟 URL 인용 판정에 쓰입니다.",
+    "login": "로그인",
+    "loginRequired": "HUB 로그인이 필요합니다.",
+    "listLabel": "프로젝트 목록",
+    "searchLabel": "검색",
+    "searchPlaceholder": "프로젝트 · 국가 코드 · URL 검색",
+    "count": "{shown} / {total}개 · 소유 URL 미등록 {unregistered}개",
+    "countryMore": "{first} 외 {more}개",
+    "empty": "프로젝트가 없습니다.",
+    "emptyFiltered": "조건에 맞는 프로젝트가 없습니다.",
+    "add": "프로젝트 만들기",
+    "added": "프로젝트를 만들었습니다",
+    "open": "설정",
+    "loading": "불러오는 중입니다.",
+    "hint": "소유 URL을 등록한 프로젝트는 등록한 URL의 오리진 전체를 자사로 셉니다. 아직 등록하지 않은 Project는 추출 결과의 표시를 씁니다.",
+    "addDomainHint": "첫 소유 URL로 등록합니다.",
+    "addEnginesHint": "선택한 엔진에서만 답변을 수집합니다. 생성 후 이 목록에서 바꿀 수 있습니다.",
+    "axis": {
+      "surface": "표면",
+      "owned": "소유 URL",
+      "brand": "브랜드"
+    },
+    "surface": {
+      "1": "Global",
+      "2": "Website",
+      "3": "Project"
+    },
+    "owned": {
+      "registered": "등록",
+      "unregistered": "미등록"
+    },
+    "column": {
+      "surface": "표면",
+      "name": "프로젝트",
+      "brands": "브랜드",
+      "countries": "국가",
+      "engines": "AI 엔진",
+      "cadence": "측정 주기",
+      "ownedUrls": "소유 URL",
+      "trackedUrls": "추적 URL",
+      "recordedAt": "마지막 변경",
+      "actions": "동작"
+    },
+    "error": {
+      "unauthorized": "로그인이 만료되었습니다.",
+      "forbidden": "최상위 관리자만 볼 수 있습니다.",
+      "source_unavailable": "입력 DB를 읽지 못했습니다. 잠시 뒤 다시 시도하세요.",
+      "failed": "목록을 불러오지 못했습니다. 계속되면 담당자에게 알려 주세요: {contact}"
+    },
+    "addErrors": {
+      "invalid": "입력 값을 확인하세요. 도메인에는 공백을 넣을 수 없습니다.",
+      "unknown": "기준정보에 없는 코드가 있습니다.",
+      "failed": "프로젝트를 만들지 못했습니다. 잠시 뒤 다시 시도하세요."
     }
   },
   "hubEntities": {

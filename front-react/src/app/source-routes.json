@@ -35,6 +35,11 @@
     "screens": []
   },
   {
+    "path": "/:locale/renewal/admin/standards/measurement",
+    "source": "app/[locale]/(renewal)/renewal/admin/standards/measurement/page.tsx",
+    "screens": []
+  },
+  {
     "path": "/:locale/renewal/admin/standards/prompts",
     "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/page.tsx",
     "screens": []

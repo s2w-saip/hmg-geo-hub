@@ -25,6 +25,7 @@ const screens: [string[], string, string][] = [
   [["admin/standards/citation-sources"], "인용 출처 분류", "sources"],
   [["admin/standards/customer-interest"], "고객 관심 데이터 관리", "interest"],
   [["admin/standards/entities"], "엔티티 카탈로그", "entities"],
+  [["admin/standards/measurement"], "측정 설정", "measurement"],
   [["admin/ga4"], "GA4 연동", "ga4"],
   [["admin/keyword-tools"], "키워드 도구", "waiting"],
 ];

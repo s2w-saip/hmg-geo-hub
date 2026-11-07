@@ -39,9 +39,10 @@ SCREENS = frozenset(
                                 "view-cards", "rn-markets", "view-weekly", "view-compare")]
     + [f"citation/{n}" for n in ("standard", "website", "project", "filter-bar", "as-of", "renewal-header", "prompts", "tone-urls")]
     + [f"projects/{n}" for n in ("list", "filters", "as-of", "settings", "prompts", "dash-summary", "dash-summary-deferred", "dash-engines", "dash-trend", "dash-composition", "dash-status")]
-    + ["shared/service-week", "shared/panel-options", "shared/filter-dates", "catalog/prompts-page", "catalog/prompts-header", "catalog/prompts-history", "acr/renewal", "acr/renewal-header"])
+    + ["shared/service-week", "shared/panel-options", "shared/filter-dates", "catalog/prompts-page", "catalog/prompts-header", "catalog/prompts-history", "acr/renewal", "acr/renewal-header",
+       "conversion/renewal", "conversion/renewal-header", "visibility/renewal", "visibility/renewal-header"])
 #: what a browser may say of its context; the rest comes from the account
-SCREEN_CONTEXT = ("ctx.project_id", "ctx.locale", "ctx.view", "ctx.variant", "ctx.kpi", "ctx.family")
+SCREEN_CONTEXT = ("ctx.project_id", "ctx.locale", "ctx.view", "ctx.variant", "ctx.kpi", "ctx.family", "ctx.client_nav")
 
 DRILLS = {"answer": "mention/drill-answer", "brand-citations": "mention/drill-brand-citations", "brand-mention-prompts": "mention/drill-brand-prompts",
           "signal-prompts": "mention/drill-signal-prompts", "missing-prompts": "mention/drill-missing-prompts", "market-evidence": "overview/market-evidence"}

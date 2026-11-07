@@ -14,7 +14,7 @@ import {
   answersMatch,
   projectHref,
   projectMatches,
-  shortId,
+  projectLabel,
   sortProjects,
   type AnswersFilter,
   type ProjectRow,
@@ -130,7 +130,7 @@ export function RnProjectList({ rows }: { rows: ProjectRow[] }) {
                           title={`${r.id} · ${t("newTab")}`}
                           className="inline-flex items-center gap-1.5 rounded-[3px] font-mono text-rn-13 font-bold text-rn-ink no-underline group-hover/row:text-rn-navy focus-visible:outline-2 focus-visible:outline-rn-navy"
                         >
-                          {shortId(r.id)}
+                          {projectLabel(r)}
                           <ExternalLink className="size-3.5 text-rn-muted group-hover/row:text-rn-navy" aria-label={t("newTab")} />
                         </Link>
                         <span title={r.first_prompt ?? undefined} className={cx("mt-px block truncate text-rn-12", r.first_prompt ? "text-rn-muted" : "text-rn-faint")}>

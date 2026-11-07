@@ -18,6 +18,8 @@ import { InterestSourcesManager } from "@/app/[locale]/(renewal)/renewal/admin/s
 import { InterestTabs } from "@/app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-tabs";
 import { tabOf as interestTab } from "@/app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-model";
 import { EntityRolesManager } from "@/app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-roles-manager";
+import { MeasurementManager } from "@/app/[locale]/(renewal)/renewal/admin/standards/measurement/_components/measurement-manager";
+import type { MeasurementListing } from "@/app/[locale]/(renewal)/renewal/admin/standards/measurement/_components/measurement-model";
 import type { SavedFilterPage } from "@/app/[locale]/(renewal)/renewal/_components/saved-filters";
 
 type Initial<C extends React.ElementType> = ComponentProps<C>["initial"];
@@ -25,8 +27,8 @@ export default function AdminPage({ page }: { page: PageDefinition }) {
   const ctx = usePageContext(page);
   const source = sourceTab(ctx.sp.tab);
   const interest = interestTab(ctx.sp.tab);
-  const endpoint = page.kind === "accounts" ? "accounts" : page.kind === "hub-prompts" ? "global-prompts" : page.kind === "ga4" ? "ga4-properties" : page.kind === "entities" ? "entity-roles" : page.kind === "interest" ? `interest-${interest}` : source === "overrides" ? "source-overrides" : source === "social" ? "source-socials" : `source-${source}`;
-  const savedPage = (page.kind === "hub-prompts" ? "hub-prompts" : page.kind === "ga4" ? "ga4" : endpoint) as SavedFilterPage;
+  const endpoint = page.kind === "accounts" ? "accounts" : page.kind === "hub-prompts" ? "global-prompts" : page.kind === "ga4" ? "ga4-properties" : page.kind === "entities" ? "entity-roles" : page.kind === "measurement" ? "measurements" : page.kind === "interest" ? `interest-${interest}` : source === "overrides" ? "source-overrides" : source === "social" ? "source-socials" : `source-${source}`;
+  const savedPage = (page.kind === "hub-prompts" ? "hub-prompts" : page.kind === "ga4" ? "ga4" : page.kind === "measurement" ? "measurement-settings" : endpoint) as SavedFilterPage;
   const { filters, search } = queryToFilter(new URLSearchParams(ctx.search));
   const initialSearch = listSearch({ filters, search, sort: DEFAULT_SORT.key, asc: DEFAULT_SORT.asc, page: 1, pageSize: DEFAULT_PAGE_SIZE });
   const needsSaved = page.kind !== "sources" || (source !== "social" && source !== "codes");
@@ -43,6 +45,7 @@ export default function AdminPage({ page }: { page: PageDefinition }) {
     if (page.kind === "hub-prompts") return <HubPromptsManager key={v.stamp} initial={v.value<HubPromptPage>("list")} initialSearch={initialSearch} options={v.value<HubOptions>("options")} loginHref={`/${ctx.locale}/login`} savedFilters={savedFilters} />;
     if (page.kind === "ga4") return <Ga4RegistryManager key={v.stamp} initial={v.value<{ items: Initial<typeof Ga4RegistryManager> }>("list").items} savedFilters={savedFilters} />;
     if (page.kind === "entities") return <EntityRolesManager key={v.stamp} initial={v.value<Initial<typeof EntityRolesManager>>("list")} savedFilters={savedFilters} />;
+    if (page.kind === "measurement") return <MeasurementManager listing={v.value<MeasurementListing>("list")} savedFilters={savedFilters} />;
     if (page.kind === "interest") { const tabs = <InterestTabs value={interest} />; return interest === "sources" ? <InterestSourcesManager key={v.stamp} initial={v.value<Initial<typeof InterestSourcesManager>>("list")} tabs={tabs} savedFilters={savedFilters} /> : <InterestKeywordsManager key={v.stamp} initial={v.value<Initial<typeof InterestKeywordsManager>>("list")} tabs={tabs} savedFilters={savedFilters} />; }
     const tabs = <SourceTabs value={source} />;
     if (source === "seeds") return <SourceSeedsManager key={v.stamp} initial={v.value<Initial<typeof SourceSeedsManager>>("list")} tabs={tabs} savedFilters={savedFilters} />;

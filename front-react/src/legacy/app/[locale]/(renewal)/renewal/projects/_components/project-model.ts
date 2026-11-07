@@ -6,6 +6,8 @@
 /** One row of the screen projects/list. */
 export interface ProjectRow {
   id: string;
+  /** the input store's name, on a project added in Admin › 측정 설정; Gold has none */
+  name?: string | null;
   prompts: number;
   answers: number;
   last_measured_day: string | null;
@@ -64,13 +66,16 @@ export function projectAt(path: string): { id: string; page: string } | null {
 /** The short id shown where a name would be (Gold has none). */
 export const shortId = (id: string) => id.slice(0, 8);
 
+/** A project where a name would be: its name, else the short id. */
+export const projectLabel = (row: Pick<ProjectRow, "id" | "name">) => row.name ?? shortId(row.id);
+
 export type AnswersFilter = "all" | "measured" | "unmeasured";
 export type ProjectSortKey = "last" | "answers" | "prompts" | "rounds";
 
 export function projectMatches(row: ProjectRow, query: string, countryLabel: (code: string) => string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const hay = [row.id, row.first_prompt ?? "", ...row.countries, ...row.countries.map(countryLabel)].join(" ").toLowerCase();
+  const hay = [row.id, row.name ?? "", row.first_prompt ?? "", ...row.countries, ...row.countries.map(countryLabel)].join(" ").toLowerCase();
   return hay.includes(q);
 }
 

@@ -14,6 +14,7 @@ export const previewTiles: TilesView = { groups: [
   { category: "source", tiles: ["ownedUrlRate", "targetUrlRate", "citationShare", "citationAccuracy"].map(key => ({ key, unit: "percent", value: null, pending: false, delta: null, direction: "flat", tone: "flat", period: null })) },
   { category: "conversion", tiles: [{ key: "trafficConversion", unit: "percent", value: null, pending: false, delta: null, direction: "flat", tone: "flat", period: null }] },
 ] as TilesView["groups"], suppressionCaption: null };
+const emptyChoice = { preset: 28, days: null, from: null, to: null };
 const measurement = { item: { version: 0, brands: [], countries: [], engines: [], cadence: null, acrRepeats: null, webUnits: [], ownedUrls: [], trackedUrls: [], trackedTargets: [], origin: null, recordedAt: null }, options: { brands: [], countries: [], engines: [] }, editing: false };
 
 /** Empty UI inputs only: no measurements, rounds, projects or accounts are invented. Unknown reads stay pending. */
@@ -25,6 +26,7 @@ export function previewRead(read: Read): unknown {
     if (name === "global-prompts") return { items: [], page: { total: 0, limit: 50, offset: 0 }, counts: { total: 0, hub: 0, gold: 0, archived: 0, removed: 0 } };
     if (name === "source-codes") return { categories: [], layers: [] };
     if (name === "source-overrides" || name === "source-seeds") return { ...listing, asOf: null, categories: [], limit: 100 };
+    if (name === "measurements") return { items: [], options: measurement.options, editing: false };
     if (name === "source-socials") return { ...listing, snapshot: null };
     if (name === "interest-sources") return { ...listing, snapshot: null };
     if (["ga4-properties", "entity-roles", "interest-keywords", "source-overrides", "source-seeds"].includes(name)) return listing;
@@ -34,6 +36,7 @@ export function previewRead(read: Read): unknown {
   if (["overview/filters", "shared/panel-options", "shared/filter-dates", "projects/filters", "website/prompts-options"].includes(name)) return options;
   if (name === "citation/filter-bar") return { options, dates: options };
   if (name.endsWith("as-of") || name.endsWith("asof")) return { asOf: null, competitorOptions: [] };
+  if (name === "conversion/renewal-header" || name === "visibility/renewal-header") return emptyChoice;
   if (name.endsWith("renewal-header")) return null;
   if (name === "overview/card-trend") return { degraded: false, cards: {} };
   if (name === "overview/brand-matrix") return { rows: [], cols: ["visibility", "shareOfVoice", "sentiment", "position", "citationShare"].map(key => ({ key, best: null, max: null, standing: null })) };
@@ -46,6 +49,8 @@ export function previewRead(read: Read): unknown {
   if (name === "citation/standard" || name === "citation/website" || name === "citation/project") return { live: null, dataDegraded: false, sectionDegraded: [], prevCategories: null, toneSummary: null, tableSource: null, periodView: null, rn: emptyCitationVm, ...(name === "citation/website" ? { own: null, reach: { status: "none" } } : {}) };
   if (name === "citation/prompts") return { tab: "owned", page: { rows: [], total: 0, win: { page: 1, pages: 0, limit: 50, offset: 0, from: 0, to: 0 } }, q: "", ownedCount: null, uncitedCount: null };
   if (name === "citation/tone-urls") return { tone: "positive", page: { rows: [], total: 0, win: { page: 1, pages: 0, limit: 50, offset: 0, from: 0, to: 0 } }, q: "", byDomain: false, counts: null };
+  if (name === "conversion/renewal") return { props: { stage: "conversion", geographyOptions: [] }, body: { state: "noprop", choice: emptyChoice, period: { from: null, to: null, days: null }, props: [] } };
+  if (name === "visibility/renewal") return { props: { stage: "visibility", geographyOptions: [] }, body: { state: "nosite", choice: emptyChoice, period: { from: null, to: null, days: null }, view: null, siteCount: 0 } };
   if (name === "acr/renewal") return { props: { ...options, stage: "acr" }, body: { measured: false, filtered: false, acrPromptCount: 0, roundBuckets: true, period: false, asOf: null, ownLabel: "HMG", totals: { prompts: 0, promptRuns: 0, iterations: 0, engines: [] }, view: emptyAcrView } };
   if (name === "catalog/prompts-page") return { ...catalog, collation: read.query?.collation ?? "ko" };
   if (name === "catalog/prompts-header") return { period: null };
