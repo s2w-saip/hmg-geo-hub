@@ -216,7 +216,7 @@ def operations() -> Figure:
 def catalog() -> Figure:
     """input_db catalog / publication: back/hub_storage/input-001.sql, input-002.sql, input-004.sql."""
     f = Figure("cat", 740, "입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, "
-               "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.")
+               "측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것과, 전체 허용 호출자에게는 승인을 끄지 않은 것이 프롬프트·기준정보 API로 나간다.")
     f.table("catalog.project_version", 16, 40, 260, "프로젝트 정의(JSON) 버전을 쌓고, HUB 편집이면 기록자를 남긴다.", [
         ("PK FK", "project_id", "uuid"), ("PK", "version", "integer"), ("", "definition", "jsonb"),
         ("", "sha256", "text"), ("", "recorded_at", "timestamptz"), ("", "recorded_by", "⇢ user_account"),
@@ -287,7 +287,7 @@ def external() -> Figure:
         ("", "revoked_by", "text"), ("", "revoke_reason", "text")], notes=["호출자당 유효 키 ≤ 2 (관리 명령)"])
     f.table("publication.api_client", 336, y2, 250, "외부 API를 부르는 시스템 하나다. 비활성이면 모든 키가 막힌다.", [
         ("PK", "client_id", "uuid"), ("UK", "name", "text"), ("", "status", "=active|disabled"), ("", "audience", "=collect|analyze"),
-        ("", "created_by", "text"), ("", "created_at", "timestamptz")])
+        ("", "all_projects", "boolean"), ("", "created_by", "text"), ("", "created_at", "timestamptz")])
     f.table("publication.api_client_project", 626, y2, 270, "호출자에게 허용한 프로젝트다. 회수해도 행은 남고 revoked_at이 찍힌다.", [
         ("PK FK", "client_id", "uuid"), ("PK FK", "project_id", "→ catalog.project"), ("", "granted_by", "text"),
         ("", "granted_at", "timestamptz"), ("", "grant_seq", "bigint"), ("", "revoked_at", "timestamptz"),

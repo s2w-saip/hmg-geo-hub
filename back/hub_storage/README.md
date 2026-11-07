@@ -241,9 +241,12 @@ m ext-client-add "<호출자 이름>" --audience collect|analyze   # client_id �
 m ext-key-issue <client_id> [--days N]   # 키를 한 번만 출력 (최대 365일, 호출자당 유효 키 2개)
 m ext-key-revoke <key_id> <사유>
 m grant-project <client_id> <project_id ...>            # 허용 · withdraw-project 로 회수(행은 남음)
+m grant-all-projects <client_id>         # 수집 호출자에게 전체 프로젝트 허용 · withdraw-all-projects 로 되돌림
 m ext-list                               # 호출자·키(해시 제외)·허용·승인 현황
-cd back && uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json   # .env.ext-api.local 필요
+cd back && uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json   # .env.ext-api.local 필요. scripts/start-local.sh도 띄운다
 ```
+
+호출자를 여는 순서(수집은 `ext-client-add` → `grant-all-projects` → `ext-key-issue`, 분석은 `ext-client-add` → `ext-key-issue`). 전체 허용 호출자(`api_client.all_projects`, `input-007.sql`)는 `publication.project_access` 행이 없는 프로젝트도 읽으므로 Admin에서 새 프로젝트를 만들면 바로 나간다. `unpublish-project`로 승인을 끈 프로젝트는 계속 막힌다. 프로젝트별 허용 호출자는 전처럼 허용과 승인이 둘 다 있어야 한다. 기준정보 12종(`surface` · `brand_bit` · `mention_type` 밖)은 처음에 `publish-reference all`로 연다.
 
 **내부 VM(taeho-dev).** 2026-11-06 입력 · Gold · 캐시 DB를 적용하려면 `init` → `vm.sh bff` · `ext` → `verify` 순서로 한다(Docker 경로는 Mac에 Docker가 없어 아직 실행하지 않았다). Docker 방식(`HGH_HUB_NATIVE` 없음)으로 `python3 -X utf8 back/hub_storage/manage.py init`을 실행한 뒤 `bash scripts/vm.sh bff`, `ext`, `proxy`를 실행한다. 첫 가져오기는 손으로 `sync-gold-catalog --expect-mass-change`, `verify` 순서로 돌린다. 호출 주소는 `https://10.0.20.132:8087/ext/`다. 인증서 `.local/ext-tls/ext.crt`는 호출자에게 건네 신뢰 목록에 넣게 한다. 사용자 crontab이 매시 정각 `vm.sh sync`, 10분에 `vm.sh service-week`(서비스 기준 주, 위 절), 30분에 `vm.sh check-sync`를 돌리고 `.local/vm-cron.log`에 한 줄씩 남긴다. 거부·실패·`WARN` 줄이 이어지면 `catalog.sync_run`의 사유를 보고 플래그를 판단한다. `service-week FAILED` 줄은 그 실행이 아무것도 기록하지 않았다는 뜻이고(사유는 줄 끝), 화면은 마지막 기준 주를 그대로 쓴다. 011을 처음 적용하면 `vm.sh bff` 뒤에 `vm.sh service-week`를 한 번 손으로 돌린다. crontab 줄은 `scripts/vm.sh` 머리말에 있다. 배치 설명은 [정본 문서 `#ext`](../../docs/architecture/hmg-geo-hub-architecture.html#ext)에 있다.
 

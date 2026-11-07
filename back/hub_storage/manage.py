@@ -521,6 +521,7 @@ def install_input():
     migrate('input-004.sql', '004_actor_names', store='input')
     migrate('input-005.sql', '005_project_add', store='input')
     migrate('input-006.sql', '006_no_gold_import', store='input')
+    migrate('input-007.sql', '007_api_all_projects', store='input')
     backfill_actor_names()
 
 
@@ -1017,9 +1018,17 @@ WHERE client_id={analytics.literal(client)} AND project_id IN ({','.join(analyti
     print(f'{client}: {len(projects)} project(s) {"granted" if granted else "withdrawn"}')
 
 
+def all_projects(args, enabled):
+    """grant-all-projects / withdraw-all-projects <client_id>: a collecting client reads every project, new ones included. unpublish-project still holds one back."""
+    client = uuid_of(params(args, 1, '<client_id>')[0], 'client_id')
+    out = isql(f"""UPDATE publication.api_client SET all_projects={'true' if enabled else 'false'}
+WHERE client_id={analytics.literal(client)} AND audience='collect' RETURNING 1;""").stdout.strip()
+    print(f'{client}: ' + (('all projects' if enabled else 'listed projects only') if out else 'no such collecting client'))
+
+
 def ext_list(args):
     print(isql("""SELECT json_build_object(
- 'clients',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'name',name,'status',status,'audience',audience) ORDER BY name),'[]') FROM publication.api_client),
+ 'clients',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'name',name,'status',status,'audience',audience,'all_projects',all_projects) ORDER BY name),'[]') FROM publication.api_client),
  'keys',(SELECT coalesce(json_agg(json_build_object('key_id',key_id,'client_id',client_id,'expires_at',expires_at,'revoked_at',revoked_at) ORDER BY created_at),'[]') FROM publication.api_key),
  'grants',(SELECT coalesce(json_agg(json_build_object('client_id',client_id,'project_id',project_id,'revoked_at',revoked_at)),'[]') FROM publication.api_client_project),
  'projects',(SELECT coalesce(json_agg(json_build_object('project_id',project_id,'projects',projects,'prompts',prompts)),'[]') FROM publication.project_access),
@@ -1091,6 +1100,7 @@ COMMANDS = {
     'ext-client-add': client_add, 'ext-client-disable': lambda a: client_status(a, 'disabled'),
     'ext-client-enable': lambda a: client_status(a, 'active'), 'ext-key-issue': key_issue, 'ext-key-revoke': key_revoke,
     'grant-project': lambda a: grant(a, True), 'withdraw-project': lambda a: grant(a, False), 'ext-list': ext_list,
+    'grant-all-projects': lambda a: all_projects(a, True), 'withdraw-all-projects': lambda a: all_projects(a, False),
     'sync-service-week': service_week,
     'internal-token': lambda a: internal_token(),
     'load-query-tables': load_query_tables,

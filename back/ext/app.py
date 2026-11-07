@@ -4,8 +4,9 @@ measurement settings, their prompts and the collecting reference values; an anal
 
 The process reaches only the input store (input_db), as hmg_ext_api, which can read the ext schema and nothing else.
 Every request is one read-only transaction that first sets hgh.key_hash to the sha256 of the presented key.
-The ext views then answer that caller's granted and approved projects and its audience's approved reference families,
-and nothing at all for an unknown, expired or revoked key. The scope is enforced by the database; this code
+The ext views then answer that caller's granted and approved projects (every project unless withdrawn, for a collecting caller
+that holds them all: manage.py grant-all-projects) and its audience's approved reference families, and nothing at all for an unknown,
+expired or revoked key. The scope is enforced by the database; this code
 only shapes the rows. Stored definitions keep Gold's encoding (surface 1/2/3, brand bitmasks); responses
 decode them with the HUB code tables (reference families surface and brand_bit), and an unknown code comes
 out as {"code": null, "raw": n} instead of failing the request.

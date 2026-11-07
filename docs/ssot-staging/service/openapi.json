@@ -675,17 +675,10 @@
       "Meta": {
         "properties": {
           "as_of": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "마지막으로 성공한 입력 가져오기 시각",
-            "title": "As Of"
+            "description": "이 응답을 읽은 시각",
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
           },
           "contract_version": {
             "description": "계약 버전. 바뀌면 프로젝트 · 프롬프트 · 기준정보를 전부 다시 읽는다",
@@ -1254,17 +1247,10 @@
       "PromptsMeta": {
         "properties": {
           "as_of": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "마지막으로 성공한 입력 가져오기 시각",
-            "title": "As Of"
+            "description": "이 응답을 읽은 시각",
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
           },
           "contract_version": {
             "description": "계약 버전. 바뀌면 프로젝트 · 프롬프트 · 기준정보를 전부 다시 읽는다",
@@ -1405,17 +1391,10 @@
       "ReferenceMeta": {
         "properties": {
           "as_of": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "마지막으로 성공한 입력 가져오기 시각",
-            "title": "As Of"
+            "description": "이 응답을 읽은 시각",
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
           },
           "change_seq": {
             "title": "Change Seq",

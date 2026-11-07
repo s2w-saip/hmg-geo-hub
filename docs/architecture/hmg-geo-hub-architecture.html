@@ -943,6 +943,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <ul class="points">
     <li><b>범위는 DB가 강제한다.</b> 요청마다 읽기 전용 트랜잭션에서 <code>set_config('hgh.key_hash', sha256(키), true)</code>를 먼저 실행한다.
       <code>ext.*</code> 뷰(소유 hmg_input_owner, security_barrier)는 그 해시의 유효한 키·활성 호출자에게 허용된 프로젝트 중 projects·prompts 승인이 있는 것(수집 호출자만)과, 호출자 종류에 맞고 승인된 기준값 종류(<code>publication.reference_family</code>)만 보인다.
+      전체 허용 수집 호출자(<code>api_client.all_projects</code>, <code>input-007.sql</code>)는 허용 · 승인 행이 없어도 모든 프로젝트를 읽어 새 프로젝트가 바로 나가고, 승인을 끈 프로젝트만 빠진다.
       키가 없거나 틀리면 모든 뷰가 0행이다. <code>hmg_ext_api</code>는 <code>catalog</code>·<code>publication</code>을 직접 읽지 못한다.</li>
     <li><b>정의는 Gold 표현 그대로 저장하고 응답에서 푼다.</b> surface 1/2/3과 브랜드 비트마스크는 HUB 코드표로 코드가 되고, 모르는 값은 <code>{"code": null, "raw": n}</code>으로 나간다.
       Gold 내부 키(<code>scope_project_id</code>·<code>source_project_id</code>·<code>site_id</code>)는 뷰에서 뺀다. 보관·삭제된 항목은 id·상태·순번만 나간다.</li>
@@ -983,7 +984,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <p class="sub prose">운영 명령(<code>HGH_HUB_NATIVE=1 python back/hub_storage/manage.py …</code>): <code>publish-project</code>·<code>unpublish-project</code> &lt;project_id&gt; [projects] [prompts],
     <code>publish-reference</code>·<code>unpublish-reference</code> &lt;family …|all&gt;, <code>ext-client-add</code> &lt;이름&gt;, <code>ext-client-disable</code>·<code>ext-client-enable</code>,
     <code>ext-key-issue</code> &lt;client_id&gt; [--days N, 최대 365] (키는 한 번만 출력), <code>ext-key-revoke</code> &lt;key_id&gt; &lt;사유&gt;,
-    <code>grant-project</code>·<code>withdraw-project</code> &lt;client_id&gt; &lt;project_id …&gt;, <code>ext-list</code>.</p>
+    <code>grant-project</code>·<code>withdraw-project</code> &lt;client_id&gt; &lt;project_id …&gt;, <code>grant-all-projects</code>·<code>withdraw-all-projects</code> &lt;client_id&gt;, <code>ext-list</code>.</p>
 </section>
 
 <section id="erd-ops" aria-labelledby="h-erd-ops">
@@ -1261,7 +1262,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
   <figure>
     <div class="scroll">
       <!-- erd:cat -->
-<svg viewBox="0 0 1200 740" role="img" aria-label="입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, 측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것만 프롬프트·기준정보 API로 나간다.">
+<svg viewBox="0 0 1200 740" role="img" aria-label="입력 DB의 프로젝트 · 프롬프트 · 측정 설정 ERD. 프로젝트와 프롬프트는 정체성 행과 버전 행으로 나뉘고, 측정 설정은 프로젝트마다 버전 행을 쌓는다. publication.project_access 승인을 통과한 것과, 전체 허용 호출자에게는 승인을 끄지 않은 것이 프롬프트·기준정보 API로 나간다.">
 <defs><marker id="cat-a" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ah" d="M0,0L10,5L0,10z"/></marker><marker id="cat-d" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path class="ahd" d="M0,0L10,5L0,10z"/></marker></defs>
 <rect class="tbox" x="16" y="40" width="260" height="212" rx="6"/>
 <path class="th" d="M16,70V46q0,-6 6,-6H270q6,0 6,6V70z"/>
@@ -1561,7 +1562,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m" x="64" y="585">revoke_reason</text>
 <text class="m sm ty" x="286" y="585" text-anchor="end">text</text>
 <text class="mu sm" x="28" y="603">호출자당 유효 키 ≤ 2 (관리 명령)</text>
-<rect class="tbox" x="336" y="350" width="250" height="194" rx="6"/>
+<rect class="tbox" x="336" y="350" width="250" height="212" rx="6"/>
 <path class="th" d="M336,380V356q0,-6 6,-6H580q6,0 6,6V380z"/>
 <line class="rule" x1="336" y1="380" x2="586" y2="380"/>
 <line class="hair" x1="348" y1="422" x2="574" y2="422"/>
@@ -1578,10 +1579,12 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
 <text class="m sm val" x="576" y="477" text-anchor="end">active|disabled</text>
 <text class="m" x="384" y="495">audience</text>
 <text class="m sm val" x="576" y="495" text-anchor="end">collect|analyze</text>
-<text class="m" x="384" y="513">created_by</text>
-<text class="m sm ty" x="576" y="513" text-anchor="end">text</text>
-<text class="m" x="384" y="531">created_at</text>
-<text class="m sm ty" x="576" y="531" text-anchor="end">timestamptz</text>
+<text class="m" x="384" y="513">all_projects</text>
+<text class="m sm ty" x="576" y="513" text-anchor="end">boolean</text>
+<text class="m" x="384" y="531">created_by</text>
+<text class="m sm ty" x="576" y="531" text-anchor="end">text</text>
+<text class="m" x="384" y="549">created_at</text>
+<text class="m sm ty" x="576" y="549" text-anchor="end">timestamptz</text>
 <rect class="tbox" x="626" y="350" width="270" height="212" rx="6"/>
 <path class="th" d="M626,380V356q0,-6 6,-6H890q6,0 6,6V380z"/>
 <line class="rule" x1="626" y1="380" x2="896" y2="380"/>
@@ -1937,7 +1940,7 @@ footer { font-size: 13px; color: var(--muted); display: grid; gap: 6px; border-t
     </div>
     <figcaption>
       <p><strong>그림 6. 기준정보와 API 경계.</strong> 2026-11-06부터 관리 화면이 없는 기준정보 8종은 <code>reference_source</code>가 원본이고 Gold는 처음 값만 준다(발행 함수 <code>catalog.publish_reference_source</code>). 계약 밖 9종만 Gold 가져오기가 종류별 set으로 기록하고 <code>catalog.current_reference</code>가 종류마다 최신 set을 고른다.
-        호출자(<code>api_client</code>)는 키와 허용 프로젝트를 갖고, 승인·허용을 바꾸면 트리거가 <code>access_seq</code>·<code>grant_seq</code>를 새로 받는다.
+        호출자(<code>api_client</code>)는 키와 허용 프로젝트(또는 전체 허용 <code>all_projects</code>)를 갖고, 승인·허용을 바꾸면 트리거가 <code>access_seq</code>·<code>grant_seq</code>를 새로 받는다.
         <code>ext.*</code> 뷰는 트랜잭션 설정 <code>hgh.key_hash</code>로 한 호출자의 범위만 보여 준다. 키는 sha256만 저장하고, 관리 명령이 호출자당 유효 키를 두 개로 제한한다.
         아래 줄(2026-10-30, <code>data-007.sql</code>)은 HUB가 정본인 출처 교정이다. 관리자가 Admin › 인용 출처 분류에서 <code>source_override</code>를 고치고(지우지 않고 원복은 <code>cleared</code>),
         바꿀 때마다 <code>source_override_event</code>가 남는다. 활성 교정은 발행 함수가 기준값 종류 <code>source_override</code>(source <code>hub_edit</code>)의 새 set으로 기록한다.

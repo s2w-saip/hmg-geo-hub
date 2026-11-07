@@ -88,6 +88,33 @@ DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM ext.caller) THEN RAISE EXCEPTION 'A disabled client is accepted'; END IF;
 END $$;
 RESET ROLE;
+-- A collecting client holding every project (007) reads a project and prompts nobody approved or granted; an approval that says no still holds one back.
+-- Other clients keep the grant and the approval. Only a collecting client can hold every project. as_of is when the response is read.
+INSERT INTO publication.api_client(client_id,name,created_by,audience,all_projects)
+VALUES('ffffffff-ffff-4fff-8fff-fffffffffffc','rollback-only C','test','collect',true);
+INSERT INTO publication.api_key(key_id,client_id,key_hash,created_by,created_at,expires_at)
+VALUES('ffffffff-ffff-4fff-8fff-ffffffffffc3','ffffffff-ffff-4fff-8fff-fffffffffffc',repeat('4',64),'test',now(),now()+interval '1 day');
+INSERT INTO catalog.project(project_id,origin) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff4','hub'),('ffffffff-ffff-4fff-8fff-fffffffffff5','hub');
+INSERT INTO catalog.project_version(project_id,version,definition,sha256) VALUES
+ ('ffffffff-ffff-4fff-8fff-fffffffffff4',1,'{}',repeat('c',64)),('ffffffff-ffff-4fff-8fff-fffffffffff5',1,'{}',repeat('c',64));
+INSERT INTO catalog.prompt(prompt_id,project_id,origin) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff6','ffffffff-ffff-4fff-8fff-fffffffffff4','hub');
+INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff6',1,'rollback-only','{}',repeat('a',64));
+INSERT INTO publication.project_access(project_id,projects,prompts,approved_by) VALUES('ffffffff-ffff-4fff-8fff-fffffffffff5',false,false,'rollback-only test');
+SET LOCAL ROLE hmg_ext_api;
+DO $$ BEGIN
+ PERFORM set_config('hgh.key_hash',repeat('4',64),true);
+ IF (SELECT reset_seq FROM ext.projects WHERE project_id='ffffffff-ffff-4fff-8fff-fffffffffff4') IS DISTINCT FROM 0 THEN RAISE EXCEPTION 'A project nobody approved misses a caller holding every project'; END IF;
+ IF (SELECT text FROM ext.prompts WHERE prompt_id='ffffffff-ffff-4fff-8fff-fffffffffff6') IS DISTINCT FROM 'rollback-only' THEN RAISE EXCEPTION 'Its prompts miss that caller'; END IF;
+ IF EXISTS(SELECT 1 FROM ext.projects WHERE project_id='ffffffff-ffff-4fff-8fff-fffffffffff5') THEN RAISE EXCEPTION 'A withdrawn approval does not hold a project back'; END IF;
+ IF EXISTS(SELECT 1 FROM ext.prompts WHERE project_id='ffffffff-ffff-4fff-8fff-fffffffffff1') THEN RAISE EXCEPTION 'A withdrawn prompts approval does not hold prompts back'; END IF;
+ IF (SELECT as_of FROM ext.meta) IS DISTINCT FROM now() THEN RAISE EXCEPTION 'as_of is not when the response is read'; END IF;
+ PERFORM set_config('hgh.key_hash',repeat('1',64),true);
+ IF EXISTS(SELECT 1 FROM ext.projects WHERE project_id='ffffffff-ffff-4fff-8fff-fffffffffff4') THEN RAISE EXCEPTION 'A caller with listed projects sees one nobody granted'; END IF;
+END $$;
+RESET ROLE;
+DO $$ BEGIN
+ BEGIN UPDATE publication.api_client SET audience='analyze' WHERE client_id='ffffffff-ffff-4fff-8fff-fffffffffffc'; RAISE EXCEPTION 'An analysis client holds every project'; EXCEPTION WHEN check_violation THEN NULL; END;
+END $$;
 SET LOCAL ROLE hmg_catalog_writer;
 DO $$ BEGIN
  BEGIN INSERT INTO catalog.prompt_version(prompt_id,version,text,definition,sha256,change_seq)

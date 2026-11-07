@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# macOS/Linux counterpart of start-gold.ps1 without Docker: data server on 127.0.0.1:5555, hub server on 127.0.0.1:5556, Next on 127.0.0.1:3333.
-# Next calls only the hub server.
+# macOS/Linux counterpart of start-gold.ps1 without Docker: data server on 127.0.0.1:5555, hub server on 127.0.0.1:5556, Next on 127.0.0.1:3333,
+# prompt and reference API on 127.0.0.1:5560. Next calls only the hub server.
 # HGH_PYTHON selects a Python 3.12 that has back/data_server/requirements.txt installed (default: python3).
 # The HUB data/operations stores (native mode, scripts/start-hub-storage.sh) are started and connected when they exist,
 # and the service week is checked against Gold before the API starts.
@@ -69,6 +69,25 @@ for _ in $(seq 60); do
     sleep 0.5
 done
 [ -n "$ready" ] || { echo "Hub server health check failed. See $logs/hub.log" >&2; exit 1; }
+
+# The prompt and reference API (back/ext). No screen uses it, so a failure here is reported and the screens still start. Restart only the one this script started.
+if [ -f "$repo/.env.ext-api.local" ]; then
+    if [ -f "$logs/ext.pid" ] && kill -0 "$(cat "$logs/ext.pid")" 2>/dev/null; then
+        pid="$(cat "$logs/ext.pid")"
+        kill "$pid"
+        while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
+    fi
+    if listening 5560; then
+        echo 'Port 5560 is in use by another process; the prompt and reference API was not started.' >&2
+    else
+        (
+            cd "$repo/back"
+            set -a; . "$repo/.env.ext-api.local"; set +a
+            nohup "$python" -m uvicorn ext.app:app --host 127.0.0.1 --port 5560 --log-config ext/logging.json >"$logs/ext.log" 2>&1 &
+            echo $! >"$logs/ext.pid"
+        )
+    fi
+fi
 
 if ! listening 3333; then
     (cd "$repo/front" && HGH_LOCAL_READ_ONLY=1 HGH_API_BASE_URL=http://127.0.0.1:5556 NEXT_TELEMETRY_DISABLED=1 \

@@ -16,7 +16,7 @@ class Unknown(BaseModel):
 
 class Meta(BaseModel):
     contract_version: str = Field(description="계약 버전. 바뀌면 프로젝트 · 프롬프트 · 기준정보를 전부 다시 읽는다")
-    as_of: datetime | None = Field(description="마지막으로 성공한 입력 가져오기 시각")
+    as_of: datetime = Field(description="이 응답을 읽은 시각")
 
 
 class PromptsMeta(Meta):

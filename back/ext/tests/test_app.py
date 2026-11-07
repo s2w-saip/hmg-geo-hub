@@ -205,7 +205,7 @@ class ExternalApi(unittest.TestCase):
         self.assertEqual(p["measurement"]["web_units"][0]["base"], "kia.com/kr")
         self.assertEqual(p["measurement"]["acr_repeats"], 5)
         self.assertNotIn("web", p)
-        schemas.ProjectResponse.model_validate({"data": p, "meta": {"contract_version": "x", "as_of": None}})
+        schemas.ProjectResponse.model_validate({"data": p, "meta": {"contract_version": "x", "as_of": T0}})
         self.assertTrue(body["meta"]["as_of"].startswith("2026-10-28T09:00"))
         odd_view = self.get(f"/ext/v1/projects/{odd}")[1]["data"]
         self.assertEqual(odd_view["surface"], {"code": None, "raw": 9})
@@ -307,7 +307,7 @@ class OpenApiTest(unittest.TestCase):
                  {"key": "a.b/c", "skey": "a.b/C", "domain": "a.b", "category": "officialHmg", "matchers": [{"prefix": "a.b/c", "boundary": True}]},
                  {"key": "e", "entity_id": "e", "rep_name": "Hyundai", "role": "own", "brand": "Hyundai"}]
         schemas.ReferenceResponse.model_validate({"data": {"family": "x", "items": items},
-                                                  "meta": {"contract_version": "x", "as_of": None, "etag": "e", "change_seq": 1, "next_after_key": "", "has_more": False}})
+                                                  "meta": {"contract_version": "x", "as_of": T0, "etag": "e", "change_seq": 1, "next_after_key": "", "has_more": False}})
 
 if __name__ == "__main__":
     unittest.main()
