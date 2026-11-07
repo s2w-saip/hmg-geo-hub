@@ -52,6 +52,34 @@ def row(snapshot="s1", version=DEFINITION_VERSION, result='{"gold":1}', error=No
     return {"snapshot_id": snapshot, "definition_version": version, "result": result, "error": error}
 
 
+class Snapshot(unittest.TestCase):
+    def test_a_new_week_is_a_new_snapshot_at_once(self):
+        """Regression: the id was kept a few seconds, so the page's re-read right after the week moved found the old week's cached filter read, and stayed on it (the shell re-reads once a move)."""
+        week = [mock.Mock(seq=1)]
+        ids = mock.AsyncMock(side_effect=["week-1", "week-2"])
+
+        async def main():
+            serving.forget_snapshots()
+            with mock.patch.object(serving, "current_snapshot", ids), mock.patch.object(serving.service_week, "peek", lambda: week[0]):
+                first, again = await serving.snapshot_of("global"), await serving.snapshot_of("global")
+                week[0] = mock.Mock(seq=2)
+                return first, again, await serving.snapshot_of("global")
+        self.assertEqual(asyncio.run(main()), ("week-1", "week-1", "week-2"))
+        self.assertEqual(ids.await_count, 2)
+        serving.forget_snapshots()
+
+    def test_no_week_read_yet_keeps_the_id_for_its_seconds(self):
+        ids = mock.AsyncMock(side_effect=["only", "never"])
+
+        async def main():
+            serving.forget_snapshots()
+            with mock.patch.object(serving, "current_snapshot", ids), \
+                    mock.patch.object(serving.service_week, "peek", side_effect=serving.service_week.ServiceWeekUnavailable("none")):
+                return await serving.snapshot_of("global"), await serving.snapshot_of("global")
+        self.assertEqual(asyncio.run(main()), ("only", "only"))
+        serving.forget_snapshots()
+
+
 class FirstScreen(unittest.TestCase):
     def test_the_current_value_is_served_and_nothing_is_counted(self):
         answer, run, _, get, _ = serve(kept=row())

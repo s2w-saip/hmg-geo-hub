@@ -40,7 +40,7 @@ PLAIN_PATHS = ("answers", "gold/keywords", "gold/social", "source")
 ROW_READS = frozenset({"kpi/summary", "kpi/engines", "kpi/compare", "mentions/brands", "mentions/types", "trend", "geo", "citations/domains", "citations/sources"})
 
 _recording: ContextVar[Recording | None] = ContextVar("hgh_rollup_recording", default=None)
-_snapshots: dict[str, tuple[float, asyncio.Future]] = {}
+_snapshots: dict[str, tuple[float, asyncio.Future, int | None]] = {}
 _keeping: set[asyncio.Task] = set()
 
 
@@ -79,12 +79,22 @@ async def current_snapshot(surface: str) -> str:
     return f"{'silver' if on_obt or held else 'gold-release'}:{release['release_id']}:{release['version']}:{digest}:{capped.seq if capped is not None else '-'}"
 
 
+def _week_seq() -> int | None:
+    """The kept week's row, without waiting for it; None before the first read of it, or with no input store."""
+    try:
+        week = service_week.peek()
+    except service_week.ServiceWeekUnavailable:
+        return None
+    return week.seq if week is not None else None
+
+
 async def snapshot_of(surface: str) -> str:
-    """current_snapshot, shared by the reads of a few seconds."""
+    """current_snapshot, shared by the reads of a few seconds, and never across a recorded week: the page's re-read right after the week moved would find the old week's kept answers."""
     kept = _snapshots.get(surface)
     now = time.monotonic()
-    if kept is None or now - kept[0] > SNAPSHOT_TTL_S or (kept[1].done() and (kept[1].cancelled() or kept[1].exception() is not None)):
-        kept = (now, asyncio.ensure_future(current_snapshot(surface)))
+    seq = _week_seq()
+    if kept is None or now - kept[0] > SNAPSHOT_TTL_S or kept[2] != seq or (kept[1].done() and (kept[1].cancelled() or kept[1].exception() is not None)):
+        kept = (now, asyncio.ensure_future(current_snapshot(surface)), seq)
         _snapshots[surface] = kept
     return await asyncio.shield(kept[1])
 
