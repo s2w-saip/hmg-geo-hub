@@ -47,7 +47,7 @@ test("Overview retries a failed comparison without reloading successful cards", 
 test("a forbidden deferred section still denies the entire page", async ({ page }) => {
   await mockHub(page, url => url.pathname.endsWith("/overview/brand-matrix") ? { status: 403, body: { error: { code: "forbidden" } } } : overview(url));
   await page.goto(`${hub}/ko/renewal/dashboard`);
-  await expect(page.getByRole("heading", { name: "접근할 수 없습니다", exact: true })).toBeVisible();
+  await expect(page.getByText("접근 가능한 메뉴가 없습니다", { exact: true })).toBeVisible();
   await expect(page.getByLabel("KPI 5종", { exact: true })).toHaveCount(0);
 });
 test("Mention's empty result does not wait for unrelated section reads", async ({ page }) => {
@@ -57,7 +57,7 @@ test("Mention's empty result does not wait for unrelated section reads", async (
     await page.goto(`${hub}/ko/renewal/standard/answer-analysis/mention`);
     await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
     held.release(unavailable);
-    await expect(page.getByRole("heading", { name: "데이터를 준비하고 있습니다", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "데이터를 불러오지 못했습니다", exact: true })).toHaveCount(0);
     expect(trace.errors).toEqual([]);
   } finally { held.release(unavailable); }
 });

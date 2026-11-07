@@ -3,23 +3,34 @@ import { readFileSync } from "node:fs";
 const routes = JSON.parse(readFileSync(new URL("../../src/app/source-routes.json", import.meta.url), "utf8")) as { path: string }[];
 // Independent acceptance expectations: an arbitrary heading or fallback page is not a migrated route.
 const screens: [string[], string, string][] = [
-  [["dashboard", "website"], "Overview", "overview"],
-  [["standard/prompts"], "글로벌 프롬프트", "prompts"],
-  [["website/prompts"], "프롬프트", "website-prompts"],
-  [["standard/answer-analysis/mention", "website/answer-analysis/mention", "projects/:id/analysis/mention"], "언급 분석베타", "mention"],
-  [["standard/answer-analysis/citation", "website/answer-analysis/citation", "projects/:id/analysis/citation"], "인용 분석베타", "citation"],
-  [["standard/answer-analysis/citation/prompts", "website/answer-analysis/citation/prompts", "projects/:id/analysis/citation/prompts"], "인용 프롬프트", "citation-prompts"],
-  [["standard/answer-analysis/citation/tone-urls", "website/answer-analysis/citation/tone-urls", "projects/:id/analysis/citation/tone-urls"], "감정별 인용 URL", "citation-tone"],
-  [["standard/ai-funnel/acr"], "AI 추천 전환율베타", "acr"],
-  [["standard/ai-funnel/conversion", "website/ai-funnel/conversion", "projects/:id/ai-funnel/conversion"], "AI 유입 전환베타", "waiting"],
-  [["standard/ai-funnel/visibility"], "AI 가시성베타", "waiting"],
-  [["projects"], "프로젝트", "projects"],
+  [["dashboard"], "AI 답변 성과 요약", "overview"],
+  [["website"], "웹사이트 AI 답변 성과 요약", "overview"],
   [["projects/:id"], "Dashboard", "overview"],
-  [["projects/:id/prompt"], "프롬프트", "project-prompts"],
-  [["projects/:id/setting"], "프로젝트 설정", "project-setting"],
-  [["projects/:id/member"], "멤버", "member"],
-  [["projects/:id/intent/google-keyword"], "키워드", "waiting"],
-  [["projects/:id/intent/social-scraping"], "소셜 분석", "waiting"],
+  [["standard/prompts"], "글로벌 프롬프트", "prompts"],
+  [["website/prompts"], "웹사이트 프롬프트", "website-prompts"],
+  [["standard/answer-analysis/mention"], "언급 분석베타", "mention"],
+  [["website/answer-analysis/mention"], "웹사이트 언급 분석베타", "mention"],
+  [["projects/:id/analysis/mention"], "언급 분석베타", "mention"],
+  [["standard/answer-analysis/citation"], "인용 분석베타", "citation"],
+  [["website/answer-analysis/citation"], "웹사이트 인용 분석베타", "citation"],
+  [["projects/:id/analysis/citation"], "인용 분석베타", "citation"],
+  [["standard/answer-analysis/citation/prompts"], "공식 도메인 인용 프롬프트베타", "citation-prompts"],
+  [["website/answer-analysis/citation/prompts"], "자사 URL 인용 프롬프트베타", "citation-prompts"],
+  [["projects/:id/analysis/citation/prompts"], "자사 URL 인용 프롬프트베타", "citation-prompts"],
+  [["standard/answer-analysis/citation/tone-urls"], "긍정/부정 답변에 인용된 URL베타", "citation-tone"],
+  [["website/answer-analysis/citation/tone-urls"], "긍정/부정 답변에 인용된 URL베타", "citation-tone"],
+  [["projects/:id/analysis/citation/tone-urls"], "긍정/부정 답변에 인용된 URL베타", "citation-tone"],
+  [["standard/ai-funnel/acr"], "ACR · AI Choice Rate베타", "acr"],
+  [["standard/ai-funnel/conversion"], "AI 유입 전환베타", "conversion"],
+  [["website/ai-funnel/conversion"], "웹사이트 AI 유입 전환베타", "conversion"],
+  [["projects/:id/ai-funnel/conversion"], "AI 유입 전환베타", "conversion"],
+  [["standard/ai-funnel/visibility"], "AI 가시성베타", "visibility"],
+  [["projects"], "Project list", "projects"],
+  [["projects/:id/prompt"], "Prompt", "project-prompts"],
+  [["projects/:id/setting"], "General", "project-setting"],
+  [["projects/:id/member"], "Member", "member"],
+  [["projects/:id/intent/google-keyword"], "Google Keyword", "google-keyword"],
+  [["projects/:id/intent/social-scraping"], "Social Scraping", "social-scraping"],
   [["admin"], "사용자 관리", "accounts"],
   [["admin/standards/prompts"], "글로벌 프롬프트 관리", "hub-prompts"],
   [["admin/standards/citation-sources"], "인용 출처 분류", "sources"],
@@ -27,7 +38,7 @@ const screens: [string[], string, string][] = [
   [["admin/standards/entities"], "엔티티 카탈로그", "entities"],
   [["admin/standards/measurement"], "측정 설정", "measurement"],
   [["admin/ga4"], "GA4 연동", "ga4"],
-  [["admin/keyword-tools"], "키워드 도구", "waiting"],
+  [["admin/keyword-tools"], "키워드 도구", "keyword-tools"],
 ];
 
 test("all original renewal routes open without API calls or browser errors", async ({ page }) => {
@@ -42,7 +53,7 @@ test("all original renewal routes open without API calls or browser errors", asy
     await page.goto(path);
     const routeName = route.path.replace("/:locale/renewal/", "");
     if (routeName.includes("*")) {
-      await expect(page.locator("h1")).toHaveText("준비되지 않은 화면입니다");
+      await expect(page.locator("h1")).toHaveText(routeName.startsWith("projects/") ? "아직 측정 데이터가 없습니다" : "준비되지 않은 화면입니다");
       await expect(page.locator("[data-page-kind]")).toHaveCount(0);
     } else {
       const expected = screens.find(([paths]) => paths.includes(routeName));
@@ -67,11 +78,11 @@ test("navigation, filter collapse, locale switch, and direct URL refresh work", 
   await expect(page.locator("[data-rn-split]")).toHaveAttribute("data-rn-split", "closed");
   await page.locator('[data-rn-nav="/renewal/standard/answer-analysis/mention"]').click();
   await expect(page).toHaveURL(/standard\/answer-analysis\/mention/);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "언어: English", exact: true }).click();
   await expect(page).toHaveURL(/\/en\/renewal\/standard\/answer-analysis\/mention/);
-  await expect(page.locator("h1")).toHaveText("Mention analysisBeta");
+  await expect(page.locator("h1")).toHaveText("MentionBeta");
   await page.reload();
-  await expect(page.locator("h1")).toHaveText("Mention analysisBeta");
+  await expect(page.locator("h1")).toHaveText("MentionBeta");
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
 });
 test("the original overview UI has no measured values and preview cannot submit a login", async ({ page }) => {
@@ -100,7 +111,7 @@ test("connected mode applies role checks before admin data reads", async ({ page
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ user: { id: "test-country-user", login: "test-user", email: null, displayName: null, role: "country", scope: { all: false, brands: ["Kia"], countries: ["KR"] }, mustChangePassword: false } }) });
   });
   await page.goto("http://127.0.0.1:3335/ko/renewal/admin");
-  await expect(page.getByRole("heading", { name: "접근할 수 없습니다" })).toBeVisible();
+  await expect(page.getByText("접근 가능한 메뉴가 없습니다", { exact: true })).toBeVisible();
   expect(adminReads).toEqual([]);
 });
 test("connected mode renders the migrated account manager with the browser contract", async ({ page }) => {
@@ -130,8 +141,8 @@ test("a failed rollup displays an error rather than previously loaded values", a
     return route.fulfill({ status: 503, contentType: "application/json", body: '{"error":{"code":"source_unavailable"}}' });
   });
   await page.goto("http://127.0.0.1:3335/ko/renewal/dashboard");
-  await expect(page.getByRole("heading", { name: "데이터를 준비하고 있습니다" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "다시 조회", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "데이터를 불러오지 못했습니다" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 시도", exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });
 test("the migrated Mention view consumes its promised screen responses in a browser", async ({ page }) => {

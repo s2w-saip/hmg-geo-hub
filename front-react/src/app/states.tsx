@@ -1,22 +1,48 @@
 import { Component, type ReactNode } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
-import { useLocale } from "use-intl";
-import { RnButton, RnCard, RnPageHeader, RnSkeleton } from "@/components/renewal-ui";
-import { RnPageFrame } from "@/app/[locale]/(renewal)/renewal/_components/filter-split";
+import { Navigate, useLocation } from "react-router-dom";
+import { useLocale, useTranslations } from "use-intl";
+import { RnCard, RnNote, RnPageHeader, RnSkeleton } from "@/components/renewal-ui";
+import { RnPageFrame, RnFilterSplit } from "@/app/[locale]/(renewal)/renewal/_components/filter-split";
+import DashError from "@/app/[locale]/(dash)/error";
 import { HghApiError } from "@/lib/hgh/errors";
 import { PageNavigation } from "./navigation";
 
-export function PageLoading() { return <div className="m-2.5 flex flex-col gap-4 rounded-[18px] bg-white p-8" role="status" aria-label="불러오는 중"><RnSkeleton className="h-8 w-52" /><RnSkeleton className="h-5 w-80" /><RnSkeleton className="h-40 w-full" /><RnSkeleton className="h-64 w-full" /></div>; }
+const PROJECT_PAGE = /^\/(?:ko|en)\/renewal\/projects\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:\/|$)/i;
+
+/** First entry into a page: the page frame's shape (header, filter panel, content), so the swap to the page does not jump. */
+export function PageLoading() {
+  return <div role="status" aria-label="불러오는 중" className="contents"><RnFilterSplit
+    header={<div className="flex flex-col gap-2"><RnSkeleton className="h-8 w-64" /><RnSkeleton className="h-4 w-[420px] max-w-full" /></div>}
+    panel={<RnCard className="h-[480px]" />} rail={<RnCard className="h-24" />}>
+    <RnCard className="h-[220px]" /><RnCard className="h-[320px]" />
+  </RnFilterSplit></div>;
+}
+/** A page body still reading, inside its frame. */
+export function BodyLoading() {
+  return <RnCard className="p-6"><RnSkeleton className="mb-4 h-4 w-32" /><div className="flex flex-col gap-3">{Array.from({ length: 5 }, (_, i) => <RnSkeleton key={i} className="h-12 w-full" />)}</div></RnCard>;
+}
+/** A page of a project with no measured data yet: a project added in Admin › 측정 설정 opens before its first round is loaded. */
+export function ProjectNoData() {
+  const locale = useLocale();
+  const t = useTranslations("renewal.projects.noData");
+  return <RnPageFrame header={<RnPageHeader title={t("title")} />}><RnNote><span data-rn-project-no-data={locale}>{t("body")}</span></RnNote></RnPageFrame>;
+}
+export function NotFoundPage() {
+  const en = useLocale() === "en";
+  return <section className="rn-standby-frame"><div className="rn-standby-head"><h1 className="text-rn-24 font-semibold">{en ? "Page unavailable" : "준비되지 않은 화면입니다"}</h1></div><p className="p-8 text-rn-13 text-rn-muted">{en ? "Check the address or choose another page from the menu." : "주소를 확인하거나 메뉴에서 다른 화면을 선택해 주세요."}</p></section>;
+}
 export function PageError({ error, retry }: { error: unknown; retry?: () => void }) {
   const locale = useLocale();
   const location = useLocation();
-  const en = locale === "en";
-  if (error instanceof PageNavigation) return <Navigate replace to={error.status === 404 ? `/${locale}/no-access` : error.href} />;
-  if (error instanceof HghApiError && error.status === 401) return <Navigate replace to={`/${locale}/login?next=${encodeURIComponent(location.pathname + location.search)}`} />;
-  const forbidden = error instanceof HghApiError && error.status === 403;
-  const late = error instanceof HghApiError && error.status === 503;
-  const title = forbidden ? (en ? "Access unavailable" : "접근할 수 없습니다") : late ? (en ? "Data is not ready" : "데이터를 준비하고 있습니다") : (en ? "Unable to load this page" : "화면을 불러오지 못했습니다");
-  return <RnPageFrame header={<RnPageHeader title={title} />}><RnCard className="p-8"><p role="alert" className="text-rn-13 text-rn-muted">{forbidden ? (en ? "Check your account permissions." : "계정의 접근 권한을 확인해 주세요.") : (en ? "Please try again shortly." : "잠시 후 다시 조회해 주세요.")}</p>{retry && !forbidden && <RnButton onClick={retry}>{en ? "Retry" : "다시 조회"}</RnButton>}</RnCard></RnPageFrame>;
+  const notFound = () => PROJECT_PAGE.test(location.pathname) ? <ProjectNoData /> : <NotFoundPage />;
+  if (error instanceof PageNavigation) return error.status === 404 ? notFound() : <Navigate replace to={error.href} />;
+  if (error instanceof HghApiError) {
+    if (error.status === 401) return <Navigate replace to={`/${locale}/login?next=${encodeURIComponent(location.pathname + location.search)}`} />;
+    if (error.status === 403) return <Navigate replace to={`/${locale}/no-access`} />;
+    if (error.status === 404) return notFound();
+  }
+  const failure = error instanceof Error ? error : new Error(String(error));
+  return <div className="px-6 py-6 xl:px-8"><DashError error={failure} reset={() => retry?.()} /></div>;
 }
 class Boundary extends Component<{ children: ReactNode; reset: string }, { error: unknown; reset: string }> {
   state = { error: null as unknown, reset: this.props.reset };

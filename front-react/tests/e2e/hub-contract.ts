@@ -3,6 +3,7 @@ import type { Page, Request } from "@playwright/test";
 // Empty contract responses for browser tests only. No runtime sample accounts or measurements.
 export const week = { state: "ok", week: { start: "2026-11-02", end: "2026-11-08", month: 11, nth: 1 }, delay: null, checkedAt: null, recordedAt: null, notes: [], rounds: { global: true, website: true } };
 const catalog = { rows: [], total: 0, count: 0, offset: 0, limit: 25, page: 1, pages: 0, rangeFrom: 0, rangeTo: 0, facets: { listType: [], depth1: [], depth2: [], depth3: [], depth4: [], funnel: [], lang: [], market: [], marketSort: [], presence: [], kind: [], status: [] }, columns: [], collation: "ko" };
+export const testProject = "11111111-1111-4111-8111-111111111111";
 export type Reply = { body: unknown; status?: number };
 export async function mockHub(page: Page, override?: (url: URL, request: Request) => Reply | undefined | Promise<Reply | undefined>) {
   const requests: string[] = [], errors: string[] = [], unhandled: string[] = [];
@@ -19,7 +20,7 @@ export async function mockHub(page: Page, override?: (url: URL, request: Request
       if (path === "/api/hub/session") body = { user: { id: "test-admin", login: "test-admin", email: null, displayName: null, role: "admin", scope: { all: true }, mustChangePassword: false } };
       else if (path === "/api/hub/saved-filters") body = { data: { items: [] } };
       else if (path === "/api/hub/accounts") body = { data: { items: [], roles: ["hq", "region", "country"] } };
-      else if (path === "/api/screens/projects/list") body = { items: [] };
+      else if (path === "/api/screens/projects/list") body = { items: [{ id: testProject, prompts: 0, answers: 0, last_measured_day: null, countries: [], engines: [], languages: [], rounds: 0, custom_fields: 0, first_prompt: null }] };
       else if (path.endsWith("/service-week")) body = week;
       else if (path === "/api/screens/overview/filters") body = { catalogRows: [], geographyOptions: [], languageOptions: [], engineOptions: [], optionMatrix: [], selectableDates: [], collectionStartDay: null, latestAnchorDay: null };
       else if (path === "/api/screens/overview/cards") body = { state: "empty" };

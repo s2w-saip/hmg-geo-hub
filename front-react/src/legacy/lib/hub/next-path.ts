@@ -10,5 +10,5 @@ export function hubLoginNext(raw: unknown, locale: string): string {
 
 /** The password change an account with an issued password goes to first (2026-10-29), coming back to `pathname`. */
 export function passwordChangeHref(locale: string, pathname: string): string {
-  return `/${locale}/change-password${pathname ? `?next=${encodeURIComponent(pathname)}` : ""}`;
+  return `/${locale}/login/password${pathname ? `?next=${encodeURIComponent(pathname)}` : ""}`;
 }

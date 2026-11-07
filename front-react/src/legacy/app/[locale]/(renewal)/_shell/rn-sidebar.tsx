@@ -393,7 +393,7 @@ function Account({ user, locale }: { user: RnShellUser; locale: string }) {
         <small className="truncate text-rn-11 text-rn-muted rn-connection-indicator">{CONNECTED ? tRoles(user.role) : t("disconnected")}</small>
       </span>
       <span className="ml-auto flex shrink-0 items-center gap-0.5">
-        <ShellIconButton label={next === "en" ? "English" : "한국어"} onClick={switchLocale}>
+        <ShellIconButton label={`${tLocale("label")}: ${tLocale(next)}`} onClick={switchLocale}>
           <span className="text-rn-11 font-bold uppercase">{current}</span>
         </ShellIconButton>
         {/* the local mode's session is always the HUB login (2026-10-28); its password is changed here (2026-10-29) */}

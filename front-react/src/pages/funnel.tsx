@@ -19,7 +19,7 @@ import { KeywordSample } from "@/app/[locale]/(renewal)/renewal/admin/keyword-to
 import { ProjectKeywordSample } from "@/app/[locale]/(renewal)/renewal/projects/_components/project-keyword-sample";
 import { ProjectSocialSample } from "@/app/[locale]/(renewal)/renewal/projects/_components/project-social-sample";
 import type { PageDefinition } from "~/app/pages";
-import { Load, savedSource, screenRead, usePageContext, useReads, type PageContext } from "./load";
+import { commonReads, Load, PageWeek, savedSource, screenRead, usePageContext, useReads, type PageContext } from "./load";
 
 /** The period pill and copy-link header both funnel pages share. */
 function FunnelHeader({ ns, title, choice }: { ns: "renewal.conversion" | "renewal.visibility"; title: string; choice: RnDaysChoice }) {
@@ -37,33 +37,33 @@ function Conversion({ page }: { page: PageDefinition }) {
   const ctx = usePageContext(page);
   const t = useTranslations("renewal.conversion");
   const tw = useTranslations("renewal.website.conversion");
-  const result = useReads({ header: screenRead("conversion/renewal-header", ctx.sp), body: screenRead("conversion/renewal", conversionQuery(ctx)) });
+  const result = useReads({ ...commonReads(ctx), header: screenRead("conversion/renewal-header", ctx.sp), body: screenRead("conversion/renewal", conversionQuery(ctx)) });
   return <Load result={result}>{v => {
     const { props, body } = v.value<RnConvScreen>("body");
     const header = <FunnelHeader ns="renewal.conversion" title={ctx.surface === "website" ? tw("title") : t("title")} choice={v.value<RnDaysChoice>("header")} />;
     // no GA4 property yet: the page on sample data under the veil, filters included, and never sample next to measured values
     const sample = body.state === "noprop";
     const panel = <RnOverviewFilterPanel basis={<RnDaysPeriod choice={body.choice} period={body.period} />} axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp"), visitorType: t("filters.visitorTypeHelp") }} hint={t("filters.hint")} />;
-    return <RnFilterRuntime pending={v.updating}><RnOverviewFilters props={{ ...props, scope: ctx.user.scope } as OverviewFilterProps} savedFilters={savedSource(ctx, conversionSaved(ctx))}>
+    return <PageWeek ctx={ctx} values={v}><RnFilterRuntime pending={v.updating}><RnOverviewFilters props={{ ...props, scope: ctx.user.scope } as OverviewFilterProps} savedFilters={savedSource(ctx, conversionSaved(ctx))}>
       <RnFilterSplit header={header} panel={sample ? <RnSampleVeil className="h-full">{panel}</RnSampleVeil> : panel} rail={<RnOverviewFilterRail />}>
         {sample ? <RnConvSample /> : <><RnOverviewApplied /><RnBusyScope className="flex flex-col gap-4"><RnConvBody input={body} /></RnBusyScope></>}
       </RnFilterSplit>
-    </RnOverviewFilters></RnFilterRuntime>;
+    </RnOverviewFilters></RnFilterRuntime></PageWeek>;
   }}</Load>;
 }
 
 function Visibility({ page }: { page: PageDefinition }) {
   const ctx = usePageContext(page);
   const t = useTranslations("renewal.visibility");
-  const result = useReads({ header: screenRead("visibility/renewal-header", ctx.sp), body: screenRead("visibility/renewal", ctx.sp) });
+  const result = useReads({ ...commonReads(ctx), header: screenRead("visibility/renewal-header", ctx.sp), body: screenRead("visibility/renewal", ctx.sp) });
   return <Load result={result}>{v => {
     const { props, body } = v.value<RnVisScreen>("body");
-    return <RnFilterRuntime pending={v.updating}><RnVisPageProvider initialTab={tabOf(ctx.sp.view)}><RnOverviewFilters props={{ ...props, scope: ctx.user.scope } as OverviewFilterProps} savedFilters={savedSource(ctx, "visibility")}>
+    return <PageWeek ctx={ctx} values={v}><RnFilterRuntime pending={v.updating}><RnVisPageProvider initialTab={tabOf(ctx.sp.view)}><RnOverviewFilters props={{ ...props, scope: ctx.user.scope } as OverviewFilterProps} savedFilters={savedSource(ctx, "visibility")}>
       <RnFilterSplit header={<FunnelHeader ns="renewal.visibility" title={t("title")} choice={v.value<VisChoice>("header")} />} top={body.state === "ok" ? <RnVisTabs view={body.view} /> : undefined}
         panel={<RnOverviewFilterPanel basis={<RnDaysPeriod choice={body.choice} period={body.period} />} axisHelp={{ engine: t("filters.engineHelp"), device: t("filters.deviceHelp") }} hint={t("filters.hint")} />} rail={<RnOverviewFilterRail />}>
         <RnOverviewApplied /><RnBusyScope className="flex flex-col gap-4"><RnVisBody input={body} /></RnBusyScope>
       </RnFilterSplit>
-    </RnOverviewFilters></RnVisPageProvider></RnFilterRuntime>;
+    </RnOverviewFilters></RnVisPageProvider></RnFilterRuntime></PageWeek>;
   }}</Load>;
 }
 

@@ -28,7 +28,7 @@ test("disconnected Mention renders the four original trend cards and keeps its t
   await expect(page.getByRole("tab", { name: "당사 지표", exact: true })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "경쟁 비교", exact: true }).click();
   await expect(page).toHaveURL(/tab=cmp/);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "언어: English", exact: true }).click();
   await expect(page).toHaveURL(/\/en\/renewal\/standard\/answer-analysis\/mention\?tab=cmp/);
   await expect(page.locator('[data-rn-gtab="cmp"]')).toHaveAttribute("aria-selected", "true");
   await page.reload();
@@ -58,11 +58,11 @@ test("original source-management tabs and search stay local in preview", async (
   expect(api).toEqual([]); expect(errors).toEqual([]);
 });
 
-test("outside-account screens retain the original gate without sample measurements", async ({ page }) => {
+test("outside-account screens show the sample under the account gate, as the Next pages do", async ({ page }) => {
   await page.goto("/ko/renewal/standard/ai-funnel/conversion");
   await expect(page.locator('[data-rn-account-gate="ga4"]')).toBeVisible();
-  await expect(page.locator("[data-rn-waiting-layout]")).toBeVisible();
-  await expect(page.getByText("측정값은 연결 후 표시됩니다.", { exact: true })).toBeVisible();
+  await expect(page.getByText("샘플 화면", { exact: true })).toBeVisible();
+  await expect(page.getByText("아래 값은 모두 샘플이며 실제 측정값이 아닙니다.", { exact: true })).toBeVisible();
 });
 
 test("the original account controls preserve the session when sign-out fails", async ({ page }) => {
@@ -80,7 +80,7 @@ test("the original password control opens the standalone password route with its
   await mockHub(page);
   await page.goto("http://127.0.0.1:3335/ko/renewal/admin");
   await page.getByRole("button", { name: "비밀번호 변경", exact: true }).click();
-  await expect(page).toHaveURL(/\/ko\/change-password\?next=%2Fko%2Frenewal%2Fadmin$/);
+  await expect(page).toHaveURL(/\/ko\/login\/password\?next=%2Fko%2Frenewal%2Fadmin$/);
   await expect(page.getByRole("heading", { name: "비밀번호 변경", exact: true })).toBeVisible();
 });
 
@@ -121,7 +121,7 @@ test("a denied project route does not read the project directory for its sidebar
   const { mockHub } = await import("./hub-contract");
   const trace = await mockHub(page, url => url.pathname === "/api/hub/session" ? { body: { user: { id: "test-country", login: "test-country", email: null, displayName: null, role: "country", scope: { all: false, countries: ["KR"], brands: ["Kia"] }, mustChangePassword: false } } } : undefined);
   await page.goto("http://127.0.0.1:3335/ko/renewal/projects/11111111-1111-4111-8111-111111111111/member");
-  await expect(page.getByRole("heading", { name: "접근할 수 없습니다", exact: true })).toBeVisible();
+  await expect(page.getByText("접근 가능한 메뉴가 없습니다", { exact: true })).toBeVisible();
   // Focus may revalidate the session; a denied route must never request feature data.
   expect(trace.requests).toContain("/api/hub/session");
   expect(trace.requests.every(path => path === "/api/hub/session")).toBe(true);

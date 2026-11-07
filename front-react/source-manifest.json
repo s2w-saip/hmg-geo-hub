@@ -84,6 +84,11 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(dash)/dashboard/_data/screen-fallbacks.ts",
+      "sha256": "52ce1c8138f3800e7b3411cd96c68258499229763bd021700e72b4551041ea68",
+      "kind": "source"
+    },
+    {
       "source": "app/[locale]/(dash)/dashboard/_data/screen-types.ts",
       "sha256": "afa7b19d8af431cbed5de880bd89b1c5a5cf5ab58607f4dbcad9b29e5e01cb4b",
       "kind": "types"
@@ -91,6 +96,11 @@
     {
       "source": "app/[locale]/(dash)/dashboard/_data/trend-kpi-family.ts",
       "sha256": "70ccb4759602d94ccc6fb63bc2417d79c28b096962b2f7093d17e6b68c71974d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(dash)/error.tsx",
+      "sha256": "1da75f7a2159890ebd7965468c7066afee9545d3def9c5178a11b009e6957654",
       "kind": "source"
     },
     {
@@ -219,13 +229,47 @@
       "kind": "types"
     },
     {
+      "source": "app/[locale]/(renewal)/_shell/beta-toast.tsx",
+      "sha256": "9ce56cc7ebeb79518c38acbe8c331bf4c45bb710a1fc2a7abb4bff6f63b2e15a"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/nav-pending.tsx",
+      "sha256": "d44b7674b6552211773a2a04a9200b6bc4bb03ad489f2eabee74a911966bc0f8"
+    },
+    {
       "source": "app/[locale]/(renewal)/_shell/renewal-pages.ts",
-      "sha256": "452fde5d3b5dd2214e4919b35e4b3a4c5c073946c13be0d08b39f0d5b76cf6f0",
+      "sha256": "f8de932ac910adac5453f9e59c17dcd541632bd56d0c540e78e9b5e86fedb5ab",
       "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/rn-project-tab.tsx",
+      "sha256": "13d18ad7565a8009868562ccb4ee2d955ecd1ddc09684e098ac09aa43dc1d089"
+    },
+    {
+      "source": "app/[locale]/(renewal)/_shell/rn-sidebar.tsx",
+      "sha256": "bcaa770cc5cd944cdb0c6384980726a35cb6d9d66362213264de9fc6796f6eff"
+    },
+    {
+      "source": "app/[locale]/(renewal)/layout.tsx",
+      "sha256": "5fc48ef5c24e65c6f9f8a08512350ff47c614b1e057c5c5a9d1a05bfa65a61cb"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/[...slug]/page.tsx",
+      "sha256": "eb93ce47080b869de63a22894dc6c28b546c4a8bf43d536ab3509f9f04520576",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/account-gate.tsx",
+      "sha256": "785ed545dfb46c38135da3d86da220b680e50da65397d4f1f3be2b157e9355da"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/_components/csv.ts",
       "sha256": "3a68abcc52ca2e11ecfed2fceca6a49983f5cb6984f82ea81ed2694e0c2fb2bb",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/days-period.tsx",
+      "sha256": "54931a01bf1b6f9dba18371bb7b27a6e2948e2f0cea24b4737417bbaa1830da3",
       "kind": "source"
     },
     {
@@ -255,7 +299,12 @@
     },
     {
       "source": "app/[locale]/(renewal)/renewal/_components/saved-filters.tsx",
-      "sha256": "6c0c0f2ca6eb6afa4c619c7c4d018e838393c5987e702d7f6281b3225f4ade08",
+      "sha256": "424769321a6c53ea6113d6ff9d08e54cf1433e5a53932ce1f789bfb72f2c32f4",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/_components/unimplemented.tsx",
+      "sha256": "72bfb0421a8070febf6dee87ded1561ae081d4d69533460222e62d6e6c7d0cc5",
       "kind": "source"
     },
     {
@@ -309,6 +358,26 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/admin/ga4/page.tsx",
+      "sha256": "68b2a6c2aae50917146107b0af23578107a310235a1caafda757db195d507d59",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/keyword-tools/_components/keyword-sample.tsx",
+      "sha256": "5acdf77da52437dbad6437af30b86018735f660c560ca039fd31eb3dd58608af",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/keyword-tools/page.tsx",
+      "sha256": "a69cf0ee50bed837a2853f9241829771e04271b14a827ed15acf1c0ed3fbaa1e",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/page.tsx",
+      "sha256": "a68ee17dd05fdf6ec66f8f0381e0f9aef6e3c60cc0fd76ee91642133a44882c3",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/_components/source-codes-manager.tsx",
       "sha256": "9760152b44bc433ea7b7f6938b32b5821942bd96ff15670e5fd1c3fba11427fb",
       "kind": "source"
@@ -359,6 +428,11 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/page.tsx",
+      "sha256": "5b4571e737725b9e16c558ad3d4099f613dbcd3d7b7028aa6dc20fc648080473",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/_components/interest-api.ts",
       "sha256": "459d650f5713be4cc7c0ac00169c2fcd2fcfd16b69924638eb6b47319dfcf33b",
       "kind": "source"
@@ -389,6 +463,11 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/page.tsx",
+      "sha256": "011f61ba79778acf72496834482c6ce02048e287950971f3d884be674b8fd3a5",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-role-sheet.tsx",
       "sha256": "499e5052ed1a4356c458d711b551e0fad7d6aa76cc4156fc23ac288e983a0a2e",
       "kind": "source"
@@ -407,6 +486,31 @@
       "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/_components/entity-roles-model.ts",
       "sha256": "7d5de8dd0c482670e9621568d37f0b286c4c4a383c3ada4957d6b4f336bf7b7d",
       "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/page.tsx",
+      "sha256": "06218821e0c4783cbc703a45e9dfdb57dd637f6826410077ae7a393577c825bf",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/measurement/_components/measurement-add.tsx",
+      "sha256": "2334a58686343c4dab4bacbcf764d64b6fe7073b1d885d4c007c60bdbf25a6e4",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/measurement/_components/measurement-manager.tsx",
+      "sha256": "e1a336d3375bd748615d887105faef3bc7fc88b118f127a7fbb62d27578fc5fa",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/measurement/_components/measurement-model.ts",
+      "sha256": "8fbf1ad7612d8738fce7a6545ae23ceb2c3b24f27ca3a7c37d0a8938d9fa014d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/measurement/page.tsx",
+      "sha256": "48b91892feb4005ec979c551381c97585f78950690131fe269aed6ab61cdf9b0",
+      "kind": "page"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/_components/hub-prompt-filter-model.ts",
@@ -429,9 +533,83 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/page.tsx",
+      "sha256": "509d5fd8e8b2e13598184f6362fbe38650c06ded05b23a8638310686b313559b",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/dashboard/_components/overview-body.tsx",
       "sha256": "ae4a8101963fa6725d945c8555968ed112c791f6917f8693971d074f5c1ea128",
       "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/dashboard/page.tsx",
+      "sha256": "f11f641040ad958758f7d7c1e673e1570fa642aac2b129c635438d82fa464897",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/[...sub]/page.tsx",
+      "sha256": "15a4f79ea7e59f418c154a225f5151c61f2e121f4e65b45d85f9266eef5519da",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/ai-funnel/conversion/page.tsx",
+      "sha256": "195bf9c85613b839850dc93ffe5c54309c53b4dfca7f1d96506c80aaaa43939e",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/page.tsx",
+      "sha256": "c40834781a481c67310c4bef09c1e2e16b668fa7e986a76b806acd5020fec5ec",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/prompts/page.tsx",
+      "sha256": "0d378148661d99d77ae70f8898319e0203aa99d1916fa771fdf3c92eda7d42f5",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/tone-urls/page.tsx",
+      "sha256": "b404a2464f6dd7fbfcd771aa3693cf7a8011ecc9424196a5c0e0a1320ea86649",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/mention/page.tsx",
+      "sha256": "231c79469f939676d4f24cb39e4b2e5c76f7cd8ff0e5894ed50d59cffa5bb84f",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/google-keyword/page.tsx",
+      "sha256": "b1ab9937586c8167fd03f8ce200dea6fa3075cd8f7e368c1e167b0c965ac4d9c",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/social-scraping/page.tsx",
+      "sha256": "a272b13ac1b695b78b58f9e62c34ce9eea519584da2b6cecc6b9bec5fbc667df",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/layout.tsx",
+      "sha256": "6a0e4697b5d938ee53f49261443ec5d01e729c5a8b5323ee748234c634d9f37f"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/member/page.tsx",
+      "sha256": "ad90d662c4b9f2ded258dd1e89b5a489347249b358a988200ce618e5443bf8ad",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/page.tsx",
+      "sha256": "fa273e15259d70af2e6bdd22cb52cb34d383123a22160a1ce359599e358c941a",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/prompt/page.tsx",
+      "sha256": "9348fd20593354e23c7f67b7ebe546e90acdaa20f9617b2aa7325403700df8ee",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/[id]/setting/page.tsx",
+      "sha256": "76639b38510873a087a133a504a2932c1a77f832907007106abb789c1550a232",
+      "kind": "reference"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/projects/_components/project-dashboard.tsx",
@@ -439,18 +617,23 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-keyword-sample.tsx",
+      "sha256": "5770e47a1d74524742989eef0335d315ccf4374e9e2e4af877723880d8783f7f",
+      "kind": "source"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/projects/_components/project-list.tsx",
-      "sha256": "b8e42f8bf8f18dafd867a07e04de70089af381f025ca57bbe2b55934cf35d270",
+      "sha256": "fe7da0535cc84b4d5b730cee2696a62521594be027dd4e961fc0209e5d386018",
       "kind": "source"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/projects/_components/project-measurement.tsx",
-      "sha256": "d02a69145bcc097015dde6ce468dd7af371d0f76fe53d6553d39b88fd61be8ea",
+      "sha256": "a37dbc25eadfde83a203024779ce4537fc4071e9a43564f07310e7633e23b6af",
       "kind": "source"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/projects/_components/project-model.ts",
-      "sha256": "cc172fe62d5de2ef27d51ab16cc9e84a592080b9a920953dc0f272622ba7f808",
+      "sha256": "fa5d7c51146735b1651a81a7a1e74a7890c41089560150dc828b517cea247b7d",
       "kind": "source"
     },
     {
@@ -472,6 +655,16 @@
       "source": "app/[locale]/(renewal)/renewal/projects/_components/project-settings.tsx",
       "sha256": "367c8797d202b8b25aa1e927c558fbfb7b2695be2cb81aadeafd3c8e6543ce7f",
       "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/_components/project-social-sample.tsx",
+      "sha256": "93a7eb2851c8acb47dfd36dec2c6e85e45bc441f3b8bc9d8da4faf05e6a1ed2c",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/projects/page.tsx",
+      "sha256": "aa91c4fd697bb007a55596aa0680d456956cd6c6742089280978351d4f97d8e9",
+      "kind": "reference"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/_components/acr-body.tsx",
@@ -504,6 +697,86 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/page.tsx",
+      "sha256": "d258215810a3e5abc9ee86717dd19f918f2940df5a21934bdccc96fea6cb0e2c",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/_components/conv-body.fixture.json",
+      "sha256": "b09e603db8996b2f60f462b5a6662bb2fcb33da5c903a0d0a6c2445db8b12ecb",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/_components/conv-body.tsx",
+      "sha256": "f08cc54bda92c52c88913e21aaa4690a36dddb3a7f4c2b895121039bc67779d9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/_components/conv-cards.tsx",
+      "sha256": "fbf951cdaa2eb59b31da7a6703267c3251beccfccc27cbf330c4038e9a48693d",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/_components/conv-insights.tsx",
+      "sha256": "03e8d4195f2c01d2db905e9baf59947c4f8d022c0613c9c72807c07076f06982",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/_components/conv-sample.tsx",
+      "sha256": "f62ec34f1a1bc15eddcc2a92c05315795cc027b947d45dc2d2950d4b66dc7d42",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/_data/screen-types.ts",
+      "sha256": "d06a5e9fd262be619fb98d3553b96c49e5b25d7c76fc1e56c716c2f7aaa19a32",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/page.tsx",
+      "sha256": "78f8316369acb09290ec2d03252e10b029f6ac3bf9afd940babef4d8137dcf32",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_components/vis-body.tsx",
+      "sha256": "c77b8f743c6756b79f21462101f93dd428a6b097400e70caa9498409ec80626c",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_components/vis-charts.tsx",
+      "sha256": "6b326cc1a0997c9670a17a4aa0d41e299722b6bf9bbef10a86dce7c8429f55bf",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_components/vis-context.tsx",
+      "sha256": "af68e4e8b6687707f67227543278f7d38679484702ff0aa0ba6c093d62beeb80",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_components/vis-more.tsx",
+      "sha256": "2d6b767767bf0064794f45a8e9105aa6646d1c322bac6719d5abaeb15e0a01cd",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_components/vis-pages.tsx",
+      "sha256": "ac479f5da85fcbd3ec96be4c771c3c9bb4bf91b142e481ffa44613e892733b33",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_data/screen-types.ts",
+      "sha256": "bb49f3aaee87cdfeb35f73a236087df7ad77e23da3ce0608a7084ba1d96bb468",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/_data/tab.ts",
+      "sha256": "8e232e771905b7c625a7f6039946bf60edcfccb42940fcd0b069fc9a5e9a5294",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/page.tsx",
+      "sha256": "a1e4305a511f5b8e6ed2296baabaa19b3556d384ebf5b8f9913cf2d9dbf476e3",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-body.tsx",
       "sha256": "59683baf990bf2a274fbc999b6af3ac5b96334e44a82479fd3e4aa7124509e51",
       "kind": "source"
@@ -532,6 +805,21 @@
       "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/_components/citation-website.tsx",
       "sha256": "e1e4a95df82cbd0d3a480a58db3da66d2db0ea40099bff205e1e411320c73a43",
       "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/page.tsx",
+      "sha256": "dcb3c7c8f042b9c74b8c2b5361b668d63a1e7c0fa9459a2bbe9f19eb6fe17472",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/prompts/page.tsx",
+      "sha256": "20c07fdb4ff99cc2bef3870f5bdbbb84167cb429b37bc7d8360a5e3e1c8611e8",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/tone-urls/page.tsx",
+      "sha256": "ff122dfbf29c9201599b1df9d4f4ed60481e682cf8edcd81f21ccc1a4ff2dbdf",
+      "kind": "reference"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/_components/mention-body.tsx",
@@ -614,6 +902,11 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/page.tsx",
+      "sha256": "0a8df4ddc52265583c80a6cb2920e5e6990d4012a99a2185ba3d482697f8db50",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/standard/prompts/_components/prompt-detail.tsx",
       "sha256": "b763717cf5e59d0302cd60b1417f5b867e90c969ba551d811ec111d8b9a32bf4",
       "kind": "source"
@@ -634,6 +927,11 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/standard/prompts/page.tsx",
+      "sha256": "80d90c02b08ff222e39aa0e78236fe527a9d54a78dfccb3fcc885455854a6084",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/website/_overview/engine-label.ts",
       "sha256": "9da09553589568391fa7122ef2557829e53e1326c6796f386001435df3114a94",
       "kind": "source"
@@ -641,6 +939,16 @@
     {
       "source": "app/[locale]/(renewal)/renewal/website/_overview/website-breakdowns.tsx",
       "sha256": "9777a41b695546044842ad52db72c215b189a72575fe075f2385128c80a47939",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-findings-view.tsx",
+      "sha256": "3d0444db0d2ed67d6ea3acf264fa06280adf4d4b43aa904783851cae67a5dac9",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/_overview/website-findings.ts",
+      "sha256": "4a76eb7f9be4c56e9e7479d21e2d6d741b798d3a8d6b290ade8eb1fdda728065",
       "kind": "source"
     },
     {
@@ -672,6 +980,26 @@
       "source": "app/[locale]/(renewal)/renewal/website/_overview/website-trend.tsx",
       "sha256": "5403a32e7e5567d61dbd1419c4a20752cbe7f1b527278d764141f5b9f1cdff75",
       "kind": "source"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/ai-funnel/conversion/page.tsx",
+      "sha256": "fc6ba7ef950ddd25959e74ff1f4124bc2479451907b0f70731166990912ea216",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/page.tsx",
+      "sha256": "1029af1d88a6931f085b999239fed71aa1a6ee3c80ab49b06491e1f149a4821d",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/prompts/page.tsx",
+      "sha256": "174b958fd5afbe65976239bc8a8b65204b25cf9b3c0e2ae026cb095453dfb6ba",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/tone-urls/page.tsx",
+      "sha256": "a93706859fb7a292b9ed47a221d36f8fe65ed7a45fcfb81c8ab7f6d7456f82cc",
+      "kind": "reference"
     },
     {
       "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/_components/missing-prompts.tsx",
@@ -714,6 +1042,16 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/page.tsx",
+      "sha256": "157350934d3d35eb559b5ed1ce6d7f6d5ab5c643bf75e7dce9dbaadd0bbeb23a",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/(renewal)/renewal/website/page.tsx",
+      "sha256": "a9a05af3017463496d665bdb9c0aa9b45adac62c82fd3a7927113deb873992de",
+      "kind": "reference"
+    },
+    {
       "source": "app/[locale]/(renewal)/renewal/website/prompts/_components/website-prompt-insights.tsx",
       "sha256": "358bc00c5905490f31329c208d1de353fbb90bd704b7f09035d21ed5c5ae9ffb",
       "kind": "source"
@@ -739,6 +1077,31 @@
       "kind": "source"
     },
     {
+      "source": "app/[locale]/(renewal)/renewal/website/prompts/page.tsx",
+      "sha256": "cd7a35abf359f96198dcd68a1e103e0ae9fa24f50f1a4ce518f85c85d7620706",
+      "kind": "reference"
+    },
+    {
+      "source": "app/[locale]/login/hub-login-form.tsx",
+      "sha256": "aef14542bce7d55078a0bf32853606e31978e282dc93f3d5514a0bcbdbf5ec9b",
+      "kind": "source"
+    },
+    {
+      "source": "app/[locale]/login/password/hub-password-form.tsx",
+      "sha256": "8d5f0c22fa9dbcad61d14933f005f18f436b5d6061b08de6b0dfd2c604968d0a",
+      "kind": "source"
+    },
+    {
+      "source": "app/globals.css",
+      "sha256": "73aae0586f1b42a4a4637c886ff7158fb335c0ffb54538bf42150d1d2a89b8fe",
+      "kind": "reference"
+    },
+    {
+      "source": "app/renewal-theme.css",
+      "sha256": "76baa15301d56b06adad1bc0ee846d765599782ad2ec6f7827c4827555afbc3f",
+      "kind": "reference"
+    },
+    {
       "source": "components/dash/account-scope-chips.tsx",
       "sha256": "42b07edc95a79a578231f5eb187dbbcd6ffae14911c2184ee7aee77c862f325b",
       "kind": "source"
@@ -752,6 +1115,10 @@
       "source": "components/dash/as-of-chip.tsx",
       "sha256": "a3dfbb7172667a7f9ac249a66a09b6391db5c789a05529a13295b0e2b2877782",
       "kind": "source"
+    },
+    {
+      "source": "components/dash/beta-notice.tsx",
+      "sha256": "50e02861077c41379b6b900d2a755c56fd8da4f39f22e712c59a5f04be7b286b"
     },
     {
       "source": "components/dash/col-info.tsx",
@@ -772,6 +1139,10 @@
       "source": "components/dash/engine-label.ts",
       "sha256": "5dfae0368163231ef4b423d5a8783465fb4a7a557c5aab3ef36e3b8cd7622360",
       "kind": "source"
+    },
+    {
+      "source": "components/dash/filter-carry.ts",
+      "sha256": "6e5a4abf191cf335626e5050c3febd3edaaebb0952d02af0b3e98d48be077eec"
     },
     {
       "source": "components/dash/filter-draft-actions.ts",
@@ -799,6 +1170,10 @@
       "kind": "source"
     },
     {
+      "source": "components/dash/notice-dialog.tsx",
+      "sha256": "9971eb289b514c67fc79c6eb77e271a6f3365589502d10cef02e949982823ea6"
+    },
+    {
       "source": "components/dash/period-delta-line.tsx",
       "sha256": "2e57516358f3de02d53d1d41cb0141e43acc4ed552df0c9d0c90b2c2b358015e",
       "kind": "source"
@@ -819,8 +1194,17 @@
       "kind": "source"
     },
     {
+      "source": "components/dash/sidebar.tsx",
+      "sha256": "7aff7010924aeb28ce920c4ea8b01eec3d4d4f784f0aed4ecd1c1a39757a3263"
+    },
+    {
       "source": "components/dash/trend-gap-overlay.tsx",
       "sha256": "1c90f7b14c903cb15b40f43286e94c9bdd2ba1b9b1d6a0c2e4ccb3eb53a46382",
+      "kind": "source"
+    },
+    {
+      "source": "components/empty-state.tsx",
+      "sha256": "f33aafc8a6b93c749ae466cd7f5d20c07ca13b3f8ddf5c661e19c28ba75edfac",
       "kind": "source"
     },
     {
@@ -965,12 +1349,12 @@
     },
     {
       "source": "components/service-week/provider.tsx",
-      "sha256": "46c74ca4fb43025f7db67fe03da2df8c9266a4bee551f1e373941b9a1a381665",
+      "sha256": "0ccd1b5e81b421848f233534445c93f5a4fbcbef6aa5e549627445a24c97ba4a",
       "kind": "source"
     },
     {
       "source": "components/service-week/sync.ts",
-      "sha256": "f305a41484df32e4ddaa4024bb1ad66e8990e67fe7a7fa18dfbfd9ebd0602f95",
+      "sha256": "5b330be3524555dd8396527d9efeb458c7a41590af75c4993479a8d76fa64c96",
       "kind": "source"
     },
     {
@@ -986,6 +1370,11 @@
     {
       "source": "components/ui/button.tsx",
       "sha256": "8abc88895e82eeecb08d5dd29dbff0fd19341676b0c20773cdf3323b3ea8080d",
+      "kind": "source"
+    },
+    {
+      "source": "components/ui/card.tsx",
+      "sha256": "4d86a6edbea1c9714497505d7df2adeba6b7ea11d10fe90ef95345607c84021f",
       "kind": "source"
     },
     {
@@ -1026,6 +1415,11 @@
     {
       "source": "components/ui/tooltip.tsx",
       "sha256": "30711729ae90f4e93a071befa1dfb413adbd9fa06e647b0a676c70a6a537762b",
+      "kind": "source"
+    },
+    {
+      "source": "components/wordmark.tsx",
+      "sha256": "361555b1ea3f3a27ed24a39e5763e1d0a481b72417ffaf54c2dd847b53b081e0",
       "kind": "source"
     },
     {
@@ -1075,7 +1469,7 @@
     },
     {
       "source": "lib/auth/route-policy.ts",
-      "sha256": "2fcab8c706362ba2bddb9430b42263bdf40504251548803c59208639568a944e",
+      "sha256": "6d591161a980c70a299a9b788cbed6ac2f2e1eec41eb5401c8c0b34dd1917129",
       "kind": "source"
     },
     {
@@ -1274,9 +1668,18 @@
       "kind": "types"
     },
     {
+      "source": "lib/hgh/errors.ts",
+      "sha256": "6e77b63f04023229b1d723d0c59dac2e1d9f2e3c3ce3f190acae17f01eb9d9a7",
+      "kind": "reference"
+    },
+    {
       "source": "lib/hgh/filter-types.ts",
       "sha256": "096409770850e54a3c9c584b0af247d33a7dd9653bdee8c2adb34e6f77d6c4bd",
       "kind": "types"
+    },
+    {
+      "source": "lib/hub/next-path.ts",
+      "sha256": "48626c8cc69599fa1e2b50e78b2efe6e95b39532914083cae09853f6d7522b9b"
     },
     {
       "source": "lib/keyword/location-presets.ts",
@@ -1307,6 +1710,11 @@
       "source": "lib/local-readonly.ts",
       "sha256": "ad7a3eeabc061185c714d9f9ede32d72bd89eb7a14a915ec436f8213a1741eba",
       "kind": "types"
+    },
+    {
+      "source": "lib/nav/page-title.ts",
+      "sha256": "0f96842a376174f0148be16b6ed2ec3aef481956bfb7556b50f07ecae6a1855b",
+      "kind": "source"
     },
     {
       "source": "lib/period-chip-text.ts",
@@ -1559,6 +1967,10 @@
       "kind": "source"
     },
     {
+      "source": "lib/viz/toast-style.ts",
+      "sha256": "35f689e082ce3d3bf061b7dc6852d19cd82e5358fbecefe9453d53e5fdae4880"
+    },
+    {
       "source": "lib/viz/trend-gap-curve.ts",
       "sha256": "abe8e9ef94f8f539ff62bd8c382009c92e8cf00ab03bdf0ddf0c43c843f27f93",
       "kind": "source"
@@ -1574,213 +1986,13 @@
       "kind": "source"
     },
     {
-      "source": "lib/hgh/errors.ts",
-      "sha256": "6e77b63f04023229b1d723d0c59dac2e1d9f2e3c3ce3f190acae17f01eb9d9a7",
-      "kind": "reference"
-    },
-    {
-      "source": "app/globals.css",
-      "sha256": "73aae0586f1b42a4a4637c886ff7158fb335c0ffb54538bf42150d1d2a89b8fe",
-      "kind": "reference"
-    },
-    {
-      "source": "app/renewal-theme.css",
-      "sha256": "76baa15301d56b06adad1bc0ee846d765599782ad2ec6f7827c4827555afbc3f",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/page.tsx",
-      "sha256": "aa91c4fd697bb007a55596aa0680d456956cd6c6742089280978351d4f97d8e9",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/page.tsx",
-      "sha256": "fa273e15259d70af2e6bdd22cb52cb34d383123a22160a1ce359599e358c941a",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/page.tsx",
-      "sha256": "c40834781a481c67310c4bef09c1e2e16b668fa7e986a76b806acd5020fec5ec",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/tone-urls/page.tsx",
-      "sha256": "b404a2464f6dd7fbfcd771aa3693cf7a8011ecc9424196a5c0e0a1320ea86649",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/citation/prompts/page.tsx",
-      "sha256": "0d378148661d99d77ae70f8898319e0203aa99d1916fa771fdf3c92eda7d42f5",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/analysis/mention/page.tsx",
-      "sha256": "231c79469f939676d4f24cb39e4b2e5c76f7cd8ff0e5894ed50d59cffa5bb84f",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/member/page.tsx",
-      "sha256": "ad90d662c4b9f2ded258dd1e89b5a489347249b358a988200ce618e5443bf8ad",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/social-scraping/page.tsx",
-      "sha256": "a272b13ac1b695b78b58f9e62c34ce9eea519584da2b6cecc6b9bec5fbc667df",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/intent/google-keyword/page.tsx",
-      "sha256": "b1ab9937586c8167fd03f8ce200dea6fa3075cd8f7e368c1e167b0c965ac4d9c",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/prompt/page.tsx",
-      "sha256": "9348fd20593354e23c7f67b7ebe546e90acdaa20f9617b2aa7325403700df8ee",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/[...sub]/page.tsx",
-      "sha256": "15a4f79ea7e59f418c154a225f5151c61f2e121f4e65b45d85f9266eef5519da",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/setting/page.tsx",
-      "sha256": "76639b38510873a087a133a504a2932c1a77f832907007106abb789c1550a232",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/ai-funnel/conversion/page.tsx",
-      "sha256": "195bf9c85613b839850dc93ffe5c54309c53b4dfca7f1d96506c80aaaa43939e",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/page.tsx",
-      "sha256": "a9a05af3017463496d665bdb9c0aa9b45adac62c82fd3a7927113deb873992de",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/prompts/page.tsx",
-      "sha256": "cd7a35abf359f96198dcd68a1e103e0ae9fa24f50f1a4ce518f85c85d7620706",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/ai-funnel/conversion/page.tsx",
-      "sha256": "fc6ba7ef950ddd25959e74ff1f4124bc2479451907b0f70731166990912ea216",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/page.tsx",
-      "sha256": "1029af1d88a6931f085b999239fed71aa1a6ee3c80ab49b06491e1f149a4821d",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/tone-urls/page.tsx",
-      "sha256": "a93706859fb7a292b9ed47a221d36f8fe65ed7a45fcfb81c8ab7f6d7456f82cc",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/citation/prompts/page.tsx",
-      "sha256": "174b958fd5afbe65976239bc8a8b65204b25cf9b3c0e2ae026cb095453dfb6ba",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/website/answer-analysis/mention/page.tsx",
-      "sha256": "157350934d3d35eb559b5ed1ce6d7f6d5ab5c643bf75e7dce9dbaadd0bbeb23a",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/page.tsx",
-      "sha256": "a68ee17dd05fdf6ec66f8f0381e0f9aef6e3c60cc0fd76ee91642133a44882c3",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/ga4/page.tsx",
-      "sha256": "68b2a6c2aae50917146107b0af23578107a310235a1caafda757db195d507d59",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/keyword-tools/page.tsx",
-      "sha256": "a69cf0ee50bed837a2853f9241829771e04271b14a827ed15acf1c0ed3fbaa1e",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/standards/customer-interest/page.tsx",
-      "sha256": "011f61ba79778acf72496834482c6ce02048e287950971f3d884be674b8fd3a5",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/standards/citation-sources/page.tsx",
-      "sha256": "5b4571e737725b9e16c558ad3d4099f613dbcd3d7b7028aa6dc20fc648080473",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/standards/prompts/page.tsx",
-      "sha256": "509d5fd8e8b2e13598184f6362fbe38650c06ded05b23a8638310686b313559b",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/admin/standards/entities/page.tsx",
-      "sha256": "06218821e0c4783cbc703a45e9dfdb57dd637f6826410077ae7a393577c825bf",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/[...slug]/page.tsx",
-      "sha256": "eb93ce47080b869de63a22894dc6c28b546c4a8bf43d536ab3509f9f04520576",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/prompts/page.tsx",
-      "sha256": "80d90c02b08ff222e39aa0e78236fe527a9d54a78dfccb3fcc885455854a6084",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/visibility/page.tsx",
-      "sha256": "a1e4305a511f5b8e6ed2296baabaa19b3556d384ebf5b8f9913cf2d9dbf476e3",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/acr/page.tsx",
-      "sha256": "d258215810a3e5abc9ee86717dd19f918f2940df5a21934bdccc96fea6cb0e2c",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/ai-funnel/conversion/page.tsx",
-      "sha256": "78f8316369acb09290ec2d03252e10b029f6ac3bf9afd940babef4d8137dcf32",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/page.tsx",
-      "sha256": "dcb3c7c8f042b9c74b8c2b5361b668d63a1e7c0fa9459a2bbe9f19eb6fe17472",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/tone-urls/page.tsx",
-      "sha256": "ff122dfbf29c9201599b1df9d4f4ed60481e682cf8edcd81f21ccc1a4ff2dbdf",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/citation/prompts/page.tsx",
-      "sha256": "20c07fdb4ff99cc2bef3870f5bdbbb84167cb429b37bc7d8360a5e3e1c8611e8",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/standard/answer-analysis/mention/page.tsx",
-      "sha256": "0a8df4ddc52265583c80a6cb2920e5e6990d4012a99a2185ba3d482697f8db50",
-      "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/dashboard/page.tsx",
-      "sha256": "f11f641040ad958758f7d7c1e673e1570fa642aac2b129c635438d82fa464897",
-      "kind": "reference"
-    },
-    {
       "source": "messages/en.json",
-      "sha256": "2672678a64531cbf63b5a51283e94056488774462fe72e647e321c1cffcceebd",
+      "sha256": "f1635a5419d3d154d1b99d2e9a69fde7fad384b17d4feb63738805a5d3d659a6",
       "kind": "reference"
     },
     {
       "source": "messages/ko.json",
-      "sha256": "eaadbe1a2e769f8003283592949b8380219aba4fb3af9cac7d9ec11512910602",
+      "sha256": "2655dad78135df2b0ea3dbd5d8295805014705c6d78e093a8aeca66ac146d057",
       "kind": "reference"
     },
     {
@@ -1789,33 +2001,8 @@
       "kind": "reference"
     },
     {
-      "source": "messages/units/u5.ko.json",
-      "sha256": "dee44bdd4ec7e40a575a0f08d3180e648bd21315946318f97342b29ff406ab4a",
-      "kind": "reference"
-    },
-    {
-      "source": "messages/units/u8.en.json",
-      "sha256": "9051b8e90eafd2e4c735f5c98a9b6413e7e058cfaec25fb400757d33e15498ce",
-      "kind": "reference"
-    },
-    {
-      "source": "messages/units/u4.ko.json",
-      "sha256": "022161aa1eb5ebb06129c2a16637547fc5a9a1f5c2f6b414ad840bfdd0a5dac3",
-      "kind": "reference"
-    },
-    {
-      "source": "messages/units/u9.en.json",
-      "sha256": "192152ef5450a8f0e93e2fb04b00155eacad989a17824138db59e2dd274330ad",
-      "kind": "reference"
-    },
-    {
-      "source": "messages/units/u11.en.json",
-      "sha256": "b02450e1d2dc815a02eca250af35ec0d848f3ce4f60348fa7b6248ae1cc33396",
-      "kind": "reference"
-    },
-    {
-      "source": "messages/units/u7.ko.json",
-      "sha256": "338cb9a7c498383561a50cb73060ae993013e608af8c35ff4e4af819520f4cda",
+      "source": "messages/units/u1.ko.json",
+      "sha256": "f2d38f643039dfbda56b41567510f3cc58501a880c4be637ffae63fa541f599c",
       "kind": "reference"
     },
     {
@@ -1824,18 +2011,28 @@
       "kind": "reference"
     },
     {
-      "source": "messages/units/u11.ko.json",
-      "sha256": "ddf00d9004bde8c9673552780e22186bdae020c88b6eef7a765ce56e96fade2c",
-      "kind": "reference"
-    },
-    {
       "source": "messages/units/u10.ko.json",
       "sha256": "716616c143e524b546c745b452d928f42cfb27242a6187eec35ad2dd71dc4e50",
       "kind": "reference"
     },
     {
-      "source": "messages/units/u7.en.json",
-      "sha256": "8551b75ea8bf2a70c2e881549f1461abfdfee7b230db6aa32429a7762aab98f0",
+      "source": "messages/units/u11.en.json",
+      "sha256": "b02450e1d2dc815a02eca250af35ec0d848f3ce4f60348fa7b6248ae1cc33396",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u11.ko.json",
+      "sha256": "ddf00d9004bde8c9673552780e22186bdae020c88b6eef7a765ce56e96fade2c",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u4.en.json",
+      "sha256": "e12de94a588bd5f1de0d8b9dee364704ebcf9227e5fc7ec569f7cc909ddd0ca0",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u4.ko.json",
+      "sha256": "022161aa1eb5ebb06129c2a16637547fc5a9a1f5c2f6b414ad840bfdd0a5dac3",
       "kind": "reference"
     },
     {
@@ -1844,18 +2041,33 @@
       "kind": "reference"
     },
     {
+      "source": "messages/units/u5.ko.json",
+      "sha256": "dee44bdd4ec7e40a575a0f08d3180e648bd21315946318f97342b29ff406ab4a",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u7.en.json",
+      "sha256": "8551b75ea8bf2a70c2e881549f1461abfdfee7b230db6aa32429a7762aab98f0",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u7.ko.json",
+      "sha256": "338cb9a7c498383561a50cb73060ae993013e608af8c35ff4e4af819520f4cda",
+      "kind": "reference"
+    },
+    {
+      "source": "messages/units/u8.en.json",
+      "sha256": "9051b8e90eafd2e4c735f5c98a9b6413e7e058cfaec25fb400757d33e15498ce",
+      "kind": "reference"
+    },
+    {
       "source": "messages/units/u8.ko.json",
       "sha256": "43b6e9641b99da2a695027233d7c99fb7bed1953d06319a54b24f5401a1b1458",
       "kind": "reference"
     },
     {
-      "source": "messages/units/u1.ko.json",
-      "sha256": "f2d38f643039dfbda56b41567510f3cc58501a880c4be637ffae63fa541f599c",
-      "kind": "reference"
-    },
-    {
-      "source": "messages/units/u4.en.json",
-      "sha256": "e12de94a588bd5f1de0d8b9dee364704ebcf9227e5fc7ec569f7cc909ddd0ca0",
+      "source": "messages/units/u9.en.json",
+      "sha256": "192152ef5450a8f0e93e2fb04b00155eacad989a17824138db59e2dd274330ad",
       "kind": "reference"
     },
     {
@@ -1869,13 +2081,13 @@
       "kind": "reference"
     },
     {
-      "source": "public/brand/hyundai-logo.svg",
-      "sha256": "4007a5f721bc50b4bb871b84b751e6f7cce6c60930e8e2e8d2c0baef0be26173",
+      "source": "public/brand/hmg-logo.svg",
+      "sha256": "e311fa38393c7ceb11e4c757d4fdeebafce4864382cc179628decc0394a96de4",
       "kind": "reference"
     },
     {
-      "source": "public/brand/hmg-logo.svg",
-      "sha256": "e311fa38393c7ceb11e4c757d4fdeebafce4864382cc179628decc0394a96de4",
+      "source": "public/brand/hyundai-logo.svg",
+      "sha256": "4007a5f721bc50b4bb871b84b751e6f7cce6c60930e8e2e8d2c0baef0be26173",
       "kind": "reference"
     },
     {
@@ -1887,58 +2099,7 @@
       "source": "public/fonts/PretendardVariable.woff2",
       "sha256": "9599f12fd42fc0bce1cd50b47a0c022e108d7aa64dd0d1bb0ed44f3282d900b4",
       "kind": "reference"
-    },
-    {
-      "source": "app/[locale]/(renewal)/_shell/rn-sidebar.tsx",
-      "sha256": "e42ef4dcd171f1cf1fa02f3ff7bed3c54a47a6876cf33506fb4990c584de7e27"
-    },
-    {
-      "source": "app/[locale]/(renewal)/_shell/rn-project-tab.tsx",
-      "sha256": "8df1d20a8346153168e39a2d5912060f2d3884edc66866e3665d4538ae55d6e9"
-    },
-    {
-      "source": "app/[locale]/(renewal)/_shell/nav-pending.tsx",
-      "sha256": "d44b7674b6552211773a2a04a9200b6bc4bb03ad489f2eabee74a911966bc0f8"
-    },
-    {
-      "source": "app/[locale]/(renewal)/_shell/beta-toast.tsx",
-      "sha256": "9ce56cc7ebeb79518c38acbe8c331bf4c45bb710a1fc2a7abb4bff6f63b2e15a"
-    },
-    {
-      "source": "app/[locale]/(renewal)/layout.tsx",
-      "sha256": "5fc48ef5c24e65c6f9f8a08512350ff47c614b1e057c5c5a9d1a05bfa65a61cb"
-    },
-    {
-      "source": "components/dash/sidebar.tsx",
-      "sha256": "065b825fc5c298c4e5074e0216f8467ab048791191b00039824f2ddd0bb32c07"
-    },
-    {
-      "source": "components/dash/beta-notice.tsx",
-      "sha256": "50e02861077c41379b6b900d2a755c56fd8da4f39f22e712c59a5f04be7b286b"
-    },
-    {
-      "source": "components/dash/notice-dialog.tsx",
-      "sha256": "9971eb289b514c67fc79c6eb77e271a6f3365589502d10cef02e949982823ea6"
-    },
-    {
-      "source": "components/dash/filter-carry.ts",
-      "sha256": "6e5a4abf191cf335626e5050c3febd3edaaebb0952d02af0b3e98d48be077eec"
-    },
-    {
-      "source": "lib/hub/next-path.ts",
-      "sha256": "48626c8cc69599fa1e2b50e78b2efe6e95b39532914083cae09853f6d7522b9b"
-    },
-    {
-      "source": "lib/viz/toast-style.ts",
-      "sha256": "35f689e082ce3d3bf061b7dc6852d19cd82e5358fbecefe9453d53e5fdae4880"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/_components/account-gate.tsx",
-      "sha256": "785ed545dfb46c38135da3d86da220b680e50da65397d4f1f3be2b157e9355da"
-    },
-    {
-      "source": "app/[locale]/(renewal)/renewal/projects/[id]/layout.tsx",
-      "sha256": "6a0e4697b5d938ee53f49261443ec5d01e729c5a8b5323ee748234c634d9f37f"
     }
-  ]
+  ],
+  "updatedOn": "2026-11-07"
 }

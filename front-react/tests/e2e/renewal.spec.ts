@@ -19,9 +19,9 @@ test("background refresh preserves an unsaved account form even when server data
 test("saved-filter failures leave successful analytics and the local retry visible", async ({ page }) => {
   const trace = await mockHub(page, url => url.pathname === "/api/hub/saved-filters" ? { status: 503, body: { error: { code: "source_unavailable" } } } : undefined);
   await page.goto(`${hub}/ko/renewal/dashboard`);
-  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
-  await expect(page.getByText("조회 조건에 해당하는 측정 데이터가 없습니다.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "데이터를 준비하고 있습니다" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "AI 답변 성과 요약", exact: true })).toBeVisible();
+  await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "데이터를 불러오지 못했습니다" })).toHaveCount(0);
   const retry = page.getByRole("button", { name: "다시 시도", exact: true });
   await expect(retry).toBeVisible();
   const before = trace.requests.filter(p => p === "/api/hub/saved-filters").length;
@@ -57,18 +57,18 @@ test("a failed critical refresh replaces the old analytics view with an explicit
   let failed = false;
   const trace = await mockHub(page, url => failed && url.pathname === "/api/screens/overview/cards" ? { status: 503, body: { error: { code: "source_unavailable" } } } : undefined);
   await page.goto(`${hub}/ko/renewal/dashboard`);
-  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI 답변 성과 요약", exact: true })).toBeVisible();
   failed = true;
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange", { bubbles: true })));
-  await expect(page.getByRole("heading", { name: "데이터를 준비하고 있습니다", exact: true })).toBeVisible();
-  await expect(page.getByText("조회 조건에 해당하는 측정 데이터가 없습니다.", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/이 구간의 집계에 실패했습니다/)).toBeVisible();
+  await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toHaveCount(0);
   expect(trace.errors).toEqual([]);
 });
 test("service-week metadata failure does not hide successfully loaded analytics", async ({ page }) => {
   const trace = await mockHub(page, url => url.pathname.endsWith("/service-week") ? { status: 503, body: { error: { code: "source_unavailable" } } } : undefined);
   await page.goto(`${hub}/ko/renewal/dashboard`);
-  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
-  await expect(page.getByText("조회 조건에 해당하는 측정 데이터가 없습니다.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "AI 답변 성과 요약", exact: true })).toBeVisible();
+  await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
   expect(trace.errors).toEqual([]);
 });
 test("Mention header displays the server's effective period separately from the service week", async ({ page }) => {
@@ -107,13 +107,14 @@ test("Website prompts refreshes the current list and insights when the week adva
     page.waitForResponse(r => r.url().includes("/api/website/prompts/insights") && r.url().includes("week-filter")),
     search.fill("week-filter"),
   ]);
-  const beforePage = trace.requests.filter(p => p === "/api/website/prompts/page").length;
-  const beforeInsights = trace.requests.filter(p => p === "/api/website/prompts/insights").length;
+  // a moved week loads the page again (the search stays in the address)
+  const beforePage = trace.requests.filter(p => p === "/api/screens/website/prompts-page").length;
+  const beforeInsights = trace.requests.filter(p => p === "/api/screens/website/prompts-insights").length;
   latest = { ...week, week: { start: "2026-11-09", end: "2026-11-15", month: 11, nth: 2 } };
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange", { bubbles: true })));
   await expect(page.locator("[data-rn-service-week]")).toContainText("11월 2주차");
-  await expect.poll(() => trace.requests.filter(p => p === "/api/website/prompts/page").length).toBeGreaterThan(beforePage);
-  await expect.poll(() => trace.requests.filter(p => p === "/api/website/prompts/insights").length).toBeGreaterThan(beforeInsights);
+  await expect.poll(() => trace.requests.filter(p => p === "/api/screens/website/prompts-page").length).toBeGreaterThan(beforePage);
+  await expect.poll(() => trace.requests.filter(p => p === "/api/screens/website/prompts-insights").length).toBeGreaterThan(beforeInsights);
   await expect(search).toHaveValue("week-filter");
   expect(trace.errors).toEqual([]);
   expect(trace.unhandled).toEqual([]);

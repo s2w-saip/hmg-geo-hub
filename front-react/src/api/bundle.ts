@@ -3,13 +3,19 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "~/app/session";
 import { hub, queryString, screen, type Query } from "./client";
 import { isHghApiError } from "@/lib/hgh/errors";
+import { isTransientScreenError } from "@/app/[locale]/(dash)/dashboard/_data/screen-fallbacks";
 import { CONNECTED } from "./client";
 
-export interface Read { name: string; query?: Query; kind?: "screen" | "hub"; optional?: boolean; deferred?: boolean }
+/**
+ * `optional`: a failed read answers null. `deferred`: the page does not wait for it, its section does.
+ * `fallback`: what a transient failure (5xx, timeout, network) answers instead of an error, as the Next page's onTransient; any other failure stays an error.
+ */
+export interface Read { name: string; query?: Query; kind?: "screen" | "hub"; optional?: boolean; deferred?: boolean; fallback?: unknown }
 export interface ReadState { pending: boolean; refreshing: boolean; error: Error | null }
 export interface ReadControls { states: Record<string, ReadState>; retry: (names?: readonly string[]) => Promise<void> }
+const absorbed = (read: Read, error: Error | null) => read.fallback !== undefined && !!error && isTransientScreenError(error);
 function blocks(read: Read, error: Error | null) {
-  if (!error) return false;
+  if (!error || absorbed(read, error)) return false;
   if (isHghApiError(error) && [401, 403].includes(error.status)) return true;
   if (read.optional) return false;
   // Only transient transport failures stay within a deferred section. Other failures deny the page.
@@ -34,8 +40,8 @@ export function useBundle(reads: Record<string, Read>) {
     enabled: CONNECTED && !!user,
   })), combine: queries => ({
     // combine structurally shares unchanged responses, keeping React's consumed promises stable.
-    data: Object.fromEntries(entries.map(([name, read], i) => [name, read.optional && queries[i].error ? null : queries[i].data])),
-    states: Object.fromEntries(entries.map(([name], i) => [name, { pending: queries[i].isPending, refreshing: queries[i].isFetching, error: queries[i].error }])),
+    data: Object.fromEntries(entries.map(([name, read], i) => [name, absorbed(read, queries[i].error) ? read.fallback : read.optional && queries[i].error ? null : queries[i].data])),
+    states: Object.fromEntries(entries.map(([name, read], i) => [name, { pending: queries[i].isPending, refreshing: queries[i].isFetching, error: absorbed(read, queries[i].error) ? null : queries[i].error }])),
     error: queries.find((q, i) => blocks(entries[i][1], q.error))?.error ?? null,
     pending: queries.some((q, i) => q.isPending && !entries[i][1].optional && !entries[i][1].deferred),
     refreshing: queries.some(q => q.isFetching),

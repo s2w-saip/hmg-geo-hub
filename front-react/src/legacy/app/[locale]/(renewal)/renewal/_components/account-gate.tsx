@@ -39,10 +39,10 @@ export function RnAccountGate({ account, children }: { account: RnAccount; child
           <span className="grid size-11 place-items-center rounded-full bg-rn-navy-50 text-rn-navy">
             <KeyRound className="size-5" aria-hidden />
           </span>
-          <RnTag className="mt-1 py-0.5">{t("preview")}</RnTag>
+          <RnTag className="mt-1 py-0.5">{t("sample")}</RnTag>
           <h2 className="m-0 text-rn-16 font-bold text-rn-ink">{t(`${account}.label`)}</h2>
           <p className="m-0 text-rn-13 leading-[1.6] break-keep text-rn-ink-2">{t(`${account}.body`)}</p>
-          <p className="m-0 text-rn-12 text-rn-muted">{t("previewNote")}</p>
+          <p className="m-0 text-rn-12 text-rn-muted">{t("note")}</p>
         </section>
       }
     >

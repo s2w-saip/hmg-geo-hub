@@ -45,7 +45,7 @@ test("filter changes keep the frame, panel and scroll mounted while only data is
     await page.keyboard.press("[");
     await expect(page.locator("[data-rn-split]")).toHaveAttribute("data-rn-split", "closed");
     held.release({ body: { state: "empty" } });
-    await expect(page.getByText("조회 조건에 해당하는 측정 데이터가 없습니다.", { exact: true })).toBeVisible();
+    await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
     await expect(frame).toHaveAttribute("data-test-preserved", "yes");
     await expect(page.locator("[data-rn-split]")).toHaveAttribute("data-rn-split", "closed");
     await expect(page.locator("[data-rn-busy]")).toHaveCount(0);
@@ -74,7 +74,7 @@ test("a late filter response cannot overwrite a newer selection", async ({ page 
       window.history.pushState(window.history.state, "", "?geography=US");
       window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
     });
-    await expect(page.getByText("조회 조건에 해당하는 측정 데이터가 없습니다.", { exact: true })).toBeVisible();
+    await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
     held.release({ body: { state: "ok", cards: [], compareTitle: null } });
     await expect(page).toHaveURL(/geography=US/);
     await expect(page.getByLabel("KPI 5종", { exact: true })).toHaveCount(0);
@@ -99,7 +99,7 @@ test("retained data is cleared immediately when the account scope changes", asyn
     await expect(page.getByLabel("KPI 5종", { exact: true })).toHaveCount(0);
     await expect(page.getByLabel("불러오는 중", { exact: true })).toBeVisible();
     held.release({ body: { state: "empty" } });
-    await expect(page.getByText("조회 조건에 해당하는 측정 데이터가 없습니다.", { exact: true })).toBeVisible();
+    await expect(page.getByText("측정 데이터가 아직 없습니다", { exact: true })).toBeVisible();
   } finally { held.release({ body: { state: "empty" } }); }
 });
 
@@ -111,6 +111,6 @@ test("a failed filter read shows the real error instead of retaining previous me
   await page.goto(`${hub}/ko/renewal/dashboard?geography=KR`);
   await expect(page.getByLabel("KPI 5종", { exact: true })).toBeVisible();
   await page.locator("[data-rn-reset]").click();
-  await expect(page.getByRole("heading", { name: "데이터를 준비하고 있습니다", exact: true })).toBeVisible();
+  await expect(page.getByText(/이 구간의 집계에 실패했습니다/)).toBeVisible();
   await expect(page.getByLabel("KPI 5종", { exact: true })).toHaveCount(0);
 });
