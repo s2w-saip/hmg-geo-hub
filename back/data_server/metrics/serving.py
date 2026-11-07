@@ -40,7 +40,7 @@ PLAIN_PATHS = ("answers", "gold/keywords", "gold/social", "source")
 ROW_READS = frozenset({"kpi/summary", "kpi/engines", "kpi/compare", "mentions/brands", "mentions/types", "trend", "geo", "citations/domains", "citations/sources"})
 
 _recording: ContextVar[Recording | None] = ContextVar("hgh_rollup_recording", default=None)
-_snapshots: dict[str, tuple[float, asyncio.Future, int | None]] = {}
+_snapshots: dict[str, tuple[float, asyncio.Future, int | None, str]] = {}
 _keeping: set[asyncio.Task] = set()
 
 
@@ -93,8 +93,10 @@ async def snapshot_of(surface: str) -> str:
     kept = _snapshots.get(surface)
     now = time.monotonic()
     seq = _week_seq()
-    if kept is None or now - kept[0] > SNAPSHOT_TTL_S or kept[2] != seq or (kept[1].done() and (kept[1].cancelled() or kept[1].exception() is not None)):
-        kept = (now, asyncio.ensure_future(current_snapshot(surface)), seq)
+    # nor across a change of the inputs a count rests on: an id older than them would keep the count on the new inputs under the old inputs' key
+    inputs = (await read_inputs()).inputs_digest
+    if kept is None or now - kept[0] > SNAPSHOT_TTL_S or kept[2] != seq or kept[3] != inputs or (kept[1].done() and (kept[1].cancelled() or kept[1].exception() is not None)):
+        kept = (now, asyncio.ensure_future(current_snapshot(surface)), seq, inputs)
         _snapshots[surface] = kept
     return await asyncio.shield(kept[1])
 
@@ -176,10 +178,14 @@ async def read(path: str, q: QueryParams, run: Callable[[], Awaitable[str]]) -> 
         return cached
     usage = {"live": False}
     token = gold_rows.track_usage(usage)
+    inputs = (await read_inputs()).inputs_digest
     try:
         text = await (_last_resort(path, run) if late else run())
     finally:
         gold_rows.stop_tracking(token)
+    # the inputs moved during the count: it may rest on the new ones, and the id is the old ones'
+    if (await read_inputs()).inputs_digest != inputs:
+        return text
     # a read Gold's rows answered is kept there already
     if (path not in ROW_READS or usage["live"]) and len(text) <= MAX_KEPT_BYTES:
         task = asyncio.ensure_future(cache_db.put(query, snapshot, DEFINITION_VERSION, text))

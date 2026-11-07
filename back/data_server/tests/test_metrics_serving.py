@@ -68,6 +68,24 @@ class Snapshot(unittest.TestCase):
         self.assertEqual(ids.await_count, 2)
         serving.forget_snapshots()
 
+    def test_a_changed_input_is_a_new_snapshot_at_once(self):
+        """Regression: the id was kept a few seconds while the inputs were read anew, so a count on a just registered URL was stored under the id of no registration, and removing the URL brought that count back."""
+        inputs = [mock.Mock(inputs_digest="before")]
+        ids = mock.AsyncMock(side_effect=["id-before", "id-after"])
+
+        async def read_inputs():
+            return inputs[0]
+
+        async def main():
+            serving.forget_snapshots()
+            with mock.patch.object(serving, "current_snapshot", ids), mock.patch.object(serving, "read_inputs", read_inputs), mock.patch.object(serving.service_week, "peek", lambda: None):
+                first, again = await serving.snapshot_of("project"), await serving.snapshot_of("project")
+                inputs[0] = mock.Mock(inputs_digest="after")
+                return first, again, await serving.snapshot_of("project")
+        self.assertEqual(asyncio.run(main()), ("id-before", "id-before", "id-after"))
+        self.assertEqual(ids.await_count, 2)
+        serving.forget_snapshots()
+
     def test_no_week_read_yet_keeps_the_id_for_its_seconds(self):
         ids = mock.AsyncMock(side_effect=["only", "never"])
 
@@ -120,6 +138,22 @@ class Filtered(unittest.TestCase):
         query, snapshot, version, text = put.call_args.args
         self.assertEqual(query, {"path": "filters/options", "country": ["US"], "surface": ["global"]})
         self.assertEqual((snapshot, version, text), ("s1", DEFINITION_VERSION, '{"n":1}'))
+
+    def test_a_count_during_an_input_change_is_answered_and_not_kept(self):
+        """The count may have read the new inputs under the old id: storing it would answer the old inputs with the new value later."""
+        inputs = [mock.Mock(inputs_digest="before")]
+
+        async def read_inputs():
+            return inputs[0]
+
+        class Moves(Runs):
+            async def __call__(self):
+                inputs[0] = mock.Mock(inputs_digest="after")
+                return await super().__call__()
+        with mock.patch.object(serving, "read_inputs", read_inputs):
+            answer, run, _, _, put = serve(run=Moves())
+        self.assertEqual((answer, run.calls), ('{"n":1}', 1))
+        put.assert_not_awaited()
 
     def test_an_oversized_result_is_answered_and_not_kept(self):
         with mock.patch.object(serving, "MAX_KEPT_BYTES", 3):
