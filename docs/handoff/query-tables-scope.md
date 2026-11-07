@@ -106,7 +106,7 @@ B 세션이 맡는다. 세션 분할은 결정 기록에 있다.
 
 ## 6. T12.1 철거 대상
 
-T9.7 교체 뒤 읽는 코드가 없는 `gold_db` 테이블이다. 삭제는 되돌릴 수 없어 스크립트만 만들고(`back/hub_storage/teardown-t12.sql`, `manage.py`가 돌리지 않는다) 실행은 사용자 확인 뒤에 한다. 2026-11-07 확인: 17개 테이블에 뷰 · FK 의존 0, 화면 캡처 171개와 필터 조회 9개 동안 스캔 0, 스크립트는 되돌리는 트랜잭션에서 끝까지 돈다. `gold_before_t97`를 지우면 가상 OBT(`build_virtual_obt.py`)를 다시 만들 수 없다. 교체는 `gold_next`를 `gold_db`로 이름을 바꾸는 방식이라, 이전 DB 전체가 한 번에 철거 대상이 된다. 남는 테이블의 구조는 `metrics-005a.sql`이 기록이다(`gold_reader/source-schema.json`을 대신한다).
+T9.7 교체 뒤 읽는 코드가 없는 `gold_db` 테이블이다. 삭제는 되돌릴 수 없어 스크립트만 만들고(`back/hub_storage/teardown-t12.sql`, `manage.py`가 돌리지 않는다) 실행은 사용자 확인 뒤에 한다. 2026-11-07 확인: 17개 테이블에 뷰 · FK 의존 0, 화면 캡처 171개와 필터 조회 9개 동안 스캔 0, 스크립트는 되돌리는 트랜잭션에서 끝까지 돈다. `gold_before_t97`를 지워도 데이터는 덤프(`.local/gold-copy/gold-20261106T033018Z.dump`)에 남는다. 가상 OBT(`build_virtual_obt.py`)를 다시 만들려면 덤프를 별도 DB에 복원하고 `SOURCE`를 그 DB로 바꾼다(복원은 돌려 보지 않았다). 교체는 `gold_next`를 `gold_db`로 이름을 바꾸는 방식이라, 이전 DB 전체가 한 번에 철거 대상이 된다. 남는 테이블의 구조는 `metrics-005a.sql`이 기록이다(`gold_reader/source-schema.json`을 대신한다).
 
 | 묶음 | 대상 | 비고 |
 |---|---|---|
