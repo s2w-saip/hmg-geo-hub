@@ -12,9 +12,10 @@ const names = new Set([
   ...["standard", "website", "project", "filter-bar", "as-of", "renewal-header", "prompts", "tone-urls"].map(n => `citation/${n}`),
   ...["list", "filters", "as-of", "settings", "prompts", "dash-summary", "dash-summary-deferred", "dash-engines", "dash-trend", "dash-composition", "dash-status"].map(n => `projects/${n}`),
   "shared/service-week", "shared/panel-options", "shared/filter-dates", "catalog/prompts-page", "catalog/prompts-header", "catalog/prompts-history", "acr/renewal", "acr/renewal-header",
+  "conversion/renewal", "conversion/renewal-header", "visibility/renewal", "visibility/renewal-header",
 ]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const CONTEXT = new Set(["ctx.project_id", "ctx.locale", "ctx.view", "ctx.variant", "ctx.kpi", "ctx.family"]);
+const CONTEXT = new Set(["ctx.project_id", "ctx.locale", "ctx.view", "ctx.variant", "ctx.kpi", "ctx.family", "ctx.client_nav"]);
 
 /** UI context is never an authority: validate the page and derive role/admin from the signed-in account. */
 export function browserScreenQuery(name: string, params: URLSearchParams, user: HubUser): ScreenQuery {

@@ -15,6 +15,7 @@ const session = await import("./session/route");
 const prompts = await import("./global-prompts/[[...rest]]/route");
 const saved = await import("./saved-filters/[[...rest]]/route");
 const ga4 = await import("./ga4-properties/[[...rest]]/route");
+const measurements = await import("./measurements/route");
 const sources = await import("./source-overrides/[[...rest]]/route");
 const seeds = await import("./source-seeds/[[...rest]]/route");
 const socials = await import("./source-socials/[[...rest]]/route");
@@ -157,6 +158,15 @@ describe("/api/hub/saved-filters", () => {
     const res = await saved.POST(req("POST", "/api/hub/saved-filters", { body: { page: "overview", name: "n", query: "" }, cookie: "tok" }), ctx());
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: { code: "limit", message: "A page keeps at most 50 saved filters", details: { limit: 50 } } });
+  });
+});
+
+describe("/api/hub/measurements", () => {
+  it("reads the list with the token, and asks for a session without one", async () => {
+    bff.fetch.mockResolvedValue({ data: { items: [] } });
+    expect((await measurements.GET(req("GET", "/api/hub/measurements", { cookie: "tok", origin: null }))).status).toBe(200);
+    expect(bff.fetch).toHaveBeenLastCalledWith("GET", "/v1/hub/measurements", { token: "tok" });
+    expect((await measurements.GET(req("GET", "/api/hub/measurements", { origin: null }))).status).toBe(401);
   });
 });
 
