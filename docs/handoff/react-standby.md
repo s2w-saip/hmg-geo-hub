@@ -95,7 +95,7 @@ Next와 다르게 둔 것: 세션 없는 `/api/*`는 모두 `{error:{code:'unaut
 | 사이드바 | `rn-sidebar.tsx`의 `renewalAdminTree`, `renewal-pages.ts`, `route-policy.ts`, 메시지 `nav.renewalAdminMeasurement` · `hubMeasurement` |
 | 첫 회차 전 프로젝트 | `[id]/not-found.tsx`(메시지 `renewal.projects.noData`), `project-model.ts`의 `projectLabel` · `name`, `project-list.tsx`, `rn-project-tab.tsx` |
 | 측정 설정 폼 | `project-measurement.tsx`의 안내 문구와 export(`Field` · `Choices` · `MEASUREMENT_INPUT`), 국가 코드를 기준정보 표기로 맞추는 `codes(text, known)` |
-| 연결 | `.env.local`의 `HUB_PROXY_TARGET`을 허브 서버로. 전환 시점은 T14.5.3 뒤 사용자가 정한다 |
+| 연결 | `.env.local`의 `HUB_PROXY_TARGET`을 허브 서버로. React가 모든 기능을 지원함을 검증(T14.5.3r)한 뒤에 사용자가 정한다(2026-11-07) |
 
 ### 허브가 제공할 브라우저 계약
 
