@@ -1,5 +1,5 @@
 -- T12.1 (2026-11-07): the gold_db tables no code reads since the query tables took over (docs/handoff/query-tables-scope.md 6). NOT a migration: manage.py never runs it, because a drop
--- cannot be undone. The user runs it after the cross-check, as the store's owner:
+-- cannot be undone. The user runs it, when decided (docs/handoff/architecture-rebuild.md '결정 대기'), as the store's owner:
 --   psql -h "$PWD/.local/pg/metrics-socket" -p 55439 -U hmg_metrics_admin -d gold_db -v ON_ERROR_STOP=1 -f back/hub_storage/teardown-t12.sql
 -- Checked on 2026-11-07: no view or foreign key depends on them, and a full capture of the screens does not touch them. A new install never had them (metrics-005a.sql leaves them out).
 -- The kept copy of the old database goes on its own, outside a transaction, once nothing compares with it: DROP DATABASE gold_before_t97;

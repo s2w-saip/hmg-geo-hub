@@ -90,7 +90,7 @@ React가 부르지 않아 Next에 남는 것: `website/prompts/export`, `context
 
 ## 6. 발견 (T13 전부터 있던 것)
 
-- `website/prompts/export`의 `.xlsx`는 실제 xlsx가 아니다. `gold_reader/catalog.py`가 `format=xlsx`를 읽지 않아 JSON이 나오고, Next가 그 몸체에 `.xlsx` 파일 이름을 붙인다(기준선: `application/json` 70,978바이트).
+- (2026-11-07 고침 `be2607c`, 아래 2줄은 그때까지의 기록) `website/prompts/export`의 `.xlsx`는 실제 xlsx가 아니다. `gold_reader/catalog.py`가 `format=xlsx`를 읽지 않아 JSON이 나오고, Next가 그 몸체에 `.xlsx` 파일 이름을 붙인다(기준선: `application/json` 70,978바이트).
 - `citation/domains-export`는 Gold 소스에서 404다(코드 주석대로, 화면은 실패 안내).
 - 그래서 1c의 'xlsx 다운로드 동일'은 실제 파일로 확인할 수 없다. 전후 동일 비교에 바이너리 스트림 스텁 테스트를 더한다.
 - `catalog.project`를 만드는 코드는 `sync_catalog.py:508`뿐이었다. T10.1 뒤에는 새 프로젝트가 생기지 않으므로 2a에서 Admin › 측정 설정의 '프로젝트 만들기'를 넣었다(`docs/handoff/measurement-input-scope.md`).
